@@ -1,0 +1,222 @@
+package com.ilxomjon.dur_novvot_dokon.ui.sale
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ilxomjon.dur_novvot_dokon.core.Translit
+import com.ilxomjon.dur_novvot_dokon.data.AppPrefs
+import com.ilxomjon.dur_novvot_dokon.data.repo.CatalogRepository
+import com.ilxomjon.dur_novvot_dokon.data.repo.DraftRepository
+import com.ilxomjon.dur_novvot_dokon.data.repo.HistoryRepository
+import com.ilxomjon.dur_novvot_dokon.domain.Currency
+import com.ilxomjon.dur_novvot_dokon.domain.DealMode
+import com.ilxomjon.dur_novvot_dokon.domain.DraftState
+import com.ilxomjon.dur_novvot_dokon.domain.Group
+import com.ilxomjon.dur_novvot_dokon.domain.PriceType
+import com.ilxomjon.dur_novvot_dokon.domain.Pricing
+import com.ilxomjon.dur_novvot_dokon.domain.Product
+import com.ilxomjon.dur_novvot_dokon.domain.SentLine
+import com.ilxomjon.dur_novvot_dokon.domain.Store
+import com.ilxomjon.dur_novvot_dokon.domain.Suggestion
+import com.ilxomjon.dur_novvot_dokon.domain.Suggestions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed interface ListFilter {
+    data object All : ListFilter
+    data object Suggested : ListFilter
+    data object InCart : ListFilter
+    data class OfGroup(val id: String) : ListFilter
+}
+
+/** Ro'yxat holati: faqat qidiruv/filtr/katalog o'zgarganda yangilanadi (savatcha o'zgarishida EMAS). */
+data class ListState(
+    val products: List<Product> = emptyList(),
+    val groups: List<Group> = emptyList(),
+    val filter: ListFilter = ListFilter.All,
+    val hasProducts: Boolean = false,
+    val loaded: Boolean = false,
+    val searching: Boolean = false,
+)
+
+/** Narx hisoblash sharoiti. */
+data class PricingCtx(val type: PriceType, val currency: Currency, val rate: Double)
+
+sealed interface SaleEvent {
+    class Repeated(val count: Int) : SaleEvent
+    data object NothingToRepeat : SaleEvent
+}
+
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+class SaleViewModel(
+    private val catalog: CatalogRepository,
+    private val draftRepo: DraftRepository,
+    private val history: HistoryRepository,
+    private val prefs: AppPrefs,
+) : ViewModel() {
+
+    private val query = MutableStateFlow("")
+    private val filter = MutableStateFlow<ListFilter>(ListFilter.All)
+    private val suggestions = MutableStateFlow<List<Suggestion>>(emptyList())
+    private val favIds = MutableStateFlow(prefs.favoriteStoreIds)
+    private val lastOrder = MutableStateFlow<List<SentLine>>(emptyList())
+    private val _showCost = MutableStateFlow(false)
+    private val _events = MutableSharedFlow<SaleEvent>(extraBufferCapacity = 2)
+
+    /** "Kelgan narx" almashtirgichi: saqlanmaydi (mijoz ko'rib qolmasligi uchun har safar o'chiq boshlanadi). */
+    val showCost: StateFlow<Boolean> = _showCost.asStateFlow()
+    val events: SharedFlow<SaleEvent> = _events.asSharedFlow()
+    val draft: StateFlow<DraftState> = draftRepo.state
+
+    /** Mijoz odatda oladigan tovarlar uchun odatiy miqdor (tovar kodi -> miqdor). */
+    val suggestedQty: StateFlow<Map<String, Double>> = suggestions.map { list -> list.associate { it.productId to it.qty } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** Sozlamalarda belgilangan tez do'konlar. */
+    val favorites: StateFlow<List<Store>> = combine(catalog.state, favIds) { c, ids ->
+        ids.mapNotNull { id -> c.stores.firstOrNull { it.id == id } }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val pricing: StateFlow<PricingCtx> = combine(draftRepo.state, catalog.state) { d, c ->
+        PricingCtx(d.priceType, d.currency, c.rate)
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, PricingCtx(PriceType.WHOLESALE, Currency.SOM, 0.0))
+
+    /** Faqat "Savatchada" filtri tanlanganda savatcha tarkibi kuzatiladi. */
+    private val cartIds = filter.flatMapLatest { f ->
+        if (f is ListFilter.InCart) draftRepo.state.map { s -> s.lines.mapTo(HashSet()) { it.productId } }.distinctUntilChanged()
+        else flowOf(emptySet<String>())
+    }
+
+    val list: StateFlow<ListState> = combine(
+        catalog.state.map { Triple(it.products, it.groups, it.loaded) }.distinctUntilChanged(),
+        query.debounce { if (it.isEmpty()) 0L else 90L },
+        filter, suggestions, cartIds,
+    ) { cat, q, f, freq, inCart ->
+        val (all, groups, loaded) = cat
+        val validFilter = if (f is ListFilter.OfGroup && groups.none { it.id == f.id }) ListFilter.All else f
+        ListState(search(all, q, validFilter, freq, inCart), groups, validFilter, all.isNotEmpty(), loaded, q.isNotBlank())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, ListState())
+
+    val canRepeat: StateFlow<Boolean> = combine(lastOrder, draftRepo.state.map { it.lines.isEmpty() }) { last, empty ->
+        last.isNotEmpty() && empty
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    init {
+        viewModelScope.launch {
+            draftRepo.state.map { it.store?.id.orEmpty() }.distinctUntilChanged().collect { storeId ->
+                if (storeId.isEmpty()) {
+                    suggestions.value = emptyList()
+                    lastOrder.value = emptyList()
+                    if (filter.value == ListFilter.Suggested) filter.value = ListFilter.All
+                    return@collect
+                }
+                val own = history.storeOrders(storeId)
+                val global = history.recentSaleOrders()
+                val list = withContext(Dispatchers.Default) { Suggestions.build(own, global, System.currentTimeMillis()) }
+                suggestions.value = list
+                lastOrder.value = own.firstOrNull { it.mode == DealMode.SALE }?.lines?.filter { it.productId.isNotEmpty() }.orEmpty()
+                // Mijoz tanlanganda va savatcha bo'sh bo'lsa, taklif qilinadigan tovarlar o'zi ochiladi.
+                if (list.isNotEmpty() && draftRepo.state.value.lines.isEmpty() && filter.value == ListFilter.All) {
+                    filter.value = ListFilter.Suggested
+                }
+            }
+        }
+    }
+
+    // ---------------- qidiruv algoritmi ----------------
+    private fun search(all: List<Product>, q: String, f: ListFilter, sugg: List<Suggestion>, inCart: Set<String>): List<Product> {
+        val base: List<Product> = when (f) {
+            ListFilter.All -> all
+            is ListFilter.OfGroup -> all.filter { it.groupId == f.id }
+            ListFilter.InCart -> all.filter { it.id in inCart }
+            ListFilter.Suggested -> {
+                val byId = HashMap<String, Product>(all.size * 2)
+                for (p in all) byId[p.id] = p
+                sugg.mapNotNull { byId[it.productId] }
+            }
+        }
+        val tokens = Translit.key(q.trim()).split(' ').filter { it.isNotEmpty() }
+        if (tokens.isEmpty()) return base
+        val scored = ArrayList<Pair<Int, Product>>()
+        for (p in base) {
+            var total = 0
+            var ok = true
+            for (t in tokens) {
+                val s = tokenScore(p, t)
+                if (s < 0) { ok = false; break }
+                total += s
+            }
+            if (ok) scored += total to p
+        }
+        // Barqaror saralash: ball bo'yicha, ball teng bo'lsa asl tartibda (alifbo yoki chastota).
+        return scored.sortedBy { it.first }.map { it.second }
+    }
+
+    /** 0 - kod aynan mos, 1 - kod boshi, 2 - so'z boshi, 3 - nomda, 4 - kodda. -1 - mos emas. */
+    private fun tokenScore(p: Product, t: String): Int = when {
+        p.idLower == t -> 0
+        p.idLower.startsWith(t) -> 1
+        p.searchKey.startsWith(t) || p.searchKey.contains(" $t") -> 2
+        p.searchKey.contains(t) -> 3
+        p.idLower.contains(t) -> 4
+        else -> -1
+    }
+
+    // ---------------- amallar ----------------
+    fun setQuery(q: String) { query.value = q }
+    fun setFilter(f: ListFilter) { filter.value = f }
+    fun setShowCost(on: Boolean) { _showCost.value = on }
+    fun reloadFavorites() { favIds.value = prefs.favoriteStoreIds }
+
+    /** Taklif qilingan tovarlarning savatchada yo'qlarini odatiy miqdorda qo'shadi. */
+    fun addAllSuggested() {
+        val c = catalog.state.value
+        val d = draftRepo.state.value
+        val items = suggestions.value.mapNotNull { s ->
+            if (d.lineFor(s.productId) != null) return@mapNotNull null
+            val p = c.productsById[s.productId] ?: return@mapNotNull null
+            Triple(p, s.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
+        }
+        if (items.isNotEmpty()) draftRepo.addLines(items)
+    }
+
+    fun plus(p: Product, price: Double, amount: Double = 1.0) = draftRepo.adjust(p, amount, price)
+    fun minus(p: Product, price: Double) = draftRepo.adjust(p, -1.0, price)
+
+    fun setStore(store: Store?) = draftRepo.setStore(store)
+    fun setPriceType(t: PriceType) = draftRepo.setPriceType(t)
+    fun setCurrency(c: Currency) = draftRepo.setCurrency(c)
+    fun setMode(m: DealMode) = draftRepo.setMode(m)
+    fun clearCart() = draftRepo.clearLines()
+    fun storeById(id: String): Store? = catalog.storeById(id)
+
+    /** Do'konga oxirgi buyurtmani joriy narxlarda savatchaga qo'shadi. */
+    fun repeatLast() {
+        val c = catalog.state.value
+        val d = draftRepo.state.value
+        val items = lastOrder.value.mapNotNull { l ->
+            val p = c.productsById[l.productId] ?: return@mapNotNull null
+            Triple(p, l.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
+        }
+        if (items.isEmpty()) { _events.tryEmit(SaleEvent.NothingToRepeat); return }
+        draftRepo.addLines(items)
+        _events.tryEmit(SaleEvent.Repeated(items.size))
+    }
+}

@@ -1,0 +1,33 @@
+# IMSOFT DOKON — Money fixture'lari (characterization, v2.2).
+# Format: kalit<TAB>natija. "KNOWN" — audit M-1: minglik ajratgichli summa jimgina 0 bo'ladi.
+# P10: Money ichki turini o'zgartirishdan oldin va keyin shu fayl o'zgarmasligi kerak.
+# display/format ichidagi probel — oddiy probel (U+0020).
+qty.5	5.0
+qty.2.5	2.5
+qty.third	0.333
+qty.big	10000000.0
+qty.tiny	0.0
+qty.halfup	2.001
+qty.zero	0.0
+plain.int	126750
+plain.float.noise	0.3
+plain.big	1000000000000
+plain.round	12.35
+plain.negative	-5
+plain.zero	0
+plain.nan	0
+display.som	1 250 000.5
+display.int	1 250 000
+format.usd	1 234.50
+format.som	1 234.5
+qtyDisplay	5
+parse.spaces.comma	1250000.5
+parse.nbsp	1250.0
+parse.dot	12.5
+parse.empty	0.0
+parse.null	0.0
+parse.garbage	0.0
+parse.KNOWN.comma.thousands	0.0
+parse.KNOWN.dot.thousands	0.0
+round2.half	2.68
+round2.inf	0.0
