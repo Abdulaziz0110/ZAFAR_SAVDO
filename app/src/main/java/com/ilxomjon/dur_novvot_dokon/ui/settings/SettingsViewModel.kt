@@ -9,6 +9,8 @@ import com.ilxomjon.dur_novvot_dokon.data.UiLanguage
 import com.ilxomjon.dur_novvot_dokon.data.UiTheme
 import com.ilxomjon.dur_novvot_dokon.data.repo.AuthRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.BackupRepository
+import com.ilxomjon.dur_novvot_dokon.data.repo.BackupException
+import com.ilxomjon.dur_novvot_dokon.data.repo.BackupPreview
 import com.ilxomjon.dur_novvot_dokon.data.repo.CatalogRepository
 import com.ilxomjon.dur_novvot_dokon.domain.Store
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,9 +35,13 @@ data class SettingsState(
 
 sealed interface SettingsEvent {
     data object BackupDone : SettingsEvent
-    data object BackupFailed : SettingsEvent
-    data object RestoreDone : SettingsEvent
-    data object RestoreFailed : SettingsEvent
+    class BackupFailed(val cause: Throwable) : SettingsEvent
+    /** [needsCheck] — tiklangan, avtomatik yuborilmaydigan navbat qatorlari. */
+    class RestoreDone(val needsCheck: Int) : SettingsEvent
+    class RestoreFailed(val cause: Throwable) : SettingsEvent
+    class Preview(val uri: Uri, val preview: BackupPreview, val password: CharArray?) : SettingsEvent
+    /** Zaxira shifrlangan: parol so'rash kerak. */
+    class NeedPassword(val uri: Uri) : SettingsEvent
     data object LoggedOut : SettingsEvent
 }
 
@@ -104,22 +110,35 @@ class SettingsViewModel(
         }
     }
 
-    fun export(uri: Uri) = runBusy(SettingsEvent.BackupDone, SettingsEvent.BackupFailed) { backup.export(uri) }
+    fun export(uri: Uri, password: CharArray?) = runBusy {
+        try { backup.export(uri, password); _events.tryEmit(SettingsEvent.BackupDone) } catch (e: Exception) { _events.tryEmit(SettingsEvent.BackupFailed(e)) }
+    }
 
-    fun import(uri: Uri) = runBusy(SettingsEvent.RestoreDone, SettingsEvent.RestoreFailed) { backup.import(uri) }
+    /** Avval ko'rib chiqish: nima tiklanishini ko'rsatadi, hech narsa o'zgarmaydi. */
+    fun preview(uri: Uri, password: CharArray?) = runBusy {
+        try {
+            _events.tryEmit(SettingsEvent.Preview(uri, backup.preview(uri, password), password))
+        } catch (e: BackupException) {
+            if (e.kind == BackupException.Kind.WRONG_PASSWORD && (password == null || password.isEmpty())) _events.tryEmit(SettingsEvent.NeedPassword(uri))
+            else _events.tryEmit(SettingsEvent.RestoreFailed(e))
+        } catch (e: Exception) {
+            _events.tryEmit(SettingsEvent.RestoreFailed(e))
+        }
+    }
 
-    private fun runBusy(ok: SettingsEvent, fail: SettingsEvent, block: suspend () -> Unit) {
+    fun import(uri: Uri, password: CharArray?) = runBusy {
+        try { _events.tryEmit(SettingsEvent.RestoreDone(backup.import(uri, password))) } catch (e: Exception) { _events.tryEmit(SettingsEvent.RestoreFailed(e)) }
+    }
+
+    fun setFlag(set: (com.ilxomjon.dur_novvot_dokon.data.AppPrefs) -> Unit) { set(prefs); refresh() }
+
+    val prefsRef get() = prefs
+
+    private fun runBusy(block: suspend () -> Unit) {
         if (_state.value.busy) return
         _state.update { it.copy(busy = true) }
         viewModelScope.launch {
-            try {
-                block()
-                _events.tryEmit(ok)
-            } catch (e: Exception) {
-                _events.tryEmit(fail)
-            } finally {
-                _state.update { read().copy(busy = false) }
-            }
+            try { block() } finally { _state.update { read().copy(busy = false) } }
         }
     }
 }

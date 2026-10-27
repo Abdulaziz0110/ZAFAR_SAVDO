@@ -23,6 +23,11 @@ class ServerSettingsViewModel(private val auth: AuthRepository) : ViewModel() {
 
     val current: ServerConfig get() = auth.serverConfig
 
+    val hasPassword: Boolean get() = auth.serverConfig.password.isNotEmpty()
+
+    /** Faqat ulanish/saqlash uchun ichkarida; UI'da ko'rsatilmaydi. */
+    internal fun currentPasswordInternal(): String = auth.serverConfig.password
+
     fun test(cfg: ServerConfig) {
         if (_state.value.testing) return
         _state.value = ServerSettingsState(testing = true)

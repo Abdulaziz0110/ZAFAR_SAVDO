@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ilxomjon.dur_novvot_dokon.core.Translit
 import com.ilxomjon.dur_novvot_dokon.data.AppPrefs
+import com.ilxomjon.dur_novvot_dokon.data.repo.KpiTracker
+import com.ilxomjon.dur_novvot_dokon.data.repo.ParkedCartRepository
+import com.ilxomjon.dur_novvot_dokon.domain.CartLine
+import com.ilxomjon.dur_novvot_dokon.domain.SentOrder
 import com.ilxomjon.dur_novvot_dokon.data.repo.CatalogRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.DraftRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.HistoryRepository
@@ -60,8 +64,22 @@ data class ListState(
 data class PricingCtx(val type: PriceType, val currency: Currency, val rate: Double)
 
 sealed interface SaleEvent {
-    class Repeated(val count: Int) : SaleEvent
+    /** [before] — "Bekor qilish" uchun oldingi savatcha. [missing] — katalogda yo'qligi uchun o'tkazib yuborilganlar. */
+    class Repeated(val count: Int, val missing: Int, val before: List<CartLine>) : SaleEvent
     data object NothingToRepeat : SaleEvent
+    class AddedUsual(val count: Int, val before: List<CartLine>) : SaleEvent
+    class Cleared(val before: List<CartLine>) : SaleEvent
+    /** Do'kon tanlandi: xulosa kartasini ko'rsatish. */
+    class StoreCard(val storeId: String) : SaleEvent
+}
+
+/** Aqlli asosiy tugma amali. Joyi va rangi doim bir xil, faqat yozuvi o'zgaradi. */
+sealed interface SmartAction {
+    data object PickStore : SmartAction
+    class AddUsual(val count: Int) : SmartAction
+    data object Finish : SmartAction
+    class TakePayment(val debt: Double) : SmartAction
+    data object None : SmartAction
 }
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -70,6 +88,8 @@ class SaleViewModel(
     private val draftRepo: DraftRepository,
     private val history: HistoryRepository,
     private val prefs: AppPrefs,
+    private val parked: ParkedCartRepository,
+    private val kpi: KpiTracker,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -78,12 +98,20 @@ class SaleViewModel(
     private val favIds = MutableStateFlow(prefs.favoriteStoreIds)
     private val lastOrder = MutableStateFlow<List<SentLine>>(emptyList())
     private val _showCost = MutableStateFlow(false)
-    private val _events = MutableSharedFlow<SaleEvent>(extraBufferCapacity = 2)
+    private val _events = MutableSharedFlow<SaleEvent>(extraBufferCapacity = 4)
+    private val _storeOrders = MutableStateFlow<List<SentOrder>>(emptyList())
+    /** Tanlangan do'konning tarixi (tekshiruvchi va "oxirgi narx" uchun). */
+    val storeOrders: StateFlow<List<SentOrder>> = _storeOrders.asStateFlow()
+    val parkedCount: StateFlow<Int> = parked.items.map { it.size }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    val flags get() = prefs
 
     /** "Kelgan narx" almashtirgichi: saqlanmaydi (mijoz ko'rib qolmasligi uchun har safar o'chiq boshlanadi). */
     val showCost: StateFlow<Boolean> = _showCost.asStateFlow()
     val events: SharedFlow<SaleEvent> = _events.asSharedFlow()
     val draft: StateFlow<DraftState> = draftRepo.state
+
+    /** To'liq takliflar (izoh uchun). */
+    val suggestionList: StateFlow<List<Suggestion>> = suggestions.asStateFlow()
 
     /** Mijoz odatda oladigan tovarlar uchun odatiy miqdor (tovar kodi -> miqdor). */
     val suggestedQty: StateFlow<Map<String, Double>> = suggestions.map { list -> list.associate { it.productId to it.qty } }
@@ -118,18 +146,36 @@ class SaleViewModel(
         last.isNotEmpty() && empty
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** Aqlli tugma: savatcha bo'sh + do'kon + takliflar -> "Odatdagini qo'sh"; savatcha bor -> "Yakunla"; qarz bor -> "To'lov". */
+    val smart: StateFlow<SmartAction> = combine(draftRepo.state, suggestions, catalog.state) { d, sug, c ->
+        val store = d.store
+        when {
+            store == null -> SmartAction.PickStore
+            d.lines.isNotEmpty() -> SmartAction.Finish
+            sug.isNotEmpty() && d.mode == DealMode.SALE -> SmartAction.AddUsual(sug.count { c.productsById.containsKey(it.productId) })
+            (c.stores.firstOrNull { it.id == store.id }?.debtSom ?: 0.0) > 0.0 -> SmartAction.TakePayment(c.stores.first { it.id == store.id }.debtSom)
+            else -> SmartAction.None
+        }
+    }.distinctUntilChanged { a, b -> a.javaClass == b.javaClass && (a as? SmartAction.AddUsual)?.count == (b as? SmartAction.AddUsual)?.count }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SmartAction.None)
+
     init {
+        viewModelScope.launch { parked.refresh() }
         viewModelScope.launch {
             draftRepo.state.map { it.store?.id.orEmpty() }.distinctUntilChanged().collect { storeId ->
                 if (storeId.isEmpty()) {
                     suggestions.value = emptyList()
                     lastOrder.value = emptyList()
+                    _storeOrders.value = emptyList()
                     if (filter.value == ListFilter.Suggested) filter.value = ListFilter.All
                     return@collect
                 }
+                if (draftRepo.state.value.lines.isEmpty()) kpi.startIfIdle(storeId)
                 val own = history.storeOrders(storeId)
+                _storeOrders.value = own
                 val global = history.recentSaleOrders()
-                val list = withContext(Dispatchers.Default) { Suggestions.build(own, global, System.currentTimeMillis()) }
+                val fb = history.feedback(storeId)
+                val list = withContext(Dispatchers.Default) { Suggestions.build(own, global, System.currentTimeMillis(), feedback = fb) }
                 suggestions.value = list
                 lastOrder.value = own.firstOrNull { it.mode == DealMode.SALE }?.lines?.filter { it.productId.isNotEmpty() }.orEmpty()
                 // Mijoz tanlanganda va savatcha bo'sh bo'lsa, taklif qilinadigan tovarlar o'zi ochiladi.
@@ -194,29 +240,52 @@ class SaleViewModel(
             val p = c.productsById[s.productId] ?: return@mapNotNull null
             Triple(p, s.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
         }
-        if (items.isNotEmpty()) draftRepo.addLines(items)
+        if (items.isEmpty()) return
+        val before = d.lines
+        draftRepo.addLines(items)
+        kpi.tap()
+        // Hech qachon jimgina qo'shilmaydi: nechta qo'shilgani va "Bekor qilish" ko'rsatiladi.
+        _events.tryEmit(SaleEvent.AddedUsual(items.size, before))
     }
 
-    fun plus(p: Product, price: Double, amount: Double = 1.0) = draftRepo.adjust(p, amount, price)
-    fun minus(p: Product, price: Double) = draftRepo.adjust(p, -1.0, price)
+    fun plus(p: Product, price: Double, amount: Double = 1.0) { kpi.tap(); draftRepo.adjust(p, amount, price) }
+    fun minus(p: Product, price: Double) { kpi.tap(); draftRepo.adjust(p, -1.0, price) }
+    fun tap() = kpi.tap()
 
-    fun setStore(store: Store?) = draftRepo.setStore(store)
+    /** "Bekor qilish": savatchani oldingi holatiga qaytaradi. */
+    fun undo(before: List<CartLine>) = draftRepo.replaceLines(before)
+
+    /** Foydalanuvchi do'kon tanladi (ro'yxatdan yoki tez tugmadan). */
+    fun setStore(store: Store?) {
+        draftRepo.setStore(store)
+        if (store != null && prefs.fStoreCard && draftRepo.state.value.lines.isEmpty()) _events.tryEmit(SaleEvent.StoreCard(store.id))
+    }
+
+    fun park() = viewModelScope.launch { parked.parkActive(); kpi.cancel() }
     fun setPriceType(t: PriceType) = draftRepo.setPriceType(t)
     fun setCurrency(c: Currency) = draftRepo.setCurrency(c)
     fun setMode(m: DealMode) = draftRepo.setMode(m)
-    fun clearCart() = draftRepo.clearLines()
+    fun clearCart() {
+        val before = draftRepo.state.value.lines
+        draftRepo.clearLines()
+        kpi.cancel()
+        if (before.isNotEmpty()) _events.tryEmit(SaleEvent.Cleared(before))
+    }
     fun storeById(id: String): Store? = catalog.storeById(id)
 
     /** Do'konga oxirgi buyurtmani joriy narxlarda savatchaga qo'shadi. */
     fun repeatLast() {
         val c = catalog.state.value
         val d = draftRepo.state.value
-        val items = lastOrder.value.mapNotNull { l ->
+        val last = lastOrder.value
+        val items = last.mapNotNull { l ->
             val p = c.productsById[l.productId] ?: return@mapNotNull null
             Triple(p, l.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
         }
         if (items.isEmpty()) { _events.tryEmit(SaleEvent.NothingToRepeat); return }
+        val before = d.lines
         draftRepo.addLines(items)
-        _events.tryEmit(SaleEvent.Repeated(items.size))
+        kpi.tap()
+        _events.tryEmit(SaleEvent.Repeated(items.size, last.size - items.size, before))
     }
 }

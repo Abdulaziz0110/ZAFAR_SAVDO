@@ -51,6 +51,12 @@ class SecureStore(private val context: Context) {
                 .putString("remote", v.remoteHost.trim()).apply()
         }
 
+    /** Foydalanuvchi o'zi saqlagan parol ("" — ilovaga o'rnatilgani ishlatiladi). Ekranga CHIQARILMAYDI. */
+    fun storedPassword(): String = prefs.getString("password", null).orEmpty()
+
+    /** Parol saqlanganmi (o'zi kiritgan yoki ilovaga o'rnatilgan). Faqat "bor/yo'q" ko'rsatish uchun. */
+    val hasPassword: Boolean get() = serverConfig.password.isNotEmpty()
+
     private companion object {
         const val FILE = "secure_server"
         const val TAG = "SecureStore"

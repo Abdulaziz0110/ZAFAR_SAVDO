@@ -10,6 +10,7 @@ coroutines = "1.9.0"
 securityCrypto = "1.1.0-alpha06"
 jtds = "1.3.1"
 junit = "4.13.2"
+work = "2.9.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -22,6 +23,7 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 jtds = { module = "net.sourceforge.jtds:jtds", version.ref = "jtds" }
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

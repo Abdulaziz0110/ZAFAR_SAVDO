@@ -38,7 +38,10 @@ class CartFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.clear_cart_title)
                 .setMessage(R.string.clear_cart_message)
-                .setPositiveButton(R.string.delete) { _, _ -> vm.clear() }
+                .setPositiveButton(R.string.delete) { _, _ ->
+                    val before = vm.clear()
+                    Snackbar.make(binding.root, R.string.cart_cleared, Snackbar.LENGTH_LONG).setAction(R.string.cart_undo) { vm.undo(before) }.show()
+                }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
             true
@@ -59,8 +62,15 @@ class CartFragment : Fragment() {
             }
         }).attachToRecyclerView(binding.recycler)
 
-        binding.btnCheckout.setOnClickListener { FinishSheet.show(childFragmentManager) }
+        binding.btnCheckout.setOnClickListener { ServiceLocator.kpi.tap(); FinishSheet.show(childFragmentManager) }
+        binding.btnKeepAsIs.setOnClickListener { vm.keepAsIs() }
         launchOnStarted { vm.state.collect { render(it) } }
+        launchOnStarted {
+            vm.warnings.collect { w ->
+                binding.warnBox.show(w.isNotEmpty())
+                binding.tvWarnings.text = CheckerSupport.text(requireContext(), vm.state.value, w)
+            }
+        }
     }
 
     private fun render(d: DraftState) {

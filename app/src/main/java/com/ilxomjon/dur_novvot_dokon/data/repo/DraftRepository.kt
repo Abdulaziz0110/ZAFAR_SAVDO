@@ -36,9 +36,13 @@ class DraftRepository(
 
     private val writes = Channel<() -> Unit>(Channel.UNLIMITED)
 
+    /** Oxirgi bazaga yozish xatosi (masalan disk to'lgan) — diagnostikada ko'rsatiladi, jimgina yutilmaydi. */
+    @Volatile var lastWriteError: Throwable? = null
+        private set
+
     init {
         scope.launch(Dispatchers.IO) {
-            for (w in writes) runCatching { w() }
+            for (w in writes) runCatching { w() }.onFailure { lastWriteError = it }
         }
     }
 
@@ -167,6 +171,35 @@ class DraftRepository(
         cart.clear()
         prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "").apply()
     }
+
+    /**
+     * Buyurtma navbatga qo'yilgandan keyin: savatcha va do'kon tanlovi DARHOL va SINXRON tozalanadi
+     * (orqadagi yozuvlar kutiladi, keyin bazadan o'chiriladi). Jarayon shundan keyin o'lsa, savatcha qaytib chiqmaydi.
+     */
+    suspend fun finishNow() {
+        _state.update { it.copy(lines = emptyList(), store = null) }
+        flush()
+        withContext(Dispatchers.IO) {
+            cart.clear()
+            prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "").commit()
+        }
+    }
+
+    /** Qatorlarni to'liq almashtiradi ("Bekor qilish" — Undo, kutishdan qaytarish). */
+    fun replaceLines(lines: List<CartLine>) = mutate({ it.copy(lines = lines) }) { s ->
+        cart.clear()
+        allLinesWrite(s)
+    }
+
+    /** Kutishdagi savatchani faol qiladi: do'kon, rejim, valyuta, narx turi va qatorlar birga. */
+    fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>) =
+        mutate({ DraftState(store = store, priceType = priceType, currency = currency, mode = mode, lines = lines) }) { s ->
+            prefs.edit().putString(K_STORE_ID, store?.id.orEmpty()).putString(K_REGION_ID, store?.regionId.orEmpty())
+                .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, priceType.code)
+                .putString(K_CURRENCY, currency.code).putString(K_MODE, mode.code).apply()
+            cart.clear()
+            allLinesWrite(s)
+        }
 
     /** Savatchadagi narxlarni joriy savdo turi/valyutaga qayta hisoblaydi. */
     private fun reprice(s: DraftState): DraftState {

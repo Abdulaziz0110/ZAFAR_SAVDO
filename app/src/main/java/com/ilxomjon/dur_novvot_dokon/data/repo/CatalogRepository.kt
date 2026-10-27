@@ -1,6 +1,9 @@
 package com.ilxomjon.dur_novvot_dokon.data.repo
 
+import com.ilxomjon.dur_novvot_dokon.core.Money
 import com.ilxomjon.dur_novvot_dokon.data.AppPrefs
+import com.ilxomjon.dur_novvot_dokon.data.local.DebtCache
+import com.ilxomjon.dur_novvot_dokon.data.local.HistoryDb
 import com.ilxomjon.dur_novvot_dokon.data.local.CatalogDao
 import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
 import com.ilxomjon.dur_novvot_dokon.domain.Agent
@@ -35,6 +38,7 @@ class CatalogRepository(
     private val dao: CatalogDao,
     private val api: ServerApi,
     private val prefs: AppPrefs,
+    private val history: HistoryDb,
 ) {
     private val _state = MutableStateFlow(CatalogState())
     val state: StateFlow<CatalogState> = _state.asStateFlow()
@@ -73,16 +77,35 @@ class CatalogRepository(
         }
     }
 
-    /** Do'kon qarzini serverdan yangilaydi. */
-    suspend fun refreshDebt(storeId: String): Pair<Double, Double> {
+    /** Do'kon qarzini serverdan yangilaydi va vaqti bilan keshga yozadi. */
+    suspend fun refreshDebt(storeId: String): DebtCache {
         val agentId = _state.value.agent?.id ?: throw IllegalStateException("Agent topilmadi")
         val (som, usd) = api.fetchDebt(agentId, storeId)
+        val now = System.currentTimeMillis()
         mutex.withLock {
-            withContext(Dispatchers.IO) { dao.updateDebt(storeId, som, usd) }
+            withContext(Dispatchers.IO) {
+                dao.updateDebt(storeId, som, usd)
+                history.putDebt(storeId, Money.parse(som), Money.parse(usd), now)
+            }
             reload()
         }
         val s = _state.value.stores.firstOrNull { it.id == storeId }
-        return (s?.debtSom ?: 0.0) to (s?.debtUsd ?: 0.0)
+        return DebtCache(storeId, s?.debtSom ?: 0.0, s?.debtUsd ?: 0.0, now)
+    }
+
+    /**
+     * Qarzning oxirgi ma'lum qiymati va vaqti: serverdan alohida so'ralgan bo'lsa shu, aks holda oxirgi sinxron (katalog) vaqti.
+     * Lokal yuborilmagan to'lovlar bu yerga QO'SHILMAYDI.
+     */
+    suspend fun knownDebt(storeId: String): DebtCache? = withContext(Dispatchers.IO) {
+        val cached = history.debt(storeId)
+        val sync = _state.value.lastSyncAt
+        val store = storeById(storeId)
+        when {
+            cached != null && cached.fetchedAt >= sync -> cached
+            store != null && sync > 0 -> DebtCache(storeId, store.debtSom, store.debtUsd, sync)
+            else -> cached
+        }
     }
 
     fun storeById(id: String): Store? = _state.value.stores.firstOrNull { it.id == id }

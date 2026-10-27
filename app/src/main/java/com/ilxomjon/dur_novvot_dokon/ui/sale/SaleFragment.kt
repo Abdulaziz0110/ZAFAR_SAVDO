@@ -26,6 +26,7 @@ import com.ilxomjon.dur_novvot_dokon.ui.navigator
 import com.ilxomjon.dur_novvot_dokon.ui.onTextChanged
 import com.ilxomjon.dur_novvot_dokon.ui.show
 import com.ilxomjon.dur_novvot_dokon.ui.viewModel
+import com.ilxomjon.dur_novvot_dokon.ui.UiBus
 
 class SaleFragment : Fragment() {
     private var _binding: FragmentSaleBinding? = null
@@ -45,12 +46,14 @@ class SaleFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        vm = viewModel { SaleViewModel(ServiceLocator.catalog, ServiceLocator.draft, ServiceLocator.history, ServiceLocator.appPrefs) }
+        vm = viewModel {
+            SaleViewModel(ServiceLocator.catalog, ServiceLocator.draft, ServiceLocator.history, ServiceLocator.appPrefs, ServiceLocator.parked, ServiceLocator.kpi)
+        }
 
         adapter = ProductAdapter(
             onPlus = { p, price, amount -> vm.plus(p, price, amount) },
             onMinus = { p, price -> vm.minus(p, price) },
-            onEdit = { p, focusPrice -> ItemEditSheet.show(childFragmentManager, p.id, focusPrice, vm.showCost.value) },
+            onEdit = { p, focusPrice -> vm.tap(); ItemEditSheet.show(childFragmentManager, p.id, focusPrice, vm.showCost.value) },
         )
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
@@ -101,7 +104,13 @@ class SaleFragment : Fragment() {
             vm.setFilter(chip?.tag as? ListFilter ?: ListFilter.All)
         }
         binding.edtSearch.onTextChanged { vm.setQuery(it) }
-        binding.btnCart.setOnClickListener { navigator().push(CartFragment()) }
+        binding.btnCart.setOnClickListener { vm.tap(); navigator().push(CartFragment()) }
+        binding.btnSmart.setOnClickListener { onSmart() }
+        binding.btnPark.setOnClickListener {
+            vm.park()
+            Snackbar.make(binding.root, R.string.park_done, Snackbar.LENGTH_SHORT).show()
+        }
+        binding.btnParked.setOnClickListener { ParkedSheet.show(childFragmentManager) }
 
         launchOnStarted { vm.list.collect { lastList = it; renderList(it) } }
         launchOnStarted { vm.draft.collect { lastDraft = it; renderDraft(it) } }
@@ -109,16 +118,61 @@ class SaleFragment : Fragment() {
         launchOnStarted { vm.showCost.collect { on -> adapter.setPricing(vm.pricing.value, on); setSwitch(on) } }
         launchOnStarted { vm.canRepeat.collect { binding.btnRepeat.show(it) } }
         launchOnStarted { vm.suggestedQty.collect { adapter.setSuggested(it) } }
+        launchOnStarted { vm.suggestionList.collect { list -> adapter.setExplanations(if (vm.flags.fExplainSuggest) SuggestText.map(requireContext(), list) else emptyMap()) } }
+        launchOnStarted { vm.smart.collect { renderSmart(it) } }
+        launchOnStarted { vm.parkedCount.collect { renderParked(it) } }
         launchOnStarted { vm.favorites.collect { updateEmpty() } }
         launchOnStarted {
             vm.events.collect { e ->
-                val msg = when (e) {
-                    is SaleEvent.Repeated -> getString(R.string.sale_repeat_done, e.count)
-                    SaleEvent.NothingToRepeat -> getString(R.string.sale_repeat_none)
+                when (e) {
+                    is SaleEvent.Repeated -> {
+                        val msg = getString(R.string.sale_repeat_done, e.count) + if (e.missing > 0) "\n" + getString(R.string.sale_repeat_missing, e.missing) else ""
+                        undoSnack(msg, e.before)
+                    }
+                    SaleEvent.NothingToRepeat -> Snackbar.make(binding.root, R.string.sale_repeat_none, Snackbar.LENGTH_SHORT).show()
+                    is SaleEvent.AddedUsual -> undoSnack(getString(R.string.usual_added, e.count), e.before)
+                    is SaleEvent.Cleared -> undoSnack(getString(R.string.cart_cleared), e.before)
+                    is SaleEvent.StoreCard -> StoreCardSheet.show(childFragmentManager, e.storeId)
                 }
-                Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun undoSnack(msg: String, before: List<com.ilxomjon.dur_novvot_dokon.domain.CartLine>) {
+        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).setAction(R.string.cart_undo) { vm.undo(before) }.show()
+    }
+
+    private fun renderSmart(a: SmartAction) {
+        val on = vm.flags.fSmartButton
+        binding.btnSmart.show(on && a !is SmartAction.None)
+        if (!on) return
+        binding.btnSmart.text = when (a) {
+            SmartAction.PickStore -> getString(R.string.smart_pick_store)
+            is SmartAction.AddUsual -> getString(R.string.smart_add_usual, a.count)
+            SmartAction.Finish -> getString(R.string.smart_finish)
+            is SmartAction.TakePayment -> getString(R.string.smart_payment, requireContext().money(a.debt, Currency.SOM))
+            SmartAction.None -> ""
+        }
+    }
+
+    private fun onSmart() {
+        vm.tap()
+        when (val a = vm.smart.value) {
+            SmartAction.PickStore -> StorePickerSheet.show(childFragmentManager, REQ_STORE)
+            is SmartAction.AddUsual -> vm.addAllSuggested()
+            SmartAction.Finish -> if (lastDraft.store != null) FinishSheet.show(childFragmentManager)
+            is SmartAction.TakePayment -> {
+                UiBus.paymentStore.value = lastDraft.store?.id
+                navigator().openTab(R.id.nav_payment)
+            }
+            SmartAction.None -> Unit
+        }
+    }
+
+    private fun renderParked(n: Int) {
+        val on = vm.flags.fMultiCart
+        binding.btnParked.show(on && n > 0)
+        binding.btnParked.text = getString(R.string.parked_chip, n)
     }
 
     override fun onResume() {
@@ -212,6 +266,7 @@ class SaleFragment : Fragment() {
         b.toggleCurrency.check(if (d.currency == Currency.USD) R.id.btnUsd else R.id.btnSom)
         b.toggleMode.check(if (d.mode == DealMode.RETURN) R.id.btnReturn else R.id.btnSale)
         b.btnClear.show(d.lines.isNotEmpty())
+        b.btnPark.show(d.lines.isNotEmpty() && vm.flags.fMultiCart)
         b.tvWarning.show(lastList.hasProducts && vm.pricing.value.rate <= 0.0)
 
         adapter.setCart(d.lines.associateBy { it.productId })

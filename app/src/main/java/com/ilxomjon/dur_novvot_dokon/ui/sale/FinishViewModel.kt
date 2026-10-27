@@ -10,6 +10,7 @@ import com.ilxomjon.dur_novvot_dokon.data.repo.DraftRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.OrderRepository
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
 import com.ilxomjon.dur_novvot_dokon.domain.Pricing
+import com.ilxomjon.dur_novvot_dokon.domain.CartWarning
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,11 @@ data class FinishState(
     val sending: Boolean = false,
     val error: Throwable? = null,
     val sent: Boolean = false,
+    /** Kvitansiya kodi (masalan "B-0412"). */
+    val receipt: String = "",
+    /** Tushunarsiz summa kiritilgan (jimgina 0 qilinmaydi). */
+    val invalid: Boolean = false,
+    val warnings: List<CartWarning> = emptyList(),
 ) {
     val payable: Double get() = Pricing.totals(total, discount).payable
     val paid: Double get() = if (currency == Currency.SOM) cash + card else cash
@@ -44,6 +50,28 @@ class FinishViewModel(
         draft.state.value.let { FinishState(it.store?.name.orEmpty(), it.currency, it.total, printer = prefs.printer) },
     )
     val state: StateFlow<FinishState> = _state.asStateFlow()
+    private var checkCtx: CheckerSupport.Ctx? = null
+
+    init {
+        val storeId = draft.state.value.store?.id
+        if (storeId != null) viewModelScope.launch {
+            checkCtx = CheckerSupport.load(storeId)
+            recheck()
+        }
+    }
+
+    private fun recheck() = _state.update { it.copy(warnings = CheckerSupport.warnings(draft.state.value, checkCtx, includeMissing = true)) }
+
+    fun keepAsIs() { CheckerSupport.dismiss(_state.value.warnings.map { it.key }); recheck() }
+
+    /** Matndan (minglik ajratgichlar bilan ham). null — tushunarsiz. */
+    fun setInputs(discount: Double?, cash: Double?, card: Double?) = _state.update {
+        it.copy(
+            discount = (discount ?: it.discount).coerceIn(0.0, maxOf(it.total, 0.0)),
+            cash = cash ?: it.cash, card = card ?: it.card,
+            invalid = discount == null || cash == null || card == null,
+        )
+    }
 
     fun setDiscount(v: Double) = _state.update { it.copy(discount = v.coerceIn(0.0, maxOf(it.total, 0.0))) }
     fun setCash(v: Double) = _state.update { it.copy(cash = v) }
@@ -56,14 +84,15 @@ class FinishViewModel(
 
     fun send() {
         val s = _state.value
-        if (s.sending) return
+        if (s.sending || s.sent) return
+        if (s.invalid) return
         _state.update { it.copy(sending = true, error = null) }
         viewModelScope.launch {
             val pay = if (s.currency == Currency.SOM) Protocol.Payments(cashSom = s.cash, card = s.card)
             else Protocol.Payments(cashUsd = s.cash)
             try {
-                orders.sendOrder(CheckoutInput(s.discount, pay, s.printer))
-                _state.update { it.copy(sending = false, sent = true) }
+                val receipt = orders.sendOrder(CheckoutInput(s.discount, pay, s.printer))
+                _state.update { it.copy(sending = false, sent = true, receipt = receipt) }
             } catch (e: Exception) {
                 _state.update { it.copy(sending = false, error = e) }
             }

@@ -4,7 +4,27 @@ import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 
-data class Suggestion(val productId: String, val qty: Double, val score: Double)
+/**
+ * Taklif. Izoh uchun: [intervalDays] — odatda necha kunda bir oladi (mediana), [daysSince] — oxirgisidan beri necha kun,
+ * [orders] — shu do'kon tarixida necha marta olgan. [confident] = false bo'lsa ekranda "taxminiy" deb ko'rsatiladi.
+ * Hech bir taklif fakt emas.
+ */
+data class Suggestion(
+    val productId: String,
+    val qty: Double,
+    val score: Double,
+    val intervalDays: Double? = null,
+    val daysSince: Double? = null,
+    val orders: Int = 0,
+    val confident: Boolean = false,
+)
+
+/** "Yo'q ekan" sabablari (agent belgilaydi). */
+object FeedbackReason {
+    const val NOT_NEEDED = "not_needed"   // 7 kun taklif qilinmaydi
+    const val NO_STOCK = "no_stock"       // bugun taklif qilinmaydi
+    const val LATER = "later"             // 2 kun
+}
 
 /**
  * "Bu mijoz odatda nimalarni oladi?" algoritmi. Faqat shu qurilmadagi buyurtmalar tarixidan o'rganadi.
@@ -26,7 +46,13 @@ object Suggestions {
         val globalQtys = ArrayList<Double>()
     }
 
-    fun build(storeOrders: List<SentOrder>, globalOrders: List<SentOrder>, now: Long, limit: Int = 12): List<Suggestion> {
+    fun build(
+        storeOrders: List<SentOrder>,
+        globalOrders: List<SentOrder>,
+        now: Long,
+        limit: Int = 12,
+        feedback: Map<String, Pair<String, Long>> = emptyMap(),
+    ): List<Suggestion> {
         val own = storeOrders.filter { it.mode == DealMode.SALE }
         val acc = HashMap<String, Acc>()
 
@@ -50,12 +76,16 @@ object Suggestions {
 
         val out = ArrayList<Suggestion>()
         for ((id, a) in acc) {
+            if (muted(feedback[id], now)) continue
             val n = a.times.size
             var score = a.score
+            var interval: Double? = null
+            val since: Double? = a.times.maxOrNull()?.let { (now - it) / DAY_MS }
             if (n >= 2) {
                 val times = a.times.sorted()
                 val gaps = times.zipWithNext { x, y -> (y - x) / DAY_MS }.filter { it > 0.01 }
                 if (gaps.isNotEmpty()) {
+                    interval = median(gaps)
                     val ratio = ((now - times.last()) / DAY_MS) / median(gaps)
                     score *= when {
                         ratio >= 0.7 -> 1.0 + min(1.5, ratio - 0.5)
@@ -68,12 +98,26 @@ object Suggestions {
             val globalOnly = n == 0 && a.globalQtys.size >= 2
             if (!(n >= 2 || recentOnce || globalOnly)) continue
             val qty = median(if (a.qtys.isNotEmpty()) a.qtys else a.globalQtys)
-            out += Suggestion(id, if (qty > 0.0) Math.round(qty * 1000.0) / 1000.0 else 1.0, score)
+            out += Suggestion(
+                id, if (qty > 0.0) Math.round(qty * 1000.0) / 1000.0 else 1.0, score,
+                intervalDays = interval, daysSince = since, orders = n, confident = n >= 3 && interval != null,
+            )
         }
         return out.sortedByDescending { it.score }.take(limit)
     }
 
-    private fun median(values: List<Double>): Double {
+    private fun muted(f: Pair<String, Long>?, now: Long): Boolean {
+        if (f == null) return false
+        val ageDays = (now - f.second) / DAY_MS
+        return when (f.first) {
+            FeedbackReason.NOT_NEEDED -> ageDays < 7.0
+            FeedbackReason.NO_STOCK -> ageDays < 1.0
+            FeedbackReason.LATER -> ageDays < 2.0
+            else -> false
+        }
+    }
+
+    fun median(values: List<Double>): Double {
         if (values.isEmpty()) return 0.0
         val s = values.sorted()
         val m = s.size / 2

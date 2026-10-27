@@ -26,3 +26,48 @@ Har qaror: sana, nima, nega, muqobil, qaytarish yo'li.
 * Yuborilgan keystore (`androiddebugkey`, 2026-04-10 da yaratilgan) SHA-256: `C9:1B:9A:4A:76:29:D4:D5:B6:03:08:A6:30:63:D0:58:84:CA:E0:84:6C:1B:2D:A6:F8:AF:89:65:BA:F7:64:0C`
 * MUHIM: egasi avval aytganidek, 2-bosqich (Java'da tiklangan) ilova eski ilovani o'chirib qayta o'rnatilgan. Agar u egasining Android Studio'sida build qilingan bo'lsa, telefonda HOZIR turgan ilova aynan shu `C9:1B…` kalit bilan imzolangan bo'lishi mumkin [ASM] — unda yangilash uchun kerakli kalit shu. Telefonda tekshirish: `adb shell dumpsys package com.ibrohimjon.imsoft_dokon_som_val | grep -A3 signatures` yoki APK'ni telefondan olib `apksigner verify --print-certs`.
 * Bu kalit egasining Android Studio'dagi ~10 ta boshqa ilovasini ham imzolaydi — bitta kalit sizsa, hammasi xavf ostida. 4-qadamda variantlar (shu kalit bilan davom etish yoki ma'lumotni zaxiralab alohida release kalitga o'tish) egasi bilan hal qilinadi.
+
+## 2026-10-27 · v2.3 (egasining yangi qarori: faqat APK, bitta uzluksiz ish)
+
+**D-007. Server va protokol o'zgarmaydi.** Yangi server jadvali, login, UNIQUE kalit, API — yo'q. Navbat yadrosi faqat mavjud
+`savollar` jadvalida `INSERT` (avvalgidek) va `SELECT` (probe) ishlatadi. `javoblar` tur 1/4 uchun o'qilmaydi va
+"server qayta ishladi" holati umuman yo'q (tasdiqlab bo'lmaydi).
+
+**D-008. Probe ishonchliligi ("guvoh" qoidasi).** "Topilmadi" faqat avval yozilgani aniq bo'lgan so'rov (watermark yoki
+oxirgi SENT ID) serverda hali turgan bo'lsa ishonchli hisoblanadi. Aks holda — NEEDS_CHECK (dublikatdan ko'ra qo'lda tekshiruv
+afzal). Natija: server qatorlarni o'chiradigan bo'lsa, ilova dublikat qilmaydi, lekin ko'proq "Tekshirish kerak" chiqadi.
+
+**D-009. Eski (v2) navbat qatorlari migratsiyada UNCERTAIN.** Ular natijasi noma'lum holda qolgan bo'lishi mumkin (audit C-2),
+shuning uchun avval qidiriladi; guvoh bo'lmasa NEEDS_CHECK.
+
+**D-010. WorkManager 2.9.1** (`work-runtime-ktx`). Foyda: ilova yopiq bo'lsa ham yuborish; hajm ~1 MB; Google rasmiy, bepul
+(Apache-2.0); o'zi Room'ni ichki ishlatadi — ilova kodi Room'ga o'tmaydi (C9 saqlanadi). Ilova ichidagi darhol yuborish ham qoladi;
+ikkalasi bitta engine + bazadagi egallash orqali ishlaydi.
+
+**D-011. Money ichki turi Double qoladi.** P10 bo'yicha Long/BigDecimal'ga o'tkazish katta va xavfli; egasi faqat "1,250,000 → 0"
+xatosini so'radi. Yangi `Money.parseUser` (foydalanuvchi kiritishi uchun), eski `Money.parse` va fixture'lari tegilmagan
+(bazadagi qiymatlarni o'qish uchun ishlatiladi).
+
+**D-012. Bitta vergul = o'nlik** (`1,250` = 1.25), chunki eski ilova ham shunday o'qigan. Bir nechta vergul/nuqta — minglik.
+
+**D-013. Yangi funksiyalar standart holatda YOQIQ**, KPI o'lchagich esa O'CHIQ. Hammasi Sozlamalarda o'chiriladi; o'chirilsa
+ilova 2.2 kabi ishlaydi. Mavjud elementlarning joyi o'zgartirilmadi (agent odatlari): yangi tugmalar qo'shimcha qilib qo'yildi.
+Yakunlash oynasi bo'limlari yig'ilmadi (joylashuv saqlansin) — faqat "Yuborish" kattalashtirildi va ogohlantirish qatori qo'shildi.
+
+**D-014. Server paroli.** Egasi server login/parolini o'zgartira olmaydi, ilova esa ulanishi kerak. Shuning uchun parol ilovada
+qoladi, lekin: ekranga hech qachon chiqmaydi, manbada oddiy matn emas (XOR bilan yashirilgan, test tekshiradi). Bu kuchli himoya
+emas — README'da ochiq yozilgan.
+
+**D-015. Takroriy to'lov oynasi 15 daqiqa** (shu do'kon, aynan shu naqd/o'tkazma/click). Faqat tasdiq so'raydi, to'smaydi.
+
+**D-016. Savatcha tekshiruvchisi chegaralari:** miqdor ≥ max(3 × mediana, mediana + 10) (kamida 2 ta tarix); narx oxirgi narxdan
+> 30 % farq (shu valyutada). Qaytarish rejimida va tarix bo'lmasa jim. Ko'pi bilan 2 ta.
+
+**D-017. Taklif fikri:** "Kerak emas" — 7 kun, "Keyinroq" — 2 kun, "Omborda yo'q" — 1 kun taklif qilinmaydi.
+
+**D-018. Lokal tekshiruv vositalari (repoga kirmaydi).** Bu muhitda Google Maven yopiq bo'lgani uchun kod Android 35 `android.jar`,
+eski APK'dagi AndroidX (enjarify + metadata tiklash), WorkManager/lifecycle/security uchun qo'lda yozilgan imzo-stub'lar va
+generatsiya qilingan R/ViewBinding'ga qarshi kompilyatsiya qilindi. Bu haqiqiy Gradle build o'rnini BOSMAYDI (AAPT2, manifest
+merge, R8, kutubxona versiyalari farqi tekshirilmagan) — birinchi CI ishga tushishi yakuniy tekshiruv.
+
+**D-019. Lokal hisobot WebView'i tarmoqqa chiqmaydi**; server hisobotida avvalgi xatti-harakat saqlandi (rasmlar bo'lishi mumkin).

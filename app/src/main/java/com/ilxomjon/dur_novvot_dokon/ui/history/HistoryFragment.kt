@@ -23,6 +23,9 @@ import com.ilxomjon.dur_novvot_dokon.ui.launchOnStarted
 import com.ilxomjon.dur_novvot_dokon.ui.money
 import com.ilxomjon.dur_novvot_dokon.ui.show
 import com.ilxomjon.dur_novvot_dokon.ui.viewModel
+import com.ilxomjon.dur_novvot_dokon.ui.outbox.OutboxUi
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxEntry
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxKind
 
 class HistoryFragment : Fragment() {
     private var _binding: FragmentHistoryBinding? = null
@@ -91,7 +94,8 @@ class HistoryFragment : Fragment() {
     private fun orderRow(ctx: Context, o: SentOrder): HistoryRow {
         val net = o.total - o.discount
         val info = ArrayList<String>()
-        if (o.pending) info += ctx.getString(R.string.history_pending)
+        if (o.outboxId > 0) info += OutboxEntry.receiptOf(OutboxKind.ORDER, o.outboxId)
+        info += stateText(ctx, o.outboxId, o.pending)
         info += ctx.getString(R.string.history_items, o.lines.size)
         info += typeName(ctx, o.priceType)
         if (o.mode == DealMode.RETURN) info += ctx.getString(R.string.history_return)
@@ -123,12 +127,19 @@ class HistoryFragment : Fragment() {
         val base = ctx.getString(
             R.string.history_payment_info, Money.display(p.cash), Money.display(p.transfer), Money.display(p.click),
         )
-        val info = if (p.pending) ctx.getString(R.string.history_pending) + " · " + base else base
+        val head = listOfNotNull(if (p.outboxId > 0) OutboxEntry.receiptOf(OutboxKind.PAYMENT, p.outboxId) else null, stateText(ctx, p.outboxId, p.pending))
+        val info = head.joinToString(" · ") + " · " + base
         val detail = if (p.note.isBlank()) info else info + "\n\n" + p.note
         return HistoryRow(
             key = "p${p.id}", title = p.storeName, amount = ctx.money(p.total, Currency.SOM), whenText = formatDateTime(p.sentAt),
             info = info, detailTitle = p.storeName, detail = detail,
         )
+    }
+
+    /** Holat matni: "Serverga yozildi" (qayta ishlandi EMAS), "Tekshirish kerak" va h.k. */
+    private fun stateText(ctx: Context, outboxId: Long, pending: Boolean): String {
+        val st = last.states[outboxId] ?: return ctx.getString(if (pending) R.string.history_pending else R.string.st_sent)
+        return OutboxUi.label(ctx, st)
     }
 
     override fun onDestroyView() {

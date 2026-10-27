@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.2"
+        versionCode = 5
+        versionName = "2.3"
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {
@@ -82,6 +82,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.security.crypto)
     implementation(libs.jtds)
+    // Ilova yopiq bo'lsa ham navbatni ishonchli yuborish (internet paydo bo'lganda)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Faqat JVM unit testlar (APK ichiga kirmaydi)
     testImplementation(libs.junit)

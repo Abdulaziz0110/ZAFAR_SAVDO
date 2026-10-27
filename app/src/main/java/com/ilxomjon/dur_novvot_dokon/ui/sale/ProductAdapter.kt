@@ -30,6 +30,14 @@ class ProductAdapter(
     private var ctx = PricingCtx(com.ilxomjon.dur_novvot_dokon.domain.PriceType.WHOLESALE, Currency.SOM, 0.0)
     private var showCost = false
     private var suggested: Map<String, Double> = emptyMap()
+    private var explanations: Map<String, String> = emptyMap()
+
+    /** Taklif izohlari ("Odatda ~7 kunda ~10 · oxirgisi 8 kun oldin"). Bo'sh bo'lsa — eski "Odatda: N". */
+    fun setExplanations(map: Map<String, String>) {
+        if (map == explanations) return
+        explanations = map
+        notifyDataSetChanged()
+    }
 
     fun setProducts(list: List<Product>) {
         products = list
@@ -102,7 +110,10 @@ class ProductAdapter(
             val line = lines[p.id]
             if (full) b.tvName.text = p.name
             val parts = ArrayList<String>(2)
-            if (line == null) suggested[p.id]?.let { parts += ctxt.getString(R.string.meta_usual, Money.qtyDisplay(it)) }
+            if (line == null) {
+                val ex = explanations[p.id]
+                if (ex != null) parts += ex else suggested[p.id]?.let { parts += ctxt.getString(R.string.meta_usual, Money.qtyDisplay(it)) }
+            }
             if (showCost) parts += ctxt.getString(R.string.meta_cost, ctxt.money(Pricing.costPrice(p, ctx.currency, ctx.rate), ctx.currency))
             if (parts.isEmpty() && p.hasBlock) parts += ctxt.getString(R.string.block_info, Money.qtyDisplay(p.blockSize))
             val meta = parts.joinToString(" · ")

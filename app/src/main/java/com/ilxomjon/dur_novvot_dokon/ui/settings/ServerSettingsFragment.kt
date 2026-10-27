@@ -35,9 +35,12 @@ class ServerSettingsFragment : Fragment() {
         if (savedInstanceState == null) {
             val c = vm.current
             binding.edtHost.setText(c.host); binding.edtDb.setText(c.database)
-            binding.edtLogin.setText(c.login); binding.edtPassword.setText(c.password)
+            binding.edtLogin.setText(c.login)
+            // Saqlangan parol HECH QACHON ekranga chiqarilmaydi (Login ekranidan ham shu sahifaga kirish mumkin).
+            binding.edtPassword.setText("")
             binding.edtRemoteHost.setText(c.remoteHost)
         }
+        binding.tilPassword.helperText = if (vm.hasPassword) getString(R.string.server_password_saved) else null
         binding.btnTest.setOnClickListener { readConfig()?.let { vm.test(it) } }
         binding.btnSave.setOnClickListener { readConfig()?.let { vm.save(it) } }
 
@@ -48,7 +51,8 @@ class ServerSettingsFragment : Fragment() {
         val host = binding.edtHost.text?.toString().orEmpty().trim()
         val db = binding.edtDb.text?.toString().orEmpty().trim()
         val login = binding.edtLogin.text?.toString().orEmpty().trim()
-        val password = binding.edtPassword.text?.toString().orEmpty()
+        // Bo'sh qoldirilsa — saqlangan parol o'zgarmaydi (ekranga chiqmaydi, faqat ichkarida ishlatiladi).
+        val password = binding.edtPassword.text?.toString().orEmpty().ifEmpty { vm.currentPasswordInternal() }
         val remote = binding.edtRemoteHost.text?.toString().orEmpty().trim()
         val empty = getString(R.string.server_error_empty)
         binding.tilHost.error = if (host.isEmpty()) empty else null

@@ -12,9 +12,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # Ixtiyoriy: telefondagi ilova bilan BIR XIL kalit bilan imzolash uchun (README ▸ "Imzo").
+      # Kalit faqat GitHub Secrets'da turadi, repoga hech qachon qo'shilmaydi.
+      HAS_KEY: ${{ secrets.SIGNING_KEYSTORE_B64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
+      # gradle-wrapper.jar haqiqiyligini tekshiradi (o'zgartirilgan jar bilan build qilinmasin)
       - uses: gradle/actions/wrapper-validation@v4
 
       - uses: actions/setup-java@v4
@@ -27,13 +32,38 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # 0) Navbat bazasi (dokon_tarix.sqlite) migratsiyasi va egallash SQL'i — telefonsiz tekshiruv
+      - name: SQL smoke test
+        run: python3 tools/sql_smoke_test.py
+
+      # 1) Protokol fixture, navbat yadrosi (fault injection), pul, biznes qoidalari (JVM, telefon kerak emas)
       - name: Unit tests
         run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
 
-      # DIQQAT: bu APK CI'ning vaqtinchalik kaliti bilan imzolanadi,
-      # agent telefoniga O'RNATMANG. Faqat build tekshiruvi.
+      - name: Signing key from secrets (optional)
+        if: env.HAS_KEY == 'true'
+        env:
+          KS: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo "$KS" | base64 -d > app-signing.keystore
+          printf 'storeFile=app-signing.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > keystore.properties
+
+      # 2) Debug APK. Kalit secrets'da bo'lmasa — CI'ning vaqtinchalik kaliti: bunday APK agent telefoniga O'RNATILMAYDI.
       - name: Assemble debug
         run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Print APK certificate (compare with the phone)
+        continue-on-error: true
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/debug/*.apk | grep -E "SHA-256|DN"
+
+      - name: Clean signing files
+        if: always()
+        run: rm -f app-signing.keystore keystore.properties
 
       - name: Upload unit test report
         if: always()
@@ -45,9 +75,9 @@ jobs:
             app/build/test-results/
           if-no-files-found: ignore
 
-      - name: Upload debug APK (CI-only, do not install on agent phones)
+      - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: IMSOFT_DOKON-debug-apk-CI-ONLY
+          name: ${{ env.HAS_KEY == 'true' && 'IMSOFT_DOKON-debug-apk-OWN-KEY' || 'IMSOFT_DOKON-debug-apk-CI-ONLY' }}
           path: app/build/outputs/apk/debug/*.apk

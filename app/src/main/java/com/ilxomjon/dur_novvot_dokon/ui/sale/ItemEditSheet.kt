@@ -19,6 +19,12 @@ import com.ilxomjon.dur_novvot_dokon.ui.money
 import com.ilxomjon.dur_novvot_dokon.ui.onTextChanged
 import com.ilxomjon.dur_novvot_dokon.ui.show
 import com.ilxomjon.dur_novvot_dokon.ui.viewModel
+import com.ilxomjon.dur_novvot_dokon.ui.formatDate
+import com.ilxomjon.dur_novvot_dokon.domain.CartChecker
+import com.ilxomjon.dur_novvot_dokon.domain.FeedbackReason
+import com.google.android.material.snackbar.Snackbar
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class ItemEditSheet : BottomSheetDialogFragment() {
     private var _binding: SheetItemEditBinding? = null
@@ -90,7 +96,8 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.chipPlus10.setOnClickListener { addQty(10.0) }
         binding.chipPlusBlock.setOnClickListener { addQty(product.blockSize) }
         binding.btnSave.setOnClickListener { save() }
-        binding.btnRemove.setOnClickListener { vm.remove(); dismiss() }
+        binding.btnRemove.setOnClickListener { vm.remove(); offerUndo(R.string.cart_deleted); dismiss() }
+        setupHints(product.id)
 
         val focusPrice = args.getBoolean(ARG_FOCUS_PRICE)
         val target = if (focusPrice) binding.edtPrice else binding.edtQty
@@ -123,9 +130,46 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         var ok = true
         if (qty <= 0.0) { binding.tilQty.error = getString(R.string.item_error_qty); ok = false }
         if (priceText.isEmpty()) { binding.tilPrice.error = getString(R.string.item_error_price); ok = false }
+        val price = Money.parseUser(priceText)
+        if (priceText.isNotEmpty() && price == null) { binding.tilPrice.error = getString(R.string.amount_invalid); ok = false }
+        if (Money.parseUser(binding.edtQty.text?.toString()) == null) { binding.tilQty.error = getString(R.string.amount_invalid); ok = false }
         if (!ok) return
-        vm.save(qty, Money.parse(priceText))
+        val changed = vm.exists
+        vm.save(qty, price ?: 0.0)
+        if (changed) offerUndo(R.string.item_changed)
         dismiss()
+    }
+
+    /** O'zgarish/o'chirishdan keyin ota ekranda "Bekor qilish" (Undo). */
+    private fun offerUndo(msg: Int) {
+        val root = parentFragment?.view ?: return
+        val v = vm
+        Snackbar.make(root, msg, Snackbar.LENGTH_LONG).setAction(R.string.cart_undo) { v.undo() }.show()
+    }
+
+    /** "Shu do'konga oxirgi narx" va "Yo'q ekan" tugmalari. */
+    private fun setupHints(productId: String) {
+        val storeId = vm.storeId ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val orders = ServiceLocator.history.storeOrders(storeId)
+            if (_binding == null) return@launch
+            CartChecker.lastPrice(orders, productId, vm.currency)?.let { (p, at) ->
+                binding.tvLastPrice.show(true)
+                binding.tvLastPrice.text = getString(R.string.item_last_price, requireContext().money(p, vm.currency), formatDate(java.util.Date(at)))
+            }
+            val usual = orders.any { o -> o.lines.any { it.productId == productId } }
+            binding.feedbackGroup.show(usual && !vm.exists)
+        }
+        val fb = { reason: String ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                ServiceLocator.history.addFeedback(storeId, productId, reason)
+                dismissAllowingStateLoss()
+            }
+            Unit
+        }
+        binding.chipNotNeeded.setOnClickListener { fb(FeedbackReason.NOT_NEEDED) }
+        binding.chipNoStock.setOnClickListener { fb(FeedbackReason.NO_STOCK) }
+        binding.chipLater.setOnClickListener { fb(FeedbackReason.LATER) }
     }
 
     override fun onDestroyView() {

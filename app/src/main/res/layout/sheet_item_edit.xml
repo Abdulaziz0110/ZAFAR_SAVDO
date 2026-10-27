@@ -44,6 +44,16 @@
         android:textColor="?attr/colorTertiary"
         android:visibility="gone" />
 
+    <!-- Shu do'konga shu tovar oxirgi qaysi narxda sotilgan (lokal tarixdan). -->
+    <TextView
+        android:id="@+id/tvLastPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorTertiary"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -134,6 +144,36 @@
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
         android:textColor="?attr/colorPrimary"
         android:textStyle="bold" />
+
+    <!-- "Yo'q ekan": taklif qilingan tovar bugun olinmasa sababi (taklif algoritmi inobatga oladi). -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/feedbackGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipNotNeeded"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fb_not_needed" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipNoStock"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fb_no_stock" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLater"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fb_later" />
+    </com.google.android.material.chip.ChipGroup>
 
     <LinearLayout
         android:layout_width="match_parent"

@@ -1,4 +1,4 @@
-# IMSOFT DOKON — versiya 2.2
+# IMSOFT DOKON — versiya 2.3
 
 Savdo agentlari uchun ilova: do'kon tanlash, tovarni savatchaga yig'ish, buyurtma va to'lovni serverga yuborish,
 do'kon qarzi va hisobotni ko'rish. Avvalgi ilovaning **butun ko'rinishi va ish tartibi qayta yozildi**;
@@ -12,7 +12,7 @@ Kotlin · MVVM · ViewBinding · Material 3 · Coroutines/Flow · minSdk 23 · t
 |---|---|
 | Buyurtma: menyu → oyna → 4 ta tab → har tovarda oyna → savatcha → to'lov oynasi | Bitta ekranda: do'kon → tovar qatorida **+ / −** → pastda jami → "Savatcha" → "Rasmiylashtirish" |
 | Har tovarda serverdan qoldiq so'rab kutish | **Server kutilmaydi** — tovar darhol qo'shiladi |
-| Qoldiqdan ortiq sotib bo'lmasdi | **Qoldiqsiz sotish**: qoldiq faqat ma'lumot (manfiy bo'lsa qizil) |
+| Qoldiqdan ortiq sotib bo'lmasdi | **Qoldiqsiz sotish**: qoldiq ko'rsatilmaydi va tekshirilmaydi |
 | Kirim narxidan arzon sotib bo'lmasdi | **Narx tekshirilmaydi** — istalgan narxda sotiladi |
 | "Келиш" belgisi narxni qulflab qo'ygan | **Naqd / Optom** (2 tur). **Narx hamma turda erkin o'zgartiriladi.** Kichik **"Kelgan narx"** almashtirgichi: yoqilsa hamma tovarda kelgan (kirim) narx ham ko'rinadi, o'chirilsa asl holat (saqlanmaydi, har safar o'chiq boshlanadi) |
 | Ma'lumot yangilashda eski ma'lumot avval o'chirilardi | Yangilash **bitta tranzaksiyada**: ulanish uzilsa eski ma'lumot saqlanadi |
@@ -37,13 +37,74 @@ Kotlin · MVVM · ViewBinding · Material 3 · Coroutines/Flow · minSdk 23 · t
 5. Windows Firewall'da 1433-port Tailscale tarmog'iga ham ruxsat berilgan bo'lishi kerak.
 **SQL Server'ni portini internetga to'g'ridan-to'g'ri ochmang** (port-forwarding): `sa` bilan xavfli.
 
+
+## 2.3 da nima yangi (faqat ilova; server, protokol va asosiy baza o'zgarmagan)
+
+### Ishonchli yuborish — best-effort dedup, KAFOLAT EMAS
+Buyurtma va to'lov avval telefonga yoziladi, keyin navbat orqali yuboriladi. Har birining kvitansiya kodi bor
+(buyurtma `B-0412`, to'lov `T-0013`) va holati **Navbat** ekranida ko'rinadi:
+
+| Holat | Ma'nosi |
+|---|---|
+| Telefonda saqlandi, navbatda | Hali yuborilmagan |
+| Yuborilmoqda… | Hozir yuborilyapti |
+| Internet kutilmoqda | Oldingi urinish serverga **yetib bormagani aniq**; o'zi qayta urinadi |
+| Yuborilgan bo'lishi mumkin — tekshirilmoqda | So'rov ketgan, javob kelmagan. Qayta yuborishdan **oldin** serverdan qidiriladi |
+| **Serverga yozildi** | `savollar` jadvaliga yozildi (server ID bor). Bu "ofis dasturi qayta ishladi" degani **emas** — buni ilova bila olmaydi va hech qachon ko'rsatmaydi |
+| **Tekshirish kerak** | Ilova o'zi xavfsiz hal qila olmadi. **O'zi yuborilmaydi.** Agent/ofis qaror qiladi |
+
+Qanday ishlaydi:
+* WorkManager: ilova yopiq bo'lsa ham internet paydo bo'lganda yuboriladi (batareya tejash kechiktirishi mumkin).
+* Har qator bir vaqtda faqat bitta ishchi tomonidan yuboriladi (bazada atomik "egallash" + vaqt cheklovi).
+* `INSERT` dan **oldin** telefonga "yuborish boshlandi" va shu agentning serverdagi oxirgi so'rov raqami (watermark) yoziladi.
+* Javob kelmasa yoki jarayon o'lsa — keyingi safar **avval faqat `SELECT` bilan qidiriladi** (shu agent, shu tur, aynan shu matn,
+  watermark'dan keyingilar). Topilsa — qayta yuborilmaydi. Tekshiruvning o'zi bajarilmasa — **hech narsa yuborilmaydi**.
+* Topilmasa: agar avval yozilgani aniq bo'lgan so'rov serverda hali turgan bo'lsa (server qatorlarni o'chirmaydi degani) —
+  qayta yuboriladi; aks holda **"Tekshirish kerak"**.
+* "Hozir yuborish" yuborishni yarim yo'lda to'xtatmaydi. Zaxiradan tiklangan navbat hech qachon o'zi yuborilmaydi.
+
+**Ochiq cheklov:** bu yondashuv *best-effort* (eng yaxshi urinish). Agar serverdagi ofis dasturi `savollar` qatorlarini
+o'chirsa/ko'chirsa yoki matnni o'zgartirib saqlasa, qidiruv adashishi mumkin — shuning uchun shubhali holatlar avtomatik emas,
+"Tekshirish kerak" ga tushadi. To'liq kafolat faqat server tomonida (UNIQUE kalit yoki API) bo'ladi — hozir server o'zgartirilmaydi.
+
+### Boshqa yangiliklar (har biri Sozlamalar ▸ Qo'shimcha imkoniyatlar'da o'chiriladi)
+* **Doimiy holat belgisi** (yuqorida): "Internet yo'q", "Server ko'rinmayapti", "Tekshirish kerak". Bosilsa — **Diagnostika**:
+  internet, VPN, do'kon/tashqi manzil porti, serverga kirish, telefon soati, navbat, batareya tejash.
+* **Qarz va to'lov alohida**: "Serverdan, 14:32" yoki "Oxirgi ma'lum qiymat"; hali yuborilmagan to'lovlar alohida qator
+  (qarzga qo'shilmaydi); "Butun qarz" tugmasi; 15 daqiqa ichida aynan shu summali to'lovdan ogohlantirish.
+* **Pul kiritish**: `1 250 000`, `1,250,000`, `1.250.000`, `12,5` to'g'ri o'qiladi; tushunarsiz summa jimgina 0 bo'lmaydi — xato ko'rsatiladi.
+* **Aqlli asosiy tugma** (pastda, joyi doim bir xil): "Do'kon tanlash" / "Odatdagini qo'sh (N)" / "Yakunlash" / "To'lov qabul qilish".
+  "Odatdagini qo'sh" hech qachon jimgina qo'shmaydi — nechtasi qo'shilgani va **Bekor qilish** chiqadi.
+* **Izohli taklif**: "Odatda ~7 kunda ~10 · oxirgisi 8 kun oldin"; tarix kam bo'lsa "Taxminiy". Tovar oynasida
+  "Kerak emas / Omborda yo'q / Keyinroq" — algoritm inobatga oladi. "Shu do'konga oxirgi narx" ko'rinadi.
+* **Savatcha tekshiruvchisi** (faqat ogohlantirish, ko'pi bilan 2 ta, hech narsani to'smaydi): odatdagidan keskin ko'p miqdor,
+  oxirgi narxdan keskin farq, odatda oladigan tovar yo'q. "Shunday qoldir".
+* **Bekor qilish (Undo)**: tozalash, o'chirish, miqdor/narx o'zgartirish, takrorlash, odatdagini qo'shish.
+* **Do'kon xulosa kartasi**: qarz (yoshi bilan), oxirgi buyurtma, vaqti kelgan tovarlar, "To'lov qabul qilish", katta "Boshlash".
+* **Ko'p savatcha**: "Kutishga qo'yish" va "Kutishda: N" (do'kon nomi katta va rangli).
+* **Kun yakuni** va **Lokal hisobot** (Hisobot ▸ Lokal): faqat shu telefondagi yozuvlar, aniq belgisi bilan; **CSV** eksport (Excel ochadi).
+* **Zaxira**: ixtiyoriy parol bilan shifrlash (AES-256), tiklashdan oldin ko'rib chiqish, versiya va yaxlitlik tekshiruvi,
+  tiklashdan oldin joriy bazaning nusxasi (xato bo'lsa qaytariladi). Yangi baza versiyasiga o'tishdan oldin ham avtomatik nusxa.
+* **KPI o'lchagich** (odatda o'chiq): buyurtmaga ketgan soniya va bosishlar, faqat telefonda.
+* **Server paroli** ekranda hech qachon ko'rsatilmaydi (Login ▸ Server sozlamalarida ham). Ilovaga o'rnatilgan parol
+  manba kodda oddiy matn emas. *Ochiq cheklov:* APK'ni tahlil qilgan odam uni baribir tiklay oladi — haqiqiy yechim server
+  tomonida cheklangan login (hozir mumkin emas).
+
+### Imzo (muhim)
+Telefondagi ilovani **ma'lumotni saqlagan holda yangilash** uchun yangi APK aynan o'sha kalit bilan imzolangan bo'lishi kerak.
+GitHub Actions o'z kaliti bilan imzolaydi — bunday APK ("CI-ONLY") eski ilova ustiga o'rnatilmaydi. O'z kalitingiz bilan:
+GitHub ▸ Settings ▸ Secrets ▸ Actions'ga qo'shing: `SIGNING_KEYSTORE_B64` (keystore fayli base64), `SIGNING_STORE_PASSWORD`,
+`SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD` (Android Studio debug kaliti uchun: `android` / `androiddebugkey` / `android`).
+Shunda artefakt "OWN-KEY" deb nomlanadi va CI logida sertifikat SHA-256 chiqadi. Keystore repoga hech qachon qo'shilmaydi.
+Yangilash, ma'lumotni saqlash va orqaga qaytish tartibi: `docs/EGA_QOLLANMA.md`.
+
 ## 2.1 da nima yangi
 
 **Tezlik**
 * Savatcha **xotirada** ishlaydi: "+" bosilganda natija zumda, bazaga yozish orqada. Avval har bosishda butun ro'yxat qayta hisoblanardi.
 * Ro'yxatda faqat **o'zgargan qator** yangilanadi, narx qatorda kerak bo'lganda hisoblanadi.
 * Buyurtma/to'lov **navbatga** tushadi (zumda), serverga yuborish orqada. Internet yo'q bo'lsa navbatda turadi va avtomatik qayta uriniladi.
-  Qayta urinishda server tekshiriladi, shuning uchun buyurtma **ikki marta tushmaydi**. Bosh sahifada "Yuborilmagan" kartasi va "Hozir yuborish" tugmasi.
+  Takroriy yuborishdan himoya bor (v2.3 da kuchaytirilgan), lekin bu **kafolat emas** — pastdagi "Ishonchli yuborish" bo'limiga qarang. Bosh sahifada "Yuborilmagan" kartasi va "Hozir yuborish" tugmasi.
 
 **Savdo ekrani**
 * Ixcham qatorlar (ko'proq tovar sig'adi), asosiysi katta (nom, narx, son), ikkinchi darajalisi kichik. **Qoldiq ko'rsatilmaydi.**
@@ -118,21 +179,21 @@ tools/gen_strings.py   lotin strings.xml dan kirill strings.xml ni avtomatik hos
 Matnlarni o'zgartirish: `tools/gen_strings.py` dagi `STRINGS` (lotin) ni tahrirlab `python3 tools/gen_strings.py` ishga tushiring;
 kirillni qo'lda to'g'rilash kerak bo'lsa `OVERRIDES` ga yozing.
 
-## Testlar (Phase 1, 1-qadam)
-* Ishga tushirish: `./gradlew testDebugUnitTest` (telefon va server kerak emas). GitHub Actions har push'da avtomatik bajaradi.
+## Testlar
+* Ishga tushirish: `./gradlew testDebugUnitTest` va `python3 tools/sql_smoke_test.py` (telefon va server kerak emas). GitHub Actions har push'da avtomatik bajaradi.
+* `OutboxEngineTest` — navbat yadrosi: 300 + 150 tasodifiy nosozlik ssenariysi (ulanish uzilishi, javob yo'qolishi, jarayon o'limi, qatorlarni o'chiradigan server), bir vaqtda ikki ishchi. Shart: 0 takroriy, 0 yo'qolgan; shubhalilar "Tekshirish kerak".
+* `BusinessRulesTest` (C8: arzon sotish to'smaydi, tekshiruvchi faqat ogohlantiradi; takliflar, lokal hisobot, CSV, parol manbada yo'q), `MoneyParseUserTest`, `BackupCryptoAndMatchTest`.
+* `tools/sql_smoke_test.py` — `HistoryDb.kt` dagi haqiqiy SQL bilan v2 → v3 migratsiya (qatorlar saqlanadi) va atomik egallash.
 * `ProtocolFixtureTest` — serverga ketadigan tur 1/3/4/5 matnlari `app/src/test/resources/fixtures/protocol.txt` bilan **bayt-bayt** solishtiriladi, 5 ta til/locale'da (uz-Latn, uz-Cyrl, ru, en, ar).
 * `MoneyFixtureTest` — pul/miqdor formatlari (`fixtures/money.txt`).
 * Test yiqilsa — protokol yoki pul formati o'zgargan. Ataylab bo'lmasa, o'zgarishni qaytaring. Fixture faylini faqat egasi roziligi bilan tahrirlang.
 * CI'dagi debug APK vaqtinchalik kalit bilan imzolanadi — **agent telefoniga o'rnatmang**.
 
 ## Tekshirilgan / tekshirilmagan (ochiq aytilgan)
-**Tekshirilgan** (bu muhitda): barcha Kotlin kodi Kotlin 2.0.21 kompilyatori bilan (asl APK'dagi AndroidX/Material baytkodi va
-Android 35 `android.jar` ga qarshi) **0 xato**; barcha XML yaxlit, resurs/matn havolalari to'liq; 42 ta mantiqiy tekshiruv
-(buyurtma/to'lov matn formatlari, narx hisoblash, pul/telefon formatlash) — asl ilova formatlariga mos.
-
-**Tekshirilmagan**: Gradle build (bu muhitda Maven yo'q edi), AAPT2 resurs bog'lash, R8 (`release` da `minify` yoqilgan,
-qoidalar `proguard-rules.pro`da), telefonda haqiqiy ishlash va haqiqiy server bilan buyurtma/to'lov yuborish.
-Birinchi build'da kichik xato chiqsa, xato matnini yuboring.
+Batafsil: `docs/TEST_REPORT.md`. Qisqasi — **tekshirilgan**: protokol fixture'lari (bayt-bayt, 5 til), navbat yadrosi
+(450 nosozlik ssenariysi, 1038 jarayon o'limi — 0 takroriy), pul, biznes qoidalari, zaxira shifri, SQL migratsiyasi;
+butun Kotlin kodi kompilyatsiyasi (Android 35 API'ga qarshi). **Tekshirilmagan**: haqiqiy telefon, haqiqiy server,
+haqiqiy Gradle/AAPT2/R8 build (GitHub Actions'da birinchi ishga tushishda ko'rinadi).
 
 ## Tavsiya (server tomoni)
 Telefon SQL Server'ga **to'g'ridan-to'g'ri** ulanadi (jTDS). Bu arxitektura o'zgarmadi (server tomonda API kerak bo'lgani uchun),

@@ -19,6 +19,53 @@ object Money {
         return s.toDoubleOrNull() ?: 0.0
     }
 
+    /**
+     * Foydalanuvchi YOZGAN summa/miqdor (v2.3). Eski [parse] dan farqi: minglik ajratgichlarni tushunadi va
+     * tushunmagan matnni jimgina 0 qilmaydi — null qaytaradi (ekranda xato ko'rsatiladi).
+     *   "1 250 000" "1,250,000" "1.250.000" "1'250'000" -> 1250000
+     *   "12,5" "12.5" -> 12.5      "1 250 000,50" "1.250.000,50" "1,250,000.50" -> 1250000.5
+     *   "" -> 0.0 (bo'sh maydon = 0)   "abc", "1,2,3.4.5" -> null
+     * Bitta vergul yoki bitta nuqta doim o'nlik ajratgich (eski ilova bilan bir xil: "1,250" = 1.25).
+     */
+    fun parseUser(raw: String?): Double? {
+        if (raw == null) return 0.0
+        var s = raw.filter { !it.isWhitespace() && it != '\u00A0' && it != '\u202F' && it != '\'' && it != '’' }
+        if (s.isEmpty()) return 0.0
+        var negative = false
+        if (s.startsWith("-")) { negative = true; s = s.substring(1) }
+        if (s.isEmpty() || s.any { !(it.isDigit() && it.code < 128) && it != ',' && it != '.' }) return null
+        val commas = s.count { it == ',' }
+        val dots = s.count { it == '.' }
+        val normalized: String = when {
+            commas == 0 && dots == 0 -> s
+            commas > 0 && dots > 0 -> {
+                // Oxirgisi o'nlik ajratgich, ikkinchisi faqat minglik bo'lishi mumkin.
+                val dec = if (s.lastIndexOf(',') > s.lastIndexOf('.')) ',' else '.'
+                val th = if (dec == ',') '.' else ','
+                if (s.count { it == dec } != 1) return null
+                val intPart = s.substringBefore(dec)
+                if (!groupsOk(intPart, th)) return null
+                intPart.replace(th.toString(), "") + "." + s.substringAfter(dec)
+            }
+            commas > 1 -> if (groupsOk(s, ',')) s.replace(",", "") else return null
+            dots > 1 -> if (groupsOk(s, '.')) s.replace(".", "") else return null
+            commas == 1 -> s.replace(',', '.')
+            else -> s
+        }
+        if (normalized.startsWith(".") || normalized.endsWith(".")) return null
+        val v = normalized.toDoubleOrNull() ?: return null
+        if (v.isNaN() || v.isInfinite()) return null
+        return if (negative) -v else v
+    }
+
+    /** "1,250,000" kabi guruhlar: birinchisi 1–3 raqam, qolganlari aynan 3 tadan. */
+    private fun groupsOk(s: String, sep: Char): Boolean {
+        val parts = s.split(sep)
+        if (parts.size < 2) return parts.firstOrNull()?.isNotEmpty() == true
+        if (parts[0].isEmpty() || parts[0].length > 3) return false
+        return parts.drop(1).all { it.length == 3 }
+    }
+
     fun round2(v: Double): Double =
         if (v.isNaN() || v.isInfinite()) 0.0 else BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).toDouble()
 

@@ -1,10 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
+
+    <!-- Doimiy holat belgisi: Offline / Server ko'rinmayapti / Tekshirish kerak. Bosilsa diagnostika ochiladi. -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorErrorContainer"
+        android:drawablePadding="8dp"
+        android:gravity="center_vertical"
+        android:minHeight="36dp"
+        android:paddingStart="16dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="6dp"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/colorOnErrorContainer"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_cloud_off"
+        app:drawableTint="?attr/colorOnErrorContainer" />
 
     <FrameLayout
         android:id="@+id/container"
@@ -16,6 +36,5 @@
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:menu="@menu/bottom_nav"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+        app:menu="@menu/bottom_nav" />
 </LinearLayout>

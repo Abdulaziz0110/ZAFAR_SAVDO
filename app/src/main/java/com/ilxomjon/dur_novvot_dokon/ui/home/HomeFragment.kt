@@ -17,6 +17,8 @@ import com.ilxomjon.dur_novvot_dokon.ui.launchOnStarted
 import com.ilxomjon.dur_novvot_dokon.ui.money
 import com.ilxomjon.dur_novvot_dokon.ui.navigator
 import com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsFragment
+import com.ilxomjon.dur_novvot_dokon.ui.outbox.OutboxFragment
+import com.ilxomjon.dur_novvot_dokon.ui.report.DayEndFragment
 import com.ilxomjon.dur_novvot_dokon.ui.show
 import com.ilxomjon.dur_novvot_dokon.ui.showInvisible
 import com.ilxomjon.dur_novvot_dokon.ui.viewModel
@@ -43,6 +45,8 @@ class HomeFragment : Fragment() {
         }
         binding.btnLoad.setOnClickListener { vm.sync() }
         binding.btnRetry.setOnClickListener { vm.retryPending() }
+        binding.btnQueue.setOnClickListener { navigator().push(OutboxFragment()) }
+        binding.btnDayEnd.setOnClickListener { navigator().push(DayEndFragment()) }
         binding.cardSale.setOnClickListener { startDeal(DealMode.SALE) }
         binding.cardReturn.setOnClickListener { startDeal(DealMode.RETURN) }
         binding.cardPayment.setOnClickListener { navigator().openTab(R.id.nav_payment) }
@@ -92,7 +96,8 @@ class HomeFragment : Fragment() {
         binding.tvTodayPayments.text = getString(R.string.home_today_payments, s.today.payments, ctx.money(s.today.paymentsSum, Currency.SOM))
         binding.cardPending.show(s.pending > 0)
         binding.tvPendingTitle.text = getString(R.string.home_pending_title, s.pending)
-        binding.tvPendingHint.setText(R.string.home_pending_hint)
+        binding.tvPendingHint.text = if (s.needsCheck > 0) getString(R.string.home_pending_needs_check, s.needsCheck)
+        else getString(R.string.home_pending_hint)
         binding.toolbar.menu.findItem(R.id.action_sync)?.isEnabled = !s.syncing
     }
 

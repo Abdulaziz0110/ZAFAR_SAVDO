@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ilxomjon.dur_novvot_dokon.data.repo.HistoryRepository
 import com.ilxomjon.dur_novvot_dokon.domain.SentOrder
 import com.ilxomjon.dur_novvot_dokon.domain.SentPayment
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +15,8 @@ data class HistoryState(
     val orders: List<SentOrder> = emptyList(),
     val payments: List<SentPayment> = emptyList(),
     val loaded: Boolean = false,
+    /** outbox_id -> holat. */
+    val states: Map<Long, OutboxState> = emptyMap(),
 )
 
 class HistoryViewModel(private val history: HistoryRepository) : ViewModel() {
@@ -22,7 +25,9 @@ class HistoryViewModel(private val history: HistoryRepository) : ViewModel() {
 
     fun refresh() {
         viewModelScope.launch {
-            _state.value = HistoryState(history.orders(), history.payments(), loaded = true)
+            val o = history.orders(); val p = history.payments()
+            val st = history.states((o.map { it.outboxId } + p.map { it.outboxId }).filter { it > 0 })
+            _state.value = HistoryState(o, p, loaded = true, states = st)
         }
     }
 }

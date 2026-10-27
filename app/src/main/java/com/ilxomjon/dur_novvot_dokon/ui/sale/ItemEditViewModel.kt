@@ -26,6 +26,11 @@ class ItemEditViewModel(
         ?: 0.0
     val costPrice: Double = product?.let { Pricing.costPrice(it, d.currency, rate) } ?: 0.0
 
+    val storeId: String? = d.store?.id
+
+    /** "Bekor qilish" uchun: o'zgarishdan oldingi savatcha. */
+    val before = d.lines
+
     fun save(qty: Double, price: Double) {
         product?.let { draft.setLine(it, qty, price) }
     }
@@ -33,4 +38,6 @@ class ItemEditViewModel(
     fun remove() {
         product?.let { draft.removeLine(it.id) }
     }
+
+    fun undo() = draft.replaceLines(before)
 }

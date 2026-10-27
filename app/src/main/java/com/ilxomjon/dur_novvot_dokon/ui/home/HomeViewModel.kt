@@ -43,6 +43,7 @@ data class HomeState(
     val draftCurrency: Currency = Currency.SOM,
     val today: TodayStats = TodayStats(),
     val pending: Int = 0,
+    val needsCheck: Int = 0,
 )
 
 sealed interface HomeEvent {
@@ -61,13 +62,13 @@ class HomeViewModel(
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 4)
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
-    val state: StateFlow<HomeState> = combine(catalog.state, draft.state, today, outbox.pending) { c, d, t, p ->
+    val state: StateFlow<HomeState> = combine(catalog.state, draft.state, today, outbox.counts) { c, d, t, counts ->
         HomeState(
             agentName = c.agent?.fullName.orEmpty(), phone = c.agent?.phone.orEmpty(),
             rate = c.rate, rateText = c.rateText, lastSyncAt = c.lastSyncAt, syncing = c.syncing,
             loaded = c.loaded, hasProducts = c.hasProducts,
             draftStore = d.store?.name, draftCount = d.itemCount, draftTotal = d.total, draftCurrency = d.currency,
-            today = t, pending = p,
+            today = t, pending = counts.unsent, needsCheck = counts.needsCheck,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
 
@@ -83,6 +84,7 @@ class HomeViewModel(
         viewModelScope.launch {
             outbox.refreshCount()
             if (outbox.pending.value > 0) outbox.kick()
+            refreshToday()
         }
     }
 

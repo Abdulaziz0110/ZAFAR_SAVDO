@@ -15,7 +15,11 @@ import com.ilxomjon.dur_novvot_dokon.ui.login.LoginFragment
 import com.ilxomjon.dur_novvot_dokon.ui.payment.PaymentFragment
 import com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment
 import com.ilxomjon.dur_novvot_dokon.ui.sale.SaleFragment
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.ilxomjon.dur_novvot_dokon.ui.diag.DiagnosticsSheet
 import kotlinx.coroutines.launch
 
 /** Bitta Activity: pastki navigatsiya (5 bo'lim) + ustiga ochiladigan ekranlar. */
@@ -40,6 +44,13 @@ class MainActivity : AppCompatActivity(), Navigator {
             override fun handleOnBackPressed() = handleBack()
         })
 
+        binding.tvStatus.setOnClickListener { DiagnosticsSheet.show(supportFragmentManager) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(ServiceLocator.network.state, ServiceLocator.outbox.counts, ServiceLocator.outbox.lastError) { n, c, e -> Triple(n, c, e) }
+                    .collect { (n, c, e) -> renderStatus(n.online, c.unsent, c.needsCheck, e != null) }
+            }
+        }
         lifecycleScope.launch {
             val state = ServiceLocator.catalog.state.first { it.loaded }
             loggedIn = state.agent != null
@@ -55,6 +66,24 @@ class MainActivity : AppCompatActivity(), Navigator {
         super.onResume()
         if (ServiceLocator.appPrefs.keepScreenOn) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Savatchadagi oxirgi o'zgarishlar bazaga yozilib bo'linsin (ilova fonga ketganda jarayon o'ldirilishi mumkin).
+        ServiceLocator.appScope.launch { runCatching { ServiceLocator.draft.flush() } }
+    }
+
+    /** Doimiy holat belgisi: faqat muammo bo'lganda ko'rinadi. "Tasdiqlandi" degan so'z yo'q. */
+    private fun renderStatus(online: Boolean, unsent: Int, needsCheck: Int, lastFailed: Boolean) {
+        val text = when {
+            !online -> if (unsent > 0) getString(R.string.status_offline_n, unsent) else getString(R.string.status_offline)
+            needsCheck > 0 -> getString(R.string.status_needs_check, needsCheck)
+            lastFailed && unsent > 0 -> getString(R.string.status_server_n, unsent)
+            else -> null
+        }
+        binding.tvStatus.text = text
+        binding.tvStatus.visibility = if (text != null && loggedIn) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun startTabs() {

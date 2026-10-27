@@ -6,6 +6,9 @@ import com.ilxomjon.dur_novvot_dokon.data.local.RawProduct
 import com.ilxomjon.dur_novvot_dokon.data.local.RawStore
 import com.ilxomjon.dur_novvot_dokon.domain.Group
 import com.ilxomjon.dur_novvot_dokon.domain.ServerConfig
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.NotSentException
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxSink
+import com.ilxomjon.dur_novvot_dokon.domain.outbox.RejectedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -14,7 +17,7 @@ import java.sql.ResultSet
 import java.sql.SQLException
 
 /** Serverdagi jadvallar bilan ishlash. Barcha so'rovlar PreparedStatement orqali (SQL injection yo'q). */
-class ServerApi(private val server: SqlServer) {
+class ServerApi(private val server: SqlServer) : OutboxSink {
 
     /** Ulanishni tekshiradi va qaysi manzil orqali ulanganini qaytaradi. */
     suspend fun testConnection(cfg: ServerConfig): String {
@@ -64,13 +67,6 @@ class ServerApi(private val server: SqlServer) {
         }
     }
 
-    /** Buyurtmani serverga yozadi (javob kutilmaydi, avvalgi ilovadagidek). */
-    suspend fun sendOrder(agentId: String, payload: String, checkDuplicate: Boolean = false) =
-        sendRequest(agentId, Protocol.TYPE_ORDER, payload, checkDuplicate)
-
-    suspend fun sendPayment(agentId: String, payload: String, checkDuplicate: Boolean = false) =
-        sendRequest(agentId, Protocol.TYPE_PAYMENT, payload, checkDuplicate)
-
     /** Do'kon qarzini so'raydi: javob "so'm:dollar". */
     suspend fun fetchDebt(agentId: String, storeId: String): Pair<String, String> {
         val answer = request(agentId, Protocol.TYPE_DEBT, storeId, timeoutMs = 20_000)
@@ -80,29 +76,101 @@ class ServerApi(private val server: SqlServer) {
     suspend fun fetchReport(agentId: String, payload: String): String =
         Protocol.reportHtml(request(agentId, Protocol.TYPE_REPORT, payload, timeoutMs = 60_000))
 
-    /**
-     * [checkDuplicate] - qayta urinishda: oldingi urinish serverga yetib borgan, faqat javob yo'qolgan bo'lishi mumkin.
-     * Shunda oxirgi so'rovlar orasida aynan shu matn bor-yo'qligi tekshiriladi (buyurtma ikki marta tushmasligi uchun).
-     */
-    private suspend fun sendRequest(agentId: String, type: String, payload: String, checkDuplicate: Boolean) {
-        server.withConnection { conn ->
-            withContext(Dispatchers.IO) {
-                wrap {
-                    if (!(checkDuplicate && alreadySent(conn, agentId, type, payload))) insertRequest(conn, agentId, type, payload)
-                }
-            }
+    /** Server vaqti (diagnostika va qurilma soatini tekshirish uchun). Faqat o'qish. */
+    suspend fun serverTimeMillis(): Long = server.withConnection { conn ->
+        withContext(Dispatchers.IO) {
+            wrap { conn.createStatement().use { st -> st.executeQuery("SELECT GETDATE()").use { rs -> rs.next(); rs.getTimestamp(1).time } } }
         }
     }
 
-    private fun alreadySent(conn: Connection, userId: String, type: String, payload: String): Boolean {
-        conn.prepareStatement("SELECT TOP 30 sorov_izox FROM savollar WHERE user_id = ? AND sorov_turi = ? ORDER BY ID DESC").use { ps ->
+    // ---------------- OutboxSink: navbat yadrosi uchun (faqat mavjud savollar jadvali) ----------------
+
+    override suspend fun maxRequestId(userId: String): Long = sinkRead { conn ->
+        conn.prepareStatement("SELECT ISNULL(MAX(ID), 0) FROM savollar WHERE user_id = ?").use { ps ->
             ps.setString(1, userId)
-            ps.setString(2, type)
+            ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else 0L }
+        }
+    }
+
+    override suspend fun insert(userId: String, type: String, payload: String): String {
+        var started = false
+        try {
+            return server.withConnection { conn ->
+                withContext(Dispatchers.IO) {
+                    started = true
+                    insertRequest(conn, userId, type, payload)
+                }
+            }
+        } catch (e: ServerException) {
+            // Ulanishning o'zi ochilmadi -> so'rov serverga yetib bormagani aniq.
+            if (!started) throw NotSentException(e.message, e)
+            throw e
+        } catch (e: SQLException) {
+            if (!started) throw NotSentException(e.message, e)
+            if (isRejected(e)) throw RejectedException(e.message, e)
+            throw e
+        }
+    }
+
+    override suspend fun find(userId: String, type: String, payload: String, afterId: Long?): String? = sinkRead { conn ->
+        if (afterId != null) {
+            scan(conn, "SELECT TOP 5000 ID, sorov_izox FROM savollar WHERE user_id = ? AND sorov_turi = ? AND ID > ? ORDER BY ID", userId, type, afterId, payload)
+        } else {
+            val exact = try {
+                conn.prepareStatement("SELECT TOP 1 ID FROM savollar WHERE user_id = ? AND sorov_turi = ? AND sorov_izox = ? ORDER BY ID DESC").use { ps ->
+                    ps.setString(1, userId); ps.setString(2, type); ps.setString(3, payload)
+                    ps.executeQuery().use { rs -> if (rs.next()) rs.getString(1) else null }
+                }
+            } catch (e: SQLException) {
+                null // ustun turi '=' ni qo'llamasa (masalan text) — pastdagi qidiruv
+            }
+            exact ?: scan(conn, "SELECT TOP 2000 ID, sorov_izox FROM savollar WHERE user_id = ? AND sorov_turi = ? ORDER BY ID DESC", userId, type, null, payload)
+        }
+    }
+
+    override suspend fun exists(requestId: String): Boolean = sinkRead { conn ->
+        conn.prepareStatement("SELECT 1 FROM savollar WHERE ID = ?").use { ps ->
+            ps.setString(1, requestId)
+            ps.executeQuery().use { it.next() }
+        }
+    }
+
+    private fun scan(conn: Connection, sql: String, userId: String, type: String, afterId: Long?, payload: String): String? {
+        conn.prepareStatement(sql).use { ps ->
+            ps.setString(1, userId); ps.setString(2, type)
+            if (afterId != null) ps.setLong(3, afterId)
             ps.executeQuery().use { rs ->
-                while (rs.next()) if (rs.getString(1) == payload) return true
+                while (rs.next()) {
+                    val text = rs.getString(2) ?: continue
+                    if (PayloadMatch.same(payload, text)) return rs.getString(1)
+                }
             }
         }
-        return false
+        return null
+    }
+
+    /** Faqat o'qish: ulanish ochilmasa [NotSentException] (ishchi navbatni to'xtatadi), boshqa xatolar o'zicha. */
+    private suspend fun <T> sinkRead(block: (Connection) -> T): T {
+        var opened = false
+        try {
+            return server.withConnection { conn -> opened = true; withContext(Dispatchers.IO) { block(conn) } }
+        } catch (e: ServerException) {
+            if (!opened) throw NotSentException(e.message, e)
+            throw e
+        }
+    }
+
+    /**
+     * Server so'rovni bajarmasdan rad etdimi (matn uzunligi, huquq va h.k.)? Aloqa uzilishi (08xxx, I/O, timeout) — rad etish EMAS:
+     * u holda INSERT bajarilgan bo'lishi mumkin.
+     */
+    private fun isRejected(e: SQLException): Boolean {
+        val state = e.sqlState.orEmpty()
+        val msg = e.message.orEmpty()
+        if (state.startsWith("08") || state.startsWith("HYT") || msg.contains("I/O Error", true) || msg.contains("timed out", true) ||
+            msg.contains("reset", true) || msg.contains("closed", true)
+        ) return false
+        return e.errorCode != 0
     }
 
     private suspend fun request(agentId: String, type: String, payload: String, timeoutMs: Long): String =

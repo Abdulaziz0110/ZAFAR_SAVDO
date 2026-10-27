@@ -27,6 +27,11 @@ class LocalDb(context: Context) : SQLiteOpenHelper(context.applicationContext, N
         addColumnIfMissing(db, "tolov", "tur", "VARCHAR DEFAULT 0")
         addColumnIfMissing(db, "tovar", "kirim_narxi_som", "VARCHAR DEFAULT 0")
         addColumnIfMissing(db, "tovar", "kirim_narxi_val", "VARCHAR DEFAULT 0")
+        // v2.3 (faqat qo'shimcha jadval): kutishga qo'yilgan savatchalar. Eski jadvallarga tegilmaydi.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS draft_cart (id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT, store_name TEXT, region_id TEXT, " +
+                "mode TEXT, currency TEXT, price_type TEXT, created INTEGER, lines_json TEXT)"
+        )
     }
 
     private fun addColumnIfMissing(db: SQLiteDatabase, table: String, column: String, definition: String) {

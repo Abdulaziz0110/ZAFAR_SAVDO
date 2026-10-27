@@ -102,7 +102,7 @@ data class ServerConfig(
 
     companion object {
         /** Oldindan belgilangan server (Sozlamalarda o'zgartirish mumkin). */
-        val DEFAULT = ServerConfig(host = "192.168.1.200", database = "Savdo", login = "sa", password = "\$balans123")
+        val DEFAULT = ServerConfig(host = "192.168.1.200", database = "Savdo", login = "sa", password = BuiltIn.password())
     }
 }
 
@@ -120,8 +120,10 @@ data class SentOrder(
     val discount: Double,
     val paid: Double,
     val lines: List<SentLine>,
-    /** true - hali serverga yuborilmagan (navbatda). */
+    /** true - hali serverga yozilmagan (navbatda yoki tekshirish kerak). */
     val pending: Boolean = false,
+    /** Navbat qatori (kvitansiya kodi va holat uchun). 0 - eski yozuv. */
+    val outboxId: Long = 0,
 )
 
 data class SentLine(val name: String, val qty: Double, val price: Double, val productId: String = "")
@@ -136,6 +138,24 @@ data class SentPayment(
     val click: Double,
     val note: String,
     val pending: Boolean = false,
+    val outboxId: Long = 0,
 ) {
     val total: Double get() = cash + transfer + click
 }
+
+/**
+ * Ilovaga o'rnatilgan server paroli. Matn ko'rinishida saqlanmaydi (APK ichida oddiy qidiruvda topilmaydi) va
+ * ekranga hech qachon chiqarilmaydi. DIQQAT: bu kuchli himoya EMAS — APK'ni tahlil qilgan odam baribir tiklay oladi.
+ * Haqiqiy yechim serverda alohida cheklangan login (server tomoni o'zgarishi kerak, hozircha mumkin emas).
+ */
+internal object BuiltIn {
+    private val K = byteArrayOf(0x5A, 0x13, 0x7C, 0x29, 0x44, 0x61, 0x0E, 0x35, 0x72)
+    private val D = byteArrayOf(0x7E, 0x71, 0x1D, 0x45, 0x25, 0x0F, 0x7D, 0x04, 0x40, 0x69)
+
+    fun password(): String {
+        val out = CharArray(D.size)
+        for (i in D.indices) out[i] = ((D[i].toInt() xor K[i % K.size].toInt()) and 0xFF).toChar()
+        return String(out)
+    }
+}
+

@@ -69,23 +69,25 @@ class FinishSheet : BottomSheetDialogFragment() {
 
         binding.edtDiscountPercent.onTextChanged {
             if (updating) return@onTextChanged
-            val amount = Pricing.discountFromPercent(vm.state.value.total, Money.parse(it))
-            vm.setDiscount(amount)
+            val pct = Money.parseUser(it)
+            val amount = Pricing.discountFromPercent(vm.state.value.total, pct ?: 0.0)
             updating = true
             binding.edtDiscountAmount.setText(if (amount > 0.0) Money.plain(amount) else "")
             updating = false
+            pushInputs(pctInvalid = pct == null)
         }
         binding.edtDiscountAmount.onTextChanged {
             if (updating) return@onTextChanged
-            val amount = Money.parse(it)
-            vm.setDiscount(amount)
+            val amount = Money.parseUser(it)
             val total = vm.state.value.total
             updating = true
-            binding.edtDiscountPercent.setText(if (amount > 0.0 && total > 0.0) Money.plain(amount / total * 100.0) else "")
+            binding.edtDiscountPercent.setText(if (amount != null && amount > 0.0 && total > 0.0) Money.plain(amount / total * 100.0) else "")
             updating = false
+            pushInputs()
         }
-        binding.edtCash.onTextChanged { if (!updating) vm.setCash(Money.parse(it)) }
-        binding.edtCard.onTextChanged { if (!updating) vm.setCard(Money.parse(it)) }
+        binding.edtCash.onTextChanged { if (!updating) pushInputs() }
+        binding.edtCard.onTextChanged { if (!updating) pushInputs() }
+        binding.btnKeepAsIs.setOnClickListener { vm.keepAsIs() }
         binding.btnFillAll.setOnClickListener {
             vm.fillAll()
             val s = vm.state.value
@@ -105,6 +107,14 @@ class FinishSheet : BottomSheetDialogFragment() {
         binding.btnSend.setOnClickListener { onSend() }
 
         launchOnStarted { vm.state.collect { render(it) } }
+    }
+
+    /** Hamma maydonlarni bir yo'la o'qiydi: tushunarsiz matn jimgina 0 bo'lmaydi. */
+    private fun pushInputs(pctInvalid: Boolean = false) {
+        val d = Money.parseUser(binding.edtDiscountAmount.text?.toString())
+        val c = Money.parseUser(binding.edtCash.text?.toString())
+        val k = Money.parseUser(binding.edtCard.text?.toString())
+        vm.setInputs(if (pctInvalid) null else d, c, k)
     }
 
     /** To'lanadigan summani butun mingga (so'm) yoki butun dollarga tushiradi, farqni chegirma qiladi. */
@@ -141,10 +151,14 @@ class FinishSheet : BottomSheetDialogFragment() {
         binding.btnSend.isEnabled = !s.sending
         binding.btnFillAll.isEnabled = !s.sending
         val err = s.error
-        binding.tvError.show(err != null)
+        binding.tvError.show(err != null || s.invalid)
         if (err != null) binding.tvError.text = getString(R.string.finish_failed) + "\n" + ctx.describeError(err)
+        else if (s.invalid) binding.tvError.setText(R.string.amount_invalid)
+        binding.btnSend.isEnabled = !s.sending && !s.invalid && !s.sent
+        binding.warnBox.show(s.warnings.isNotEmpty())
+        if (s.warnings.isNotEmpty()) binding.tvWarnings.text = CheckerSupport.text(ctx, ServiceLocator.draft.state.value, s.warnings)
         if (s.sent) {
-            Toast.makeText(ctx, R.string.finish_queued, Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, getString(R.string.finish_queued_receipt, s.receipt), Toast.LENGTH_LONG).show()
             val nav = navigator()
             dismissAllowingStateLoss()
             nav.openTab(R.id.nav_home)
