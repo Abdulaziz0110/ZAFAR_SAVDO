@@ -12,6 +12,9 @@ import kotlinx.coroutines.withContext
 import uz.imsoft.shared.CloudDb
 import uz.imsoft.shared.JObj
 import uz.imsoft.shared.Json
+import uz.imsoft.shared.OrderCodec
+import uz.imsoft.shared.OrderLine
+import uz.imsoft.shared.OrderRequest
 import uz.imsoft.shared.report.ClientSnapshot
 import uz.imsoft.shared.report.SnapshotCodec
 import java.io.File
@@ -72,7 +75,8 @@ class SnapshotRepository(private val context: Context, private val prefs: MijozP
     }
 
     /**
-     * [askFresh] — 1-ilovadan narx/qarzni serverdan yangilashni so'rash (u 15 daqiqagacha javob beradi).
+     * 1-ilova bulutga qo'ygan ENG SO'NGGI ma'lumotni darhol oladi (1-ilovada Excel yuklanganda u darhol yuboriladi).
+     * [askFresh] — qo'shimcha ravishda 1-ilovadan narx/qarzni serverdan yangilashni so'raydi (server ko'ringanda bajaradi).
      */
     suspend fun refresh(askFresh: Boolean): RefreshResult {
         val link = prefs.link ?: return RefreshResult.NOT_LINKED
@@ -125,5 +129,26 @@ class SnapshotRepository(private val context: Context, private val prefs: MijozP
             _state.update { it.copy(loading = false, error = e) }
             throw e
         }
+    }
+
+    // ---------------- buyurtma (v2.5) ----------------
+
+    /** "Qayta buyurtma" ni 1-ilovaga yuboradi. Bu savdo emas — 1-ilova egasi ko'rib, savatchaga oladi. */
+    suspend fun sendOrder(note: String, source: String, lines: List<OrderLine>): String = withContext(Dispatchers.IO) {
+        val link = prefs.link ?: throw IllegalStateException("not_linked")
+        val id = OrderCodec.newId()
+        CloudDb(link.dbUrl).put("s/${link.readKey}/ord/$id", OrderCodec.toCloud(note, source, lines))
+        prefs.myOrders = (prefs.myOrders.split('|').filter { it.isNotEmpty() } + id).takeLast(50).joinToString("|")
+        id
+    }
+
+    /** Shu telefondan yuborilgan buyurtmalar va holati (yangisi birinchi). */
+    suspend fun myOrders(): List<OrderRequest> = withContext(Dispatchers.IO) {
+        val link = prefs.link ?: return@withContext emptyList()
+        val mine = prefs.myOrders.split('|').filter { it.isNotEmpty() }.toSet()
+        if (mine.isEmpty()) return@withContext emptyList()
+        @Suppress("UNCHECKED_CAST")
+        val raw = CloudDb(link.dbUrl).get("s/${link.readKey}/ord") as? Map<String, Any?> ?: emptyMap()
+        raw.filterKeys { it in mine }.mapNotNull { (k, v) -> OrderCodec.fromCloud(k, v) }.sortedByDescending { it.at }
     }
 }

@@ -16,7 +16,7 @@
         app:title="@string/report_title" />
 
     <com.google.android.material.card.MaterialCardView
-        style="@style/Widget.Material3.CardView.Filled"
+        style="@style/Widget.App.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
@@ -39,7 +39,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSourceServer"
-                    style="?attr/materialButtonOutlinedStyle"
+                    style="@style/Widget.App.Segment"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"
@@ -47,7 +47,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSourceLocal"
-                    style="?attr/materialButtonOutlinedStyle"
+                    style="@style/Widget.App.Segment"
                     android:layout_width="0dp"
                     android:layout_height="48dp"
                     android:layout_weight="1"

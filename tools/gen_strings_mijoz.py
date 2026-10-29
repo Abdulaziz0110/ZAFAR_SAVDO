@@ -6,7 +6,7 @@ from gen_strings import to_cyr, lat_text, write  # noqa: E402
 
 STRINGS = {
  'app_name': '{{IMSOFT}} Mijoz', 'unit_som': "so'm", 'ok': 'OK', 'cancel': 'Bekor qilish', 'close': 'Yopish',
- 'nav_home': 'Bosh sahifa', 'nav_prices': 'Narxlar', 'nav_report': 'Hisobot', 'nav_printer': 'Printer', 'nav_settings': 'Sozlamalar',
+ 'nav_home': 'Bosh sahifa', 'nav_prices': 'Narxlar', 'nav_report': 'Tarix', 'nav_printer': 'Printer', 'nav_settings': 'Sozlamalar',
  'err_denied': "Ruxsat yo'q: ulanish kodi eskirgan bo'lishi mumkin. 1-ilovadan yangi kod oling.",
  'err_net': "Internetga ulanib bo'lmadi. Telefondagi oxirgi ma'lumot ko'rsatilmoqda.",
  'err_too_new': "Ma'lumot yangiroq versiyadan. 2-ilovani yangilang.",
@@ -29,7 +29,7 @@ STRINGS = {
  'home_report_balance': "1C hisoboti bo'yicha (%1$s oxiriga): %2$s",
  'home_not_linked': 'Ulanmagan',
  'home_sync': "1-ilova yuborgan: %1$s · telefonga olingan: %2$s",
- 'home_request_pending': "Yangilash so'raldi (%1$s). 1-ilova 15 daqiqagacha javob beradi — u yoqilgan va internetda bo'lishi kerak.",
+ 'home_request_pending': "Narx va qarzni serverdan yangilash ham so'raldi (%1$s) — 1-ilova server ko'ringanda (do'kon tarmog'ida) bajaradi.",
  'home_no_reports': "Hisobotlar hali import qilinmagan",
  'home_coverage': 'Hisobot davrlari: %1$s',
  'sum_bought': 'Olindi: %1$s (%2$d ta)',
@@ -116,7 +116,7 @@ STRINGS = {
  'st_link': 'Ulanish',
  'st_language': 'Til', 'lang_lat': 'Lotin', 'lang_cyr': 'Kirill',
  'st_theme': 'Mavzu', 'theme_system': 'Tizim', 'theme_light': "Yorug'", 'theme_dark': "Qorong'i",
- 'st_scale': "Ekran o'lchami", 'scale_small': 'Kichik', 'scale_compact': 'Ixcham', 'scale_normal': 'Odatiy', 'scale_large': 'Katta',
+ 'st_scale': "Ekran o'lchami", 'scale_small': '90%', 'scale_compact': '92%', 'scale_normal': '100%', 'scale_large': '110%', 'scale_xlarge': '120%',
  'st_font': 'Shrift', 'font_small': '90%', 'font_normal': '100%', 'font_large': '115%',
  'st_data': "Ma'lumot",
  'st_auto_refresh': "Ilova ochilganda o'zi yangilansin",
@@ -125,10 +125,50 @@ STRINGS = {
  'st_printer_section': "\"Printer\" bo'limini ko'rsatish",
  'st_printer_hint': "Faqat printer ulangan telefonda yoqing. Kompyuterda 1C chop etgan cheklar shu telefonga keladi.",
  'st_skip_old': "Shuncha kundan eski cheklar chiqarilmasin:",
- 'skip_none': 'Hammasi chiqsin', 'skip_1': '1 kun', 'skip_3': '3 kun', 'skip_7': '7 kun',
+ 'skip_none': 'Hammasi', 'skip_1': '1 kun', 'skip_3': '3 kun', 'skip_7': '7 kun',
  'st_about': 'Ilova haqida',
  'st_about_text': "{{IMSOFT}} Mijoz %1$s. Ma'lumot 1-ilovadan (IMSOFT DOKON) keladi; bu ilova hech narsani o'zgartirmaydi va savdo qilmaydi. Kelgan narxlar ko'rsatilmaydi.",
 }
+
+STRINGS.update({
+ # v2.5
+ 'home_updated_at': "Yangi ma'lumot olindi (1-ilova %1$s da yuborgan)",
+ 'home_same_at': "Bu 1-ilovadagi eng so'nggi ma'lumot (%1$s). 1-ilovada yangi Excel yuklansa — bu yerda darhol ko'rinadi.",
+ 'home_coverage2': 'Hisobotlar: %1$s · 1-ilovaga yuklangan: %2$s',
+ 'pdf_query': 'Qidiruv: %1$s',
+ 'lgm_reorder': 'Qayta buyurtma',
+ 'lgm_reorder_hint': "Tanlangan tovarlar 1-ilovaga so'rov bo'lib boradi. Bu savdo emas: 1-ilova egasi ko'rib, o'zi rasmiylashtiradi. Narx 1-ilovada hozirgi katalogdan olinadi.",
+ 'lgm_send': '1-ilovaga yuborish',
+ 'lgm_sent': "Buyurtma 1-ilovaga yuborildi. Holatini \"Tarix ▸ Buyurtmalarim\" da ko'rasiz.",
+ 'lgm_usb_printer': 'USB chek printeri',
+ 'lgm_printed': 'Chek printerga yuborildi',
+ 'mo_title': 'Buyurtmalarim',
+ 'mo_hint': "Shu telefondan yuborilgan qayta buyurtmalar va 1-ilovadagi holati.",
+ 'mo_empty': "Hali buyurtma yuborilmagan",
+ 'mo_item_title': 'Buyurtma · %1$s',
+ 'mo_note': 'Izoh: %1$s',
+ 'mo_status_at': 'Holat vaqti: %1$s',
+ 'mo_st_sent': 'Yuborildi',
+ 'mo_st_seen': '1-ilovaga yetib bordi',
+ 'mo_st_taken': 'Savatchaga olindi',
+ 'mo_st_rejected': 'Rad etildi',
+ 'notif_updates': 'Yangilanishlar',
+ 'notif_new_title': "Yangi ma'lumot keldi",
+ 'notif_new_text': "1C hisoboti %1$s gacha yangilandi",
+ 'st_look': "Ko'rinish",
+ 'st_scale_hint': "Tugmalar va ro'yxatlar kattaligi",
+ 'st_auto_bg': 'Fonda avtomatik yangilash',
+ 'st_auto_bg_hint': "Internet bo'lsa va batareya kam bo'lmasa, telefon o'zi tekshiradi. Ma'lumot o'zgarmagan bo'lsa deyarli trafik ketmaydi.",
+ 'auto_off': "O'chiq", 'auto_1h': 'Har soat', 'auto_2h': 'Har 2 soat',
+ 'link_remove_short': 'Uzish',
+ 'st_notify_new': "Yangi ma'lumot kelganda xabar berish",
+})
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from strings_ledger import LEDGER  # noqa: E402
+for _k in LEDGER:
+    assert _k not in STRINGS, _k
+STRINGS.update(LEDGER)
 
 OVERRIDES = {}
 

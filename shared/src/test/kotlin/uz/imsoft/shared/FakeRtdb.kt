@@ -42,9 +42,23 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
 
     private fun canWrite(p: List<String>, newValue: Any?): Boolean = when {
         p.size == 3 && p[0] == "s" && p[2] == "req" -> p[1].length >= 24 && newValue is Number
+        // CloudDb.RULES "ord": faqat yangi yozuv, belgilangan maydonlar, cheklangan uzunlik
+        p.size == 4 && p[0] == "s" && p[2] == "ord" -> p[1].length >= 24 && get(p) == null && orderOk(p[3], newValue)
         p.size == 3 && p[0] == "q" -> p[1].length >= 24 && newValue == null
         p.size >= 2 && p[0] == "p" -> p[1].length >= 24
         else -> false
+    }
+
+    private fun orderOk(id: String, v: Any?): Boolean {
+        val m = v as? Map<*, *> ?: return false
+        if (id.length !in 10..40 || !m.containsKey("at") || !m.containsKey("l")) return false
+        if (m.keys.any { it !in setOf("at", "v", "src", "n", "l") }) return false
+        if ((m["at"] as? Number)?.toLong() != now - 1) return false // {".sv":"timestamp"} == now
+        val l = m["l"] as? String ?: return false
+        if (l.length > 30000) return false
+        (m["n"])?.let { if (it !is String || it.length > 300) return false }
+        (m["src"])?.let { if (it !is String || it.length > 200) return false }
+        return true
     }
 
     private fun resolve(v: Any?): Any? = when (v) {

@@ -103,6 +103,9 @@ class CloudDb(
         /** Server vaqti belgisi (Firebase o'zi qo'yadi — telefon soati noto'g'ri bo'lsa ham). */
         val SERVER_TIME: Map<String, Any?> = mapOf(".sv" to "timestamp")
 
+        /** Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma). */
+        const val RULES_VERSION = 2
+
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
   "rules": {
@@ -111,7 +114,19 @@ class CloudDb(
     "s": {
       "${'$'}rk": {
         ".read": "${'$'}rk.length >= 24",
-        "req": { ".write": "${'$'}rk.length >= 24", ".validate": "newData.isNumber()" }
+        "req": { ".write": "${'$'}rk.length >= 24", ".validate": "newData.isNumber()" },
+        "ord": {
+          "${'$'}oid": {
+            ".write": "${'$'}rk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}oid.length >= 10 && ${'$'}oid.length <= 40 && newData.hasChildren(['at', 'l'])",
+            "at": { ".validate": "newData.val() == now" },
+            "v": { ".validate": "newData.isNumber()" },
+            "src": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "n": { ".validate": "newData.isString() && newData.val().length <= 300" },
+            "l": { ".validate": "newData.isString() && newData.val().length <= 30000" },
+            "${'$'}other": { ".validate": false }
+          }
+        }
       }
     },
     "q": {

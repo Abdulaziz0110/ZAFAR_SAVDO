@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """strings.xml (lotin, asosiy) va values-b+uz+Cyrl/strings.xml (kirill, avtomatik o'giriladi) yaratadi.
 Kirill matnni qo'lda tahrirlash kerak bo'lsa, shu fayldagi OVERRIDES ga yozing."""
-import re, os
+import re, os, sys
 from xml.sax.saxutils import escape
 
 STRINGS = {
@@ -264,7 +264,7 @@ STRINGS.update({
  'f_multicart': "Ko'p savatcha (kutishga qo'yish)",
  'f_dup_payment': "Takroriy to'lovdan ogohlantirish",
  'f_kpi': "Tezlik o'lchagich ({{KPI}})",
- 'f_kpi_hint': 'Buyurtmaga ketgan vaqt va bosishlar soni. Faqat shu telefonda saqlanadi.',
+ 'f_kpi_hint': 'Buyurtmaga ketgan vaqt va bosishlar soni (faqat shu telefonda)',
  'kpi_empty': "Hali o'lchov yo'q",
  'kpi_summary': "Oxirgi %1$d ta buyurtma: o'rtacha (mediana) %2$d soniya, %3$d bosish",
  'server_password_saved': "Parol saqlangan. O'zgartirish uchun yangisini yozing, aks holda bo'sh qoldiring.",
@@ -273,7 +273,7 @@ STRINGS.update({
 # --- v2.4 (2-ilova bilan ulashish, qidiruv, takrorlash, qulayliklar) ---
 STRINGS.update({
  'settings_more_title': "Qo'shimcha",
- 'extras_title': 'Qulayliklar (12 ta sozlama)',
+ 'extras_title': 'Qulayliklar',
  'remote_help_title': 'Masofadan ishlash ({{Wi-Fi}}siz)',
  'remote_help_text': "Do'kondan tashqarida (mobil internetda) savdo qilish uchun bepul {{Tailscale}} ishlatiladi:\n\n1) Server kompyuteriga {{tailscale.com}} dan {{Tailscale}} o'rnating va Gmail bilan kiring.\n2) Agent telefonlariga Play Market'dan {{Tailscale}} o'rnatib, XUDDI SHU Gmail bilan kiring.\n3) Kompyuterdagi {{Tailscale}} oynasida ko'rsatilgan {{100.x.x.x}} manzilni ko'chiring.\n4) Sozlamalar ▸ Server ▸ \"Tashqi manzil\" ga shu manzilni yozing.\n\nIlova avval do'kon manzilini, ulanmasa tashqi manzilni o'zi sinaydi. Batafsil: {{EGA_QOLLANMA}} ▸ (d).",
  'search_approx': "Taxminiy natijalar (imlo yoki klaviatura tuzatildi)",
@@ -303,7 +303,7 @@ STRINGS.update({
  # qulayliklar
  'ex_scale': "Ekran o'lchami",
  'ex_scale_hint': "Tugmalar, ro'yxatlar va matnlar kattaligi (faqat shu ilovada).",
- 'ex_scale_small': 'Kichik', 'ex_scale_compact': 'Ixcham', 'ex_scale_normal': 'Odatiy', 'ex_scale_large': 'Katta',
+ 'ex_scale_small': '90%', 'ex_scale_compact': '92%', 'ex_scale_normal': '100%', 'ex_scale_large': '110%',
  'ex_font': 'Shrift',
  'ex_font_small': '90%', 'ex_font_normal': '100%', 'ex_font_large': '115%',
  'ex_search': 'Aqlli qidiruv',
@@ -336,7 +336,7 @@ STRINGS.update({
  'ex_backup': 'Avtomatik zaxira',
  'ex_auto_backup': 'Har kuni zaxira nusxa olish',
  'ex_backup_hint': "Telefon ichida saqlanadi (oxirgi 7 ta). Telefon yo'qolishidan himoya qilmaydi — buning uchun Sozlamalar ▸ Zaxira nusxa saqlash.",
- 'ex_backup_now': 'Hozir zaxira olish',
+ 'ex_backup_now': 'Zaxira olish',
  'ex_backup_list': 'Avto-zaxiralardan tiklash',
  'ex_backup_none': "Avto-zaxira hali yo'q",
  'ex_backup_item': '%1$s · %2$d KB',
@@ -352,7 +352,7 @@ STRINGS.update({
  'share_publish_now': '2-ilovaga hozir yuborish',
  'share_link_code': 'Ulanish kodini yuborish',
  'share_reports': 'Hisobotlar (1C)',
- 'share_import_file': 'Fayldan import qilish (.xlsx / .xls / .htm)',
+ 'share_import_file': 'Excel faylni yuklash (.xlsx / .xls)',
  'share_import_server': 'Serverdan olish (davr tanlab)',
  'share_how_export': "1C'dan faylni qanday olaman?",
  'share_how_export_text': "1) 1C'da mijoz kartochkasini oching (masalan Dadaxon Aka), davrni tanlab \"Ko'rsatish\" ni bosing.\n2) Файл ▸ Сохранить как.\n3) Fayl turi: Excel (*.xlsx yoki *.xls). Nom bering va saqlang. (.mxl — 1C'ning o'z formati, o'qilmaydi.)\n4) Faylni telefonga o'tkazing (Telegram \"Saved messages\", kabel yoki fleshka).\n5) Shu yerda \"Fayldan import qilish\" ni bosib faylni tanlang.\n\nBir xil davrni qayta import qilsangiz dublikat bo'lmaydi: fayl davridagi eski yozuvlar yangisi bilan almashtiriladi. Har kuni yoki har hafta oxirgi kunlarni yuborish yetarli.",
@@ -361,8 +361,9 @@ STRINGS.update({
  'share_db_url': '{{Firebase}} manzili ({{https://...firebaseio.com}})',
  'share_db_secret': '{{Database secret}}',
  'share_save_check': 'Saqlash va tekshirish',
- 'share_auto': "Yangi ma'lumotni o'zi yuborsin",
- 'share_answer': "2-ilova \"Yangilash\" bosganda narx va qarzni serverdan yangilab yuborsin (15 daqiqagacha)",
+ 'share_auto': "Yangi ma'lumotni darhol 2-ilovaga yuborsin",
+ 'share_answer': "2-ilova so'rasa narx va qarzni yangilash",
+ 'share_answer_hint': "Server ko'ringanda bajariladi (do'kon Wi-Fi yoki VPN). Excel ma'lumoti esa baribir darhol boradi.",
  'share_pc_config': 'Kompyuter uchun chek sozlamasi',
  'share_pc_config_text': "Bu matnni kompyuterdagi forwarder papkasiga \"forwarder.ini\" nomi bilan saqlang. Ichida maxfiy kalit bor — faqat o'z kompyuteringizga yuboring!",
  'share_new_keys': 'Kalitlarni almashtirish',
@@ -426,7 +427,80 @@ STRINGS.update({
  'share_not_card_msg': "Faylda \"Sana, Xarakat, Izoxlar, Soni, Summa\" sarlavhali jadval topilmadi. Mijoz kartochkasi hisobotini saqlaganingizni tekshiring. Quyida fayl boshi (dasturchiga yuborish mumkin):",
 })
 
+STRINGS.update({
+ # v2.5: 1C tarixi (1-ilova), buyurtmalar, avto-yangilash
+ 'history_1c': '1C tarixi',
+ 'lgh_repeat_sale': 'Takrorlash (savatchaga)',
+ 'lgh_repeat_return': 'Vozvratni takrorlash',
+ 'lgh_to_cart': "Savatchaga qo'shish",
+ 'lgh_repeat_hint': "%1$s uchun. Narxlar hozirgi katalogdan olinadi (1C'dagi eski narx emas). Katalogda topilmagan tovar qo'shilmaydi.",
+ 'lgh_order_hint': "%1$s 2-ilovadan so'radi. Savatchada tekshirib, odatdagidek rasmiylashtirasiz.",
+ 'lgh_branch_printer': '2-filial printeri (bulut orqali)',
+ 'lgh_branch_sent': "Chek 2-filial printeri navbatiga qo'yildi. 2-ilova telefoni internetda bo'lsa chiqadi.",
+ 'ord_title': '2-ilovadan buyurtmalar',
+ 'ord_open': "Buyurtmalarni ko'rish",
+ 'ord_accept': 'Buyurtma qabul qilish',
+ 'ord_accept_hint': "2-ilovada mijoz o'tgan savdoni \"Qayta buyurtma\" qilsa, shu yerda ko'rinadi va bildirishnoma keladi. Buyurtma o'zi savdo bo'lmaydi — siz savatchaga olib, tekshirib rasmiylashtirasiz.",
+ 'ord_need_setup': "Avval pastdagi \"Sozlash\" bo'limini to'ldiring",
+ 'ord_off': "O'chirilgan",
+ 'ord_new_n': 'Yangi buyurtmalar: %1$d ta',
+ 'ord_none_new': "Yangi buyurtma yo'q",
+ 'ord_banner': '2-ilovadan yangi buyurtma: %1$d ta',
+ 'ord_sheet_hint': "Bosing: tovarlarni ko'rib, savatchaga oling yoki rad eting.",
+ 'ord_empty': "Buyurtma yo'q",
+ 'ord_item_title': 'Buyurtma · %1$s',
+ 'ord_item_lines': '%1$d xil tovar',
+ 'ord_note': 'Izoh: %1$s',
+ 'ord_st_new': 'Yangi',
+ 'ord_st_taken': 'Savatchaga olindi',
+ 'ord_st_rejected': 'Rad etildi',
+ 'ord_reject': 'Rad etish',
+ 'ord_notif_title': '%1$s: yangi buyurtma',
+ 'ord_notif_text': "%1$d ta yangi buyurtma (%2$d xil tovar). Izoh: %3$s",
+ 'share_open_history': "1C tarixi",
+ 'share_import_server_short': 'Serverdan',
+ 'share_publish_short': 'Yuborish',
+ 'share_link_code_short': 'Ulanish kodi',
+ 'share_sync_title': 'Avtomatik yangilash',
+ 'share_sync_hint': "Telefon o'zi (internet bo'lsa, batareya kam bo'lmasa) shu oraliqda tekshiradi: 2-ilova so'rovi, yangi buyurtma, yuborilmagan ma'lumot. Excel yuklanganda esa darhol yuboriladi.",
+ 'sync_off': "O'chiq", 'sync_30m': '30 daq', 'sync_1h': '1 soat', 'sync_2h': '2 soat',
+ 'share_receipt_title': 'Chek',
+ 'share_receipt_header': "Chek sarlavhasi (do'kon nomi)",
+ 'share_receipt_header_hint': "1C tarixidan chiqariladigan chek tepasida yoziladi. Bo'sh qoldirsangiz yozilmaydi.",
+
+})
+
+STRINGS.update({
+ # v2.5: dizayn — sozlamalar izohlari
+ 'settings_share_sum': "2-filial ilovasi: Excel yuklash, 1C tarixi, buyurtmalar, chek printeri",
+ 'settings_extras_sum': "Ekran o'lchami, savdo ekrani, qidiruv, PIN, zaxira, eslatmalar",
+ 'settings_remote_sum': "Do'kondan tashqarida (VPN orqali) server bilan ishlash",
+ 'settings_look': "Ko'rinish",
+ 'settings_queue_sum': "Serverga hali yetmagan buyurtma va to'lovlar",
+ 'settings_diag_sum': "Server, internet va navbat holatini tekshirish",
+ 'f_store_card_hint': "Do'kon tanlanganda qarz, oxirgi savdo va odatdagi tovarlar ko'rinadi",
+ 'f_smart_button_hint': "Pastdagi katta tugma keyingi qadamni aytadi (masalan \"Savatchaga o'tish\")",
+ 'f_explain_hint': "Taklif qilingan tovar yonida nega taklif qilingani yoziladi",
+ 'f_checker_hint': "G'alati miqdor yoki narxni ko'rsa ogohlantiradi, hech narsani to'xtatmaydi",
+ 'f_multicart_hint': "Joriy savdoni kutishga qo'yib, boshqa do'kon bilan ishlash",
+ 'f_dup_payment_hint': "Bir xil to'lov qisqa vaqtda ikki marta kiritilsa so'raydi",
+ 'home_payment_short': "To'lov",
+ 'home_ledger_title': '1C tarixi · %1$s',
+ 'home_ledger_info': 'Hisobotlar %1$s gacha · qidirish, takrorlash, chek',
+ 'ex_sec_screen': 'Ekran',
+ 'ex_scale_xlarge': '120%',
+ 'ex_cost_switch_hint': "Savdo ekranida kelgan narxni ko'rsatish tugmasi (faqat shu telefonda)",
+ 'ex_backup_list_short': 'Tiklash',
+
+})
+
 # kirillni qo'lda to'g'rilash kerak bo'lgan joylar
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from strings_ledger import LEDGER  # noqa: E402
+for _k in LEDGER:
+    assert _k not in STRINGS, _k
+STRINGS.update(LEDGER)
+
 OVERRIDES = {}
 
 MAP = {'a':'а','b':'б','d':'д','e':'е','f':'ф','g':'г','h':'ҳ','i':'и','j':'ж','k':'к','l':'л','m':'м','n':'н','o':'о',
@@ -461,7 +535,7 @@ TOKEN = re.compile(r"[A-Za-z'’ʻʼ‘`]+")
 PROTECT = re.compile(r'(%\d*\$?[sdf]|%%|\{\{.*?\}\})')
 
 # Lotinda qolishi kerak bo'lgan nomlar (v2.4): avtomatik {{...}} ichiga olinadi.
-BRANDS = ['Gmail', 'Excel', 'HTML', 'Telegram', 'SMS', 'Firebase', 'Google', 'Tailscale', 'Play Market', 'PIN', 'KB',
+BRANDS = ['Gmail', 'Wi-Fi', 'Excel', 'HTML', 'Telegram', 'SMS', 'Firebase', 'Google', 'Tailscale', 'Play Market', 'PIN', 'KB',
           'xlsx', 'xls', 'htm', 'mxl', 'VPN', 'IMSOFT', 'Click', 'USB', 'ESC/POS', 'forwarder.ini', 'forwarder.py', 'Python',
           'OTG', 'Xiaomi', 'HyperOS', 'Redmi', 'DOKON', 'Windows']
 

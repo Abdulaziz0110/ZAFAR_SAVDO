@@ -21,6 +21,8 @@ import uz.imsoft.shared.CloudDb
 import uz.imsoft.shared.JObj
 import uz.imsoft.shared.Json
 import uz.imsoft.shared.LinkCode
+import uz.imsoft.shared.OrderCodec
+import uz.imsoft.shared.OrderRequest
 import uz.imsoft.shared.report.CardParser
 import uz.imsoft.shared.report.CardReport
 import uz.imsoft.shared.report.ClientSnapshot
@@ -57,7 +59,14 @@ data class ShareState(
     val autoPublish: Boolean = true,
     val answerRequests: Boolean = true,
     val hasQueue: Boolean = false,
+    val acceptOrders: Boolean = true,
+    val newOrders: Int = 0,
+    val receiptHeader: String = "",
+    val syncMinutes: Int = 60,
 )
+
+/** 1C tarixi (UI uchun). [version] import/tozalashda o'zgaradi. */
+data class ClientLedger(val entries: List<LedgerEntry>, val clientName: String, val version: Long, val loaded: Boolean)
 
 /** Import oldidan ko'rsatiladigan natija. Saqlash [ShareRepository.commit] bilan. */
 class ImportPreview(
@@ -96,6 +105,12 @@ class ShareRepository(
     /** Eng oxirgi import qilingan hisobotdagi rasmiy qoldiq. */
     private var balance: Pair<Long, Money2>? = null
     private var loadedFor: String? = null
+    private var ledgerVersion = 0L
+    private val _ledger = MutableStateFlow(ClientLedger(emptyList(), "", 0L, false))
+    val ledger: StateFlow<ClientLedger> = _ledger.asStateFlow()
+    private val _orders = MutableStateFlow<List<OrderRequest>>(emptyList())
+    /** 2-ilovadan kelgan buyurtmalar (oxirgi tekshiruv). */
+    val orders: StateFlow<List<OrderRequest>> = _orders.asStateFlow()
 
     private fun dir() = File(context.filesDir, "share").apply { mkdirs() }
     private fun file(clientId: String) = File(dir(), "ledger_" + clientId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.ifEmpty { "x" } + ".json")
@@ -118,6 +133,7 @@ class ShareRepository(
                 }
             }
             loadedFor = cid
+            ledgerVersion++
         }
         publishState()
     }
@@ -146,7 +162,10 @@ class ShareRepository(
             clientId = store.clientId, clientName = store.clientName, entries = entries.size, coverage = coverage, log = log,
             lastPublishAt = store.lastPublishAt, lastPublishError = store.lastPublishError, dirty = store.dirty, busy = busy,
             rulesOk = store.rulesOk, autoPublish = store.autoPublish, answerRequests = store.answerRequests, hasQueue = store.queueKey.isNotEmpty(),
+            acceptOrders = store.acceptOrders, newOrders = _orders.value.count { it.status == OrderRequest.Status.SENT },
+            receiptHeader = store.receiptHeader, syncMinutes = store.syncMinutes,
         )
+        _ledger.value = ClientLedger(entries, store.clientName, ledgerVersion, true)
     }
 
     private inline fun <T> busy(block: () -> T): T {
@@ -170,6 +189,7 @@ class ShareRepository(
             store.dbUrl = u
             store.secret = secret.trim()
             store.rulesOk = true
+            store.rulesVersion = CloudDb.RULES_VERSION
             if (store.readKey.isEmpty()) store.readKey = CloudDb.newKey()
             if (store.queueKey.isEmpty()) store.queueKey = CloudDb.newKey()
             store.dirty = true
@@ -194,6 +214,9 @@ class ShareRepository(
     }
 
     fun setAuto(v: Boolean) { store.autoPublish = v; publishState() }
+    fun setAcceptOrders(v: Boolean) { store.acceptOrders = v; store.dirty = true; publishState() }
+    fun setReceiptHeader(v: String) { store.receiptHeader = v.trim().take(60); store.dirty = true; publishState() }
+    fun setSyncMinutes(v: Int) { store.syncMinutes = v; publishState() }
     fun setAnswer(v: Boolean) { store.answerRequests = v; publishState() }
 
     /** Kalitlarni almashtirish (masalan telefon yo'qolsa): eski ulanish kodi ishlamay qoladi. */
@@ -258,6 +281,7 @@ class ShareRepository(
             p.report.closing?.let { c -> if (balance == null || c.first >= balance!!.first) balance = c }
             log = listOf(ImportLog(System.currentTimeMillis(), p.name, p.source, m.added, m.removed, m.same, p.report.periodFrom ?: 0, p.report.periodTo ?: 0)) + log
             saveLocked()
+            ledgerVersion++
             store.dirty = true
             publishState()
         }
@@ -269,6 +293,7 @@ class ShareRepository(
             loadLocked()
             entries = emptyList(); coverage = emptyList(); log = emptyList(); balance = null
             saveLocked()
+            ledgerVersion++
             store.dirty = true
             publishState()
         }
@@ -306,6 +331,8 @@ class ShareRepository(
         return ClientSnapshot(
             System.currentTimeMillis(), store.clientId, store.clientName, c.rate, debt,
             items.sortedBy { it.name.lowercase() }, entries, coverage, c.lastSyncAt, reportBalance = balance,
+            features = if (store.acceptOrders && store.rulesVersion >= 2) setOf(ClientSnapshot.FEATURE_ORDERS) else emptySet(),
+            shopName = store.receiptHeader,
         )
     }
 
@@ -351,12 +378,20 @@ class ShareRepository(
     }
 
     /**
-     * Fon ishchisi uchun: 2-ilova "Yangilash" so'rovi bo'lsa — narx va qarzni serverdan yangilab (imkon bo'lsa) yuboradi;
-     * aks holda o'zgarish bo'lsa yuboradi. @return true — biror narsa yuborildi.
+     * Fon ishchisi uchun (va ilova ochilganda): qoidalar yangilanishi, 2-ilovaning "Yangilash" so'rovi, o'zgargan ma'lumotni
+     * yuborish va 2-ilovadan kelgan buyurtmalar. @return true — biror narsa yuborildi.
      */
     suspend fun tick(): Boolean {
         if (!store.isConfigured) return false
         mutex.withLock { withContext(Dispatchers.IO) { loadLocked() } }
+        if (store.rulesVersion < CloudDb.RULES_VERSION) {
+            // Yangi versiya qoidalari (masalan 2-ilovadan buyurtma) — secret bilan o'zi o'rnatadi.
+            runCatching {
+                withContext(Dispatchers.IO) { cloud().setRules(CloudDb.RULES) }
+                store.rulesVersion = CloudDb.RULES_VERSION
+                store.dirty = true
+            }
+        }
         var serve = false
         var req = 0L
         if (store.answerRequests) {
@@ -364,13 +399,78 @@ class ShareRepository(
             serve = req > store.lastRequestServed
         }
         if (serve) {
-            // Server ko'rinmasa (do'kondan tashqarida, VPN yo'q) — bor ma'lumot baribir yuboriladi.
+            // Narx/qarz faqat server ko'rinsa yangilanadi (do'kon tarmog'i yoki VPN). Ko'rinmasa — import qilingan oxirgi ma'lumot qoladi.
             if (System.currentTimeMillis() - catalog.state.value.lastSyncAt > 10 * 60_000L) runCatching { catalog.sync() }
             runCatching { catalog.refreshDebt(store.clientId) }
         }
         val sent = if (serve || (store.autoPublish && store.dirty)) publish() else false
         if (serve && sent) store.lastRequestServed = req
+        if (store.acceptOrders && store.rulesVersion >= 2) runCatching { refreshOrders(notify = true) }
         return sent
+    }
+
+    // ---------------- 2-ilovadan buyurtmalar ----------------
+
+    /**
+     * Buyurtmalarni o'qiydi. Yangi (SENT) buyurtmaga "1-ilovaga yetib bordi" (SEEN) belgisi qo'yiladi — bu odam ko'rdi degani EMAS.
+     * 30 kundan eskilari o'chiriladi.
+     */
+    suspend fun refreshOrders(notify: Boolean = false): List<OrderRequest> = withContext(Dispatchers.IO) {
+        if (!store.isConfigured) return@withContext emptyList()
+        val db = cloud()
+        @Suppress("UNCHECKED_CAST")
+        val raw = db.get("s/${store.readKey}/ord") as? Map<String, Any?> ?: emptyMap()
+        val now = System.currentTimeMillis()
+        val list = ArrayList<OrderRequest>()
+        for ((id, v) in raw) {
+            var o = OrderCodec.fromCloud(id, v) ?: continue
+            if (o.at in 1 until now - 30L * 86_400_000L) { runCatching { db.delete("s/${store.readKey}/ord/$id") }; continue }
+            if (o.lines.isEmpty()) continue
+            if (o.status == OrderRequest.Status.SENT) {
+                runCatching { db.put("s/${store.readKey}/ord/$id/st", OrderCodec.statusValue(OrderRequest.Status.SEEN)) }
+                    .onSuccess { o = o.copy(status = OrderRequest.Status.SEEN, statusAt = now) }
+            }
+            list += o
+        }
+        list.sortByDescending { it.at }
+        _orders.value = list
+        if (notify) {
+            val seen = store.seenOrders.split('|').filter { it.isNotEmpty() }.toMutableSet()
+            val fresh = list.filter { it.id !in seen && (it.status == OrderRequest.Status.SEEN || it.status == OrderRequest.Status.SENT) }
+            if (fresh.isNotEmpty()) {
+                val o = fresh.first()
+                com.ilxomjon.dur_novvot_dokon.data.extras.Extras.notify(
+                    context, 4103,
+                    context.getString(com.ilxomjon.dur_novvot_dokon.R.string.ord_notif_title, store.clientName),
+                    context.getString(com.ilxomjon.dur_novvot_dokon.R.string.ord_notif_text, fresh.size, o.lines.size, o.note.ifBlank { "—" }),
+                )
+                seen += fresh.map { it.id }
+                store.seenOrders = seen.toList().takeLast(200).joinToString("|")
+            }
+        }
+        mutex.withLock { publishState() }
+        list
+    }
+
+    suspend fun setOrderStatus(id: String, status: OrderRequest.Status) = withContext(Dispatchers.IO) {
+        cloud().put("s/${store.readKey}/ord/$id/st", OrderCodec.statusValue(status))
+        _orders.value = _orders.value.map { if (it.id == id) it.copy(status = status, statusAt = System.currentTimeMillis()) else it }
+        mutex.withLock { publishState() }
+    }
+
+    // ---------------- 2-filial printeri ----------------
+
+    /** Tayyor ESC/POS chekni 2-filial printeri navbatiga qo'yadi (2-ilova chop etadi). */
+    suspend fun sendToBranchPrinter(bytes: ByteArray) = withContext(Dispatchers.IO) {
+        check(store.isConfigured && store.queueKey.isNotEmpty()) { "not_configured" }
+        val db = cloud()
+        val key = "c" + (System.currentTimeMillis() * 1_000_000L + (System.nanoTime() % 1_000_000L).let { if (it < 0) -it else it })
+        db.put(
+            "q/${store.queueKey}/$key",
+            linkedMapOf("t" to CloudDb.SERVER_TIME, "b" to uz.imsoft.shared.B64.encode(bytes), "n" to bytes.size, "src" to "1-ilova"),
+            timeoutMs = 60_000,
+        )
+        runCatching { db.put("p/${store.queueKey}/sig", CloudDb.SERVER_TIME) }
     }
 
     /** 2-filial telefoni (2-ilova) qoldirgan printer holati. */

@@ -1,24 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- tools/gen_theme.py yaratgan — qo'lda o'zgartirmang -->
 <resources>
-    <color name="brand_primary">#53DBC9</color>
-    <color name="brand_on_primary">#003731</color>
+    <color name="brand_primary">#53DBCA</color>
+    <color name="brand_on_primary">#003732</color>
     <color name="brand_primary_container">#005048</color>
-    <color name="brand_on_primary_container">#74F8E5</color>
-    <color name="brand_secondary">#B0CCC6</color>
-    <color name="brand_on_secondary">#1B3531</color>
-    <color name="brand_secondary_container">#324B47</color>
+    <color name="brand_on_primary_container">#74F8E6</color>
+    <color name="brand_secondary">#B1CCC6</color>
+    <color name="brand_on_secondary">#1C3531</color>
+    <color name="brand_secondary_container">#334B47</color>
     <color name="brand_on_secondary_container">#CCE8E2</color>
-    <color name="brand_tertiary">#F2BE52</color>
+    <color name="brand_tertiary">#F0BF61</color>
     <color name="brand_on_tertiary">#412D00</color>
     <color name="brand_tertiary_container">#5D4200</color>
     <color name="brand_on_tertiary_container">#FFDEA6</color>
-    <color name="brand_surface">#0E1514</color>
-    <color name="brand_on_surface">#DDE4E1</color>
-    <color name="brand_surface_variant">#3F4947</color>
-    <color name="brand_on_surface_variant">#BEC9C5</color>
-    <color name="brand_outline">#899390</color>
-    <color name="brand_outline_variant">#3F4947</color>
     <color name="brand_error">#FFB4AB</color>
     <color name="brand_on_error">#690005</color>
+    <color name="brand_error_container">#93000A</color>
+    <color name="brand_on_error_container">#FFDAD6</color>
+    <color name="brand_surface">#101413</color>
+    <color name="brand_on_surface">#E0E3E1</color>
+    <color name="brand_surface_variant">#3F4947</color>
+    <color name="brand_on_surface_variant">#BEC9C6</color>
+    <color name="brand_outline">#899390</color>
+    <color name="brand_outline_variant">#3F4947</color>
+    <color name="brand_inverse_surface">#E0E3E1</color>
+    <color name="brand_inverse_on_surface">#2D3130</color>
+    <color name="brand_inverse_primary">#006A60</color>
+    <color name="brand_surface_dim">#101413</color>
+    <color name="brand_surface_bright">#363A39</color>
+    <color name="brand_surface_container_lowest">#0B0F0E</color>
+    <color name="brand_surface_container_low">#191C1B</color>
+    <color name="brand_surface_container">#1D201F</color>
+    <color name="brand_surface_container_high">#272B2A</color>
+    <color name="brand_surface_container_highest">#323534</color>
     <color name="brand_debt">#FFB4AB</color>
+    <color name="brand_success">#8ED885</color>
+    <color name="brand_success_container">#0B3D10</color>
+    <color name="brand_on_success_container">#C9F2C0</color>
+    <color name="brand_warning_container">#5D4200</color>
+    <color name="brand_on_warning_container">#FFDEA6</color>
 </resources>

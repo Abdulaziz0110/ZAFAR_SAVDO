@@ -44,9 +44,14 @@ class SettingsFragment : Fragment() {
         onToggle(b.tgLang) { id -> p.language = if (id == R.id.langCyr) "cyr" else "lat"; Locator.applyUi() }
         onToggle(b.tgTheme) { id -> p.theme = when (id) { R.id.themeLight -> "light"; R.id.themeDark -> "dark"; else -> "system" }; Locator.applyUi() }
         onToggle(b.tgScale) { id ->
-            p.uiScale = when (id) { R.id.scale85 -> 0.85f; R.id.scale100 -> 1.0f; R.id.scale110 -> 1.1f; else -> 0.92f }
+            p.uiScale = when (id) { R.id.scale90 -> 0.9f; R.id.scale110 -> 1.1f; R.id.scale120 -> 1.2f; else -> 1.0f }
             requireActivity().recreate()
         }
+        onToggle(b.tgAuto) { id ->
+            p.autoMinutes = when (id) { R.id.auto60 -> 60; R.id.auto120 -> 120; else -> 0 }
+            uz.imsoft.mijoz.data.RefreshWorker.schedule(requireContext().applicationContext, p.autoMinutes)
+        }
+        b.swNotify.setOnCheckedChangeListener { _, on -> if (!rendering) { p.notifyNew = on; if (on) askNotify() } }
         onToggle(b.tgFont) { id ->
             p.fontScale = when (id) { R.id.font90 -> 0.9f; R.id.font115 -> 1.15f; else -> 1.0f }
             requireActivity().recreate()
@@ -65,6 +70,14 @@ class SettingsFragment : Fragment() {
         launchOnStarted { Locator.data.state.collect { render() } }
     }
 
+    private val notifPerm = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
+    private fun askNotify() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) notifPerm.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     private fun onToggle(g: MaterialButtonToggleGroup, block: (Int) -> Unit) {
         g.addOnButtonCheckedListener { _, id, checked -> if (checked && !rendering) block(id) }
     }
@@ -79,7 +92,9 @@ class SettingsFragment : Fragment() {
         bb.btnUnlink.isEnabled = link != null
         bb.tgLang.check(if (p.language == "cyr") R.id.langCyr else R.id.langLat)
         bb.tgTheme.check(when (p.theme) { "light" -> R.id.themeLight; "dark" -> R.id.themeDark; else -> R.id.themeSystem })
-        bb.tgScale.check(when (p.uiScale) { 0.85f -> R.id.scale85; 1.0f -> R.id.scale100; 1.1f -> R.id.scale110; else -> R.id.scale92 })
+        bb.tgScale.check(when (p.uiScale) { 0.9f -> R.id.scale90; 1.1f -> R.id.scale110; 1.2f -> R.id.scale120; else -> R.id.scale100 })
+        bb.tgAuto.check(when (p.autoMinutes) { 60 -> R.id.auto60; 120 -> R.id.auto120; 0 -> R.id.auto0; else -> R.id.auto60 })
+        bb.swNotify.isChecked = p.notifyNew
         bb.tgFont.check(when (p.fontScale) { 0.9f -> R.id.font90; 1.15f -> R.id.font115; else -> R.id.font100 })
         bb.swAutoRefresh.isChecked = p.autoRefresh
         bb.swFuzzy.isChecked = p.fuzzy

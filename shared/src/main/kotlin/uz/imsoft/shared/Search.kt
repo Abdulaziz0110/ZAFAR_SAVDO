@@ -238,8 +238,31 @@ class SearchIndex<T>(
         return best
     }
 
+    private fun tokenScore(qt: Tok, nt: Tok, fuzzy: Boolean): Triple<Double, Boolean, Int>? = TokenScore.score(qt, nt, fuzzy)
+
+    private fun rangeOf(e: Entry<T>, foldStart: Int, foldEnd: Int): IntRange? {
+        val map = e.folded.map
+        if (foldStart < 0 || foldEnd <= foldStart || foldEnd > map.size) return null
+        return map[foldStart]..map[foldEnd - 1]
+    }
+
+    private fun mergeRanges(e: Entry<T>, list: List<IntRange>): List<IntRange> {
+        if (list.size <= 1) return list
+        val sorted = list.sortedBy { it.first }
+        val out = ArrayList<IntRange>()
+        var cur = sorted[0]
+        for (r in sorted.drop(1)) {
+            cur = if (r.first <= cur.last + 1) cur.first..maxOf(cur.last, r.last) else { out += cur; r }
+        }
+        out += cur
+        return out
+    }
+}
+
+/** Bitta so'rov so'zini bitta nom so'zi bilan solishtirish (tovar qidiruvi va tarix qidiruvi uchun umumiy qoida). */
+object TokenScore {
     /** (ball, imlo tuzatilganmi, nt ichidagi boshlanish o'rni yoki -1). */
-    private fun tokenScore(qt: Tok, nt: Tok, fuzzy: Boolean): Triple<Double, Boolean, Int>? {
+    fun score(qt: Tok, nt: Tok, fuzzy: Boolean): Triple<Double, Boolean, Int>? {
         val q = qt.text
         val n = nt.text
         if (n == q) return Triple(100.0, false, 0)
@@ -265,23 +288,6 @@ class SearchIndex<T>(
         return null
     }
 
-    private fun rangeOf(e: Entry<T>, foldStart: Int, foldEnd: Int): IntRange? {
-        val map = e.folded.map
-        if (foldStart < 0 || foldEnd <= foldStart || foldEnd > map.size) return null
-        return map[foldStart]..map[foldEnd - 1]
-    }
-
-    private fun mergeRanges(e: Entry<T>, list: List<IntRange>): List<IntRange> {
-        if (list.size <= 1) return list
-        val sorted = list.sortedBy { it.first }
-        val out = ArrayList<IntRange>()
-        var cur = sorted[0]
-        for (r in sorted.drop(1)) {
-            cur = if (r.first <= cur.last + 1) cur.first..maxOf(cur.last, r.last) else { out += cur; r }
-        }
-        out += cur
-        return out
-    }
 }
 
 object Distance {
@@ -308,5 +314,45 @@ object Distance {
             val t = prev2; prev2 = prev; prev = cur; cur = t
         }
         return prev[m]
+    }
+}
+
+/** Bitta nom ichida so'rov so'zini topish (natija: ball, imlo tuzatilganmi, asl matndagi oraliq). */
+class NameMatcher(val name: String) {
+    class Hit(val score: Double, val fuzzy: Boolean, val range: IntRange?)
+
+    private val folded = Fold.fold(name)
+    private val tokens = Tokenizer.tokens(folded.text)
+    private val compact by lazy { folded.text.replace(" ", "") }
+
+    fun match(qt: Tok, fuzzy: Boolean): Hit? {
+        var best: Hit? = null
+        for (nt in tokens) {
+            val s = TokenScore.score(qt, nt, fuzzy) ?: continue
+            if (best != null && best.score >= s.first) continue
+            val len = if (s.second) minOf(nt.text.length, qt.text.length) else qt.text.length
+            val start = if (s.third >= 0) nt.start + s.third else nt.start
+            best = Hit(s.first, s.second, range(start, start + len))
+        }
+        if (best == null && qt.text.length >= 4 && !qt.digits && compact.contains(qt.text)) best = Hit(40.0, true, null)
+        return best
+    }
+
+    private fun range(foldStart: Int, foldEnd: Int): IntRange? {
+        val map = folded.map
+        if (foldStart < 0 || foldEnd <= foldStart || foldEnd > map.size) return null
+        return map[foldStart]..map[foldEnd - 1]
+    }
+
+    companion object {
+        fun mergeRanges(list: List<IntRange>): List<IntRange> {
+            if (list.size <= 1) return list
+            val sorted = list.sortedBy { it.first }
+            val out = ArrayList<IntRange>()
+            var cur = sorted[0]
+            for (r in sorted.drop(1)) cur = if (r.first <= cur.last + 1) cur.first..maxOf(cur.last, r.last) else { out += cur; r }
+            out += cur
+            return out
+        }
     }
 }

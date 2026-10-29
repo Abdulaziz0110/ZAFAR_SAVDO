@@ -101,3 +101,31 @@ printerga; jarayon o'rtada o'lsa chek o'zi qayta chiqmaydi, foydalanuvchi "Qayta
 
 **D-028. Ekran o'lchami** — Activity konfiguratsiyasidagi zichlik (dp) ko'paytuvchisi: barcha ekranlar bir xil kichrayadi,
 alohida layout nusxalari kerak emas. Odatiy — "Ixcham" (0.92). Qatorlar va tugmalar ham biroz kichraytirildi.
+
+## v2.5 / IMSOFT Mijoz 1.1 (2026-10-29)
+
+**D-029. 1C tarixi "hujjat" bo'lib ko'rsatiladi.** 1C kartochkasida har tovar alohida qator; bir vaqtda (soniyagacha) yozilgan bir turdagi
+qatorlar bitta hujjat. Haqiqiy faylda aralash turdagi bir xil vaqt yo'q (tekshirildi). Kalit: `stamp|tur|tur matni`.
+
+**D-030. Qidiruv qoidasi: shartlar VA, sana/tur YOKI, tovar shartlari bitta qatorda.** "pista 40" deganda foydalanuvchi aynan
+40 kg pista nazarda tutadi. Bo'lmasa (shartlar turli qatorlarda) natija "taxminiy" belgisi bilan beriladi — hech qachon jim
+"aniq" deb ko'rsatilmaydi. "27.10" kabi ikki ma'noli so'z sana YOKI son (27,1) sifatida tekshiriladi.
+
+**D-031. Takrorlashda narx — joriy katalogdan.** 1C dagi eski narx savatchaga qo'yilmaydi (C8 qoidalari o'zgarmaydi). Tovar nom bo'yicha
+bog'lanadi: aniq — belgilangan; taxminiy — belgilanmagan, foydalanuvchi tekshiradi; topilmagan — qo'shilmaydi.
+
+**D-032. 2-ilovada "takrorlash" = buyurtma so'rovi, savdo emas.** 2-ilova savdo qilmaydi (avvalgi qaror). So'rov 1-ilovaga boradi,
+egasi ko'rib savatchaga oladi. Holatlar faqat: yuborildi / 1-ilovaga yetib bordi / savatchaga olindi / rad etildi.
+"Serverda tasdiqlandi" degan holat yo'q. Firebase qoidasi: mijoz faqat YANGI yozuv qo'shadi (`!data.exists()`), maydonlar va
+uzunlik cheklangan, vaqt server vaqti. Qoidalar versiyasi (`RULES_VERSION=2`) — 1-ilova secret bilan o'zi yangilaydi.
+
+**D-033. Chek rasm sifatida (ESC/POS GS v 0).** Matn rejimida kirill va o'/g' printer kod sahifasiga bog'liq; rasm har doim to'g'ri.
+80 mm = 576 nuqta, 240 qatorli bo'laklar. 1-ilova chekni 2-filial navbatiga qo'yadi — forwarder bilan bir xil format.
+
+**D-034. Avtomatik yangilash WorkManager bilan (1–2 soat, tarmoq + batareya sharti).** Doimiy ulanish (SSE) batareyani yeydi;
+2-ilova "Yangilash" baribir darhol oladi, 1-ilova import qilinganda darhol yuboradi. 2-ilova avval faqat sarlavhani o'qiydi.
+
+**D-035. Bitta dizayn tizimi ikkala ilova uchun (`tools/gen_theme.py`).** Ranglar Material 3 tonal palitrasidan (brend #006A60),
+surface container rollari ham aniqlangan (aks holda Material standart binafsha tusni qo'yadi). Ekran standarti 100%.
+1C tarixi UI kodi 1-ilovada yoziladi va `tools/sync_ledger_kit.py` bilan 2-ilovaga ko'chiriladi (qo'lda tahrirlanmaydi).
+

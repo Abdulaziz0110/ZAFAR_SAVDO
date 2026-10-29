@@ -42,6 +42,12 @@ class PricesFragment : Fragment() {
         vm = ViewModelProvider(this)[PricesViewModel::class.java]
         b.recycler.layoutManager = LinearLayoutManager(requireContext())
         b.recycler.adapter = adapter
+        b.recycler.addItemDecoration(
+            com.google.android.material.divider.MaterialDividerItemDecoration(requireContext(), androidx.recyclerview.widget.RecyclerView.VERTICAL).apply {
+                dividerInsetStart = (16 * resources.displayMetrics.density).toInt()
+                isLastItemDecorated = false
+            },
+        )
         b.edtSearch.onTextChanged { vm.query.value = it }
         val p = Locator.prefs
         rendering = true

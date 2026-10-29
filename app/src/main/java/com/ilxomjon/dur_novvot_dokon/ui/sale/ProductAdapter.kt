@@ -128,6 +128,11 @@ class ProductAdapter(
             b.tvMeta.show(meta.isNotEmpty())
             b.tvPrice.text = ctxt.money(line?.price ?: Pricing.unitPrice(p, ctx.type, ctx.currency, ctx.rate), ctx.currency)
             val inCart = line != null
+            // Savatchadagi tovar yengil fon bilan ajralib turadi
+            if (inCart) {
+                val c = com.google.android.material.color.MaterialColors.getColor(b.root, com.google.android.material.R.attr.colorSecondaryContainer)
+                b.root.setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(c, 140))
+            } else b.root.background = null
             b.btnMinus.show(inCart)
             b.tvQty.show(inCart)
             if (line != null) b.tvQty.text = Money.qtyDisplay(line.qty)

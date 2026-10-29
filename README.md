@@ -1,4 +1,4 @@
-# IMSOFT DOKON — versiya 2.4 (+ 2-ilova "IMSOFT Mijoz" 1.0)
+# IMSOFT DOKON — versiya 2.5 (+ 2-ilova "IMSOFT Mijoz" 1.1)
 
 Savdo agentlari uchun ilova: do'kon tanlash, tovarni savatchaga yig'ish, buyurtma va to'lovni serverga yuborish,
 do'kon qarzi va hisobotni ko'rish. Avvalgi ilovaning **butun ko'rinishi va ish tartibi qayta yozildi**;
@@ -37,6 +37,19 @@ Kotlin · MVVM · ViewBinding · Material 3 · Coroutines/Flow · minSdk 23 · t
 5. Windows Firewall'da 1433-port Tailscale tarmog'iga ham ruxsat berilgan bo'lishi kerak.
 **SQL Server'ni portini internetga to'g'ridan-to'g'ri ochmang** (port-forwarding): `sa` bilan xavfli.
 
+
+## 2.5 da nima yangi (ikkala ilova)
+
+* **1C tarixi** ikkala ilovada bir xil: import qilingan savdo, vozvrat, to'lovlar ro'yxati; aqlli qidiruv (tovar, kg, narx, sana,
+  vaqt, turi — aralash); hujjat oynasi; **chek** (chop etish, rasm, PDF); 1-ilovada **takrorlash** (savatchaga, joriy narxda),
+  2-ilovada **qayta buyurtma** (1-ilovaga so'rov) va "Buyurtmalarim".
+* **Tezroq yangilanish**: Excel yuklanganda darhol yuboriladi; 2-ilova "Yangilash" darhol oladi; fonda 1–2 soatda avtomatik
+  (batareyani tejab).
+* **Dizayn**: bitta rang tizimi (yorug'/qorong'i), 100% o'lcham, kattaroq tovar qatorlari, tushunarli sozlamalar.
+* Batafsil: `CHANGELOG.md`, yo'riqnoma: `docs/EGA_QOLLANMA.md` (j)–(m).
+
+Ishlab chiquvchi uchun: ranglar/uslublar `tools/gen_theme.py`, satrlar `tools/gen_strings*.py` + `tools/strings_ledger.py`,
+1C tarixi UI `app/.../ui/ledger/` -> `tools/sync_ledger_kit.py` -> `mijoz/.../ui/ledger/` (2-ilovadagi nusxani tahrirlamang).
 
 ## 2.4 da nima yangi (1-ilova) va 2-ilova
 

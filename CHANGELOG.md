@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## 2.5 (versionCode 7) + IMSOFT Mijoz 1.1 (versionCode 2) — 2026-10-29
+Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
+C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida; yangi funksiyalar sozlamada o'chiriladi.
+
+### 1C tarixi — ikkala ilovada bir xil (`ui/ledger/`, `tools/sync_ledger_kit.py`)
+* Import qilingan savdo, vozvrat va to'lovlar **hujjat** sifatida ro'yxatda (bir vaqtda yozilgan qatorlar — bitta savdo;
+  haqiqiy fayl: 445 qator = 126 hujjat), kunlar bo'yicha, "Bugun/Kecha", hafta kuni bilan.
+* Qidiruv (`shared/report/LedgerSearch.kt`): tovar nomi (lotin/kirill, xato, klaviatura tili), miqdor (`40kg`, `2,5 кг`),
+  narx/summa (`200000`, `200 000`, `200k`, `3,7mln`, `15$`), chegaralar (`>1mln`, `1mln-5mln`), sana (`27.10`, `27.10-29.10`,
+  `27 oktabr`, `oktabr`, `bugun`, `kecha`), vaqt (`16:21`), turi (`savdo`, `vozvrat`, `to'lov`), valyuta, istisno (`-pista`).
+  Tovar shartlari bitta qatorda bajarilishi kerak ("pista 40" — aynan 40 kg pista); bo'lmasa "taxminiy" deb ko'rsatiladi.
+  Filtrlar (Hammasi/Savdo/Vozvrat/To'lov, davr) va jami (topilgan hujjatlar, mos tovarlar miqdori va summasi).
+* Hujjat oynasi: qatorlar (qidirilgani ajratilgan), jami, chegirma, "qoldiq (shundan keyin)", tovar tarixi (bosilsa).
+* **Chek**: rasm ko'rinishi, chop etish, rasm (Telegram), matn, nusxa, PDF. Chek rasm bo'lib chop etiladi (ESC/POS rastr) —
+  kirill/lotin harflari printer kod sahifasiga bog'liq emas. Sarlavha (do'kon nomi) 1-ilova sozlamasidan.
+* 1-ilova: **Takrorlash** — tovarlar katalogga bog'lanadi (aniq/taxminiy/topilmadi), narx JORIY katalogdan, Naqd/Optom tanlanadi,
+  savatcha bo'sh bo'lmasa almashtirish/qo'shish/kutishga qo'yish so'raladi. Chek -> **2-filial printeriga** (bulut navbati).
+* 2-ilova: **Qayta buyurtma** — 1-ilovaga so'rov (savdo emas), izoh bilan; "Buyurtmalarim" (Yuborildi / 1-ilovaga yetib bordi /
+  Savatchaga olindi / Rad etildi). Chek -> USB printer.
+* 1-ilova: "2-ilovadan buyurtmalar" (bildirishnoma, ro'yxat, savatchaga olish yoki rad etish). Firebase qoidalari v2 —
+  1-ilova o'zi yangilaydi; mijoz faqat yangi buyurtma qo'sha oladi (o'zgartira/o'chira olmaydi).
+
+### Tezlik va avtomatik yangilash
+* Excel yuklanganda 1-ilova darhol yuboradi (internet bo'lmasa — paydo bo'lishi bilan). 2-ilova "Yangilash" 1-ilovadagi eng so'nggi
+  ma'lumotni darhol oladi; "15 daqiqa" xabari olib tashlandi.
+* Fonda avtomatik yangilash: 1-ilova 30 daq / 1 soat / 2 soat / o'chiq; 2-ilova har soat / har 2 soat / o'chiq (+ yangi ma'lumot
+  haqida xabar). Faqat internet bor va batareya kam bo'lmaganda; o'zgarmagan bo'lsa katta fayl yuklanmaydi.
+* 1-ilova ochilganda 2-ilova so'rovi va buyurtmalari darhol tekshiriladi.
+
+### Dizayn (ikkala ilova bir xil: `tools/gen_theme.py`)
+* To'liq Material 3 palitrasi (yorug' va qorong'i), "surface container" ranglari ham brend rangidan — kartalar, pastki menyu,
+  dialoglar endi standart binafsha tus olmaydi. Asosiy konteyner rangi yumshatildi.
+* Ekran o'lchami standarti **100%** (oldin 92% — ro'yxatlar mayda edi; eski standart bir marta avtomatik o'zgartiriladi).
+  Tanlov: 90/100/110/120%.
+* Tovar va narx qatorlari kattaroq (64dp, nom 16sp, narx 16–17sp, +/− 44–48dp), ajratuvchi chiziq, savatchadagi tovar foni.
+* Bosh sahifa: bitta katta "Yangi savdo" tugmasi + 3 ixcham plitka, "1C tarixi" kartasi.
+* Sozlamalar: bo'limlar va qatorlar, har bir funksiya ostida qisqa izoh; "Qulayliklar" va 2-ilova sozlamalari kartalarga ajratildi.
+* Kichik matnlar 12sp -> 13sp; bir xil karta burchagi va fon; tugma/segment balandliklari bir xil.
+
+### Testlar
+* JVM: 90 -> **116** (1C tarixi qidiruvi 15, katalog bog'lash 3, chek/ESC/POS 4, buyurtma va qoidalar 4).
+
 ## 2.4 (versionCode 6) + IMSOFT Mijoz 1.0 — 2026-10-29
 Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
 C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida faylda; yangi funksiyalar Sozlamalarda o'chiriladi.

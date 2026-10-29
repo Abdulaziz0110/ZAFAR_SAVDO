@@ -36,8 +36,20 @@ data class ClientSnapshot(
     val version: Int = VERSION,
     /** 1C hisobotidagi rasmiy qoldiq ("kun oxiriga qarzdorlik"): stamp (kun oxiri) va summa (Dt − Kt). */
     val reportBalance: Pair<Long, Money2>? = null,
+    /** 1-ilovada yoqilgan imkoniyatlar: [FEATURE_ORDERS] — 2-ilovadan buyurtma qabul qilinadi. */
+    val features: Set<String> = emptySet(),
+    /** Chek sarlavhasi (1-ilova sozlamasidan, bo'sh bo'lishi mumkin). */
+    val shopName: String = "",
 ) {
-    companion object { const val VERSION = 1 }
+    /** Eng oxirgi import vaqti (telefon soati, ms). */
+    val lastImportAt: Long get() = coverage.maxOfOrNull { it.importedAt } ?: 0L
+    /** Hisobotlar qaysi kungacha (stamp). */
+    val coveredTo: Long get() = coverage.maxOfOrNull { it.to } ?: 0L
+
+    companion object {
+        const val VERSION = 1
+        const val FEATURE_ORDERS = "ord"
+    }
 }
 
 object SnapshotCodec {
@@ -51,6 +63,8 @@ object SnapshotCodec {
             "l" to s.ledger.map { entryToList(it) },
             "cov" to s.coverage.map { listOf(it.from, it.to, it.importedAt, it.source) },
             "rb" to s.reportBalance?.let { listOf(it.first, it.second.som, it.second.usd) },
+            "f" to s.features.sorted(),
+            "shop" to s.shopName,
         ),
     )
 
@@ -92,7 +106,8 @@ object SnapshotCodec {
         }
         val debt = o.obj("debt")?.let { DebtInfo(it.num("s"), it.num("u"), it.long("at"), it.str("src")) }
         val rb = (o.map["rb"] as? List<Any?>)?.let { l -> (l.getOrNull(0) as? Number)?.toLong()?.let { st -> st to Money2(d(l.getOrNull(1)), d(l.getOrNull(2))) } }
-        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb)
+        val features = o.arr("f").mapNotNull { it?.toString() }.toSet()
+        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb, features, o.str("shop"))
     }
 
     /** Bulutga yoziladigan ko'rinish: gzip + base64 (Firebase satr sifatida saqlaydi). */

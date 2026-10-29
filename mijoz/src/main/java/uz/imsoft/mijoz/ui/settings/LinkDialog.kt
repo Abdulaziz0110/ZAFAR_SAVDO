@@ -38,6 +38,7 @@ object LinkDialog {
                 Locator.prefs.setLink(code)
                 f.viewLifecycleOwner.lifecycleScope.launch {
                     Locator.data.onLinked()
+                    uz.imsoft.mijoz.data.RefreshWorker.schedule(ctx.applicationContext, Locator.prefs.autoMinutes)
                     val msg = try {
                         Locator.data.refresh(askFresh = true)
                         ctx.getString(R.string.link_ok, code.clientName)

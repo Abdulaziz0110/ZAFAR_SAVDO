@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.google.android.material.snackbar.Snackbar
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
@@ -51,6 +53,23 @@ class HomeFragment : Fragment() {
         binding.cardReturn.setOnClickListener { startDeal(DealMode.RETURN) }
         binding.cardPayment.setOnClickListener { navigator().openTab(R.id.nav_payment) }
         binding.cardReport.setOnClickListener { navigator().openTab(R.id.nav_report) }
+        binding.cardLedger.setOnClickListener {
+            val hist = parentFragmentManager.findFragmentByTag("tab_" + R.id.nav_history) as? com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment
+            com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment.open1C(navigator(), hist)
+        }
+        launchOnStarted {
+            com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.state.collect { st ->
+                val bb = _binding ?: return@collect
+                bb.cardLedger.show(st.clientId.isNotEmpty() && st.entries > 0)
+                bb.tvLedgerTitle.text = getString(R.string.home_ledger_title, st.clientName)
+                bb.tvLedgerInfo.text = when {
+                    st.newOrders > 0 -> getString(R.string.ord_banner, st.newOrders)
+                    st.coverage.isNotEmpty() -> getString(R.string.home_ledger_info, uz.imsoft.shared.report.Stamp.formatDate(st.coverage.maxOf { it.to }))
+                    else -> ""
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch { runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.load() } }
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
 
         launchOnStarted { vm.state.collect { render(it) } }

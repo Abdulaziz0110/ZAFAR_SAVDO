@@ -24,6 +24,8 @@ object Locator {
         app = a
         applyUi()
         scope.launch { runCatching { data.loadLocal() } }
+        // Fonda avtomatik yangilash (Sozlamalar ▸ Ma'lumot)
+        uz.imsoft.mijoz.data.RefreshWorker.schedule(a, prefs.autoMinutes)
     }
 
     /** BroadcastReceiver uchun (jarayon endi boshlangan bo'lsa ham). */

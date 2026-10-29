@@ -19,8 +19,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_mijoz"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         vectorDrawables {
             generatedDensities?.clear()
         }
@@ -76,4 +76,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    // v2.5: fonda avtomatik yangilash (1–2 soatda, batareyani tejab)
+    implementation(libs.androidx.work.runtime.ktx)
 }

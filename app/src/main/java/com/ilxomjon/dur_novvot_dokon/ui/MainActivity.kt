@@ -93,6 +93,8 @@ class MainActivity : AppCompatActivity(), Navigator {
             val away = System.currentTimeMillis() - backgroundAt
             if (backgroundAt == 0L || away >= maxOf(p.lockAfterMin * 60_000L, 5_000L)) showLock()
         }
+        // Mijoz ilovasi: ilova ochilganda 2-ilova so'rovi va buyurtmalari darhol tekshiriladi.
+        if (ServiceLocator.shareStore.isConfigured) com.ilxomjon.dur_novvot_dokon.data.share.ShareWorker.kick(this, 1)
         // Avto-yangilash: ma'lumot eski bo'lsa (Qulayliklar ▸ Avto-yangilash)
         val h = p.autoSyncHours
         val cat = ServiceLocator.catalog.state.value

@@ -44,7 +44,7 @@ import java.util.Date
 import java.util.TimeZone
 
 /** "Mijoz ilovasi (2-ilova)": 1C hisobotlarini import qilish, Firebase sozlash va 2-ilovaga yuborish. */
-class ShareFragment : Fragment() {
+class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerHost by com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost {
     private var _binding: FragmentShareBinding? = null
     private val binding get() = _binding!!
     private val repo get() = ServiceLocator.share
@@ -97,6 +97,22 @@ class ShareFragment : Fragment() {
         }
         binding.swAuto.setOnCheckedChangeListener { _, on -> if (!rendering) repo.setAuto(on) }
         binding.swAnswer.setOnCheckedChangeListener { _, on -> if (!rendering) repo.setAnswer(on) }
+        binding.swOrders.setOnCheckedChangeListener { _, on -> if (!rendering) { repo.setAcceptOrders(on); ShareWorker.kick(requireContext().applicationContext) } }
+        binding.btnOrders.setOnClickListener { OrdersSheet.show(childFragmentManager) }
+        binding.btnHistory.setOnClickListener {
+            if (repo.state.value.entries == 0) { snack(R.string.share_ledger_empty); return@setOnClickListener }
+            val hist = parentFragmentManager.findFragmentByTag("tab_" + R.id.nav_history) as? com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment
+            com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment.open1C(navigator(), hist)
+        }
+        binding.tgSync.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked || rendering) return@addOnButtonCheckedListener
+            val m = when (id) { R.id.sync30 -> 30; R.id.sync60 -> 60; R.id.sync120 -> 120; else -> 0 }
+            repo.setSyncMinutes(m)
+            if (repo.state.value.configured) ShareWorker.schedule(requireContext().applicationContext, m)
+        }
+        binding.edtHeader.setText(ServiceLocator.shareStore.receiptHeader)
+        binding.edtHeader.setOnFocusChangeListener { _, focus -> if (!focus) repo.setReceiptHeader(binding.edtHeader.text?.toString().orEmpty()) }
+        binding.edtHeader.setOnEditorActionListener { v, _, _ -> repo.setReceiptHeader(v.text?.toString().orEmpty()); v.clearFocus(); false }
 
         launchOnStarted { repo.state.collect { render(it) } }
         viewLifecycleOwner.lifecycleScope.launch { repo.load(); refreshPrinter() }
@@ -131,11 +147,21 @@ class ShareFragment : Fragment() {
         binding.btnImportServer.isEnabled = !s.busy
         binding.tvLedger.text = if (s.entries == 0) getString(R.string.share_ledger_empty)
         else getString(R.string.share_ledger_info, s.entries, s.coverage.joinToString(", ") { Stamp.formatDate(it.from) + "–" + Stamp.formatDate(it.to) })
+        binding.btnHistory.isEnabled = s.entries > 0
         binding.tvLog.text = s.log.take(5).joinToString("\n") {
             getString(R.string.share_log_line, formatDateTime(it.at), if (it.source == "server") getString(R.string.share_src_server) else it.name, it.added, it.removed)
         }
         binding.tvLog.show(s.log.isNotEmpty())
         if (binding.swAuto.isChecked != s.autoPublish) binding.swAuto.isChecked = s.autoPublish
+        if (binding.swOrders.isChecked != s.acceptOrders) binding.swOrders.isChecked = s.acceptOrders
+        binding.tgSync.check(when (s.syncMinutes) { 30 -> R.id.sync30; 60 -> R.id.sync60; 120 -> R.id.sync120; 0 -> R.id.sync0; else -> R.id.sync60 })
+        binding.tvOrders.text = when {
+            !s.configured -> getString(R.string.ord_need_setup)
+            !s.acceptOrders -> getString(R.string.ord_off)
+            s.newOrders > 0 -> getString(R.string.ord_new_n, s.newOrders)
+            else -> getString(R.string.ord_none_new)
+        }
+        binding.btnOrders.isEnabled = s.configured
         if (binding.swAnswer.isChecked != s.answerRequests) binding.swAnswer.isChecked = s.answerRequests
         if (s.hasSecret && binding.edtSecret.text.isNullOrEmpty()) binding.tilSecret.helperText = getString(R.string.share_secret_saved)
         if (binding.edtUrl.text.isNullOrEmpty() && s.dbUrl.isNotEmpty()) binding.edtUrl.setText(s.dbUrl)
@@ -189,8 +215,11 @@ class ShareFragment : Fragment() {
     }
 
     private fun publish() {
+        val app = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val ok = repo.publish()
+            // Internet bo'lmasa — paydo bo'lishi bilan fon ishi o'zi yuboradi.
+            if (!ok) ShareWorker.kick(app)
             if (_binding == null) return@launch
             snack(if (ok) R.string.share_published else R.string.share_publish_failed)
             refreshPrinter()

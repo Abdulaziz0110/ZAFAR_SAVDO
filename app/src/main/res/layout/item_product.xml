@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Tovar qatori (v2.5): kattaroq, o'qilishi oson; savatchadagi tovar fon bilan ajralib turadi. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
@@ -8,12 +9,12 @@
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="48dp"
+    android:minHeight="64dp"
     android:orientation="horizontal"
-    android:paddingStart="12dp"
-    android:paddingTop="3dp"
-    android:paddingEnd="6dp"
-    android:paddingBottom="3dp">
+    android:paddingStart="16dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -27,12 +28,13 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="15sp" />
+            android:textAppearance="@style/TextAppearance.App.ItemTitle" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
@@ -41,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:background="?attr/selectableItemBackground"
                 android:paddingTop="2dp"
-                android:paddingEnd="8dp"
+                android:paddingEnd="10dp"
                 android:paddingBottom="2dp"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="16sp"
@@ -49,46 +51,48 @@
 
             <TextView
                 android:id="@+id/tvMeta"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp" />
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.ItemSub" />
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMinus"
             style="?attr/materialIconButtonOutlinedStyle"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:contentDescription="@string/item_remove"
             app:icon="@drawable/ic_remove" />
 
         <TextView
             android:id="@+id/tvQty"
             android:layout_width="wrap_content"
-            android:layout_height="34dp"
+            android:layout_height="44dp"
             android:background="?attr/selectableItemBackground"
             android:gravity="center"
-            android:minWidth="40dp"
+            android:minWidth="44dp"
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPlus"
             style="?attr/materialIconButtonFilledTonalStyle"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:contentDescription="@string/item_save_add"
             app:icon="@drawable/ic_add" />
     </LinearLayout>

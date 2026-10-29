@@ -1,3 +1,29 @@
+# Test hisoboti — v2.5 + IMSOFT Mijoz 1.1 (2026-10-29)
+
+## Natija (shu muhitda bajarilgan)
+| Tekshiruv | Natija |
+|---|---|
+| Kotlin kompilyatsiyasi: `app` + `shared` (Android SDK, JDK'siz — Android unit test sharoiti) | **0 xato** |
+| Kotlin kompilyatsiyasi: `mijoz` + `shared` | **0 xato** |
+| JUnit, jami | **116/116 o'tdi** (v2.4 dagi 90 ta o'zgarmagan holda yashil) |
+| `LedgerSearchTest` (15) — hujjatlarga yig'ish; nom (lotin/kirill/xato/klaviatura); "pista 40" bitta qatorda; narx/summa (`200 000`, `200k`, `200минг`, `21,51mln`, `15$`); son boshi — taxminiy; nomdagi raqam aniq; sana/oraliq/oy/bugun/kecha/vaqt; turi va valyuta; istisno; jami faqat mos qatorlar; turli qatorlarda — taxminiy; ajratish oralig'i; filtr; "2.5" ikki ma'noli | 15/15 |
+| `CatalogMatchTest` (3) — aniq (nom/id, kirill), taxminiy, topilmadi | 3/3 |
+| `ReceiptTest` (4) — chek matni/HTML (ekranlash), son formati, ESC/POS rastr baytlari va bo'laklari | 4/4 |
+| `OrdersTest` (4) — kodek, id tartibi, soxta Firebase'da qoidalar: mijoz faqat yangi buyurtma qo'shadi, o'zgartira/o'chira/ortiqcha maydon yoza olmaydi, 1-ilova holat yozadi | 4/4 |
+| Haqiqiy 1C fayli (repoga kiritilmagan) bilan qidiruv: 445 qator -> 126 hujjat; `pista 40` -> 7 hujjat; `орик`, `ьфнша` (mayiz), `3762` (taxminiy), `to'lov >10mln` — barchasi kutilgandek, < 25 ms | qo'lda |
+| Resurs havolalari (`@string/@style/@drawable/...`) va barcha XML fayllar | xatosiz |
+| `pc/test_forwarder.py` | 8/8 |
+| Maketlarning taxminiy ko'rinishi (HTML render, 360dp, yorug'/qorong'i) — sig'ishi va kesilgan yozuvlar tekshirildi | qo'lda |
+
+## Tekshirib bo'lmagan narsalar (ochiq)
+1. Haqiqiy telefon: yangi ranglar, 100% o'lcham, ro'yxatlar, bottom sheet'lar, chek rasmi ko'rinishi.
+2. Haqiqiy Firebase qoidalari v2 (`ord`, `now`) — soxta server bilan sinaldi; telefonda birinchi ochilishda o'rnatiladi.
+3. Chekning Xprinter XP-Q80A'da rastr bo'lib chiqishi (GS v 0, 240 qatorli bo'laklar) — printer bilan sinash kerak.
+4. WorkManager'ning Xiaomi/HyperOS'da 1–2 soatlik ishlashi (batareya cheklovi "Cheklovsiz" bo'lishi kerak).
+5. Haqiqiy Gradle build (AAPT2: yangi uslub atributlari, FileProvider) — GitHub Actions'da.
+
+---
+
 # Test hisoboti — v2.4 + IMSOFT Mijoz 1.0 (2026-10-29)
 
 ## Natija (shu muhitda bajarilgan)

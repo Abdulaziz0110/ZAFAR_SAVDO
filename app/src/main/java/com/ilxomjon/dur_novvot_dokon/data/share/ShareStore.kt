@@ -42,13 +42,24 @@ class ShareStore(private val context: Context) {
 
     /** Yangi ma'lumot (import, narx/qarz yangilanishi) bo'lsa o'zi yuborsin. */
     var autoPublish: Boolean get() = prefs.getBoolean("auto", true); set(v) = prefs.edit().putBoolean("auto", v).apply()
-    /** 2-ilova "Yangilash" bosganda (15 daqiqagacha) narx/qarzni serverdan yangilab yuborsin. */
+    /** 2-ilova "Yangilash" bosganda narx/qarzni (server ko'rinsa) yangilab yuborsin. */
     var answerRequests: Boolean get() = prefs.getBoolean("answer", true); set(v) = prefs.edit().putBoolean("answer", v).apply()
     var rulesOk: Boolean get() = prefs.getBoolean("rules_ok", false); set(v) = prefs.edit().putBoolean("rules_ok", v).apply()
     var dirty: Boolean get() = prefs.getBoolean("dirty", false); set(v) = prefs.edit().putBoolean("dirty", v).apply()
     var lastPublishAt: Long get() = prefs.getLong("last_pub", 0L); set(v) = prefs.edit().putLong("last_pub", v).apply()
     var lastPublishError: String get() = s("last_err"); set(v) = put("last_err", v)
     var lastRequestServed: Long get() = prefs.getLong("last_req", 0L); set(v) = prefs.edit().putLong("last_req", v).apply()
+
+    /** O'rnatilgan qoidalar versiyasi (CloudDb.RULES_VERSION dan kichik bo'lsa qayta o'rnatiladi). */
+    var rulesVersion: Int get() = prefs.getInt("rules_ver", if (rulesOk) 1 else 0); set(v) = prefs.edit().putInt("rules_ver", v).apply()
+    /** 2-ilovadan "qayta buyurtma" qabul qilinsin (v2.5). */
+    var acceptOrders: Boolean get() = prefs.getBoolean("accept_orders", true); set(v) = prefs.edit().putBoolean("accept_orders", v).apply()
+    /** Ko'rilgan buyurtmalar (bildirishnoma qayta chiqmasin). */
+    var seenOrders: String get() = s("seen_orders"); set(v) = put("seen_orders", v)
+    /** Chek sarlavhasi (do'kon nomi), bo'sh bo'lishi mumkin. */
+    var receiptHeader: String get() = s("receipt_header"); set(v) = put("receipt_header", v)
+    /** Fon yangilanishi oralig'i, daqiqa (0 — o'chiq). */
+    var syncMinutes: Int get() = prefs.getInt("sync_min", 60); set(v) = prefs.edit().putInt("sync_min", v).apply()
 
     val isConfigured: Boolean get() = dbUrl.isNotBlank() && secret.isNotBlank() && clientId.isNotBlank() && readKey.isNotBlank()
 

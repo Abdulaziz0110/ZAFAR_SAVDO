@@ -72,7 +72,7 @@ Tarif bepul ("Spark"), karta kerak emas. Qoidalarni ilova o'zi o'rnatadi. Secret
 1. 1C ▸ Mijoz kartochkasi ▸ mijoz va davrni tanlang ▸ **Ko'rsatish**.
 2. **Файл ▸ Сохранить как** ▸ turi **Excel (*.xlsx)** ▸ saqlang. (`.mxl` — 1C'ning o'z formati, o'qilmaydi.)
 3. Faylni telefonga o'tkazing (Telegram "Saved messages" eng oson).
-4. 1-ilova ▸ Mijoz ilovasi ▸ **Fayldan import qilish** ▸ faylni tanlang ▸ ko'rib chiqing ▸ **Saqlash**.
+4. 1-ilova ▸ Mijoz ilovasi ▸ **Excel faylni yuklash** ▸ faylni tanlang ▸ ko'rib chiqing ▸ **Saqlash**.
    Avto-yuborish yoqilgan bo'lsa 2-ilovaga o'zi ketadi.
 * Bir davrni qayta yuborsangiz dublikat bo'lmaydi. Oxirgi 7 kunni yuborish yetarli.
 * "Hisobot tanilmadi" chiqsa — "Yuborish" tugmasi bilan matnni dasturchiga yuboring.
@@ -82,7 +82,8 @@ Tarif bepul ("Spark"), karta kerak emas. Qoidalarni ilova o'zi o'rnatadi. Secret
 1. GitHub ▸ Actions ▸ **IMSOFT_MIJOZ-debug-apk-OWN-KEY** ▸ yuklab oling ▸ mijoz (yoki 2-filial) telefoniga o'rnating (Android 8+).
 2. 1-ilova ▸ Mijoz ilovasi ▸ **Ulanish kodini yuborish** ▸ Telegram orqali o'sha telefonga yuboring.
 3. 2-ilovada xabarni nusxalang ▸ **Kodni joylash** ▸ OK. Bosh sahifada qarz va ma'lumot chiqadi.
-* "Yangilash" bosilsa 1-ilova 15 daqiqagacha narx va qarzni serverdan yangilab yuboradi (1-ilova yoqilgan va serverga ulana olishi kerak).
+* "Yangilash" bosilsa 1-ilovadagi **eng so'nggi** ma'lumot darhol keladi (1-ilovada Excel yuklanganda u darhol yuboriladi).
+  Narx va qarzni serverdan yangilash ham so'raladi — 1-ilova buni server ko'ringanda (do'kon tarmog'ida) bajaradi.
 
 ## (h) 2-filial chek printeri
 **Telefonda (2-filial):**
@@ -114,3 +115,36 @@ Tarif bepul ("Spark"), karta kerak emas. Qoidalarni ilova o'zi o'rnatadi. Secret
 Ilova do'konda `192.168.1.200` ni, tashqarida tashqi manzilni o'zi tanlaydi. **SQL portini routerda ochmang** (port-forwarding) — `sa` bilan xavfli.
 **Kompyuterdan masofadan 1C:** ikkinchi kompyuterga ham Tailscale o'rnating va server kompyuteriga **Удалённый рабочий стол**
 (`mstsc` ▸ `100.x.y.z`; Windows Pro kerak) yoki bepul **RustDesk** orqali ulaning — 1C'da odatdagidek ishlaysiz.
+
+---
+
+# 2.5 — yangi qismlar
+
+## (j) 1-ilovani 2.5 ga, 2-ilovani 1.1 ga yangilash
+Ikkalasi ham oddiy yangilash (ma'lumot joyida qoladi): GitHub ▸ Actions ▸ oxirgi yashil build ▸ ikkala APK ▸ telefonlarda "Yangilash".
+Birinchi ochilishda ekran o'lchami 100% bo'ladi (oldingi "Ixcham" o'rniga). Kichikroq kerak bo'lsa: Sozlamalar ▸ Qulayliklar ▸ Ekran ▸ 90%.
+
+## (k) 1C tarixi (ikkala ilovada)
+* 1-ilova: **Tarix ▸ 1C tarixi** yorlig'i (yoki Bosh sahifa ▸ "1C tarixi" kartasi). 2-ilova: pastdagi **Tarix**.
+* Qidiruv qatoriga istalganini yozing: `pista`, `pista 40kg`, `200000`, `27.10`, `27.10-29.10`, `oktabr`, `to'lov >10mln`, `-pista`.
+  (i) tugmasi — to'liq yo'riqnoma.
+* Hujjatni bosing: tovarlar, jami, qoldiq. Tovarni bosing — shu tovar qachon, qancha, necha puldan olingani.
+* **Chek** — rasmni ko'rasiz: Chop etish / Rasm (Telegram) / PDF.
+  1-ilovada chop etish chekni **2-filial printeriga** yuboradi (2-ilova telefoni internetda bo'lsa chiqadi).
+  Chek tepasidagi do'kon nomi: 1-ilova ▸ Mijoz ilovasi ▸ **Chek** ▸ sarlavha.
+* 1-ilova: **Takrorlash (savatchaga)** — narx hozirgi katalogdan; "≈" belgili tovarni tekshirib belgilang.
+
+## (l) 2-ilovadan qayta buyurtma
+1. 2-ilova ▸ Tarix ▸ savdoni bosing ▸ **Qayta buyurtma** ▸ miqdorlarni tekshiring ▸ izoh (ixtiyoriy) ▸ **1-ilovaga yuborish**.
+2. 1-ilovaga bildirishnoma keladi (Mijoz ilovasi ▸ "2-ilovadan buyurtmalar" yoki Tarix ▸ 1C tarixi tepasida).
+3. Buyurtmani bosing ▸ **Savatchaga qo'shish** ▸ odatdagidek rasmiylashtiring (yoki **Rad etish**).
+4. 2-ilovada: Tarix ▸ 🛒 **Buyurtmalarim** — holat ko'rinadi.
+* O'chirish: 1-ilova ▸ Mijoz ilovasi ▸ "Buyurtma qabul qilish".
+* Birinchi marta: 1-ilova yangi qoidalarni Firebase'ga o'zi o'rnatadi (internet bo'lsa, ilova ochilganda) — siz hech narsa qilmaysiz.
+
+## (m) Avtomatik yangilash (batareyani tejab)
+* 1-ilova ▸ Mijoz ilovasi ▸ **Avtomatik yangilash**: 30 daq / 1 soat (tavsiya) / 2 soat / O'chiq.
+* 2-ilova ▸ Sozlamalar ▸ **Fonda avtomatik yangilash**: Har soat (tavsiya) / Har 2 soat / O'chiq; "Yangi ma'lumot kelganda xabar berish".
+* Telefon faqat internet bor va batareya kam bo'lmaganda tekshiradi. Xiaomi'da ishonchli ishlashi uchun: Sozlamalar ▸ Ilovalar ▸
+  ilova ▸ Batareya ▸ **Cheklovsiz**.
+

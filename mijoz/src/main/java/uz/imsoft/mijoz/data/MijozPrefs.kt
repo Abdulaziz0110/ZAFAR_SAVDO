@@ -35,7 +35,18 @@ class MijozPrefs(context: Context) {
     // ---------------- ko'rinish ----------------
     var language: String get() = s("language", "lat"); set(v) = put("language", v)
     var theme: String get() = s("theme", "system"); set(v) = put("theme", v)
-    var uiScale: Float get() = p.getFloat("ui_scale", 0.92f); set(v) = p.edit().putFloat("ui_scale", v).apply()
+    var uiScale: Float
+        get() {
+            // v2.5: eski "Ixcham" (0.92) standart edi — ro'yxatlar mayda ko'rinardi. Bir marta "Odatiy" ga o'tkaziladi.
+            if (!p.getBoolean("scale_v25", false)) {
+                val old = p.getFloat("ui_scale", 1.0f)
+                val e = p.edit().putBoolean("scale_v25", true)
+                if (old == 0.92f) e.putFloat("ui_scale", 1.0f) else if (old == 0.85f) e.putFloat("ui_scale", 0.9f)
+                e.apply()
+            }
+            return p.getFloat("ui_scale", 1.0f)
+        }
+        set(v) = p.edit().putFloat("ui_scale", v).apply()
     var fontScale: Float get() = p.getFloat("font_scale", 1.0f); set(v) = p.edit().putFloat("font_scale", v).apply()
     /** Narxlar: "cash" (Naqd) / "wholesale" (Optom). */
     var priceType: String get() = s("price_type", "wholesale"); set(v) = put("price_type", v)
@@ -44,6 +55,12 @@ class MijozPrefs(context: Context) {
     var fuzzy: Boolean get() = b("fuzzy", true); set(v) = putB("fuzzy", v)
     /** Ilova ochilganda o'zi yangilasin. */
     var autoRefresh: Boolean get() = b("auto_refresh", true); set(v) = putB("auto_refresh", v)
+    /** Fonda avtomatik yangilash oralig'i, daqiqa (0 — o'chiq). v2.5 */
+    var autoMinutes: Int get() = p.getInt("auto_minutes", 60); set(v) = p.edit().putInt("auto_minutes", v).apply()
+    /** Yangi ma'lumot kelganda bildirishnoma. */
+    var notifyNew: Boolean get() = b("notify_new", true); set(v) = putB("notify_new", v)
+    /** Yuborilgan buyurtmalar id lari (oxirgi 50) — holatini ko'rsatish uchun. */
+    var myOrders: String get() = s("my_orders"); set(v) = put("my_orders", v)
 
     // ---------------- chek printeri ----------------
     /** "Printer" bo'limi ko'rinsin (2-filial telefoni). */

@@ -46,8 +46,8 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val msg = try {
                 when (Locator.data.refresh(askFresh = true)) {
-                    RefreshResult.UPDATED -> getString(R.string.home_updated)
-                    RefreshResult.SAME -> getString(R.string.home_same)
+                    RefreshResult.UPDATED -> getString(R.string.home_updated_at, Fmt.dateTime(Locator.data.state.value.publishedAt))
+                    RefreshResult.SAME -> getString(R.string.home_same_at, Fmt.dateTime(Locator.data.state.value.publishedAt))
                     RefreshResult.NO_DATA -> getString(R.string.home_no_data)
                     RefreshResult.NOT_LINKED -> getString(R.string.home_link_title)
                 }
@@ -99,7 +99,8 @@ class HomeFragment : Fragment() {
             snap == null -> getString(R.string.home_no_data)
             else -> getString(R.string.home_sync, Fmt.dateTime(s.publishedAt.takeIf { it > 0 } ?: snap.createdAt), if (s.fetchedAt > 0) Fmt.dateTime(s.fetchedAt) else "—")
         }
-        bb.tvRequest.show(s.requestPending)
+        // "Narx/qarzni yangilash so'raldi" — 1-ilova server ko'ringanda bajaradi (Excel ma'lumoti baribir darhol keladi).
+        bb.tvRequest.show(s.requestPending && s.snapshot != null)
         if (s.requestPending) bb.tvRequest.text = getString(R.string.home_request_pending, Fmt.time(s.requestAt))
         bb.tvError.show(s.error != null)
         bb.tvError.text = ctx.describe(s.error)
@@ -123,7 +124,10 @@ class HomeFragment : Fragment() {
             getString(R.string.last_pay, lastPay?.let { Stamp.formatDateTime(it.stamp) + " · " + ctx.money2(ClientStats.paymentOf(it)) } ?: "—"),
         ).joinToString("\n")
         bb.tvCoverage.text = if (snap.coverage.isEmpty()) getString(R.string.home_no_reports)
-        else getString(R.string.home_coverage, snap.coverage.joinToString(", ") { Stamp.formatDate(it.from) + "–" + Stamp.formatDate(it.to) })
+        else getString(
+            R.string.home_coverage2, snap.coverage.joinToString(", ") { Stamp.formatDate(it.from) + "–" + Stamp.formatDate(it.to) },
+            if (snap.lastImportAt > 0) Fmt.dateTime(snap.lastImportAt) else "—",
+        )
     }
 
     override fun onDestroyView() {

@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Narx qatori (v2.5): 1-ilovadagi tovar qatori bilan bir xil o'lcham va shrift -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="48dp"
+    android:minHeight="64dp"
     android:orientation="horizontal"
     android:paddingStart="16dp"
-    android:paddingTop="5dp"
+    android:paddingTop="8dp"
     android:paddingEnd="16dp"
-    android:paddingBottom="5dp">
+    android:paddingBottom="8dp">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -24,24 +25,23 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="15sp" />
+            android:textAppearance="@style/TextAppearance.App.ItemTitle" />
 
         <TextView
             android:id="@+id/tvMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="12sp" />
+            android:layout_marginTop="2dp"
+            android:textAppearance="@style/TextAppearance.App.ItemSub" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/tvPrice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="12dp"
         android:gravity="end"
         android:textColor="?attr/colorPrimary"
-        android:textSize="16sp"
+        android:textSize="17sp"
         android:textStyle="bold" />
 </LinearLayout>

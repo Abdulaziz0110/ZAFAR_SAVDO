@@ -62,6 +62,12 @@ class SaleFragment : Fragment() {
         adapter.haptics = ServiceLocator.appPrefs.fHaptics
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
+        binding.recycler.addItemDecoration(
+            com.google.android.material.divider.MaterialDividerItemDecoration(requireContext(), androidx.recyclerview.widget.RecyclerView.VERTICAL).apply {
+                dividerInsetStart = (16 * resources.displayMetrics.density).toInt()
+                isLastItemDecorated = false
+            },
+        )
         binding.switchCost.show(ServiceLocator.appPrefs.fCostSwitch)
         binding.recycler.setHasFixedSize(true)
         binding.recycler.setItemViewCacheSize(24)

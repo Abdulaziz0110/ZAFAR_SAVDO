@@ -26,7 +26,7 @@ import com.ilxomjon.dur_novvot_dokon.ui.formatDateTime
 import com.ilxomjon.dur_novvot_dokon.ui.navigator
 import kotlinx.coroutines.launch
 
-/** Sozlamalar ▸ Qulayliklar: 12 ta qo'shimcha sozlama (har biri o'chiriladi). */
+/** Sozlamalar ▸ Qulayliklar: ekran, savdo ekrani, qidiruv, avto-yangilash, PIN, zaxira, eslatmalar (har biri o'chiriladi). */
 class ExtrasFragment : Fragment() {
     private var _binding: FragmentExtrasBinding? = null
     private val binding get() = _binding!!
@@ -49,7 +49,7 @@ class ExtrasFragment : Fragment() {
         render()
 
         onToggle(binding.tgScale) { id ->
-            prefs.uiScale = when (id) { R.id.scale85 -> 0.85f; R.id.scale100 -> 1.0f; R.id.scale110 -> 1.1f; else -> 0.92f }
+            prefs.uiScale = when (id) { R.id.scale90 -> 0.9f; R.id.scale110 -> 1.1f; R.id.scale120 -> 1.2f; else -> 1.0f }
             requireActivity().recreate()
         }
         onToggle(binding.tgFont) { id ->
@@ -91,7 +91,7 @@ class ExtrasFragment : Fragment() {
     private fun render() {
         val b = _binding ?: return
         rendering = true
-        b.tgScale.check(when (prefs.uiScale) { 0.85f -> R.id.scale85; 1.0f -> R.id.scale100; 1.1f -> R.id.scale110; else -> R.id.scale92 })
+        b.tgScale.check(when (prefs.uiScale) { 0.9f -> R.id.scale90; 1.1f -> R.id.scale110; 1.2f -> R.id.scale120; else -> R.id.scale100 })
         b.tgFont.check(when (prefs.fontScale) { 0.9f -> R.id.font90; 1.15f -> R.id.font115; else -> R.id.font100 })
         b.swFuzzy.isChecked = prefs.fFuzzySearch
         b.swLayout.isChecked = prefs.fLayoutFix

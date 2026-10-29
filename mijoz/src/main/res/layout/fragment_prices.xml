@@ -50,7 +50,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCash"
-                style="?attr/materialButtonOutlinedStyle"
+                style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -60,7 +60,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnWholesale"
-                style="?attr/materialButtonOutlinedStyle"
+                style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -80,7 +80,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSom"
-                style="?attr/materialButtonOutlinedStyle"
+                style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -90,7 +90,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnUsd"
-                style="?attr/materialButtonOutlinedStyle"
+                style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"

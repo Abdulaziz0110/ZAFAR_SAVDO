@@ -23,7 +23,7 @@
             android:padding="12dp">
 
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Material3.CardView.Filled"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
@@ -75,7 +75,7 @@
             <!-- Noma'lum holatdagi chek -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardUnknown"
-                style="@style/Widget.Material3.CardView.Filled"
+                style="@style/Widget.App.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
@@ -121,7 +121,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Material3.CardView.Outlined"
+                style="@style/Widget.App.Card.Outlined"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp">
@@ -176,7 +176,7 @@
                 android:layout_marginTop="4dp"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
-                android:textSize="11sp" />
+                android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

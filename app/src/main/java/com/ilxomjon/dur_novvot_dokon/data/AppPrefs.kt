@@ -68,7 +68,18 @@ class AppPrefs(context: Context) {
     private fun setStr(key: String, v: String) = prefs.edit().putString(key, v).apply()
 
     /** Ekran o'lchami (zichlik ko'paytuvchisi): 0.85 / 0.92 / 1.0 / 1.1. Odatiy — ixcham (0.92). */
-    var uiScale: Float get() = prefs.getFloat("ui_scale", 0.92f); set(v) = prefs.edit().putFloat("ui_scale", v).apply()
+    var uiScale: Float
+        get() {
+            // v2.5: eski standart "Ixcham" (0.92) ro'yxatlarni mayda qilardi — bir marta "100%" ga o'tkaziladi.
+            if (!prefs.getBoolean("scale_v25", false)) {
+                val old = prefs.getFloat("ui_scale", 1.0f)
+                val e = prefs.edit().putBoolean("scale_v25", true)
+                if (old == 0.92f) e.putFloat("ui_scale", 1.0f) else if (old == 0.85f) e.putFloat("ui_scale", 0.9f)
+                e.apply()
+            }
+            return prefs.getFloat("ui_scale", 1.0f)
+        }
+        set(v) = prefs.edit().putFloat("ui_scale", v).apply()
     /** Shrift ko'paytuvchisi (telefon sozlamasiga qo'shimcha): 0.9 / 1.0 / 1.15. */
     var fontScale: Float get() = prefs.getFloat("font_scale", 1.0f); set(v) = prefs.edit().putFloat("font_scale", v).apply()
     /** Imlo xatolariga chidamli qidiruv. */
