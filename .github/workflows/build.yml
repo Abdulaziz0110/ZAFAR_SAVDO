@@ -1,0 +1,132 @@
+name: Build & unit tests
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  unzip:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZIP bo'lsa — ochish va almashtirish
+        run: |
+          set -euo pipefail
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)
+          if [ -z "$ZIP" ]; then echo "ZIP yo'q — o'tkazib yuborildi"; exit 0; fi
+          echo "ZIP: $ZIP"
+          rm -rf /tmp/u && mkdir -p /tmp/u && unzip -q "$ZIP" -d /tmp/u
+          SRC=/tmp/u
+          if [ "$(ls -A /tmp/u | wc -l)" = 1 ] && [ -d "/tmp/u/$(ls -A /tmp/u)" ]; then SRC="/tmp/u/$(ls -A /tmp/u)"; fi
+          if [ ! -f "$SRC/settings.gradle.kts" ]; then echo "::error::Bu IMSOFT loyihasining ZIP'i emas (settings.gradle.kts yo'q)"; exit 1; fi
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          (cd "$SRC" && tar --exclude=./.github -cf - .) | tar -xf -
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "O'zgarish yo'q"; else git commit -qm "ZIP'dan yangilandi: ${ZIP#./}"; git push; fi
+
+  build:
+    needs: unzip
+    if: always() && (needs.unzip.result == 'success' || needs.unzip.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_KEY: ${{ secrets.SIGNING_KEYSTORE_B64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.ref || github.ref_name }}
+
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: SQL smoke test
+        run: python3 tools/sql_smoke_test.py
+
+      - name: Forwarder (PC) tests
+        run: python3 pc/test_forwarder.py
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
+
+      - name: Signing key from secrets (optional)
+        if: env.HAS_KEY == 'true'
+        env:
+          KS: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo "$KS" | base64 -d > app-signing.keystore
+          printf 'storeFile=app-signing.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > keystore.properties
+
+      - name: Assemble debug
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug :mijoz:assembleDebug
+
+      - name: Print APK certificate (compare with the phone)
+        continue-on-error: true
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          for f in app/build/outputs/apk/debug/*.apk mijoz/build/outputs/apk/debug/*.apk; do
+            echo "== $f"; "$APKSIGNER" verify --print-certs "$f" | grep -E "SHA-256|DN"
+          done
+
+      - name: Clean signing files
+        if: always()
+        run: rm -f app-signing.keystore keystore.properties
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+          if-no-files-found: ignore
+
+      - name: Upload debug APK (1-ilova)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.HAS_KEY == 'true' && 'IMSOFT_DOKON-debug-apk-OWN-KEY' || 'IMSOFT_DOKON-debug-apk-CI-ONLY' }}
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload debug APK (2-ilova, IMSOFT Mijoz)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.HAS_KEY == 'true' && 'IMSOFT_MIJOZ-debug-apk-OWN-KEY' || 'IMSOFT_MIJOZ-debug-apk-CI-ONLY' }}
+          path: mijoz/build/outputs/apk/debug/*.apk
+
+      - name: Upload PC forwarder
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: IMSOFT_forwarder-PC
+          path: |
+            pc/forwarder.py
+            pc/forwarder.vbs
+            pc/forwarder.ini.example
+            pc/README_PC.md
