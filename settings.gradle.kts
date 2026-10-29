@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "IMSOFT_DOKON"
 include(":app")
+include(":mijoz")

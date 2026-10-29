@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 5
-        versionName = "2.3"
+        versionCode = 6
+        versionName = "2.4"
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {
@@ -38,6 +38,13 @@ android {
                 keyPassword = keystoreProps.getProperty("keyPassword")
             }
         }
+    }
+
+    // Ikki ilova uchun umumiy kod (qidiruv, hisobot o'quvchi, bulut) — alohida modulsiz, manba papkasi sifatida.
+    sourceSets {
+        getByName("main").java.srcDir("../shared/src/main/kotlin")
+        getByName("test").java.srcDir("../shared/src/test/kotlin")
+        getByName("test").resources.srcDir("../shared/src/test/resources")
     }
 
     buildFeatures {

@@ -1,0 +1,95 @@
+package uz.imsoft.mijoz.ui.settings
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
+import uz.imsoft.mijoz.Locator
+import uz.imsoft.mijoz.R
+import uz.imsoft.mijoz.databinding.FragmentSettingsBinding
+import uz.imsoft.mijoz.printer.PrintService
+import uz.imsoft.mijoz.ui.MainActivity
+import uz.imsoft.mijoz.ui.launchOnStarted
+
+class SettingsFragment : Fragment() {
+    private var _b: FragmentSettingsBinding? = null
+    private val b get() = _b!!
+    private var rendering = false
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _b = FragmentSettingsBinding.inflate(inflater, container, false)
+        return b.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val p = Locator.prefs
+        render()
+        b.btnPaste.setOnClickListener { LinkDialog.show(this) { render() } }
+        b.btnUnlink.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.link_remove).setMessage(R.string.link_remove_msg)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        PrintService.stop(requireContext())
+                        Locator.data.unlink()
+                        render()
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null).show()
+        }
+        onToggle(b.tgLang) { id -> p.language = if (id == R.id.langCyr) "cyr" else "lat"; Locator.applyUi() }
+        onToggle(b.tgTheme) { id -> p.theme = when (id) { R.id.themeLight -> "light"; R.id.themeDark -> "dark"; else -> "system" }; Locator.applyUi() }
+        onToggle(b.tgScale) { id ->
+            p.uiScale = when (id) { R.id.scale85 -> 0.85f; R.id.scale100 -> 1.0f; R.id.scale110 -> 1.1f; else -> 0.92f }
+            requireActivity().recreate()
+        }
+        onToggle(b.tgFont) { id ->
+            p.fontScale = when (id) { R.id.font90 -> 0.9f; R.id.font115 -> 1.15f; else -> 1.0f }
+            requireActivity().recreate()
+        }
+        b.swAutoRefresh.setOnCheckedChangeListener { _, on -> if (!rendering) p.autoRefresh = on }
+        b.swFuzzy.setOnCheckedChangeListener { _, on -> if (!rendering) p.fuzzy = on }
+        b.swPrinter.setOnCheckedChangeListener { _, on ->
+            if (rendering) return@setOnCheckedChangeListener
+            p.printerSection = on
+            if (!on) PrintService.stop(requireContext())
+            (activity as? MainActivity)?.updatePrinterTab()
+        }
+        onToggle(b.tgSkip) { id -> p.skipOlderDays = when (id) { R.id.skip1 -> 1; R.id.skip3 -> 3; R.id.skip7 -> 7; else -> 0 } }
+        val version = runCatching { requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName }.getOrNull().orEmpty()
+        b.tvAbout.text = getString(R.string.st_about_text, version)
+        launchOnStarted { Locator.data.state.collect { render() } }
+    }
+
+    private fun onToggle(g: MaterialButtonToggleGroup, block: (Int) -> Unit) {
+        g.addOnButtonCheckedListener { _, id, checked -> if (checked && !rendering) block(id) }
+    }
+
+    private fun render() {
+        val bb = _b ?: return
+        val p = Locator.prefs
+        rendering = true
+        val link = p.link
+        bb.tvLink.text = if (link == null) getString(R.string.link_none)
+        else getString(R.string.link_info, link.clientName.ifEmpty { "—" }, if (link.queueKey.isNotEmpty()) getString(R.string.link_with_printer) else "")
+        bb.btnUnlink.isEnabled = link != null
+        bb.tgLang.check(if (p.language == "cyr") R.id.langCyr else R.id.langLat)
+        bb.tgTheme.check(when (p.theme) { "light" -> R.id.themeLight; "dark" -> R.id.themeDark; else -> R.id.themeSystem })
+        bb.tgScale.check(when (p.uiScale) { 0.85f -> R.id.scale85; 1.0f -> R.id.scale100; 1.1f -> R.id.scale110; else -> R.id.scale92 })
+        bb.tgFont.check(when (p.fontScale) { 0.9f -> R.id.font90; 1.15f -> R.id.font115; else -> R.id.font100 })
+        bb.swAutoRefresh.isChecked = p.autoRefresh
+        bb.swFuzzy.isChecked = p.fuzzy
+        bb.swPrinter.isChecked = p.printerSection
+        bb.tgSkip.check(when (p.skipOlderDays) { 1 -> R.id.skip1; 3 -> R.id.skip3; 7 -> R.id.skip7; else -> R.id.skip0 })
+        rendering = false
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _b = null
+    }
+}

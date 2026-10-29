@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 2.4 (versionCode 6) + IMSOFT Mijoz 1.0 — 2026-10-29
+Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
+C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida faylda; yangi funksiyalar Sozlamalarda o'chiriladi.
+
+### Yangi: 2-ilova (`mijoz/`, `com.ibrohimjon.imsoft_mijoz`, minSdk 26)
+* Bosh sahifa (qarz — server qiymati va vaqti, bu oy, oxirgi xarid/to'lov), Narxlar (faqat mijoz olgan tovarlar, Naqd/Optom,
+  so'm/$, tovar tarixi), Hisobot (xarid/to'lov/hammasi, davrlar, kunlar bo'yicha, PDF), Sozlamalar (ulanish kodi, til, mavzu, o'lcham).
+* 2-filial chek printeri: foreground servis (`connectedDevice`), Firebase navbati, SSE signal + 60 s zaxira tekshiruv, USB bulk
+  (sinf 7 ustuvor), "inflight/printed" dublikat himoyasi, noma'lum holatni foydalanuvchi hal qiladi, sinov cheki, jurnal,
+  BOOT_COMPLETED, batareya cheklovi tugmasi, holat 1-ilovaga yoziladi.
+
+### 1-ilova
+* Mijoz ilovasi (Sozlamalar ▸ Qo'shimcha): Firebase (REST, secret shifrlangan, qoidalar avtomatik), mijoz tanlash, 1C hisoboti
+  importi (.xls BIFF5/8 + birlashtirilgan kataklar, .htm cp1251/UTF-8 + rowspan/colspan, .txt/.csv), serverdan import (tur 5,
+  o'zgarishsiz), ko'rib chiqish oynasi, davr bo'yicha almashtirish (dublikatsiz), ulanish kodi, `forwarder.ini`, `ShareWorker`
+  (15 daqiqada: 2-ilova so'roviga javob, o'zgarishni yuborish), 2-filial printer holati.
+* Tarix ▸ **Takrorlash** (joriy narxlarda; almashtirish/qo'shish/kutishga qo'yish).
+* Professional qidiruv (`shared/Search.kt`) savdo va do'kon tanlashda, ajratib ko'rsatish, "taxminiy" belgisi, mashhurlik.
+* Ixcham qatorlar; ekran o'lchami va shrift (Activity konfiguratsiyasi orqali).
+* Qulayliklar (12): o'lcham, shrift, imlo, klaviatura, tartib, "+" rejimi, tebranish, "Kelgan narx" tugmasi, avto-yangilash, PIN qulf,
+  kunlik avto-zaxira (+tiklash), kun yakuni eslatmasi, navbat ogohlantirishi.
+* Masofadan ishlash yo'riqnomasi (Tailscale) ilova ichida.
+* Kirill matnlarda brend nomlari (VPN, Firebase, Telegram…) lotinda qoladi.
+
+### Kompyuter
+* `pc/forwarder.py` Telegram o'rniga Firebase: idempotent PUT (fayl nomidan kalit — qayta yuborishda dublikat yo'q), "yangi chek"
+  signali, 401/403/404/413/429 alohida, `--test`, `--status`, `--once`; `forwarder.vbs`; testlar `pc/test_forwarder.py`.
+
+### Haqiqiy 1C fayli (2026-10-29)
+* `.xlsx` o'quvchi (ZIP + SAX, birlashtirilgan kataklar). Haqiqiy "Mijoz kartochkasi": 445 yozuv (406 savdo, 35 to'lov, 4 qaytarish),
+  jami hisobot oxiridagi aylanma bilan bir xil. 20 ustun: yetkazib beruvchi va qarz olish/berish ustunlari mijoz ustunlariga
+  aralashmaydi; `Qarzi (Dt)`/`Xaqqi (Kt)` va "kun boshiga/oxiriga qoldiq" qatorlari o'qiladi → 2-ilovada rasmiy qoldiq.
+
+### Testlar
+* JVM: 56 → **90** (qidiruv, JSON/Base64/kod, 1C .htm/.xls/.txt o'quvchi, statistika, soxta Firebase bilan oqim). Python: forwarder 8 test.
+* CI ikkala APK'ni va forwarder papkasini artefakt qiladi.
+
+
 ## 2.3 (versionCode 5) — 2026-10-27 · faqat APK
 Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5), `assafocopy.sqlite` mavjud jadvallari, SharedPreferences kalitlari,
 applicationId va C8 biznes qoidalari **o'zgarmagan**. Protokol fixture testlari o'zgarmagan va yashil.

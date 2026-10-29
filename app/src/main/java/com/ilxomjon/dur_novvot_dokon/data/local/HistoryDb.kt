@@ -294,6 +294,11 @@ class HistoryDb(context: Context) : SQLiteOpenHelper(context.applicationContext,
         return out
     }
 
+    /** Eng eski hali serverga yozilmagan navbat qatori vaqti (v2.4 ogohlantirish uchun, faqat o'qish). */
+    fun oldestUnsentAt(): Long? = readableDatabase.rawQuery(
+        "SELECT MIN(created_at) FROM outbox WHERE state IN ('READY','SENDING','RETRY_WAIT','UNCERTAIN','NEEDS_CHECK')", null,
+    ).use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null }
+
     fun counts(): OutboxCounts {
         var r = OutboxCounts()
         readableDatabase.rawQuery("SELECT state, COUNT(*) FROM outbox GROUP BY state", null).use { c ->

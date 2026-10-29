@@ -53,6 +53,12 @@ class SettingsFragment : Fragment() {
         }
         binding.toolbar.setNavigationOnClickListener { navigator().pop() }
         binding.btnServer.setOnClickListener { navigator().push(ServerSettingsFragment()) }
+        binding.btnShare.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.ShareFragment()) }
+        binding.btnExtras.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.extras.ExtrasFragment()) }
+        binding.btnRemoteHelp.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.remote_help_title).setMessage(R.string.remote_help_text)
+                .setPositiveButton(R.string.close, null).show()
+        }
         binding.btnLogout.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.settings_logout_title)

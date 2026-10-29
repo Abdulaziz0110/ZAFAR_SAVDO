@@ -179,6 +179,7 @@ class OutboxWorker(appContext: Context, params: WorkerParameters) : CoroutineWor
         val c = outbox.counts.value
         // NEEDS_CHECK qatorlari avtomatik yuborilmaydi — ular uchun qayta urinish shart emas.
         val waiting = c.ready + c.retry + c.uncertain + c.sending
+        runCatching { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.checkQueueAlert(applicationContext) }
         return if (r.retryLater && waiting > 0 && runAttemptCount < 50) Result.retry() else Result.success()
     }
 }

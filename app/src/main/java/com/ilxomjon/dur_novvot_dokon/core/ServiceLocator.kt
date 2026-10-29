@@ -28,6 +28,9 @@ import com.ilxomjon.dur_novvot_dokon.data.repo.HistoryRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.OrderRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.OutboxRepository
 import com.ilxomjon.dur_novvot_dokon.data.repo.ReportRepository
+import com.ilxomjon.dur_novvot_dokon.data.share.ShareRepository
+import com.ilxomjon.dur_novvot_dokon.data.share.ShareStore
+import com.ilxomjon.dur_novvot_dokon.data.share.ShareWorker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +73,13 @@ object ServiceLocator {
             outbox.refreshCount()
             outbox.kick()
             network.start()
+            // v2.4: 2-ilova bilan ulashish (sozlangan bo'lsa)
+            runCatching {
+                share.load()
+                catalog.onChanged = { share.markDirty(); if (shareStore.isConfigured && shareStore.autoPublish) ShareWorker.kick(app) }
+                if (shareStore.isConfigured) ShareWorker.schedule(app)
+            }
+            runCatching { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.onAppStart(app) }
         }
     }
 
@@ -102,6 +112,9 @@ object ServiceLocator {
     val parked by lazy { ParkedCartRepository(localDb, draft, catalog) }
     val localReports by lazy { LocalReportRepository(historyDb) }
     val diagnostics by lazy { DiagnosticsRepository(app, secure, api, network, outbox, historyDb, localDb) }
+    val repeatSale by lazy { com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale(catalog, draft, parked) }
+    val shareStore by lazy { ShareStore(app) }
+    val share by lazy { ShareRepository(app, shareStore, catalog, api) }
     val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox) }
 
     fun applyUiPrefs() {

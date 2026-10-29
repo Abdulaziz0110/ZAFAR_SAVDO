@@ -49,3 +49,68 @@ Hammasi joyida bo'lsa — qolgan telefonlarga birma-bir o'rnating.
    `tar -xf` buyrug'i bilan **yangilashdan oldingi** `imsoft_nusxa.tar` ni qaytaring va ilovani oching.
 4. Faqat **eski APK** (`IMSOFT_DOKON_2610` yoki telefondagi avvalgi ilova) ga qayting — 2.2 sinov build'lariga emas.
 5. Nima bo'lganini (ekran rasmi, Diagnostika matni) saqlab, dasturchiga yuboring.
+
+---
+
+# 2.4 — yangi qismlar (har biri qisqa qadamlar)
+
+## (d) 1-ilovani 2.4 ga yangilash
+2.3 sizning kalitingiz bilan o'rnatilgan, 2.4 ham o'sha kalit bilan chiqadi — **oddiy yangilash**, ma'lumot joyida qoladi.
+1. GitHub ▸ Actions ▸ oxirgi yashil build ▸ **IMSOFT_DOKON-debug-apk-OWN-KEY** ni yuklab oling.
+2. Telefonda APK'ni oching ▸ "Yangilash". (Yoki kompyuterdan: `adb install -r app-debug.apk`.)
+
+## (e) Firebase (bepul bulut) — bir marta, ~5 daqiqa
+1. **console.firebase.google.com** ▸ **Create a project** (yoki "Add project") ▸ nom: `imsoft` ▸ Analytics: o'chiring ▸ Create.
+2. Chap menyuda **Realtime Database** ("Build" yoki "Databases" bo'limida) ▸ **Create Database** ▸ joy: **Belgium (europe-west1)** ▸ **locked mode** ▸ Enable.
+3. Sahifa tepasidagi manzilni nusxalang: `https://imsoft-…-default-rtdb.europe-west1.firebasedatabase.app`.
+4. ⚙ (Project settings) ▸ **Service accounts** ▸ **Database secrets** ▸ **Show** ▸ nusxalang (bo'sh bo'lsa **Add secret**).
+5. 1-ilova ▸ Sozlamalar ▸ **Mijoz ilovasi (2-ilova)** ▸ manzil va secret'ni joylang ▸ **Saqlash va tekshirish**.
+6. **Mijozni tanlang** ▸ Dadaxon Aka (TRZ).
+Tarif bepul ("Spark"), karta kerak emas. Qoidalarni ilova o'zi o'rnatadi. Secret'ni hech kimga bermang.
+
+## (f) 1C hisobotini 1-ilovaga olish (har kuni yoki har hafta)
+1. 1C ▸ Mijoz kartochkasi ▸ mijoz va davrni tanlang ▸ **Ko'rsatish**.
+2. **Файл ▸ Сохранить как** ▸ turi **Excel (*.xlsx)** ▸ saqlang. (`.mxl` — 1C'ning o'z formati, o'qilmaydi.)
+3. Faylni telefonga o'tkazing (Telegram "Saved messages" eng oson).
+4. 1-ilova ▸ Mijoz ilovasi ▸ **Fayldan import qilish** ▸ faylni tanlang ▸ ko'rib chiqing ▸ **Saqlash**.
+   Avto-yuborish yoqilgan bo'lsa 2-ilovaga o'zi ketadi.
+* Bir davrni qayta yuborsangiz dublikat bo'lmaydi. Oxirgi 7 kunni yuborish yetarli.
+* "Hisobot tanilmadi" chiqsa — "Yuborish" tugmasi bilan matnni dasturchiga yuboring.
+* **Serverdan olish** tugmasi 1-ilovaning odatdagi "Hisobot ▸ Serverdan" so'rovini ishlatadi; agar u ham shu jadvalni bersa — fayl kerak emas.
+
+## (g) 2-ilova (IMSOFT Mijoz) ni o'rnatish
+1. GitHub ▸ Actions ▸ **IMSOFT_MIJOZ-debug-apk-OWN-KEY** ▸ yuklab oling ▸ mijoz (yoki 2-filial) telefoniga o'rnating (Android 8+).
+2. 1-ilova ▸ Mijoz ilovasi ▸ **Ulanish kodini yuborish** ▸ Telegram orqali o'sha telefonga yuboring.
+3. 2-ilovada xabarni nusxalang ▸ **Kodni joylash** ▸ OK. Bosh sahifada qarz va ma'lumot chiqadi.
+* "Yangilash" bosilsa 1-ilova 15 daqiqagacha narx va qarzni serverdan yangilab yuboradi (1-ilova yoqilgan va serverga ulana olishi kerak).
+
+## (h) 2-filial chek printeri
+**Telefonda (2-filial):**
+1. 2-ilova ▸ Sozlamalar ▸ **"Printer" bo'limini ko'rsatish** ▸ yoqing.
+2. Printer bo'limi ▸ **Servisni yoqish** ▸ bildirishnomaga ruxsat bering.
+3. Printerni USB (OTG) bilan ulang ▸ chiqqan oynada **"Doim"** belgilab OK.
+4. **Batareya cheklovini o'chirish** ▸ ruxsat. Xiaomi: Sozlamalar ▸ Ilovalar ▸ IMSOFT Mijoz ▸ Avto-ishga tushirish **yoqilgan**, Batareya ▸ **Cheklovsiz**.
+5. **Sinov cheki** ▸ chek chiqishi kerak.
+**Kompyuterda (1-filial):**
+1. `pc` papkasini (forwarder.py, forwarder.vbs) `C:\imsoft-chek\` ga ko'chiring. Eski Telegram'li forwarder ishlayotgan bo'lsa — Vazifalar dispetcheridan `pythonw` ni to'xtating.
+2. 1-ilova ▸ Mijoz ilovasi ▸ **Kompyuter uchun chek sozlamasi** ▸ Telegram orqali kompyuterga yuboring ▸ matnni Bloknotga qo'yib
+   `C:\imsoft-chek\forwarder.ini` nomi bilan saqlang ("Тип файла: Все файлы", kodirovka UTF-8).
+3. Sinov: `cmd` ▸ `cd C:\imsoft-chek` ▸ `python forwarder.py --test` ▸ telefondagi printerdan chek chiqadi.
+4. `forwarder.vbs` yorlig'ini **Win+R ▸ `shell:startup`** papkasiga qo'ying ▸ ikki marta bosing (endi kompyuter yoqilganda o'zi ishlaydi).
+5. Windows'dagi `filial2` printeri (Standard TCP/IP, `127.0.0.1`, Raw, 9100) avvalgidek qoladi — 1C cheklarni shunga chop etadi.
+* Holat: `python forwarder.py --status` yoki 1-ilova ▸ Mijoz ilovasi (yuqorida "2-filial printeri").
+* Internet yo'q bo'lsa cheklar kompyuterda (`outbox`) yoki bulutda kutadi va keyin tartib bilan chiqadi.
+
+## (i) Masofadan savdo (Wi-Fi'siz) — Tailscale, bepul
+**Server kompyuterida (SQL Server turgan):**
+1. **tailscale.com/download** ▸ Windows ▸ o'rnating ▸ Gmail bilan kiring. Tailscale belgisi ▸ **Run unattended** (yoki "Unattended mode") yoqing.
+2. Belgidagi manzilni (`100.x.y.z`) yozib oling. Kompyuter uyquga ketmasin (Elektr ta'minoti ▸ "Hech qachon").
+3. PowerShell'ni **administrator** sifatida oching va bitta buyruq:
+   `New-NetFirewallRule -DisplayName "SQL Tailscale" -Direction Inbound -Protocol TCP -LocalPort 1433 -RemoteAddress 100.64.0.0/10 -Action Allow`
+   (faqat Tailscale tarmog'iga ochiladi; SQL Server'ning o'zi o'zgarmaydi).
+**Har bir agent telefonida:**
+4. Play Market ▸ **Tailscale** ▸ o'sha Gmail bilan kiring ▸ yoqing.
+5. 1-ilova ▸ Sozlamalar ▸ Server ▸ **Tashqi manzil** = `100.x.y.z` ▸ "Ulanishni tekshirish".
+Ilova do'konda `192.168.1.200` ni, tashqarida tashqi manzilni o'zi tanlaydi. **SQL portini routerda ochmang** (port-forwarding) — `sa` bilan xavfli.
+**Kompyuterdan masofadan 1C:** ikkinchi kompyuterga ham Tailscale o'rnating va server kompyuteriga **Удалённый рабочий стол**
+(`mstsc` ▸ `100.x.y.z`; Windows Pro kerak) yoki bepul **RustDesk** orqali ulaning — 1C'da odatdagidek ishlaysiz.

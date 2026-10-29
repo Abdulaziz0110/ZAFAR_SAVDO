@@ -6,6 +6,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
@@ -42,10 +44,16 @@ class HistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vm = viewModel { HistoryViewModel(ServiceLocator.history) }
         adapter = HistoryAdapter { row ->
+            val order = if (row.key.startsWith("o")) last.orders.firstOrNull { "o${it.id}" == row.key } else null
             val b = MaterialAlertDialogBuilder(requireContext())
                 .setTitle(row.detailTitle)
                 .setMessage(row.detail)
-                .setPositiveButton(R.string.close, null)
+            if (order != null && order.lines.any { it.productId.isNotEmpty() }) {
+                b.setPositiveButton(R.string.repeat_action) { _, _ -> repeatOrder(order) }
+                b.setNegativeButton(R.string.close, null)
+            } else {
+                b.setPositiveButton(R.string.close, null)
+            }
             if (row.shareText.isNotEmpty()) {
                 b.setNeutralButton(R.string.history_share) { _, _ ->
                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
@@ -72,6 +80,38 @@ class HistoryFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         vm.refresh()
+    }
+
+    /** "Takrorlash": savatcha bo'sh bo'lmasa — nima qilishni so'raydi. */
+    private fun repeatOrder(o: SentOrder) {
+        val draft = ServiceLocator.draft.state.value
+        if (draft.lines.isEmpty()) { runRepeat(o, com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode.REPLACE); return }
+        val modes = ArrayList<com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode>()
+        val labels = ArrayList<String>()
+        modes += com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode.REPLACE; labels += getString(R.string.repeat_replace, draft.lines.size)
+        modes += com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode.ADD; labels += getString(R.string.repeat_add)
+        if (ServiceLocator.appPrefs.fMultiCart) { modes += com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode.PARK; labels += getString(R.string.repeat_park) }
+        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.repeat_title)
+            .setItems(labels.toTypedArray()) { _, i -> runRepeat(o, modes[i]) }
+            .setNegativeButton(R.string.cancel, null).show()
+    }
+
+    private fun runRepeat(o: SentOrder, mode: com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale.Mode) {
+        val act = requireActivity()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val r = ServiceLocator.repeatSale.repeat(o, mode)
+            val root = act.findViewById<View>(android.R.id.content)
+            if (r.added == 0) {
+                com.google.android.material.snackbar.Snackbar.make(root, R.string.repeat_nothing, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+                return@launch
+            }
+            (act as? com.ilxomjon.dur_novvot_dokon.ui.Navigator)?.openTab(R.id.nav_sale)
+            val parts = ArrayList<String>()
+            parts += act.getString(R.string.repeat_done, r.added)
+            if (r.missing > 0) parts += act.getString(R.string.sale_repeat_missing, r.missing)
+            if (r.priceChanged > 0) parts += act.getString(R.string.repeat_price_changed, r.priceChanged)
+            com.google.android.material.snackbar.Snackbar.make(root, parts.joinToString("\n"), com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+        }
     }
 
     override fun onHiddenChanged(hidden: Boolean) {

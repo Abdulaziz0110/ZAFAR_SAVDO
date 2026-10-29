@@ -28,6 +28,22 @@ class MainActivity : AppCompatActivity(), Navigator {
     private lateinit var binding: ActivityMainBinding
     private var loggedIn = false
 
+    // v2.4: PIN qulfi
+    private var lockView: android.view.View? = null
+    private var wrongPins = 0
+    private var lockedUntil = 0L
+    private val lockBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() { moveTaskToBack(true) }
+    }
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        // Sozlamalar ▸ Qulayliklar ▸ Ekran o'lchami / Shrift
+        val wrapped = runCatching {
+            com.ilxomjon.dur_novvot_dokon.data.extras.Extras.wrap(newBase, com.ilxomjon.dur_novvot_dokon.data.AppPrefs(newBase))
+        }.getOrDefault(newBase)
+        super.attachBaseContext(wrapped)
+    }
+
     private val tabIds = listOf(R.id.nav_home, R.id.nav_sale, R.id.nav_payment, R.id.nav_history, R.id.nav_report)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +59,8 @@ class MainActivity : AppCompatActivity(), Navigator {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = handleBack()
         })
+        onBackPressedDispatcher.addCallback(this, lockBack)
+        if (savedInstanceState == null) backgroundAt = 0L
 
         binding.tvStatus.setOnClickListener { DiagnosticsSheet.show(supportFragmentManager) }
         lifecycleScope.launch {
@@ -68,8 +86,88 @@ class MainActivity : AppCompatActivity(), Navigator {
         else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
+    override fun onStart() {
+        super.onStart()
+        val p = ServiceLocator.appPrefs
+        if (p.pinHash.isNotEmpty() && lockView == null) {
+            val away = System.currentTimeMillis() - backgroundAt
+            if (backgroundAt == 0L || away >= maxOf(p.lockAfterMin * 60_000L, 5_000L)) showLock()
+        }
+        // Avto-yangilash: ma'lumot eski bo'lsa (Qulayliklar ▸ Avto-yangilash)
+        val h = p.autoSyncHours
+        val cat = ServiceLocator.catalog.state.value
+        if (h > 0 && cat.agent != null && !cat.syncing && ServiceLocator.network.state.value.online &&
+            System.currentTimeMillis() - cat.lastSyncAt > h * 3_600_000L
+        ) {
+            ServiceLocator.appScope.launch { runCatching { ServiceLocator.catalog.sync() } }
+        }
+    }
+
+    private fun showLock() {
+        if (lockView != null) return
+        val root = window.decorView as android.view.ViewGroup
+        val v = layoutInflater.inflate(R.layout.view_pin_lock, root, false)
+        root.addView(v)
+        lockView = v
+        lockBack.isEnabled = true
+        val edt = v.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edtPin)
+        val til = v.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.tilPin)
+        val tryUnlock = {
+            val now = System.currentTimeMillis()
+            if (now < lockedUntil) {
+                til.error = getString(R.string.pin_wait, ((lockedUntil - now) / 1000 + 1).toInt())
+            } else if (com.ilxomjon.dur_novvot_dokon.data.extras.Extras.checkPin(ServiceLocator.appPrefs, edt.text?.toString().orEmpty())) {
+                wrongPins = 0
+                hideLock()
+            } else {
+                wrongPins++
+                edt.setText("")
+                if (wrongPins >= 5) { lockedUntil = now + 30_000L; wrongPins = 0 }
+                til.error = getString(R.string.pin_wrong)
+            }
+        }
+        v.findViewById<android.view.View>(R.id.btnUnlock).setOnClickListener { tryUnlock() }
+        edt.setOnEditorActionListener { _, _, _ -> tryUnlock(); true }
+        v.findViewById<android.view.View>(R.id.btnForgot).setOnClickListener { forgotPin() }
+        edt.requestFocus()
+    }
+
+    private fun hideLock() {
+        lockView?.let { (window.decorView as android.view.ViewGroup).removeView(it) }
+        lockView = null
+        lockBack.isEnabled = false
+        val imm = getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+    }
+
+    /** PIN unutilsa: agent paroli serverda tekshiriladi, to'g'ri bo'lsa PIN o'chiriladi. */
+    private fun forgotPin() {
+        val agent = ServiceLocator.catalog.state.value.agent
+        if (agent == null) { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.setPin(ServiceLocator.appPrefs, null); hideLock(); return }
+        val til = com.google.android.material.textfield.TextInputLayout(this).apply { setPadding(48, 16, 48, 0) }
+        val edt = com.google.android.material.textfield.TextInputEditText(til.context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setHint(R.string.password_label)
+        }
+        til.addView(edt)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle(R.string.pin_forgot).setMessage(R.string.pin_forgot_msg).setView(til)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                lifecycleScope.launch {
+                    val ok = runCatching { ServiceLocator.api.login(agent.phone, edt.text?.toString().orEmpty()) != null }.getOrDefault(false)
+                    if (ok) {
+                        com.ilxomjon.dur_novvot_dokon.data.extras.Extras.setPin(ServiceLocator.appPrefs, null)
+                        hideLock()
+                    } else {
+                        lockView?.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.tilPin)?.error = getString(R.string.pin_forgot_fail)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null).show()
+    }
+
     override fun onStop() {
         super.onStop()
+        if (lockView == null) backgroundAt = System.currentTimeMillis()
         // Savatchadagi oxirgi o'zgarishlar bazaga yozilib bo'linsin (ilova fonga ketganda jarayon o'ldirilishi mumkin).
         ServiceLocator.appScope.launch { runCatching { ServiceLocator.draft.flush() } }
     }
@@ -176,5 +274,7 @@ class MainActivity : AppCompatActivity(), Navigator {
 
     private companion object {
         const val TAG_LOGIN = "login"
+        /** Ilova oxirgi marta fonga ketgan vaqt (jarayon o'lsa 0 — PIN so'raladi). */
+        @Volatile var backgroundAt = 0L
     }
 }

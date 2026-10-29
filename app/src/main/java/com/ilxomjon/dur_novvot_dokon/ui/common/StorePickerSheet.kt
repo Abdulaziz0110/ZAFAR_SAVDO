@@ -18,7 +18,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
-import com.ilxomjon.dur_novvot_dokon.core.Translit
 import com.ilxomjon.dur_novvot_dokon.databinding.ItemStoreBinding
 import com.ilxomjon.dur_novvot_dokon.databinding.SheetStorePickerBinding
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
@@ -67,17 +66,23 @@ class StorePickerSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private val index by lazy { uz.imsoft.shared.SearchIndex(all, { it.name }, { it.id }, { it.regionName }) }
+
     private fun applyFilter(q: String) {
-        val tokens = Translit.key(q.trim()).split(' ').filter { it.isNotEmpty() }
-        var list = if (tokens.isEmpty()) all else all.filter { s -> tokens.all { s.searchKey.contains(it) || s.regionKey.contains(it) } }
+        val blank = q.isBlank()
+        val prefs = ServiceLocator.appPrefs
+        val hits = if (blank) null else index.search(q, uz.imsoft.shared.SearchOptions(prefs.fFuzzySearch, prefs.fLayoutFix))
+        adapter.highlights = hits?.associate { it.item.id to it.ranges }.orEmpty()
+        var list = hits?.map { it.item } ?: all
         if (binding.chipDebtors.isChecked) list = list.filter { it.debtSom > 0.0 || it.debtUsd > 0.0 }
-        if (tokens.isEmpty() && recentIds.isNotEmpty()) {
+        if (blank && recentIds.isNotEmpty()) {
             // Qidiruv yo'q bo'lsa: so'nggi ishlangan do'konlar yuqorida.
             val rank = HashMap<String, Int>()
             recentIds.forEachIndexed { i, id -> rank[id] = i }
             list = list.sortedBy { rank[it.id] ?: Int.MAX_VALUE }
         }
-        adapter.submitList(list)
+        // Ajratib ko'rsatish o'zgargan bo'lishi mumkin (ro'yxat bir xil bo'lsa ham) — ko'rinadigan qatorlar qayta chiziladi.
+        adapter.submitList(list) { adapter.notifyItemRangeChanged(0, adapter.itemCount) }
         binding.tvEmpty.show(list.isEmpty())
     }
 
@@ -87,6 +92,8 @@ class StorePickerSheet : BottomSheetDialogFragment() {
     }
 
     private class StoreAdapter(private val onPick: (Store) -> Unit) : ListAdapter<Store, StoreAdapter.VH>(Diff) {
+        var highlights: Map<String, List<IntRange>> = emptyMap()
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             VH(ItemStoreBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
@@ -95,7 +102,7 @@ class StorePickerSheet : BottomSheetDialogFragment() {
         inner class VH(private val b: ItemStoreBinding) : RecyclerView.ViewHolder(b.root) {
             fun bind(s: Store) {
                 val ctx = b.root.context
-                b.tvName.text = s.name
+                b.tvName.text = Highlight.apply(s.name, highlights[s.id], ctx)
                 b.tvRegion.text = s.regionName.ifEmpty { ctx.getString(R.string.store_no_region) }
                 b.tvDebt.text = debtText(ctx, s)
                 b.tvDebt.show(b.tvDebt.text.isNotEmpty())

@@ -2,7 +2,6 @@ package com.ilxomjon.dur_novvot_dokon.ui.sale
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ilxomjon.dur_novvot_dokon.core.Translit
 import com.ilxomjon.dur_novvot_dokon.data.AppPrefs
 import com.ilxomjon.dur_novvot_dokon.data.repo.KpiTracker
 import com.ilxomjon.dur_novvot_dokon.data.repo.ParkedCartRepository
@@ -42,6 +41,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uz.imsoft.shared.SearchIndex
+import uz.imsoft.shared.SearchOptions
 
 sealed interface ListFilter {
     data object All : ListFilter
@@ -58,6 +59,10 @@ data class ListState(
     val hasProducts: Boolean = false,
     val loaded: Boolean = false,
     val searching: Boolean = false,
+    /** Nomdagi mos qismlar (qalin ko'rsatish uchun). */
+    val highlights: Map<String, List<IntRange>> = emptyMap(),
+    /** Natijalar taxminiy (imlo/klaviatura tuzatildi yoki so'zlarning hammasi topilmadi). */
+    val approximate: Boolean = false,
 )
 
 /** Narx hisoblash sharoiti. */
@@ -139,7 +144,7 @@ class SaleViewModel(
     ) { cat, q, f, freq, inCart ->
         val (all, groups, loaded) = cat
         val validFilter = if (f is ListFilter.OfGroup && groups.none { it.id == f.id }) ListFilter.All else f
-        ListState(search(all, q, validFilter, freq, inCart), groups, validFilter, all.isNotEmpty(), loaded, q.isNotBlank())
+        search(all, q, validFilter, freq, inCart).copy(groups = groups, filter = validFilter, hasProducts = all.isNotEmpty(), loaded = loaded, searching = q.isNotBlank())
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, ListState())
 
     val canRepeat: StateFlow<Boolean> = combine(lastOrder, draftRepo.state.map { it.lines.isEmpty() }) { last, empty ->
@@ -161,6 +166,7 @@ class SaleViewModel(
 
     init {
         viewModelScope.launch { parked.refresh() }
+        viewModelScope.launch { runCatching { loadPopularity() } }
         viewModelScope.launch {
             draftRepo.state.map { it.store?.id.orEmpty() }.distinctUntilChanged().collect { storeId ->
                 if (storeId.isEmpty()) {
@@ -186,8 +192,19 @@ class SaleViewModel(
         }
     }
 
-    // ---------------- qidiruv algoritmi ----------------
-    private fun search(all: List<Product>, q: String, f: ListFilter, sugg: List<Suggestion>, inCart: Set<String>): List<Product> {
+    // ---------------- qidiruv (v2.4: professional qidiruv, shared/Search.kt) ----------------
+    @Volatile private var index: SearchIndex<Product>? = null
+    @Volatile private var indexOf: List<Product>? = null
+    /** Tovar mashhurligi (shu telefondagi oxirgi buyurtmalar bo'yicha) — qidiruv va saralash uchun. */
+    @Volatile private var popularity: Map<String, Double> = emptyMap()
+
+    private fun indexFor(all: List<Product>): SearchIndex<Product> {
+        val cur = index
+        if (cur != null && indexOf === all) return cur
+        return SearchIndex(all, { it.name }, { it.id }).also { index = it; indexOf = all }
+    }
+
+    private fun search(all: List<Product>, q: String, f: ListFilter, sugg: List<Suggestion>, inCart: Set<String>): ListState {
         val base: List<Product> = when (f) {
             ListFilter.All -> all
             is ListFilter.OfGroup -> all.filter { it.groupId == f.id }
@@ -198,31 +215,32 @@ class SaleViewModel(
                 sugg.mapNotNull { byId[it.productId] }
             }
         }
-        val tokens = Translit.key(q.trim()).split(' ').filter { it.isNotEmpty() }
-        if (tokens.isEmpty()) return base
-        val scored = ArrayList<Pair<Int, Product>>()
-        for (p in base) {
-            var total = 0
-            var ok = true
-            for (t in tokens) {
-                val s = tokenScore(p, t)
-                if (s < 0) { ok = false; break }
-                total += s
-            }
-            if (ok) scored += total to p
-        }
-        // Barqaror saralash: ball bo'yicha, ball teng bo'lsa asl tartibda (alifbo yoki chastota).
-        return scored.sortedBy { it.first }.map { it.second }
+        if (q.isBlank()) return ListState(products = sorted(base, f))
+        val allowed: Set<String>? = if (f == ListFilter.All) null else base.mapTo(HashSet()) { it.id }
+        val pop = popularity
+        val opts = SearchOptions(fuzzy = prefs.fFuzzySearch, layoutFix = prefs.fLayoutFix)
+        val hits = indexFor(all).search(q, opts, popularity = { pop[it.id] ?: 0.0 })
+            .filter { allowed == null || it.item.id in allowed }
+        val hl = HashMap<String, List<IntRange>>(hits.size * 2)
+        for (h in hits) if (h.ranges.isNotEmpty()) hl[h.item.id] = h.ranges
+        return ListState(products = hits.map { it.item }, highlights = hl, approximate = hits.isNotEmpty() && hits.all { it.approximate })
     }
 
-    /** 0 - kod aynan mos, 1 - kod boshi, 2 - so'z boshi, 3 - nomda, 4 - kodda. -1 - mos emas. */
-    private fun tokenScore(p: Product, t: String): Int = when {
-        p.idLower == t -> 0
-        p.idLower.startsWith(t) -> 1
-        p.searchKey.startsWith(t) || p.searchKey.contains(" $t") -> 2
-        p.searchKey.contains(t) -> 3
-        p.idLower.contains(t) -> 4
-        else -> -1
+    /** Qidiruvsiz ro'yxat tartibi (Sozlamalar ▸ Qulayliklar). Taklif/savatcha filtrlarida o'z tartibi saqlanadi. */
+    private fun sorted(list: List<Product>, f: ListFilter): List<Product> {
+        if (f == ListFilter.Suggested || f == ListFilter.InCart) return list
+        return when (prefs.productSort) {
+            "name" -> list.sortedBy { it.searchKey }
+            "popular" -> { val pop = popularity; list.sortedByDescending { pop[it.id] ?: 0.0 } }
+            else -> list
+        }
+    }
+
+    private suspend fun loadPopularity() {
+        val orders = history.recentSaleOrders()
+        val count = HashMap<String, Int>()
+        for (o in orders) for (l in o.lines) if (l.productId.isNotEmpty()) count[l.productId] = (count[l.productId] ?: 0) + 1
+        popularity = count.mapValues { (_, n) -> minOf(25.0, Math.log(1.0 + n) * 7.0) }
     }
 
     // ---------------- amallar ----------------

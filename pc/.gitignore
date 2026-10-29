@@ -1,0 +1,5 @@
+forwarder.ini
+outbox/
+failed/
+forwarder.log*
+__pycache__/

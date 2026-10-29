@@ -13,6 +13,7 @@ import com.ilxomjon.dur_novvot_dokon.domain.Pricing
 import com.ilxomjon.dur_novvot_dokon.domain.Product
 import com.ilxomjon.dur_novvot_dokon.ui.money
 import com.ilxomjon.dur_novvot_dokon.ui.show
+import com.ilxomjon.dur_novvot_dokon.ui.common.Highlight
 
 /**
  * Tezkor ro'yxat adapteri. Narx har qatorda KERAK BO'LGANDA hisoblanadi (minglab qatorni oldindan hisoblamaymiz),
@@ -31,6 +32,12 @@ class ProductAdapter(
     private var showCost = false
     private var suggested: Map<String, Double> = emptyMap()
     private var explanations: Map<String, String> = emptyMap()
+    private var highlights: Map<String, List<IntRange>> = emptyMap()
+    /** Sozlamalar ▸ Qulayliklar ▸ Tebranish. */
+    var haptics: Boolean = true
+
+    /** Qidiruvda mos kelgan qismlar (nom ichida qalin). [setProducts] dan oldin chaqiriladi. */
+    fun setHighlights(map: Map<String, List<IntRange>>) { highlights = map }
 
     /** Taklif izohlari ("Odatda ~7 kunda ~10 · oxirgisi 8 kun oldin"). Bo'sh bo'lsa — eski "Odatda: N". */
     fun setExplanations(map: Map<String, String>) {
@@ -88,12 +95,12 @@ class ProductAdapter(
     inner class VH(private val b: ItemProductBinding) : RecyclerView.ViewHolder(b.root) {
         init {
             b.btnPlus.setOnClickListener { v ->
-                current()?.let { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); onPlus(it, priceOf(it), firstAmount(it)) }
+                current()?.let { if (haptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); onPlus(it, priceOf(it), firstAmount(it)) }
             }
             // Uzoq bosish: bitta blok (yoki 10 ta) birdan qo'shiladi.
             b.btnPlus.setOnLongClickListener { v ->
                 val p = current() ?: return@setOnLongClickListener false
-                v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                if (haptics) v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 onPlus(p, priceOf(p), if (p.hasBlock) p.blockSize else 10.0)
                 true
             }
@@ -108,7 +115,7 @@ class ProductAdapter(
         fun bind(p: Product, full: Boolean) {
             val ctxt = b.root.context
             val line = lines[p.id]
-            if (full) b.tvName.text = p.name
+            if (full) b.tvName.text = Highlight.apply(p.name, highlights[p.id], ctxt)
             val parts = ArrayList<String>(2)
             if (line == null) {
                 val ex = explanations[p.id]

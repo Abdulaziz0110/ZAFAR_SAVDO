@@ -51,12 +51,18 @@ class SaleFragment : Fragment() {
         }
 
         adapter = ProductAdapter(
-            onPlus = { p, price, amount -> vm.plus(p, price, amount) },
+            onPlus = { p, price, amount ->
+                if (ServiceLocator.appPrefs.addMode == "ask" && vm.draft.value.lineFor(p.id) == null) {
+                    vm.tap(); ItemEditSheet.show(childFragmentManager, p.id, false, vm.showCost.value)
+                } else vm.plus(p, price, amount)
+            },
             onMinus = { p, price -> vm.minus(p, price) },
             onEdit = { p, focusPrice -> vm.tap(); ItemEditSheet.show(childFragmentManager, p.id, focusPrice, vm.showCost.value) },
         )
+        adapter.haptics = ServiceLocator.appPrefs.fHaptics
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
+        binding.switchCost.show(ServiceLocator.appPrefs.fCostSwitch)
         binding.recycler.setHasFixedSize(true)
         binding.recycler.setItemViewCacheSize(24)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
@@ -213,7 +219,9 @@ class SaleFragment : Fragment() {
 
     /** Ro'yxat: qidiruv/filtr/katalog o'zgarganda. */
     private fun renderList(s: ListState) {
+        adapter.setHighlights(s.highlights)
         adapter.setProducts(s.products)
+        binding.tvApprox.show(s.searching && s.approximate)
         renderGroups(s.groups, s.filter)
         val showSuggest = s.filter == ListFilter.Suggested && s.products.isNotEmpty()
         binding.suggestBar.show(showSuggest)

@@ -312,6 +312,18 @@
                     android:layout_height="wrap_content"
                     android:text="@string/sale_suggest_add_all" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvApprox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="2dp"
+                android:text="@string/search_approx"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorTertiary"
+                android:visibility="gone" />
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.recyclerview.widget.RecyclerView

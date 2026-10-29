@@ -71,3 +71,33 @@ generatsiya qilingan R/ViewBinding'ga qarshi kompilyatsiya qilindi. Bu haqiqiy G
 merge, R8, kutubxona versiyalari farqi tekshirilmagan) — birinchi CI ishga tushishi yakuniy tekshiruv.
 
 **D-019. Lokal hisobot WebView'i tarmoqqa chiqmaydi**; server hisobotida avvalgi xatti-harakat saqlandi (rasmlar bo'lishi mumkin).
+
+## v2.4 / IMSOFT Mijoz 1.0
+
+**D-020. Bepul bulut — Firebase Realtime Database (REST), Telegram emas.** Telegram bot o'zi yoki boshqa bot yuborgan xabarni
+`getUpdates` orqali olmaydi (kompyuterdagi bot → telefondagi bot sxemasi ishlamaydi) va navbat 24 soatda o'chadi. Firebase: bepul,
+karta so'ramaydi, kutubxonasiz HTTPS, navbat chek chiqmaguncha turadi, ikkala ilova va kompyuter uchun bitta joy.
+
+**D-021. Ruxsatlar modeli.** Secret faqat egasida (1-ilova shifrlangan, `forwarder.ini`). 2-ilova secret'siz: qoidalar faqat
+`s/{32 belgili kalit}` o'qish + `req` yozish, `q/{kalit}` o'qish + o'chirish, `p/{kalit}` o'qish/yozish. Ildizni hech kim
+ro'yxatlay olmaydi. Mijoz almashtirilsa o'qish kaliti yangilanadi.
+
+**D-022. Umumiy kod — alohida Gradle modulisiz** (`shared/src/main/kotlin` ikkala modulga `srcDir`): yangi plagin/bog'liqlik yo'q,
+CI xavfi kam; testlar 1-ilova testlari bilan birga ishlaydi.
+
+**D-023. 1C hisobot o'quvchi ustunlarni sarlavha MATNI bo'yicha topadi** (tartib/son farq qilsa ham ishlaydi). Import davri
+(sarlavhadagi "dan … gacha" yoki yozuvlar oralig'i) ichidagi eski yozuvlar almashtiriladi — qayta yuborishda dublikat yo'q.
+Haqiqiy fayl kelgach sinov fixture'i qo'shiladi.
+
+**D-024. Qarz faqat server qiymati** (1-ilova katalogi/tur 3), vaqti bilan. Hisobot yozuvlaridan qarz "hisoblanmaydi" —
+boshlang'ich qoldiq noma'lum, noto'g'ri raqam ko'rsatish xavfi bor.
+
+**D-025. Chek dublikatidan himoya:** kompyuter — fayl nomidan o'zgarmas kalit bilan PUT; telefon — "inflight" diskka yozilib keyin
+printerga; jarayon o'rtada o'lsa chek o'zi qayta chiqmaydi, foydalanuvchi "Qayta chop etish" yoki "Chiqqan" ni tanlaydi.
+
+**D-026. 2-ilova printer servisi turi `connectedDevice`** (USB printer). `dataSync` Android 15'da kuniga 6 soat bilan cheklangan.
+
+**D-027. Takrorlash — joriy narxlarda** (C8: narx har doim katalog qoidasi bilan); yuborilgan buyurtma o'zgarmaydi.
+
+**D-028. Ekran o'lchami** — Activity konfiguratsiyasidagi zichlik (dp) ko'paytuvchisi: barcha ekranlar bir xil kichrayadi,
+alohida layout nusxalari kerak emas. Odatiy — "Ixcham" (0.92). Qatorlar va tugmalar ham biroz kichraytirildi.

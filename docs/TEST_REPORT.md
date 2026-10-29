@@ -1,4 +1,35 @@
-# Test hisoboti — v2.3 (2026-10-27)
+# Test hisoboti — v2.4 + IMSOFT Mijoz 1.0 (2026-10-29)
+
+## Natija (shu muhitda bajarilgan)
+| Tekshiruv | Natija |
+|---|---|
+| Kotlin kompilyatsiyasi: `app` (1-ilova) + `shared` | **0 xato** |
+| Kotlin kompilyatsiyasi: `mijoz` (2-ilova) + `shared` | **0 xato** |
+| JUnit, jami (1-ilova modulida, `shared` testlari bilan) | **88/88 o'tdi** (v2.3 dagi 56 ta o'zgarmagan holda yashil) |
+| `ProtocolFixtureTest`, `MoneyFixtureTest` — fixture fayllari o'zgarmagan | yashil |
+| `SharedCoreTest` (17) — JSON, Base64 (JDK bilan solishtirish), ulanish kodi, URL, qidiruv: ko'p so'z, kirill/lotin, tutuq belgisi, kod, imlo, h/x q/k, klaviatura tartibi, raqamlar, ajratib ko'rsatish oralig'i, qisman natija, mashhurlik, 5000 tovarda < 150 ms | 17/17 |
+| `ReportImportTest` (9) — ekran rasmidagi tuzilmadagi 1C hisoboti: `.htm` (windows-1251, rowspan/colspan), `.xls` (BIFF8, birlashtirilgan kataklar), 3000 satrli `.xls` (SST bir nechta CONTINUE'ga bo'lingan), TSV; So'm/$ qatorlari, kunlik jami qatorlari tashlanadi, mijoz nomi va davr sarlavhadan; qayta importda dublikat yo'q; davr bo'yicha almashtirish | 9/9 |
+| `ClientStatsTest` (4) — jami, kunlar, tovar tarixi, davrlar (oy/hafta/o'tgan oy, yil o'tishi) | 4/4 |
+| `CloudFlowTest` (2) — soxta Firebase (REST + qoidalar takrori): 1-ilova yuboradi → 2-ilova kod bilan o'qiydi; mijoz faqat `req` yoza oladi, ildiz/boshqa yozish taqiqlangan; chek navbati tartibi va idempotent PUT; o'chirish; holat | 2/2 |
+| `pc/test_forwarder.py` (8) — tartib, idempotent qayta yuborish, 401 (fayl qoladi), 413 (failed/), internet yo'q (fayl qoladi), 200 KB TCP qabul, bo'sh ulanish, `forwarder.ini` tekshiruvi | 8/8 |
+| `tools/sql_smoke_test.py` | OK |
+
+## Tekshirib bo'lmagan narsalar (ochiq)
+1. **Haqiqiy 1C fayli.** O'quvchi ekran rasmidagi tuzilmaga o'xshatib yasalgan fayllarda sinaldi. Haqiqiy 1C 7.7 "Сохранить как"
+   fayli (ustun nomlari, birlashtirish, sana ko'rinishi) farq qilishi mumkin — namunaviy fayl so'raldi; import oldidan ko'rib
+   chiqish oynasi bunday holatni ko'rsatadi.
+2. **Server hisoboti (tur 5) HTML'i** "Mijoz kartochkasi" bilan bir xilmi — noma'lum (shuning uchun fayldan import asosiy yo'l).
+3. **Haqiqiy Firebase.** REST chaqiriqlari Firebase hujjatiga mos yozilgan va soxta server bilan sinaldi; haqiqiy qoidalar
+   dvigateli, SSE oqimi (`text/event-stream`) va Uzbekistondan ulanish — telefonda tekshiriladi.
+4. **Haqiqiy Gradle build** (ikki modul, AAPT2, manifest) — GitHub Actions'da.
+5. **2-ilova USB printer kodi** ChekPrinter tavsifi asosida qayta yozildi (o'sha sinf 7 + bulk OUT yo'li u yerda sinalgan);
+   shu ilovada telefon + Xprinter bilan hali sinalmagan. Xiaomi'da servisning ekran o'chiq paytda uzoq ishlashi, avto-ishga tushish.
+6. **Ekran o'lchami** (Activity zichligini almashtirish) HyperOS'da ko'rinishi; PIN qulf, eslatmalar, avto-zaxira — telefonda.
+7. **Tailscale** orqali SQL Server'ga ulanish (firewall qoidasi bilan).
+
+---
+
+# (oldingi) Test hisoboti — v2.3 (2026-10-27)
 
 ## Natija (shu muhitda bajarilgan)
 | Tekshiruv | Natija |

@@ -1,4 +1,4 @@
-# IMSOFT DOKON — versiya 2.3
+# IMSOFT DOKON — versiya 2.4 (+ 2-ilova "IMSOFT Mijoz" 1.0)
 
 Savdo agentlari uchun ilova: do'kon tanlash, tovarni savatchaga yig'ish, buyurtma va to'lovni serverga yuborish,
 do'kon qarzi va hisobotni ko'rish. Avvalgi ilovaning **butun ko'rinishi va ish tartibi qayta yozildi**;
@@ -37,6 +37,70 @@ Kotlin · MVVM · ViewBinding · Material 3 · Coroutines/Flow · minSdk 23 · t
 5. Windows Firewall'da 1433-port Tailscale tarmog'iga ham ruxsat berilgan bo'lishi kerak.
 **SQL Server'ni portini internetga to'g'ridan-to'g'ri ochmang** (port-forwarding): `sa` bilan xavfli.
 
+
+## 2.4 da nima yangi (1-ilova) va 2-ilova
+
+Loyihada endi **ikki ilova** va kompyuter uchun kichik dastur bor:
+
+| Qism | Kim uchun | Nima qiladi |
+|---|---|---|
+| `app/` — **IMSOFT DOKON 2.4** (1-ilova) | Agent / ega | Savdo (avvalgidek) + 1C hisobotlarini import qilib **2-ilovaga yuborish** |
+| `mijoz/` — **IMSOFT Mijoz 1.0** (2-ilova) | Mijoz (Dadaxon aka) / 2-filial | Faqat ko'rish: o'zi olgan tovarlar narxi (Naqd/Optom, so'm/$), xaridlar, to'lovlar, joriy qarz. **Savdo yo'q, kelgan narx yo'q.** 2-filial chek printeri (ixtiyoriy bo'lim) |
+| `pc/forwarder.py` | 1-filial kompyuteri | 1C chop etgan chekni internet orqali 2-filial telefoniga yuboradi |
+| `shared/` | ikkala ilova | Umumiy kod: qidiruv, 1C hisobot o'quvchi (.xls/.htm/.txt), bulut (Firebase), ma'lumot formati |
+
+### Ikki ilova qanday bog'lanadi (bepul)
+```
+1C (kompyuter) ──"Сохранить как" .xls/.htm──► 1-ilova ──► Google Firebase (bepul) ──► 2-ilova
+       └─ chek ─► forwarder.py ───────────────────────────► Firebase navbati ───────► 2-ilova ─USB─► printer
+1-ilova ◄── SQL Server (narx, qarz; do'konda Wi-Fi yoki tashqarida Tailscale)
+```
+* **Firebase Realtime Database** (Google, bepul "Spark" tarifi, karta so'ramaydi). Kutubxonasiz, oddiy HTTPS (REST).
+* **Telegram nega emas:** Telegram bot o'zi (yoki boshqa bot) yuborgan xabarni `getUpdates` orqali ololmaydi — kompyuterdagi
+  bot yuborgan chekni telefondagi o'sha bot o'qiy olmaydi; bundan tashqari navbat 24 soatda o'chadi. Firebase'da navbat chek
+  chiqmaguncha turadi.
+* **Xavfsizlik:** Firebase "secret" faqat 1-ilovada (shifrlangan) va kompyuterdagi `forwarder.ini` da. 2-ilovaga boradigan
+  **ulanish kodida secret yo'q** — u bilan faqat o'sha mijoz ma'lumotini o'qish, "yangilab ber" so'rovini yozish va o'z chek
+  navbatidan o'chirish mumkin (`CloudDb.RULES`, 1-ilova o'zi o'rnatadi). Kalitlar 32 belgili tasodifiy; "Kalitlarni almashtirish"
+  eski kodni o'chiradi. 2-ilovaga **kelgan (kirim) narx va SQL paroli umuman yuborilmaydi**.
+* **Halol cheklov:** 2-ilovadagi qarz — 1-ilova oxirgi marta serverdan olgan qiymat (vaqti bilan ko'rsatiladi). 2-ilova "Yangilash"
+  bosganda 1-ilova (yoqilgan, internetda va serverga ulana olsa) 15 daqiqagacha yangilab yuboradi; ulana olmasa bor ma'lumot yuboriladi.
+
+### 1-ilova yangiliklari (2.4)
+* **Mijoz ilovasi (2-ilova)** — Sozlamalar ▸ Qo'shimcha: Firebase sozlash (qoidalar o'zi o'rnatiladi), mijoz tanlash,
+  **1C hisobotini fayldan import** (`.xls` / `.htm` / `.txt`, 1C 7.7 "Mijoz kartochkasi") yoki **serverdan** (mavjud tur 5 so'rovi,
+  davr tanlab), import oldidan **ko'rib chiqish** (davr, yozuvlar, jami, katalogda topilmagan tovarlar, nechta yangi/almashadi),
+  avtomatik yuborish, ulanish kodini Telegram/SMS orqali yuborish, kompyuter uchun `forwarder.ini`, 2-filial printer holati.
+  Bir davrni qayta import qilsangiz **dublikat bo'lmaydi** (fayl davridagi eski yozuvlar almashtiriladi).
+* **Savdoni takrorlash** — Tarix ▸ buyurtma ▸ **Takrorlash**: o'sha do'kon, savdo turi, valyuta, miqdorlar; narxlar **joriy**
+  (C8 qoidalari bilan). Savatcha bo'sh bo'lmasa: almashtirish / qo'shish / joriyni kutishga qo'yish. Yuborilgan buyurtma o'zgarmaydi.
+* **Professional qidiruv** (`shared/Search.kt`): bir nechta so'z istalgan tartibda; lotin/kirill va tutuq belgisiz; kod bo'yicha;
+  imlo xatolari (1–2 harf, h/x, q/k, qo'sh harf); **klaviatura tili adashsa ham** ("ьфнша" → mayiz); raqamlar faqat aniq/boshidan
+  (134 hech qachon 120 bo'lmaydi); topilgan qism **qalin**; "taxminiy natijalar" belgisi; mashhurlik bo'yicha saralash.
+  Do'kon tanlashda ham (hudud nomi bilan).
+* **Ixchamroq dizayn**: ro'yxat qatorlari va tugmalar kichraytirildi + **Ekran o'lchami** (Kichik / Ixcham — odatiy / Odatiy / Katta).
+* **Qulayliklar (12 ta, har biri o'chiriladi)**: ekran o'lchami; shrift; aqlli qidiruv (imlo, klaviatura); qidiruvsiz tartib
+  (server/nom/ko'p sotilgan); "+" tugmasi (darhol / miqdor so'rash); tebranish; "Kelgan narx" tugmasini yashirish; avtomatik
+  yangilash (1/3/6 soat); **PIN qulf** (PBKDF2, qulflash vaqti, unutilsa agent paroli bilan); **kunlik avto-zaxira** (oxirgi 7 ta,
+  tiklash); **kun yakuni eslatmasi**; yuborilmagan buyurtma ogohlantirishi.
+* **Masofadan ishlash yo'riqnomasi** (Sozlamalar ▸ Masofadan ishlash) — Tailscale, bepul.
+
+### 2-ilova (IMSOFT Mijoz) ekranlari
+* **Bosh sahifa**: joriy qarz (server ma'lumoti, vaqti bilan), "Yangilash", bu oy olingan/to'langan, oxirgi xarid va to'lov.
+* **Narxlar**: faqat shu mijoz olgan tovarlar; Naqd/Optom, So'm/$; qidiruv; guruhlar; oxirgi xarid; tovar bosilsa — **qachon,
+  qancha, necha puldan** olingani (eng arzon/qimmat narx bilan).
+* **Hisobot**: Xaridlar / To'lovlar / Hammasi; Bugun, Bu hafta, Bu oy, O'tgan oy, 90 kun, Hammasi, istalgan davr; kunlar
+  bo'yicha jami; **PDF / chop etish**.
+* **Printer** (Sozlamalarda yoqiladi, faqat 2-filial telefonida): doimiy servis, Firebase'dan cheklar eskisidan yangisiga, USB (OTG)
+  printerga **bayt o'zgartirilmasdan**; "yangi chek bor" signali darhol (SSE) + har daqiqada tekshiruv; dublikatdan himoya
+  (chop etish o'rtasida to'xtasa chek o'zi qayta chiqmaydi — "noma'lum" deb ko'rsatiladi, siz tanlaysiz); sinov cheki; jurnal;
+  telefon yoqilganda o'zi ishga tushadi; holati 1-ilovada ko'rinadi.
+* **Sozlamalar**: ulanish kodi, til (lotin/kirill), mavzu, ekran o'lchami, shrift.
+
+### O'zgarmaganlar
+SQL Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId,
+C8 biznes qoidalari. 1-ilovadagi barcha yangi ma'lumot **alohida faylda** (`files/share/`, `share_secure` sozlamalari);
+`dokon_tarix.sqlite` ga faqat bitta o'qish so'rovi qo'shildi (sxema o'zgarmadi).
 
 ## 2.3 da nima yangi (faqat ilova; server, protokol va asosiy baza o'zgarmagan)
 
@@ -153,8 +217,8 @@ endi ishlatilmaydi.
 
 ## Ataylab olib tashlanganlar
 * **Avto-yangilash**: avvalgi ilovada u doim "yangilanish yo'q" qaytarardi (ishlamas edi) va imzo tekshirmasdan APK o'rnatardi — xavfli.
-* **PIN-qulf**: avvalgi ilovada hech qayerda ishga tushmagan.
-* Keraksiz ruxsatlar (telefon holati, joylashuv, Bluetooth, xotira, o'rnatish, sync) olib tashlandi: faqat INTERNET va tarmoq holati.
+* **PIN-qulf**: avvalgi ilovada hech qayerda ishga tushmagan. (2.4 da **ixtiyoriy, ishlaydigan** PIN qulf qo'shildi — Qulayliklar.)
+* Keraksiz ruxsatlar (telefon holati, joylashuv, Bluetooth, xotira, o'rnatish, sync) olib tashlandi: faqat INTERNET va tarmoq holati. (2.4: bildirishnoma ruxsati — faqat eslatma yoqilganda so'raladi.)
 * `minSdk` 21 → **23** (shifrlangan saqlash uchun). Android 5.x qurilmalarda o'rnatilmaydi.
 * `allowBackup=false`: server paroli shifrlangan, avtomatik zaxiraga tushmasin. O'rniga ilova ichida **Zaxira nusxa** (Sozlamalar).
 
@@ -169,18 +233,27 @@ endi ishlatilmaydi.
 
 ## Tuzilma
 ```
+shared/src/main/kotlin/uz/imsoft/shared/   umumiy: Search (qidiruv), CloudDb (Firebase REST), LinkCode, Json, B64,
+                                           report/ (Grid, HtmlTable, XlsReader, CardParser, Snapshot, ClientStats)
+mijoz/                                     2-ilova (uz.imsoft.mijoz): data, printer (PrintService, UsbPrinter), ui
+pc/                                        forwarder.py (kompyuter), test_forwarder.py
 app/src/main/java/com/ilxomjon/dur_novvot_dokon/
   core/     ServiceLocator (qo'lda DI), Money, Phone
   domain/   Models, Pricing (narx qoidalari)
   data/     local (SQLite DAO), remote (jTDS, Protocol, ServerApi), repo (Catalog, Draft, Order, Report, Auth, Backup, History)
   ui/       MainActivity + home / sale / payment / report / history / settings / login / common
-tools/gen_strings.py   lotin strings.xml dan kirill strings.xml ni avtomatik hosil qiladi
+tools/gen_strings.py        1-ilova: lotin strings.xml dan kirill strings.xml ni avtomatik hosil qiladi
+tools/gen_strings_mijoz.py  2-ilova matnlari (xuddi shunday)
+tools/make_card_fixtures.py 1C hisobotiga o'xshash test fayllari (.htm, .xls)
 ```
 Matnlarni o'zgartirish: `tools/gen_strings.py` dagi `STRINGS` (lotin) ni tahrirlab `python3 tools/gen_strings.py` ishga tushiring;
 kirillni qo'lda to'g'rilash kerak bo'lsa `OVERRIDES` ga yozing.
 
 ## Testlar
-* Ishga tushirish: `./gradlew testDebugUnitTest` va `python3 tools/sql_smoke_test.py` (telefon va server kerak emas). GitHub Actions har push'da avtomatik bajaradi.
+* Ishga tushirish: `./gradlew testDebugUnitTest`, `python3 tools/sql_smoke_test.py`, `python3 pc/test_forwarder.py` (telefon, server va internet kerak emas). GitHub Actions har push'da avtomatik bajaradi.
+* v2.4: `SharedCoreTest` (JSON, Base64, ulanish kodi, qidiruv: ko'p so'z, kirill/lotin, imlo, klaviatura, raqamlar, ajratib ko'rsatish, 5000 tovarda tezlik),
+  `ReportImportTest` (1C hisobotining .htm va .xls (BIFF8, birlashtirilgan kataklar, katta SST) ko'rinishlari, So'm/$ qatorlari, kunlik jami qatorlari, qayta importda dublikat yo'q),
+  `ClientStatsTest`, `CloudFlowTest` (soxta Firebase bilan: 1-ilova yuboradi → 2-ilova kod bilan o'qiydi; ruxsatlar; chek navbati idempotent), `test_forwarder.py` (8 test).
 * `OutboxEngineTest` — navbat yadrosi: 300 + 150 tasodifiy nosozlik ssenariysi (ulanish uzilishi, javob yo'qolishi, jarayon o'limi, qatorlarni o'chiradigan server), bir vaqtda ikki ishchi. Shart: 0 takroriy, 0 yo'qolgan; shubhalilar "Tekshirish kerak".
 * `BusinessRulesTest` (C8: arzon sotish to'smaydi, tekshiruvchi faqat ogohlantiradi; takliflar, lokal hisobot, CSV, parol manbada yo'q), `MoneyParseUserTest`, `BackupCryptoAndMatchTest`.
 * `tools/sql_smoke_test.py` — `HistoryDb.kt` dagi haqiqiy SQL bilan v2 → v3 migratsiya (qatorlar saqlanadi) va atomik egallash.

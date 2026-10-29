@@ -44,6 +44,9 @@ class CatalogRepository(
     val state: StateFlow<CatalogState> = _state.asStateFlow()
     private val mutex = Mutex()
 
+    /** Katalog yoki qarz yangilanganda (2-ilovaga yuborish uchun). */
+    @Volatile var onChanged: (() -> Unit)? = null
+
     suspend fun load() = mutex.withLock { reload() }
 
     private suspend fun reload() = withContext(Dispatchers.IO) {
@@ -72,6 +75,7 @@ class CatalogRepository(
                 prefs.lastSyncAt = System.currentTimeMillis()
                 reload()
             }
+            runCatching { onChanged?.invoke() }
         } finally {
             _state.update { it.copy(syncing = false) }
         }
@@ -89,6 +93,7 @@ class CatalogRepository(
             }
             reload()
         }
+        runCatching { onChanged?.invoke() }
         val s = _state.value.stores.firstOrNull { it.id == storeId }
         return DebtCache(storeId, s?.debtSom ?: 0.0, s?.debtUsd ?: 0.0, now)
     }

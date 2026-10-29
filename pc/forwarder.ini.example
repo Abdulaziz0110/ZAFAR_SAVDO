@@ -1,0 +1,10 @@
+; Bu faylni 1-ilova o'zi yaratib beradi: Sozlamalar ▸ Mijoz ilovasi ▸ "Kompyuter uchun chek sozlamasi".
+; Ichida maxfiy kalit (secret) bor — faqat o'z kompyuteringizda saqlang.
+[firebase]
+url = https://imsoft-12345-default-rtdb.firebaseio.com
+secret = BU_YERGA_SECRET
+queue = BU_YERGA_32_BELGILI_NAVBAT_KALITI
+
+[local]
+host = 127.0.0.1
+port = 9100
