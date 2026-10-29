@@ -1,7 +1,6 @@
 package uz.imsoft.shared
 
-import com.sun.net.httpserver.HttpServer
-import java.net.InetSocketAddress
+import java.net.URI
 import java.net.URLDecoder
 
 /**
@@ -13,33 +12,26 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
     val root = LinkedHashMap<String, Any?>()
     var now = 1_700_000_000_000L
     var rulesSet: String? = null
-    private val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-    val port: Int get() = server.address.port
     val requests = ArrayList<String>()
 
-    init {
-        server.createContext("/") { ex ->
-            val method = ex.requestHeaders.getFirst("X-HTTP-Method-Override") ?: ex.requestMethod
-            val rawPath = ex.requestURI.rawPath.removeSuffix(".json").trim('/')
-            val path = rawPath.split('/').filter { it.isNotEmpty() }.map { URLDecoder.decode(it, "UTF-8") }
-            val q = (ex.requestURI.rawQuery ?: "").split('&').filter { it.contains('=') }
-                .associate { it.substringBefore('=') to URLDecoder.decode(it.substringAfter('='), "UTF-8") }
-            val body = ex.requestBody.readBytes().toString(Charsets.UTF_8)
-            synchronized(this) { requests += "$method /${path.joinToString("/")}" }
-            val admin = q["auth"] == secret
-            val (code, resp) = synchronized(this) { handle(method, path, q, body, admin) }
-            val bytes = resp.toByteArray(Charsets.UTF_8)
-            if (code == 204) { ex.sendResponseHeaders(204, -1) } else { ex.sendResponseHeaders(code, bytes.size.toLong()); ex.responseBody.use { it.write(bytes) } }
-            ex.close()
-        }
-        server.start()
-    }
-
-    /** CloudDb uchun HTTP: https://fake... manzilini shu serverga yo'naltiradi. */
+    /**
+     * CloudDb uchun HTTP: so'rov tarmoqqa chiqmaydi, shu obyekt ichida bajariladi (Android unit testlarida
+     * com.sun.net.httpserver yo'q). URL, metod, so'rov parametrlari va tana haqiqiy REST'dagidek tahlil qilinadi.
+     */
     fun http(): CloudDb.Http = object : CloudDb.Http {
-        private val real = UrlHttp()
-        override fun request(method: String, url: String, body: String?, timeoutMs: Int): CloudDb.Response =
-            real.request(method, url.replace(Regex("^https://[^/]+"), "http://127.0.0.1:$port"), body, timeoutMs)
+        override fun request(method: String, url: String, body: String?, timeoutMs: Int): CloudDb.Response {
+            val uri = URI(url)
+            val rawPath = (uri.rawPath ?: "").removeSuffix(".json").trim('/')
+            val path = rawPath.split('/').filter { it.isNotEmpty() }.map { URLDecoder.decode(it, "UTF-8") }
+            val q = (uri.rawQuery ?: "").split('&').filter { it.contains('=') }
+                .associate { it.substringBefore('=') to URLDecoder.decode(it.substringAfter('='), "UTF-8") }
+            val m = if (method == "PATCH" || q["x-http-method-override"] == "PATCH") "PATCH" else method
+            synchronized(this@FakeRtdb) {
+                requests += "$m /${path.joinToString("/")}"
+                val (code, resp) = handle(m, path, q, body.orEmpty(), q["auth"] == secret)
+                return CloudDb.Response(code, resp)
+            }
+        }
     }
 
     private fun canRead(p: List<String>): Boolean = when {
@@ -135,5 +127,5 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
         }
     }
 
-    override fun close() = server.stop(0)
+    override fun close() = Unit
 }
