@@ -1,4 +1,4 @@
-# Test hisoboti — v2.7 + Savdo Mijoz 1.3 (2026-10-30)
+# Test hisoboti — v2.8 + Savdo Mijoz 1.3 (2026-10-30)
 
 ## Natija (shu muhitda bajarilgan)
 | Tekshiruv | Natija |
@@ -17,7 +17,9 @@
 | `LabelsTest.codesPayload`, `snapshotCarriesPlu` — kompyuter yuborgan kodlar (PLU nollarsiz, takror shtrix, raqam ko'rinishidagi kod), katalogga bog'lash (kod, keyin nom); 2-ilovaga PLU va eski formatdagi ma'lumot | 2/2 |
 | `pc/test_onec_export.py` (+7) — PLU/shtrix manbasini tanlash (UT11 kabi registr, tovar rekviziti, "Весовой" belgisi olinmaydi), so'rov matni (ВЫРАЗИТЬ/ССЫЛКА), qo'lda yozilgan manba, birlashtirish, faqat o'zgarganda yuborish, telefon so'rovi, hisobot | 16/16 |
 | Python `codes.json` -> Kotlin `CodesPayload` (JVM) | o'tdi |
-| JUnit (`app` + `shared`) | **145/145 o'tdi** (avvalgi 136 ta o'zgarmagan holda yashil) |
+| `pc/test_ornatish.py` (6) — 1C bazalar ro'yxati (ibases.v8i), ulanish qatori, onec.ini (parol maxsus belgilar bilan, [codes] saqlanadi), forwarder.ini tekshiruvi, avtozapusk vbs, LPR sinov yuborish | 6/6 |
+| `LprTest` (3) — TSPL bitmap (Python `tspl_bytes` bilan bir xil: 0 = qora, to'ldiruvchi bitlar oq, SIZE/GAP/DIRECTION), LPR protokoli soxta LPD serverda (navbat, nazorat fayli 'l', ma'lumot aynan), rad etilgan navbat | 3/3 |
+| JUnit (`app` + `shared`) | **148/148 o'tdi** (avvalgi 136 ta o'zgarmagan holda yashil) |
 | `LoginTest` (6) — PBKDF2 JDK bilan bir xil; shifrlash/ochish; noto'g'ri parol; kalit (telefon formati farqi yo'q); do'kon kodi <-> manzil; soxta Firebase'da `a/` qoidasi (qisqa kalit o'qilmaydi, yozib bo'lmaydi) | 6/6 |
 | `OrdersTest.orderCarriesSender` — `by` (kim yubordi) maydoni bulut orqali, uzunlik cheklovi | 1/1 |
 | `pc/test_onec_export.py` (9, v2.6) — sozlama va ulanish qatori; davr; jadval; xesh (xlsx vaqt belgisiz); faqat o'zgarganlar yuboriladi; davr o'zgarsa qayta; xatoda ulanish uziladi; yuklash formati (gzip+base64); kalit/nom | 9/9 |

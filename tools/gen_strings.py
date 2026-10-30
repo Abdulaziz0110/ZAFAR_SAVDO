@@ -799,11 +799,32 @@ STRINGS.update({
  'lb_codes_never': "Kompyuterdan hali kod kelmagan.",
  'lb_codes_how': "Kompyuterdagi onec_export.py 1C'dan tarozi PLU raqamlari va shtrix kodlarni o'zi oladi (har 6 soatda va siz so'raganda) — har bir tovarni qo'lda yozish shart emas. Qo'lda yozilgan PLU ustun turadi.",
  'lb_codes_now': 'Hozir yangilash',
+ 'lb_codes_ini_text': "Bu matnni o'zingizga (Telegram) yuboring. Kompyuterda ORNATISH.bat Bloknot ochganda shu matnni joylab saqlaysiz. Ichida maxfiy kalit bor — boshqalarga bermang.",
  'lb_codes_wait': "So'rov yuborildi. Kompyuter 1-3 daqiqada yuboradi — kuting…",
  'lb_codes_done': "Yangilandi: PLU %1$d ta, shtrix kod %2$d ta",
  'lb_codes_timeout': "Kompyuterdan javob kelmadi. Kompyuter yoniqmi va onec_export.py ishlayaptimi — tekshiring.",
  'lb_codes_fail': "So'rov yuborilmadi: %1$s",
  'lb_codes_no_cloud': "Avval Firebase sozlang (Sozlamalar ▸ Mijozlar va 2-ilova) va kompyuterga sozlamani yuboring.",
+
+})
+
+STRINGS.update({
+ # v2.7: ulashilgan printer (Windows LPD) — kompyuterda dastur shart emas
+ 'lb_mode_lpd': 'Ulashilgan printer', 'lb_mode_app': 'IMSOFT dasturi',
+ 'lb_queue': 'Printer ulashish nomi', 'lb_queue_hint': "Windows'da printerga berilgan umumiy nom (bo'shliqsiz), masalan xprinter",
+ 'lb_rotate': "Yorliq teskari chiqsa — 180° burish",
+ 'lb_host_hint_lpd': "Printer ulangan kompyuter IP manzili, masalan 192.168.1.200",
+ 'lb_setup_hint_lpd': "Kompyuterda bir marta ORNATISH.bat ni ishga tushiring — u printerni xprinter nomi bilan ulashadi. Boshqa dastur kerak emas, 1C ham avvalgidek chiqaraveradi. Kompyuter yoniq tursa bo'ldi.",
+ 'lb_printer_lpd': '%1$s · %2$s (ulashilgan)',
+ 'lb_found_lpd': '%1$s — ulashilgan printer xizmati bor',
+ 'lb_find_none_lpd': "Wi-Fi tarmog'ida ulashilgan printer xizmati (LPD) bor kompyuter topilmadi. Kompyuterda \"LPD Print Service\" yoqilganini va telefon o'sha Wi-Fi tarmog'ida ekanini tekshiring. IP manzilni qo'lda ham yozish mumkin.",
+ 'lb_st_lpd_ok': 'Tayyor: %1$s · %2$s',
+ 'lb_st_lpd_unknown': 'Tekshirilmagan: %1$s · %2$s',
+ 'lb_st_lpd_err': "Xato: %1$s — kompyuterda \"LPD Print Service\" yoqilganmi va 515-port ochiqmi?",
+ 'lb_err_no_host_lpd': "Printer ulangan kompyuter IP manzilini kiriting (\"Kompyuterni topish\" yoki qo'lda).",
+ 'lb_err_lpd_queue': "Kompyuterda \"%1$s\" nomli ulashilgan printer yo'q (%2$s). Xprinter ▸ Свойства принтера ▸ Доступ ▸ \"Общий доступ\" — nomini ilovadagidek yozing.",
+ 'lb_err_lpd': "Kompyuter ishni qabul qilmadi: %1$s",
+ 'lb_err_lpd_net': "Kompyuterga (%1$s) ulanib bo'lmadi: %2$s\n\nKompyuter yoniqmi, \"LPD Print Service\" yoqilganmi, telefon o'sha Wi-Fi tarmog'idami — tekshiring.",
 
 })
 
@@ -851,7 +872,7 @@ PROTECT = re.compile(r'(%\d*\$?[sdf]|%%|\{\{.*?\}\})')
 BRANDS = ['Gmail', 'Wi-Fi', 'Excel', 'HTML', 'Telegram', 'SMS', 'Firebase', 'Google', 'Tailscale', 'Play Market', 'PIN', 'KB',
           'xlsx', 'xls', 'htm', 'mxl', 'VPN', 'IMSOFT', 'Click', 'USB', 'ESC/POS', 'forwarder.ini', 'forwarder.py', 'Python',
           'OTG', 'Xiaomi', 'HyperOS', 'Redmi', 'DOKON', 'Windows', 'Xprinter', 'PLU', 'IP', 'dpi', 'MXL',
-          'start_labels.bat', 'label_printer.py', 'pip install pillow pywin32', 'onec_export.py']
+          'start_labels.bat', 'label_printer.py', 'pip install pillow pywin32', 'onec_export.py', 'LPD Print Service', 'LPD', 'xprinter', 'Свойства принтера', 'Доступ', 'Общий доступ', 'ORNATISH.bat', 'Telegram']
 
 def protect_brands(s):
     for b in sorted(BRANDS, key=len, reverse=True):

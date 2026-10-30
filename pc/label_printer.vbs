@@ -4,4 +4,6 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)
 Set sh = CreateObject("WScript.Shell")
 sh.CurrentDirectory = dir
-sh.Run "pythonw """ & dir & "\label_printer.py""", 0, False
+exe = "pythonw"
+If sh.Run("cmd /c where pythonw >nul 2>&1", 0, True) <> 0 Then exe = "pyw"
+sh.Run exe & " """ & dir & "\label_printer.py""", 0, False

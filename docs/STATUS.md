@@ -1,4 +1,4 @@
-# Holat — Savdo Agent 2.7 (versionCode 9) + Savdo Mijoz 1.3 (versionCode 4), 2026-10-30
+# Holat — Savdo Agent 2.8 (versionCode 10) + Savdo Mijoz 1.3 (versionCode 4), 2026-10-30
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -14,6 +14,8 @@ Belgilar:
 | Telefon ↔ `label_printer.py` protokoli (Wi-Fi TCP, takror chop etmaslik, kalit) | VERIFIED (Kotlin klient JVM'da ↔ Python server, file rejimi) |
 | Internet orqali navbat (Firebase `L/`), holat (`P/`) | VERIFIED (soxta bulut bilan, `test_label_printer.py`) |
 | Haqiqiy Xprinter'da chop etish (`gdi` va `tspl`) | IMPLEMENTED-UNVERIFIED (Windows va printer kerak) |
+| Ulashilgan printer (Windows LPD, TSPL) — kompyuter dasturisiz | VERIFIED (soxta LPD, TSPL baytlari) / haqiqiy XP-365B'da IMPLEMENTED-UNVERIFIED |
+| `ORNATISH.bat` + `ornatish.py` (hammasi bitta joyda: LPD, ulashish, 515, ini, 1C, avtozapusk) | sof qismlar VERIFIED (6/6); Windows'da IMPLEMENTED-UNVERIFIED |
 | UDP orqali kompyuterni topish | VERIFIED (localhost), haqiqiy Wi-Fi'da IMPLEMENTED-UNVERIFIED |
 
 ## Tovar kodlari: PLU va shtrix 1C'dan
@@ -32,11 +34,11 @@ Belgilar:
 ## Qilinmagan
 | Narsa | Holat |
 |---|---|
-| Telefondan to'g'ridan-to'g'ri printerga (kompyutersiz) yorliq | NOT-IMPLEMENTED (printer USB'da kompyuterga ulangan) |
+| Kompyutersiz (Bluetooth/OTG) yorliq | NOT-IMPLEMENTED (XP-365B faqat USB; kompyuter yoniq turishi kerak) |
 | 1C ga PLU/shtrix yozish | NOT-IMPLEMENTED (ataylab: 1C faqat o'qiladi) |
 
 ## Testlar
-- JUnit (`app` + `shared`): 145/145; `mijoz` kompilyatsiyasi: 0 xato.
-- `pc/test_onec_export.py` 16/16, `pc/test_label_printer.py` 18/18, `pc/test_forwarder.py` 8/8.
+- JUnit (`app` + `shared`): 148/148; `mijoz` kompilyatsiyasi: 0 xato.
+- `pc/test_onec_export.py` 16/16, `pc/test_label_printer.py` 19/19, `pc/test_forwarder.py` 8/8.
 - Satrlar (lotin + kirill), resurs havolalari, format argumentlari: xatosiz.
 - Haqiqiy Gradle build (AAPT2, lint) — GitHub Actions'da (`android-build.yml`).

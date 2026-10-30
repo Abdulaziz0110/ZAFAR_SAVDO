@@ -1,7 +1,22 @@
 # CHANGELOG
 
-## 2.7 (versionCode 9) + Savdo Mijoz 1.3 (versionCode 4) — 2026-10-30
+## 2.8 (versionCode 10) + Savdo Mijoz 1.3 (versionCode 4) — 2026-10-30
+(2.7 dagi narx yorliqlari, tovar kodlari va quyidagilar)
 Server, protokol (tur 1, 3, 4, 5), baza, applicationId va imzo o'zgarmagan.
+
+### Kompyuter: bitta `ORNATISH.bat`
+* `pc/ORNATISH.bat` + `ornatish.py`: administrator, pywin32, printer ulashish (LPD, sinov yorlig'i), forwarder.ini (Bloknot),
+  1C bazasi ro'yxatdan tanlanadi + foydalanuvchi/parol (onec.ini), PLU/shtrix sinovi, avtozapusk, eski label_printer tozalanadi.
+* Ilovada faqat "Ulashilgan printer" (kompyuter dasturi rejimi yashirildi). Narx yorlig'i ▸ ⋮ ▸ Kompyuterdan kodlar (1C) ▸
+  **Kompyuter sozlamasi** — forwarder.ini matni shu yerdan ham olinadi.
+* `onec_export.py`: Bloknot ANSI'da saqlagan ini ham o'qiladi; bir vaqtda faqat bitta nusxa ishlaydi.
+
+### Yorliq printeri: kompyuterda dastur shart emas (Windows "ulashilgan printer")
+* Yangi rejim **"Ulashilgan printer"** (standart): telefon Xprinter'ga Windows'ning o'z LPD xizmati orqali to'g'ridan-to'g'ri
+  yuboradi — Python, .bat, forwarder.ini kerak emas; 1C ham avvalgidek chiqaraveradi. Yorliq TSPL buyrug'i (rasm) bo'lib boradi.
+* Kompyuterda bir marta: `pc/ORNATISH.bat` — LPD yoqiladi, printer "xprinter" nomi bilan ulashiladi, 515-port.
+* "Kompyuterni topish" — Wi-Fi tarmog'ida 515-port ochiq kompyuterlarni qidiradi. "Yorliq teskari chiqsa" — 180°.
+* Eski yo'l ("IMSOFT dasturi", label_printer.py) ham qoldi — internet orqali chop etish kerak bo'lsa.
 
 ### Tovar kodlari: PLU va shtrix 1C'dan avtomatik
 * `pc/onec_export.py` 1C'dan tarozi PLU raqamlari va shtrix kodlarni oladi (joyi metama'lumotdan o'zi topiladi; faqat o'qiydi)

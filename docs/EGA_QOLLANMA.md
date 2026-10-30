@@ -233,14 +233,12 @@ Holat 1-ilovada (shu bo'limda) ko'rinadi. Telefon kelgan fayllarni o'zi import q
 ## (s2) Narx yorliqlari (Xprinter) — PLU va shtrixli narx
 
 **Bir marta sozlash (kompyuter):**
-1. Xprinter USB bilan kompyuterga ulangan, Windows'da drayveri o'rnatilgan, 1C'dan yorliq chiqayotgan bo'lsin.
-2. `cmd` ▸ `pip install pillow pywin32`.
-3. 1-ilova ▸ Bosh sahifa ▸ **Narx yorlig'i** ▸ yuqoridagi printer belgisi ▸ **Kompyuter sozlamasi** ▸ yuborish ▸
-   kompyuterdagi `pc` papkasiga `forwarder.ini` nomi bilan saqlang (eski fayl bo'lsa almashtiring).
-4. `pc\start_labels.bat` ni oching: printer nomi, yorliq o'lchami va kompyuter IP manzili chiqadi. Windows "Брандмауэр"
-   so'rasa — **Частные сети** ga ruxsat bering (yoki `allow_firewall.bat` ni administrator sifatida bir marta).
-5. Telefonda: Yorliq printeri ▸ **Kompyuterni topish** ▸ **Sinov yorlig'i**. Chiqsa — `label_printer.vbs` yorlig'ini
-   `Win+R` ▸ `shell:startup` ga qo'ying.
+1. `IMSOFT_kompyuter.zip` ni `D:\imsoft\` ga oching va **ORNATISH.bat** ni ikki marta bosing (administrator so'raydi).
+2. Oynadagi savollarga javob bering: printer ulashiladi, Bloknot ochilganda telefondagi "Kompyuter sozlamasi" matnini
+   joylab saqlaysiz (Narx yorlig'i ▸ ⋮ ▸ Kompyuterdan kodlar (1C) ▸ Kompyuter sozlamasi), 1C bazasi, foydalanuvchi va parol.
+3. Telefonda: **Narx yorlig'i** ▸ printer belgisi ▸ **Kompyuterni topish** (yoki IP: `192.168.1.200`), nomi `xprinter` ▸
+   yorliq o'lchami ▸ **Sinov yorlig'i**. Teskari chiqsa — "180° burish".
+
 
 **PLU va shtrix kodlar — avtomatik (1C'dan):** kompyuterdagi `onec_export.py` ularni 1C'dan o'zi oladi va telefonga yuboradi
 (har 6 soatda va so'ralganda). Birinchi marta: kompyuterda `python onec_export.py --codes` — oynada "PLU manbasi" va

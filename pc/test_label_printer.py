@@ -223,6 +223,19 @@ class LanTest(Base):
         self.assertEqual(self.rpc(None, raw=b"{not json")["error"], "bad_json")
         self.assertEqual(self.rpc({"key": "nope", "op": "info"})["error"], "bad_key")
 
+    def test_browser_check(self):
+        s = socket.create_connection(("127.0.0.1", self.srv.getsockname()[1]), timeout=10)
+        s.sendall(b"GET / HTTP/1.1\r\nHost: x\r\n\r\n")
+        data = b""
+        while True:
+            b = s.recv(4096)
+            if not b:
+                break
+            data += b
+        s.close()
+        self.assertTrue(data.startswith(b"HTTP/1.0 200 OK"))
+        self.assertIn("Xprinter XP-365B", data.decode("utf-8"))
+
     def test_big_job(self):
         j = self.job("big", n=1, copies=1)
         j["labels"] = j["labels"] * 300

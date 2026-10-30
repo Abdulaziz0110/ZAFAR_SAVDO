@@ -48,6 +48,20 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val s = repo.state.value
+        // Ega faqat ilova ichida ishlaydi: kompyuterdagi dastur rejimi (label_printer.py) yashirin, doim ulashilgan printer.
+        b.tgMode.show(false)
+        if (!s.lpd) repo.setMode(com.ilxomjon.dur_novvot_dokon.data.labels.MODE_LPD)
+        b.tgMode.check(R.id.modeLpd)
+        b.tgMode.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            saveHost()
+            repo.setMode(if (id == R.id.modeApp) com.ilxomjon.dur_novvot_dokon.data.labels.MODE_APP else com.ilxomjon.dur_novvot_dokon.data.labels.MODE_LPD)
+            applyMode()
+            check()
+        }
+        b.edtQueue.setText(s.queue)
+        b.swRotate.isChecked = s.rotate
+        b.swRotate.setOnCheckedChangeListener { _, on -> repo.setRotate(on) }
         b.edtHost.setText(s.host)
         b.edtPort.setText(s.port.toString())
         val cloudReady = ServiceLocator.shareStore.isCloudReady
@@ -63,8 +77,26 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
         b.btnCheck.setOnClickListener { saveHost(); check() }
         b.btnTest.setOnClickListener { saveHost(); test() }
         b.btnIni.setOnClickListener { showIni() }
+        applyMode()
         renderStatus()
         if (s.host.isNotBlank() || cloudReady) check()
+    }
+
+    /** Ulashilgan printer (LPD) yoki kompyuter dasturi: keraksiz maydonlar yashiriladi. */
+    private fun applyMode() {
+        val bb = _b ?: return
+        val lpd = repo.state.value.lpd
+        val cloudReady = ServiceLocator.shareStore.isCloudReady
+        bb.tilQueue.show(lpd)
+        bb.swRotate.show(lpd)
+        bb.tilPort.show(!lpd)
+        bb.swCloud.show(!lpd)
+        bb.tvCloudHint.show(!lpd)
+        bb.btnIni.show(!lpd)
+        bb.tgDpi.show(true)
+        bb.tvSetupHint.setText(if (lpd) R.string.lb_setup_hint_lpd else R.string.lb_setup_hint)
+        bb.tilHost.helperText = getString(if (lpd) R.string.lb_host_hint_lpd else R.string.lb_host_hint)
+        if (!lpd) bb.swCloud.isEnabled = cloudReady
     }
 
     private fun sizeId(w: Double, h: Double): Int = when {
@@ -88,8 +120,9 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
     }
 
     private fun saveHost() {
+        if (repo.state.value.lpd) repo.setQueue(b.edtQueue.text?.toString().orEmpty())
         val host = b.edtHost.text?.toString()?.trim().orEmpty()
-        val port = b.edtPort.text?.toString()?.toIntOrNull()?.takeIf { it in 1..65535 } ?: 9110
+        val port = b.edtPort.text?.toString()?.toIntOrNull()?.takeIf { it in 1..65535 && it != 515 } ?: 9110
         b.tilHost.error = if (host.isNotEmpty() && !IP.matches(host)) getString(R.string.lb_host_bad) else null
         if (host.isEmpty() || IP.matches(host)) repo.setHost(host, port)
     }
@@ -98,7 +131,23 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
         val bb = _b ?: return
         val s: LabelState = repo.state.value
         val i = s.info
-        val cloudOk = s.cloud && ServiceLocator.shareStore.isCloudReady
+        val cloudOk = !s.lpd && s.cloud && ServiceLocator.shareStore.isCloudReady
+        if (s.lpd) {
+            bb.tvStatus.text = when {
+                s.host.isBlank() -> getString(R.string.lb_st_none)
+                i != null && s.infoError.isEmpty() -> getString(R.string.lb_st_lpd_ok, s.queue, s.host)
+                s.infoError.isNotEmpty() -> getString(R.string.lb_st_offline, s.host)
+                else -> getString(R.string.lb_st_lpd_unknown, s.queue, s.host)
+            }
+            val sub = ArrayList<String>()
+            if (s.infoError.isNotEmpty()) sub += getString(R.string.lb_st_lpd_err, s.infoError.take(80))
+            else i?.text?.takeIf { it.isNotBlank() }?.let { sub += it }
+            bb.tvStatusSub.text = sub.joinToString("\n")
+            bb.tvStatusSub.show(sub.isNotEmpty())
+            val (w, h) = repo.sizePx()
+            bb.tvSize.text = getString(R.string.lb_size_manual, w, h)
+            return
+        }
         bb.tvStatus.text = when {
             s.host.isNotBlank() && i != null && s.infoError.isEmpty() -> getString(R.string.lb_st_ok, i.printer.ifBlank { "?" })
             s.host.isNotBlank() && s.infoError.isNotEmpty() -> getString(R.string.lb_st_offline, s.host)
@@ -148,7 +197,8 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
             setBusy(false)
             val bb = _b ?: return@launch
             if (found.isEmpty()) {
-                MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_find_pc).setMessage(R.string.lb_find_none)
+                MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_find_pc)
+                    .setMessage(if (repo.state.value.lpd) R.string.lb_find_none_lpd else R.string.lb_find_none)
                     .setPositiveButton(R.string.close, null).show()
                 return@launch
             }
@@ -156,7 +206,8 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
             for (pc in found) {
                 bb.foundList.addView(
                     MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-                        text = getString(R.string.lb_found_item, pc.host.ifBlank { pc.ip }, pc.ip, pc.printer.ifBlank { "?" })
+                        text = if (repo.state.value.lpd) getString(R.string.lb_found_lpd, pc.ip)
+                        else getString(R.string.lb_found_item, pc.host.ifBlank { pc.ip }, pc.ip, pc.printer.ifBlank { "?" })
                         isAllCaps = false
                         setOnClickListener { use(pc.ip, pc.port) }
                     },
@@ -169,8 +220,13 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
         val bb = _b ?: return
         bb.foundList.removeAllViews()
         bb.edtHost.setText(ip)
-        bb.edtPort.setText(port.toString())
-        repo.setHost(ip, port)
+        if (repo.state.value.lpd) {
+            repo.setQueue(bb.edtQueue.text?.toString().orEmpty())
+            repo.setHost(ip, repo.state.value.port)
+        } else {
+            bb.edtPort.setText(port.toString())
+            repo.setHost(ip, port)
+        }
         check()
     }
 
@@ -192,13 +248,7 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                val reason = (e as? LabelPrinterClient.PrintError)?.reason
-                val msg = when {
-                    reason == "no_printer" -> getString(R.string.lb_err_no_route)
-                    reason == "bad_key" -> getString(R.string.lb_err_key)
-                    reason != null && reason.startsWith("printer") -> getString(R.string.lb_err_printer, reason.substringAfter(':', "").trim().ifEmpty { reason })
-                    else -> getString(R.string.lb_err_net, reason ?: requireContext().describeError(e))
-                }
+                val msg = requireContext().labelErrorText(e)
                 if (_b != null) MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_print_fail).setMessage(msg).setPositiveButton(R.string.close, null).show()
             } finally {
                 setBusy(false)

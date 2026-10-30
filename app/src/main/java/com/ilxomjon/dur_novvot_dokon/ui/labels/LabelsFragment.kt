@@ -159,6 +159,7 @@ class LabelsFragment : Fragment() {
 
     private fun printerLine(s: LabelState): String {
         val i = s.info
+        if (s.lpd) return if (s.host.isBlank()) getString(R.string.lb_printer_none) else getString(R.string.lb_printer_lpd, s.queue, s.host)
         return when {
             s.host.isNotBlank() && i != null && s.infoError.isEmpty() -> getString(R.string.lb_printer_lan, i.printer.ifBlank { "?" }, i.host.ifBlank { s.host })
             s.host.isNotBlank() && s.infoError.isNotEmpty() -> getString(R.string.lb_printer_offline, s.host) + if (s.cloud && ServiceLocator.shareStore.isCloudReady) " · " + getString(R.string.lb_printer_cloud_fallback) else ""
@@ -303,7 +304,15 @@ class LabelsFragment : Fragment() {
         val cloud = ServiceLocator.shareStore.isCloudReady
         val d = MaterialAlertDialogBuilder(ctx).setTitle(R.string.lb_codes).setMessage(codesText(repo.state.value))
             .setNegativeButton(R.string.close, null)
-        if (cloud) d.setPositiveButton(R.string.lb_codes_now) { _, _ -> askCodes() }
+        if (cloud) {
+            d.setPositiveButton(R.string.lb_codes_now) { _, _ -> askCodes() }
+            // Kompyuterdagi ORNATISH.bat so'raydigan forwarder.ini matni
+            d.setNeutralButton(R.string.b_pc_settings) { _, _ ->
+                MaterialAlertDialogBuilder(ctx).setTitle(R.string.b_pc_settings).setMessage(R.string.lb_codes_ini_text)
+                    .setPositiveButton(R.string.share_send) { _, _ -> com.ilxomjon.dur_novvot_dokon.ui.share.ImportUi.shareText(ctx, ServiceLocator.share.forwarderIni()) }
+                    .setNegativeButton(R.string.close, null).show()
+            }
+        }
         d.show()
     }
 

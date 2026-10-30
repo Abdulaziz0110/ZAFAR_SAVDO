@@ -22,6 +22,31 @@
             android:text="@string/lb_printer_title"
             android:textAppearance="?attr/textAppearanceTitleLarge" />
 
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/tgMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeLpd"
+                style="@style/Widget.App.Segment"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/lb_mode_lpd" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeApp"
+                style="@style/Widget.App.Segment"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="@string/lb_mode_app" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="match_parent"
@@ -116,6 +141,30 @@
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilQueue"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/lb_queue"
+            app:helperText="@string/lb_queue_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edtQueue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swRotate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/lb_rotate" />
 
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/swCloud"
@@ -239,6 +288,7 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/tvSetupHint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"

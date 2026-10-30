@@ -73,6 +73,37 @@ def setup_logging(verbose=False):
 
 # ---------------------------------------------------------------- sozlama
 
+def read_text(path):
+    """Bloknot UTF-8 (BOM bilan/siz) yoki ANSI (1251) da saqlagan bo'lsa ham o'qiladi. Fayl yo'q bo'lsa — None."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return None
+    for enc in ("utf-8-sig", "cp1251"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1")
+
+
+def single_instance(name="onec_export"):
+    """Bir vaqtda faqat bitta nusxa ishlasin (avtozapusk + qo'lda ishga tushirilsa). @return qulf fayli yoki None."""
+    path = os.path.join(tempfile.gettempdir(), "imsoft_%s.lock" % name)
+    try:
+        f = open(path, "a+")
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return f
+    except OSError:
+        return None
+
+
 def normalize_url(raw):
     u = raw.strip().rstrip("/")
     if not u:
@@ -93,7 +124,10 @@ class Config:
             raise SystemExit("forwarder.ini topilmadi: %s\n1-ilova ▸ Mijozlar ▸ 'Kompyuter sozlamasi' matnini shu nom bilan saqlang." % path)
         cp = configparser.ConfigParser(interpolation=None)
         # onec.ini (ixtiyoriy) — [onec] va [codes] shu yerda tursa, telefondan yangi forwarder.ini kelganda o'chib ketmaydi
-        cp.read([path, os.path.join(os.path.dirname(os.path.abspath(path)), "onec.ini")], encoding="utf-8-sig")
+        for f in (path, os.path.join(os.path.dirname(os.path.abspath(path)), "onec.ini")):
+            text = read_text(f)
+            if text is not None:
+                cp.read_string(text, source=f)
         fb = cp["firebase"] if cp.has_section("firebase") else {}
         self.url = normalize_url(fb.get("url", ""))
         self.secret = fb.get("secret", "").strip()
@@ -911,6 +945,10 @@ def main():
         return
     if not a.once and not a.one and not cfg.report:
         cfg.check_onec(need_report=False)
+        lock = single_instance()
+        if lock is None:
+            log.info("Boshqa nusxa allaqachon ishlayapti — chiqildi")
+            return
         log.info("Ishga tushdi (faqat tovar kodlari — [onec] report bo'sh)")
         loop(cfg)
         return
@@ -939,6 +977,10 @@ def main():
         print(msg)
         for e in errors[:20]:
             print("  xato:", e)
+        return
+    lock = single_instance()
+    if lock is None:
+        log.info("Boshqa nusxa allaqachon ishlayapti — chiqildi")
         return
     log.info("Ishga tushdi")
     loop(cfg)

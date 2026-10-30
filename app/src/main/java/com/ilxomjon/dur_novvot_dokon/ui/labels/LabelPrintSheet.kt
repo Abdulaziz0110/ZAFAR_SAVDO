@@ -86,7 +86,7 @@ class LabelPrintSheet : BottomSheetDialogFragment() {
 
     /** Nuqtadan mm (ko'rsatish uchun). */
     private fun mm(px: Int): Int {
-        val dpi = repo.state.value.info?.dpi?.takeIf { it > 0 } ?: repo.state.value.dpi
+        val dpi = repo.state.value.info?.dpi?.takeIf { it > 0 && !repo.state.value.lpd } ?: repo.state.value.dpi
         return Math.round(px * 25.4 / dpi).toInt()
     }
 
@@ -94,6 +94,7 @@ class LabelPrintSheet : BottomSheetDialogFragment() {
         val s = repo.state.value
         val cloudOk = s.cloud && ServiceLocator.shareStore.isCloudReady
         val pr = s.info?.printer?.ifBlank { null } ?: "—"
+        if (s.lpd) return if (s.host.isBlank()) getString(R.string.lb_route_none) else getString(R.string.lb_printer_lpd, s.queue, s.host)
         return when {
             s.host.isNotBlank() && cloudOk -> getString(R.string.lb_route_lan_cloud, pr, s.host)
             s.host.isNotBlank() -> getString(R.string.lb_route_lan, pr, s.host)
@@ -217,16 +218,7 @@ class LabelPrintSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun errorText(e: Exception): String {
-        val reason = (e as? LabelPrinterClient.PrintError)?.reason
-        return when {
-            reason == null -> getString(R.string.lb_err_net, requireContext().describeError(e))
-            reason == "no_printer" -> getString(R.string.lb_err_no_route)
-            reason == "bad_key" -> getString(R.string.lb_err_key)
-            reason.startsWith("printer") -> getString(R.string.lb_err_printer, reason.substringAfter(':', "").trim().ifEmpty { reason })
-            else -> getString(R.string.lb_err_net, reason)
-        }
-    }
+    private fun errorText(e: Exception): String = requireContext().labelErrorText(e)
 
     override fun onDestroyView() {
         super.onDestroyView()

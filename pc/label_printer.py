@@ -398,7 +398,35 @@ def send_frame(conn, obj):
 def handle_conn(cfg, printer, conn, addr):
     conn.settimeout(30)
     try:
-        if read_exact(conn, 4) != MAGIC:
+        head = read_exact(conn, 4)
+        if head == b"GET ":
+            # Tekshiruv: telefon brauzerida http://<kompyuter IP>:9110 ochilsa — dastur ishlayotgani ko'rinadi
+            req = head
+            conn.settimeout(2)
+            try:
+                while b"\r\n\r\n" not in req and len(req) < 8192:
+                    chunk = conn.recv(1024)
+                    if not chunk:
+                        break
+                    req += chunk
+            except socket.timeout:
+                pass
+            try:
+                name = printer.printer_name()
+            except PrintFail as e:
+                name = str(e)
+            text = "IMSOFT yorliq printeri ishlayapti\nKompyuter: %s\nPrinter: %s\nRejim: %s\nTelefon ilovasiga shu IP va %d portni yozing.\n" % (
+                socket.gethostname(), name, cfg.mode, cfg.port)
+            body = text.encode("utf-8")
+            conn.sendall(b"HTTP/1.0 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: " +
+                         str(len(body)).encode("ascii") + b"\r\nConnection: close\r\n\r\n" + body)
+            try:
+                conn.shutdown(socket.SHUT_WR)
+            except OSError:
+                pass
+            log.info("Brauzer tekshiruvi: %s", addr[0])
+            return
+        if head != MAGIC:
             return
         n = struct.unpack(">I", read_exact(conn, 4))[0]
         if n > MAX_FRAME:
@@ -588,6 +616,22 @@ def test_png(w=464, h=320):
     return b.getvalue()
 
 
+def local_ips():
+    """Kompyuterning barcha IPv4 manzillari (Ethernet va Wi-Fi bir vaqtda bo'lishi mumkin)."""
+    ips = []
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if not ip.startswith("127.") and ip not in ips:
+                ips.append(ip)
+    except OSError:
+        pass
+    first = local_ip()
+    if first not in ips and not first.startswith("127."):
+        ips.insert(0, first)
+    return ips or ["127.0.0.1"]
+
+
 def local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -633,7 +677,9 @@ def main():
         log.error("Port %d band (boshqa nusxa ishlayaptimi?): %s", cfg.port, e)
         raise SystemExit(2)
     info = printer.info()
-    log.info("Ishga tushdi. Printer: %s (%s), kompyuter IP: %s, port %d", info.get("printer") or "?", cfg.mode, local_ip(), cfg.port)
+    log.info("Ishga tushdi. Printer: %s (%s), port %d", info.get("printer") or "?", cfg.mode, cfg.port)
+    for ip in local_ips():
+        log.info("Telefonga yoziladigan IP: %s   (tekshirish: telefon brauzerida http://%s:%d )", ip, ip, cfg.port)
     threading.Thread(target=discovery, args=(cfg, printer, cfg.port + 1), daemon=True).start()
     if cfg.has_cloud:
         threading.Thread(target=cloud_loop, args=(cfg, printer), daemon=True).start()

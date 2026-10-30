@@ -1,6 +1,7 @@
 package com.ilxomjon.dur_novvot_dokon.data.labels
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uz.imsoft.shared.B64
 import uz.imsoft.shared.CloudDb
@@ -93,6 +94,41 @@ class LabelPrinterClient {
         @Suppress("UNCHECKED_CAST")
         val m = db.get("P/$key") as? Map<String, Any?> ?: return@withContext null
         infoOf(JObj(m), "")
+    }
+
+    /**
+     * Wi-Fi tarmog'ida [port] ochiq kompyuterlarni qidirish (telefon tarmog'idagi x.x.x.1..254, parallel).
+     * Ulashilgan printer (Windows LPD, 515) uchun — kompyuterda dastur shart emas.
+     */
+    suspend fun scanPort(port: Int, timeoutMs: Int = 400): List<FoundPc> = withContext(Dispatchers.IO) {
+        val prefixes = LinkedHashSet<String>()
+        runCatching {
+            for (ni in NetworkInterface.getNetworkInterfaces()) {
+                if (!ni.isUp || ni.isLoopback) continue
+                for (ia in ni.interfaceAddresses) {
+                    val a = ia.address as? java.net.Inet4Address ?: continue
+                    if (!a.isSiteLocalAddress) continue
+                    prefixes += a.hostAddress.orEmpty().substringBeforeLast('.') + "."
+                }
+            }
+        }
+        val found = java.util.Collections.synchronizedList(ArrayList<FoundPc>())
+        val gate = kotlinx.coroutines.sync.Semaphore(48)
+        kotlinx.coroutines.coroutineScope {
+            for (pre in prefixes) for (i in 1..254) {
+                launch {
+                    gate.acquire()
+                    try {
+                        val ip = pre + i
+                        val ok = runCatching { Socket().use { s -> s.connect(InetSocketAddress(ip, port), timeoutMs); true } }.getOrDefault(false)
+                        if (ok) found += FoundPc(ip, port, "", "")
+                    } finally {
+                        gate.release()
+                    }
+                }
+            }
+        }
+        found.sortedBy { it.ip.substringAfterLast('.').toIntOrNull() ?: 0 }
     }
 
     /** Wi-Fi tarmog'ida label_printer.py ni qidirish (UDP broadcast, port+1). */

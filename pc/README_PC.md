@@ -1,5 +1,19 @@
 # Kompyuter dasturlari
 
+## Eng oddiy yo'l: `ORNATISH.bat` (hammasini o'zi qiladi)
+Kompyuterga faqat 3 ta fayl kerak: `ORNATISH.bat`, `ornatish.py`, `onec_export.py` (masalan `D:\imsoft\` ga).
+`ORNATISH.bat` ni ikki marta bosing — administrator so'raydi va ketma-ket:
+1. eski `label_printer.py` ni to'xtatib, avtozapuskdan olib tashlaydi;
+2. Xprinter'ni telefon uchun ulashadi (Windows LPD, nomi `xprinter`, 515-port) va sinov yorlig'i chiqaradi;
+3. `forwarder.ini` uchun Bloknot ochadi — telefondagi "Kompyuter sozlamasi" matnini joylab saqlaysiz;
+4. 1C bazasini ro'yxatdan tanlatadi, foydalanuvchi va parolni so'raydi (`onec.ini`);
+5. 1C'dan PLU va shtrix kodlarni olib ko'radi (topilmasa `discover.txt` yaratadi);
+6. `onec_export.py` ni avtozapuskka qo'yadi va fonda ishga tushiradi.
+Qayta ishga tushirsa bo'ladi — bajarilganlarini so'rab o'tadi. Kompyuterda server/localhost dasturi qolmaydi:
+printerga Windows'ning o'zi, 1C kodlariga `onec_export.py` (faqat internetga chiqadi) xizmat qiladi.
+
+Quyidagilar — batafsil va qo'lda sozlash uchun.
+
 Hammasi bitta papkada turadi (masalan `C:\imsoft\`). Kerak: Python 3.8+ va bir marta `pip install pywin32 pillow`.
 
 | Dastur | Nima uchun | Birinchi marta (oynada) | Doimiy (yorlig'i `Win+R` ▸ `shell:startup` ga) |
@@ -90,7 +104,13 @@ Fayllar:
 
 Chek baytlari o'zgartirilmaydi. Bulutga o'zgarmas kalit bilan yoziladi, shuning uchun javob yo'qolib qayta yuborilsa ham faqat bitta chek chiqadi.
 
-## 3. `label_printer.py` — narx yorlig'i printeri (Xprinter, USB)
+## 3. Narx yorlig'i printeri (Xprinter, USB)
+
+**Asosiy yo'l — dasturisiz:** `ORNATISH.bat` ni ishga tushiring (Windows LPD xizmati,
+printer "xprinter" nomi bilan ulashiladi, 515-port). Telefonda "Ulashilgan printer" rejimi. Quyidagi `label_printer.py` —
+faqat internet orqali chop etish kerak bo'lsa.
+
+### `label_printer.py` (ixtiyoriy)
 
 1-ilova ▸ **Narx yorliqlari** ▸ "PLU narx" / "Shtrixli narx" → telefon yorliqni rasm qilib chizadi →
 Wi-Fi orqali shu kompyuterga (TCP 9110) yoki internet orqali (Firebase `L/{kalit}`) → **label_printer.py** → USB Xprinter.
@@ -102,6 +122,8 @@ Wi-Fi orqali shu kompyuterga (TCP 9110) yoki internet orqali (Firebase `L/{kalit
 * Telefon kompyuterni o'zi topadi (UDP 9111). Topmasa: `allow_firewall.bat` ni administrator sifatida bir marta ishga tushiring
   yoki IP manzilni qo'lda yozing (`start_labels.bat` oynasida ko'rinadi).
 * Bitta ish ikki yo'ldan (Wi-Fi va internet) kelsa ham bir marta chiqadi (`labels_done.json`).
+* **Ulanmasa tekshirish:** telefon brauzerida `http://<kompyuter IP>:9110` ni oching. "IMSOFT yorliq printeri ishlayapti" chiqsa —
+  tarmoq va dastur joyida (ilovaga shu IP ni yozing). Ochilmasa — `allow_firewall.bat` (administrator) yoki routerdagi "AP isolation".
 
 | Buyruq | Nima qiladi |
 |---|---|

@@ -207,3 +207,9 @@ SQL/1C ga tegmasdan olishning yagona yo'li — mavjud `onec_export.py` (COM, odd
 metama'lumotdan topiladi (tovar rekviziti yoki "весы/оборудование/PLU" registri; Булево "Весовой" va boshqa havolalar
 hisobga olinmaydi), qo'lda `[codes]` bilan almashtiriladi. Firebase `in/{inbox}` orqali (k = "codes"), faqat o'zgarganda.
 2-ilovaga PLU `PriceItem` ning 8-elementi (additiv; eski 2-ilova o'qimaydi). Kelgan narx 2-ilovaga baribir yuborilmaydi.
+
+**D-049. Yorliq: Windows LPD orqali to'g'ridan-to'g'ri (kompyuter dasturisiz).** Ega kompyuterda alohida dastur ishlatishni
+istamadi. XP-365B faqat USB (Bluetooth/Wi-Fi yo'q), shuning uchun telefon printerga faqat kompyuter orqali yetadi; eng
+yengil yo'l — Windows'ning o'z "LPD Print Service" xizmati (RFC 1179). Ilova yorliqni TSPL BITMAP qilib, 'l' (xom) turida
+yuboradi — drayver o'zgartirmaydi, printer TSPL'ni o'zi tushunadi; SIZE/GAP ilova sozlamasidan. LPR klienti va TSPL
+kodlovchi shared'da (JVM testlari: soxta LPD, Python versiyasi bilan bir xil bitmap). label_printer.py — ikkinchi rejim.

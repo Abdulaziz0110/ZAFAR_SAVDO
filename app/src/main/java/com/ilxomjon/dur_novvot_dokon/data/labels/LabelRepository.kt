@@ -20,6 +20,8 @@ import uz.imsoft.shared.Json
 import uz.imsoft.shared.android.LabelBitmap
 import uz.imsoft.shared.barcode.BarcodeEncode
 import uz.imsoft.shared.label.CodesPayload
+import uz.imsoft.shared.label.Lpr
+import uz.imsoft.shared.label.Tspl
 import uz.imsoft.shared.label.LabelData
 import uz.imsoft.shared.label.LabelKind
 import uz.imsoft.shared.label.LabelPrice
@@ -47,12 +49,26 @@ data class LabelState(
     val codesNote: String = "",
     /** "Kompyuterdan yangilash" so'ralgan vaqt (javob kutilmoqda). */
     val codesAskedAt: Long = 0L,
+    /**
+     * Qanday chop etiladi: [MODE_LPD] — Windows'da ulashilgan printerga to'g'ridan-to'g'ri (kompyuterda dastur shart emas);
+     * [MODE_APP] — kompyuterdagi label_printer.py orqali (Wi-Fi yoki internet).
+     */
+    val mode: String = MODE_LPD,
+    /** Windows'dagi ulashish nomi (общий ресурс), masalan "xprinter". */
+    val queue: String = "xprinter",
+    val gapMm: Double = 2.0,
+    /** Yorliq teskari chiqsa — 180° burish. */
+    val rotate: Boolean = false,
 ) {
+    val lpd: Boolean get() = mode == MODE_LPD
     val total: Int get() = items.sumOf { it.copies }
 }
 
 /** Chop etishga tayyor ish: chiziladigan yorliqlar va tashlab ketiladiganlar (sababi bilan). */
 /** [skipped]: tovar id -> sabab. */
+const val MODE_LPD = "lpd"
+const val MODE_APP = "app"
+
 class LabelBatch(val kind: LabelKind, val labels: List<LabelData>, val skipped: List<Pair<String, Skip>>, val wPx: Int, val hPx: Int) {
     enum class Skip { NO_PLU, NO_BARCODE, NO_PRICE, NOT_IN_CATALOG }
     val total: Int get() = labels.sumOf { it.copies }
@@ -101,6 +117,8 @@ class LabelRepository(
             loadMap("plu").size + loadMap("plu_manual").size,
             p.getLong("codes_at", 0L), p.getInt("codes_plu", 0), p.getInt("codes_bc", 0), p.getString("codes_note", "").orEmpty(),
             p.getLong("codes_asked", 0L),
+            p.getString("mode", MODE_LPD).orEmpty(), p.getString("queue", "xprinter").orEmpty(),
+            p.getFloat("gap", 2f).toDouble(), p.getBoolean("rotate", false),
         )
     }
 
@@ -234,6 +252,19 @@ class LabelRepository(
         p.edit().putString("host", host.trim()).putInt("port", port).apply()
     }
 
+    fun setMode(mode: String) {
+        _state.update { it.copy(mode = mode, info = null, infoError = "") }
+        p.edit().putString("mode", mode).remove("info").apply()
+    }
+
+    fun setQueue(q: String) {
+        val v = Lpr.clean(q).ifEmpty { "xprinter" }
+        _state.update { it.copy(queue = v) }
+        p.edit().putString("queue", v).apply()
+    }
+
+    fun setRotate(on: Boolean) { _state.update { it.copy(rotate = on) }; p.edit().putBoolean("rotate", on).apply() }
+
     fun setCloud(on: Boolean) { _state.update { it.copy(cloud = on) }; p.edit().putBoolean("cloud", on).apply() }
 
     fun setSize(wMm: Double, hMm: Double, dpi: Int) {
@@ -246,6 +277,7 @@ class LabelRepository(
     /** Kompyuterdan printer ma'lumoti (LAN, bo'lmasa bulutdagi oxirgi holat). */
     suspend fun refreshInfo(): PrinterInfo? {
         val s = _state.value
+        if (s.lpd) return refreshLpd(s)
         val key = share.labelKey
         val info = try {
             if (s.host.isNotBlank()) client.infoLan(s.host, s.port, key) else cloudDb()?.let { client.infoCloud(it, key) }
@@ -261,13 +293,29 @@ class LabelRepository(
         return info
     }
 
-    suspend fun discover(): List<FoundPc> = client.discover(_state.value.port)
+    /** Ulashilgan printer: kompyuterning LPD xizmati javob beradimi va navbat (ulashish nomi) bormi. */
+    private suspend fun refreshLpd(s: LabelState): PrinterInfo? {
+        if (s.host.isBlank()) { _state.update { it.copy(info = null, infoError = "") }; return null }
+        return try {
+            val text = withContext(Dispatchers.IO) { Lpr.queueState(s.host, s.queue) }
+            val info = PrinterInfo(s.host, s.queue, MODE_LPD, 0, 0, s.dpi, s.wMm, s.hMm, System.currentTimeMillis(), true, text.take(200))
+            _state.update { it.copy(info = info, infoError = "") }
+            info
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _state.update { it.copy(info = null, infoError = e.message ?: e.javaClass.simpleName) }
+            null
+        }
+    }
+
+    suspend fun discover(): List<FoundPc> = if (_state.value.lpd) client.scanPort(Lpr.PORT) else client.discover(_state.value.port)
 
     /** Yorliq o'lchami nuqtalarda: kompyuter aytgani (Windows drayveridagi qog'oz), bo'lmasa sozlamadagi mm × dpi. */
     fun sizePx(): Pair<Int, Int> {
         val s = _state.value
         val i = s.info
-        if (i != null && i.wPx in 80..3000 && i.hPx in 60..3000) return i.wPx to i.hPx
+        if (!s.lpd && i != null && i.wPx in 80..3000 && i.hPx in 60..3000) return i.wPx to i.hPx
         val k = s.dpi / 25.4
         return (s.wMm * k).toInt() to (s.hMm * k).toInt()
     }
@@ -303,10 +351,37 @@ class LabelRepository(
     fun render(b: LabelBatch, d: LabelData) = LabelBitmap.render(d, b.kind, b.wPx, b.hPx)
 
     suspend fun print(b: LabelBatch, only: List<LabelData> = b.labels): LabelPrinterClient.Sent {
+        if (_state.value.lpd) return printLpd(b, only)
         val pngs = withContext(Dispatchers.Default) { only.map { LabelBitmap.png(render(b, it)) to it.copies } }
         val id = "j" + System.currentTimeMillis().toString(36) + (100..999).random()
         val s = _state.value
         return client.send(LabelPrinterClient.Job(id, pngs, only.map { it.name }), s.host, s.port, share.labelKey, cloudDb())
+    }
+
+    /** Windows'ning ulashilgan printeriga to'g'ridan-to'g'ri: har yorliq TSPL bitmap, bitta LPR ish. */
+    private suspend fun printLpd(b: LabelBatch, only: List<LabelData>): LabelPrinterClient.Sent {
+        val s = _state.value
+        if (s.host.isBlank()) throw LabelPrinterClient.PrintError("no_printer")
+        val data = withContext(Dispatchers.Default) {
+            val o = java.io.ByteArrayOutputStream()
+            for (d in only) {
+                val bmp = render(b, d)
+                val w = bmp.width; val h = bmp.height
+                val px = IntArray(w * h)
+                bmp.getPixels(px, 0, w, 0, 0, w, h)
+                bmp.recycle()
+                val black = BooleanArray(px.size) { (px[it] and 0xFF) < 128 }
+                o.write(Tspl.build(black, w, h, d.copies, s.wMm, s.hMm, s.gapMm, s.rotate))
+            }
+            o.toByteArray()
+        }
+        val job = ((System.currentTimeMillis() / 1000) % 1000).toInt()
+        try {
+            withContext(Dispatchers.IO) { Lpr.print(s.host, s.queue, data, job) }
+        } catch (e: Lpr.LprError) {
+            throw LabelPrinterClient.PrintError(if (e.reason.startsWith("refused:queue")) "lpd_queue" else "lpd:" + e.reason)
+        }
+        return LabelPrinterClient.Sent.Printed(only.sumOf { it.copies }, s.queue)
     }
 
     /** Sinov yorlig'i (PLU shaklida): o'lcham va printerni tekshirish. */
