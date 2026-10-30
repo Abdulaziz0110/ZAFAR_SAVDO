@@ -27,16 +27,20 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.SETTINGS)
         val p = Locator.prefs
         render()
-        b.btnPaste.setOnClickListener { LinkDialog.show(this) { render() } }
+        b.btnPaste.setText(R.string.lgn_login_other)
+        b.btnPaste.setOnClickListener { (activity as? uz.imsoft.mijoz.ui.MainActivity)?.showLogin() }
         b.btnUnlink.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.link_remove).setMessage(R.string.link_remove_msg)
                 .setPositiveButton(R.string.ok) { _, _ ->
                     viewLifecycleOwner.lifecycleScope.launch {
                         PrintService.stop(requireContext())
                         Locator.data.unlink()
+                        Locator.login.logout()
                         render()
+                        (activity as? uz.imsoft.mijoz.ui.MainActivity)?.showLogin()
                     }
                 }
                 .setNegativeButton(R.string.cancel, null).show()
@@ -67,6 +71,12 @@ class SettingsFragment : Fragment() {
         onToggle(b.tgSkip) { id -> p.skipOlderDays = when (id) { R.id.skip1 -> 1; R.id.skip3 -> 3; R.id.skip7 -> 7; else -> 0 } }
         val version = runCatching { requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName }.getOrNull().orEmpty()
         b.tvAbout.text = getString(R.string.st_about_text, version)
+        // Sirli menyu: versiya yozuvini uzoq bosish
+        b.tvAbout.setOnLongClickListener {
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            (activity as? uz.imsoft.mijoz.ui.MainActivity)?.push(MijozSecretFragment())
+            true
+        }
         launchOnStarted { Locator.data.state.collect { render() } }
     }
 
@@ -88,7 +98,8 @@ class SettingsFragment : Fragment() {
         rendering = true
         val link = p.link
         bb.tvLink.text = if (link == null) getString(R.string.link_none)
-        else getString(R.string.link_info, link.clientName.ifEmpty { "—" }, if (link.queueKey.isNotEmpty()) getString(R.string.link_with_printer) else "")
+        else getString(R.string.link_info, link.clientName.ifEmpty { "—" }, if (link.queueKey.isNotEmpty()) getString(R.string.link_with_printer) else "") +
+            if (p.loginPhone.isNotEmpty()) "\n" + getString(R.string.lgn_as, uz.imsoft.shared.Phone.pretty(p.loginPhone), p.memberName.ifBlank { "—" }) else 
         bb.btnUnlink.isEnabled = link != null
         bb.tgLang.check(if (p.language == "cyr") R.id.langCyr else R.id.langLat)
         bb.tgTheme.check(when (p.theme) { "light" -> R.id.themeLight; "dark" -> R.id.themeDark; else -> R.id.themeSystem })
@@ -101,6 +112,11 @@ class SettingsFragment : Fragment() {
         bb.swPrinter.isChecked = p.printerSection
         bb.tgSkip.check(when (p.skipOlderDays) { 1 -> R.id.skip1; 3 -> R.id.skip3; 7 -> R.id.skip7; else -> R.id.skip0 })
         rendering = false
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) { uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.SETTINGS) }
     }
 
     override fun onDestroyView() {

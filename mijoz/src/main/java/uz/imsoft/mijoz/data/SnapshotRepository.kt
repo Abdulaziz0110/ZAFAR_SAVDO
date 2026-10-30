@@ -31,7 +31,12 @@ data class DataState(
     val requestAt: Long = 0L,
     val linked: Boolean = false,
     val loaded: Boolean = false,
+    /** 1-ilovada bu telefon o'chirilgan yoki paroli almashgan — qayta kirish kerak. */
+    val revoked: Boolean = false,
 )
+
+/** Kirish bekor qilingan (1-ilova egasi telefonni o'chirgan yoki parolni almashtirgan). */
+class AccessRevokedException : Exception("revoked")
 
 enum class RefreshResult { UPDATED, SAME, NO_DATA, NOT_LINKED }
 
@@ -39,7 +44,12 @@ enum class RefreshResult { UPDATED, SAME, NO_DATA, NOT_LINKED }
  * 1-ilova yuborgan ma'lumotni Firebase'dan oladi va telefonda saqlaydi (internetsiz ham ko'rinadi).
  * Hech narsa o'zgartirmaydi — faqat "yangilab ber" so'rovini (vaqt belgisi) yozadi.
  */
-class SnapshotRepository(private val context: Context, private val prefs: MijozPrefs) {
+class SnapshotRepository(
+    private val context: Context,
+    private val prefs: MijozPrefs,
+    /** Telefon/parol bilan jimgina qayta kirish (kalit almashganda). */
+    private val relogin: suspend (force: Boolean) -> LoginRepository.Relogin = { LoginRepository.Relogin.NONE },
+) {
     private val _state = MutableStateFlow(DataState())
     val state: StateFlow<DataState> = _state.asStateFlow()
     private val mutex = Mutex()
@@ -79,6 +89,36 @@ class SnapshotRepository(private val context: Context, private val prefs: MijozP
      * [askFresh] — qo'shimcha ravishda 1-ilovadan narx/qarzni serverdan yangilashni so'raydi (server ko'ringanda bajaradi).
      */
     suspend fun refresh(askFresh: Boolean): RefreshResult {
+        val first: RefreshResult
+        try {
+            first = refreshOnce(askFresh)
+        } catch (e: CloudDb.CloudException) {
+            if (!e.denied) throw e
+            return afterRelogin(askFresh) ?: throw e
+        }
+        if (first != RefreshResult.NO_DATA) return first
+        return afterRelogin(askFresh) ?: first
+    }
+
+    /** Ma'lumot topilmadi / ruxsat yo'q: balki 1-ilova kalitni almashtirgan — qayta kirib, bir marta qaytaramiz. */
+    private suspend fun afterRelogin(askFresh: Boolean): RefreshResult? = when (relogin(false)) {
+        LoginRepository.Relogin.CHANGED -> refreshOnce(askFresh)
+        LoginRepository.Relogin.REVOKED -> {
+            onRevoked()
+            throw AccessRevokedException()
+        }
+        else -> null
+    }
+
+    suspend fun onRevoked() = mutex.withLock {
+        withContext(Dispatchers.IO) { file().delete() }
+        prefs.requestAt = 0L
+        prefs.fetchedAt = 0L
+        prefs.metaAt = 0L
+        _state.value = DataState(loaded = true, revoked = true)
+    }
+
+    private suspend fun refreshOnce(askFresh: Boolean): RefreshResult {
         val link = prefs.link ?: return RefreshResult.NOT_LINKED
         _state.update { it.copy(loading = true, error = null) }
         try {
@@ -135,9 +175,21 @@ class SnapshotRepository(private val context: Context, private val prefs: MijozP
 
     /** "Qayta buyurtma" ni 1-ilovaga yuboradi. Bu savdo emas — 1-ilova egasi ko'rib, savatchaga oladi. */
     suspend fun sendOrder(note: String, source: String, lines: List<OrderLine>): String = withContext(Dispatchers.IO) {
-        val link = prefs.link ?: throw IllegalStateException("not_linked")
         val id = OrderCodec.newId()
-        CloudDb(link.dbUrl).put("s/${link.readKey}/ord/$id", OrderCodec.toCloud(note, source, lines))
+        val body = OrderCodec.toCloud(note, source, lines, prefs.memberName.take(80))
+        val link0 = prefs.link ?: throw IllegalStateException("not_linked")
+        val db0 = CloudDb(link0.dbUrl)
+        // Qoidalar eski kalit ostiga yozishga ham ruxsat beradi — lekin 1-ilova uni ko'rmaydi. Shuning uchun kalit hali
+        // amaldaligini (meta bor-yo'qligini) tekshiramiz; eskirgan bo'lsa qayta kirib, yangi kalit ostiga yozamiz.
+        val stale = runCatching { db0.get("s/${link0.readKey}/meta/at") == null }.getOrDefault(false)
+        if (stale) {
+            when (relogin(true)) {
+                LoginRepository.Relogin.REVOKED -> { onRevoked(); throw AccessRevokedException() }
+                else -> Unit
+            }
+        }
+        val l = prefs.link ?: throw IllegalStateException("not_linked")
+        CloudDb(l.dbUrl).put("s/${l.readKey}/ord/$id", body)
         prefs.myOrders = (prefs.myOrders.split('|').filter { it.isNotEmpty() } + id).takeLast(50).joinToString("|")
         id
     }

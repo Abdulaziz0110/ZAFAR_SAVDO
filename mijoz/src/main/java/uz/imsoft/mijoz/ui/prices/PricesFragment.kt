@@ -23,13 +23,19 @@ import uz.imsoft.mijoz.ui.money
 import uz.imsoft.mijoz.ui.onTextChanged
 import uz.imsoft.mijoz.ui.show
 import uz.imsoft.shared.report.Stamp
+import uz.imsoft.mijoz.data.OrderCart
+import uz.imsoft.mijoz.ui.ledger.RepeatSheet
+import uz.imsoft.mijoz.ui.ledgerhost.MijozLedgerHost
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
-/** Narxlar: faqat shu mijoz olgan tovarlar; Naqd/Optom, So'm/$; kelgan narx YO'Q. */
+/** Narxlar: faqat shu mijoz olgan tovarlar; Naqd/Optom, So'm/$; kelgan narx YO'Q. v2.6: "+" bilan buyurtma savatchasi. */
 class PricesFragment : Fragment() {
     private var _b: FragmentPricesBinding? = null
     private val b get() = _b!!
     private lateinit var vm: PricesViewModel
-    private val adapter = Adapter { row -> HistorySheet.show(childFragmentManager, row.item.name) }
+    private val adapter = Adapter({ row -> HistorySheet.show(childFragmentManager, row.item.name) }, { row -> askQty(row) })
     private var rendering = false
     private var groupsShown: List<String> = emptyList()
 
@@ -39,6 +45,7 @@ class PricesFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.PRICES)
         vm = ViewModelProvider(this)[PricesViewModel::class.java]
         b.recycler.layoutManager = LinearLayoutManager(requireContext())
         b.recycler.adapter = adapter
@@ -61,6 +68,62 @@ class PricesFragment : Fragment() {
             if (checked && !rendering) { p.currency = if (id == R.id.btnUsd) "usd" else "som"; adapter.notifyDataSetChanged() }
         }
         launchOnStarted { vm.state.collect { render(it) } }
+        launchOnStarted { Locator.cart.items.collect { renderCart(it); adapter.notifyDataSetChanged() } }
+        launchOnStarted { Locator.data.state.collect { adapter.ordersOn = MijozLedgerHost.ordersEnabled(); renderCart(Locator.cart.items.value) } }
+        b.btnCartSend.setOnClickListener { RepeatSheet.showPlan(childFragmentManager, MijozLedgerHost.planForCart(requireContext())) }
+        b.btnCartClear.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.cart_clear).setMessage(R.string.cart_clear_msg)
+                .setPositiveButton(R.string.ok) { _, _ -> Locator.cart.clear() }
+                .setNegativeButton(R.string.cancel, null).show()
+        }
+    }
+
+    private fun renderCart(items: List<OrderCart.Item>) {
+        val bb = _b ?: return
+        val on = MijozLedgerHost.ordersEnabled()
+        bb.cartBar.show(on && items.isNotEmpty())
+        if (items.isEmpty()) return
+        val (som, usd) = Locator.cart.approxTotal()
+        val sum = listOfNotNull(som.takeIf { it > 0 }?.let { requireContext().money(it, false) }, usd.takeIf { it > 0 }?.let { requireContext().money(it, true) }).joinToString(" + ")
+        bb.tvCart.text = getString(R.string.cart_bar, items.size) + if (sum.isNotEmpty()) "\n≈ $sum" else ""
+    }
+
+    private fun priceOf(r: PriceRow): Pair<Double, Boolean> {
+        val p = Locator.prefs
+        val usd = p.currency == "usd"
+        val cash = p.priceType == "cash"
+        return when {
+            cash && usd -> r.item.cashUsd
+            cash -> r.item.cashSom
+            usd -> r.item.wholesaleUsd
+            else -> r.item.wholesaleSom
+        } to usd
+    }
+
+    /** "+": miqdor so'raladi (oldingi olingan miqdor taklif qilinadi). 0 — savatchadan olib tashlaydi. */
+    private fun askQty(r: PriceRow) {
+        val ctx = requireContext()
+        val cur = Locator.cart.qty(r.key)
+        val suggest = if (cur > 0) cur else r.last?.qty?.takeIf { it > 0 } ?: 1.0
+        val til = TextInputLayout(ctx).apply { setPadding(48, 16, 48, 0); hint = getString(R.string.cart_qty) }
+        val edt = TextInputEditText(til.context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(Fmt.qty(suggest).replace(" ", "").replace('\u00A0'.toString(), ""))
+            selectAll()
+        }
+        til.addView(edt)
+        if (r.last != null) til.helperText = getString(R.string.cart_last, Stamp.formatDate(r.last.stamp), Fmt.qty(r.last.qty))
+        val d = MaterialAlertDialogBuilder(ctx).setTitle(r.item.name).setView(til)
+            .setPositiveButton(R.string.cart_put) { _, _ ->
+                val q = edt.text?.toString().orEmpty().replace(',', '.').replace(" ", "").toDoubleOrNull() ?: 0.0
+                val (price, usd) = priceOf(r)
+                Locator.cart.set(OrderCart.Item(r.key, r.item.name, r.item.id, q, price, usd))
+            }
+            .setNegativeButton(R.string.cancel, null)
+        if (cur > 0) d.setNeutralButton(R.string.cart_remove) { _, _ -> Locator.cart.remove(r.key) }
+        val dlg = d.show()
+        edt.requestFocus()
+        dlg.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
     }
 
     private fun render(s: PricesState) {
@@ -96,13 +159,20 @@ class PricesFragment : Fragment() {
         bb.chipGroups.show(groups.isNotEmpty())
     }
 
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) { uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.PRICES) }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _b = null
     }
 
-    private class Adapter(private val onClick: (PriceRow) -> Unit) : RecyclerView.Adapter<Adapter.VH>() {
+    private class Adapter(private val onClick: (PriceRow) -> Unit, private val onAdd: (PriceRow) -> Unit) : RecyclerView.Adapter<Adapter.VH>() {
         private var rows: List<PriceRow> = emptyList()
+        var ordersOn = false
+            set(v) { if (field != v) { field = v; notifyDataSetChanged() } }
 
         fun submit(list: List<PriceRow>) { rows = list; notifyDataSetChanged() }
 
@@ -111,7 +181,11 @@ class PricesFragment : Fragment() {
         override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(rows[position])
 
         inner class VH(private val b: ItemPriceBinding) : RecyclerView.ViewHolder(b.root) {
-            init { b.root.setOnClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onClick) } }
+            init {
+                b.root.setOnClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onClick) }
+                b.btnAdd.setOnClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onAdd) }
+                b.btnAdd.setOnLongClickListener { rows.getOrNull(bindingAdapterPosition)?.let { Locator.cart.remove(it.key) }; true }
+            }
 
             fun bind(r: PriceRow) {
                 val ctx = b.root.context
@@ -132,6 +206,10 @@ class PricesFragment : Fragment() {
                     ctx.getString(R.string.price_last, Stamp.formatDate(last.stamp), Fmt.qty(last.qty), lp)
                 }
                 b.tvMeta.show(last != null)
+                b.btnAdd.show(ordersOn)
+                val inCart = Locator.cart.qty(r.key)
+                b.btnAdd.text = if (inCart > 0) Fmt.qty(inCart) else ""
+                b.btnAdd.setIconResource(if (inCart > 0) R.drawable.ic_check else R.drawable.ic_add)
             }
 
             private fun bold(text: String, ranges: List<IntRange>): CharSequence {

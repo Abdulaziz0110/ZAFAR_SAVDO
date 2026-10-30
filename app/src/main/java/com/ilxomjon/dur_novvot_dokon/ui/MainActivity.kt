@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity(), Navigator {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.countLaunch(this)
 
         binding.bottomNav.setOnItemSelectedListener { item ->
             showTab(item.itemId)
@@ -80,8 +81,39 @@ class MainActivity : AppCompatActivity(), Navigator {
         }
     }
 
+    // v2.6: ulanadigan (Bluetooth/USB) shtrix kod skaneri klaviatura kabi yozadi. Savdo ekrani ochiq va hech qaysi
+    // matn maydoni tanlanmagan bo'lsa ham kodni ushlab, savatchaga qo'shamiz.
+    private val scanBuf = StringBuilder()
+    private var scanAt = 0L
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.device?.isVirtual == false && currentFocus !is android.widget.EditText &&
+            supportFragmentManager.backStackEntryCount == 0
+        ) {
+            val sale = supportFragmentManager.findFragmentByTag(tabTag(R.id.nav_sale)) as? SaleFragment
+            if (sale != null && sale.isVisible) {
+                val now = System.currentTimeMillis()
+                if (event.keyCode == android.view.KeyEvent.KEYCODE_ENTER || event.keyCode == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                    val code = scanBuf.toString()
+                    scanBuf.setLength(0)
+                    if (sale.onHardwareScan(code)) return true
+                } else {
+                    val c = event.unicodeChar
+                    if (c > 0 && !Character.isISOControl(c)) {
+                        if (now - scanAt > 300) scanBuf.setLength(0)
+                        scanBuf.append(c.toChar())
+                        scanAt = now
+                        return true
+                    }
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onResume() {
         super.onResume()
+        com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.apply(this)
         if (ServiceLocator.appPrefs.keepScreenOn) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
@@ -244,9 +276,19 @@ class MainActivity : AppCompatActivity(), Navigator {
         when {
             fm.backStackEntryCount > 0 -> fm.popBackStack()
             loggedIn && binding.bottomNav.selectedItemId != R.id.nav_home -> binding.bottomNav.selectedItemId = R.id.nav_home
-            else -> finish()
+            else -> {
+                // Tasodifan chiqib ketmaslik uchun: 2 soniya ichida ikkinchi marta bosilsa chiqadi.
+                val now = System.currentTimeMillis()
+                if (now - lastBackAt < 2000L) finish()
+                else {
+                    lastBackAt = now
+                    android.widget.Toast.makeText(this, R.string.back_again_to_exit, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
+
+    private var lastBackAt = 0L
 
     // --- Navigator
     override fun openTab(itemId: Int) {

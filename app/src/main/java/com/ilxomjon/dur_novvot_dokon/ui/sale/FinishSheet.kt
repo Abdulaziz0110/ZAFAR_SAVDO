@@ -59,7 +59,8 @@ class FinishSheet : BottomSheetDialogFragment() {
         binding.tilCard.show(!usd)
         binding.chipPrinter1.text = getString(R.string.finish_printer_n, 1)
         binding.chipPrinter2.text = getString(R.string.finish_printer_n, 2)
-        binding.chipPrinter3.text = getString(R.string.finish_printer_n, 3)
+        // "3" — serverda printersiz (cheksiz) savdo; qiymat o'zgarmaydi, faqat nomi tushunarli.
+        binding.chipPrinter3.text = getString(R.string.finish_no_printer)
         binding.chipPrinter.check(
             when (s0.printer) { "2" -> R.id.chipPrinter2; "3" -> R.id.chipPrinter3; else -> R.id.chipPrinter1 },
         )

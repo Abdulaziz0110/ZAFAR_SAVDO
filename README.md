@@ -1,4 +1,15 @@
-# IMSOFT DOKON — versiya 2.5 (+ 2-ilova "IMSOFT Mijoz" 1.1)
+# Savdo Agent 2.6 (+ 2-ilova "Savdo Mijoz" 1.2) — IMSOFT DOKON
+
+## 2.6 da nima yangi
+* **Universal**: har do'kon o'z Firebase'i bilan; 1-ilovada barcha mijoz va yuk beruvchilar (har biriga 1C tarixi, telefonlar,
+  chek printeri). 2-ilovaga **telefon raqami + parol** bilan kirish (bir marta), bitta mijozga bir nechta ishchi telefoni.
+* **Buyurtma savatchasi** (2-ilova "Narxlar" ▸ +) -> 1-ilovada tasdiqlansa savatchaga tushadi.
+* **Kompyuterdan avtomatik** 1C -> Excel -> telefon (`pc/onec_export.py`, har 1/2/3 soat).
+* **Shtrix kod bilan savdo**: kamera, Bluetooth/USB skaner, tarozi yorlig'i (og'irlik); 1C ro'yxati Excel orqali.
+* Ekranning o'zida **o'rgatuvchi ko'rsatmalar**; **sirli menyu** (versiya yozuvini uzoq bosing).
+* Mayda: ikki marta "orqaga" — chiqish; standart qorong'i rejim va 90% shrift; "−" uzoq bosilsa — nol; "Printersiz"; yangi nom/ikonka.
+* Batafsil: `CHANGELOG.md`, `DECISIONS.md` (D-036…D-043), yo'riqnoma: `docs/EGA_QOLLANMA.md` (n)–(s), kompyuter: `pc/README_PC.md`.
+
 
 Savdo agentlari uchun ilova: do'kon tanlash, tovarni savatchaga yig'ish, buyurtma va to'lovni serverga yuborish,
 do'kon qarzi va hisobotni ko'rish. Avvalgi ilovaning **butun ko'rinishi va ish tartibi qayta yozildi**;

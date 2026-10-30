@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gen_strings import to_cyr, lat_text, write  # noqa: E402
 
 STRINGS = {
- 'app_name': '{{IMSOFT}} Mijoz', 'unit_som': "so'm", 'ok': 'OK', 'cancel': 'Bekor qilish', 'close': 'Yopish',
+ 'app_name': 'Savdo Mijoz', 'unit_som': "so'm", 'ok': 'OK', 'cancel': 'Bekor qilish', 'close': 'Yopish',
  'nav_home': 'Bosh sahifa', 'nav_prices': 'Narxlar', 'nav_report': 'Tarix', 'nav_printer': 'Printer', 'nav_settings': 'Sozlamalar',
  'err_denied': "Ruxsat yo'q: ulanish kodi eskirgan bo'lishi mumkin. 1-ilovadan yangi kod oling.",
  'err_net': "Internetga ulanib bo'lmadi. Telefondagi oxirgi ma'lumot ko'rsatilmoqda.",
@@ -86,7 +86,7 @@ STRINGS = {
  'pr_battery': "Batareya cheklovini o'chirish",
  'pr_battery_ok': "Batareya cheklovi allaqachon o'chirilgan",
  'pr_usb_list': "USB qurilmalarni ko'rsatish",
- 'pr_help': "Printer USB (OTG) kabeli bilan ulanadi. Birinchi ulashda chiqqan oynada \"Doim\" ni belgilang. Xiaomi: Sozlamalar ▸ Ilovalar ▸ IMSOFT Mijoz ▸ Avto-ishga tushirish YOQILGAN, Batareya ▸ \"Cheklovsiz\".",
+ 'pr_help': "Printer USB (OTG) kabeli bilan ulanadi. Birinchi ulashda chiqqan oynada \"Doim\" ni belgilang. Xiaomi: Sozlamalar ▸ Ilovalar ▸ Savdo Mijoz ▸ Avto-ishga tushirish YOQILGAN, Batareya ▸ \"Cheklovsiz\".",
  'pr_log': 'Jurnal',
  'pr_err_no_link': "Ulanish kodida chek navbati yo'q. 1-ilovadan yangi kod oling.",
  'pr_st_running': 'Servis: ishlayapti',
@@ -127,7 +127,7 @@ STRINGS = {
  'st_skip_old': "Shuncha kundan eski cheklar chiqarilmasin:",
  'skip_none': 'Hammasi', 'skip_1': '1 kun', 'skip_3': '3 kun', 'skip_7': '7 kun',
  'st_about': 'Ilova haqida',
- 'st_about_text': "{{IMSOFT}} Mijoz %1$s. Ma'lumot 1-ilovadan (IMSOFT DOKON) keladi; bu ilova hech narsani o'zgartirmaydi va savdo qilmaydi. Kelgan narxlar ko'rsatilmaydi.",
+ 'st_about_text': "Savdo Mijoz %1$s. Ma'lumot 1-ilovadan (Savdo Agent) keladi; bu ilova hech narsani o'zgartirmaydi va savdo qilmaydi. Kelgan narxlar ko'rsatilmaydi.",
 }
 
 STRINGS.update({
@@ -162,6 +162,60 @@ STRINGS.update({
  'auto_off': "O'chiq", 'auto_1h': 'Har soat', 'auto_2h': 'Har 2 soat',
  'link_remove_short': 'Uzish',
  'st_notify_new': "Yangi ma'lumot kelganda xabar berish",
+})
+
+STRINGS.update({
+ # v2.6
+ 'back_again_to_exit': 'Chiqish uchun yana bir marta bosing',
+ # v2.6 — sirli menyu (2-ilova)
+ 'sx_stats': 'Statistika', 'sx_stats_sub': "Ma'lumot hajmi, yangilanish vaqtlari, buyurtmalar",
+ 'sx_st_client': 'Mijoz: %1$s', 'sx_st_data': "Tovarlar: %1$d · 1C yozuvlari: %2$d · davrlar: %3$d",
+ 'sx_st_times': "Do'kon yuborgan: %1$s\nTelefonga olingan: %2$s", 'sx_st_cart': 'Savatchada: %1$d xil · yuborilgan buyurtmalar: %2$d',
+ 'sx_debt': 'Qarz dinamikasi', 'sx_debt_sub': "Oxirgi kunlarda qarz qanday o'zgargan — kichik grafik",
+ 'sx_debt_down': "Kamaydi: %1$s 👍", 'sx_debt_up': "Oshdi: %1$s",
+ 'sx_debt_note': "1C hisobotidagi qoldiq bo'yicha (taxminiy, rasmiy hisob-kitob emas).",
+ 'sx_last_cart': 'Oxirgi xaridni takrorlash', 'sx_last_cart_sub': "Oxirgi xarid tovarlari buyurtma savatchasiga",
+ 'sx_last_cart_done': "%1$d ta tovar savatchaga qo'shildi (%2$s)",
+ 'sx_turbo': 'Tezkor yangilash', 'sx_turbo_sub': "Hozir yangilash va vaqtini o'lchash",
+ 'sx_turbo_run': 'Yangilanmoqda…', 'sx_turbo_ok': 'Tayyor: %1$d ms', 'sx_turbo_fail': "Bo'lmadi (%1$d ms)",
+ 'sx_link': 'Ulanish pasporti', 'sx_link_sub': "Qaysi do'kon va telefon bilan ulangan (kalitlar yashirilgan)",
+ 'sx_ln_shop': "Do'kon kodi: %1$s", 'sx_ln_client': 'Mijoz: %1$s', 'sx_ln_phone': 'Kirish: %1$s · %2$s',
+ 'sx_ln_code': 'ulash kodi bilan', 'sx_ln_key': "O'qish kaliti: %1$s", 'sx_ln_printer': 'Chek printeri navbati: %1$s',
+ # v2.6 — o'rgatuvchi ko'rsatmalar
+ 'tour_m_debt_t': 'Qarz', 'tour_m_debt': "Joriy qarzingiz — do'kon yuborgan ma'lumot bo'yicha, vaqti bilan.",
+ 'tour_m_refresh_t': 'Yangilash', 'tour_m_refresh': "Eng so'nggi ma'lumotni darhol oladi. Ilova o'zi ham har 1–2 soatda yangilab turadi.",
+ 'tour_m_order_t': 'Buyurtma', 'tour_m_order': "Kerakli tovarlarni tanlab do'konga buyurtma yuborasiz. Do'kon tasdiqlasa — rasmiylashtiriladi.",
+ 'tour_m_report_t': 'Tarix', 'tour_m_report': "Barcha xaridlar, qaytarishlar va to'lovlar. Qidirish: tovar, kg, narx, sana.",
+ 'tour_m_search_t': 'Qidirish', 'tour_m_search': "Tovar nomini yozing (lotin/kirill farqi yo'q, xato yozilsa ham topadi).",
+ 'tour_m_type_t': 'Narx turi', 'tour_m_type': "Naqd yoki optom narx, so'm yoki dollar.",
+ 'tour_m_add_t': "+ — buyurtmaga", 'tour_m_add': "Tovar yonidagi + ni bosib miqdorni yozing. Uzoq bossangiz — olib tashlanadi. Tovarni bossangiz — narx tarixi.",
+ 'tour_m_auto_t': 'Avto-yangilash', 'tour_m_auto': "Fonda necha soatda yangilansin. Zaryadni tejaydi: faqat internet bo'lganda ishlaydi.",
+ 'tour_m_theme_t': "Ko'rinish", 'tour_m_theme': "Qorong'i/yorug' rejim, shrift va o'lcham.",
+ # v2.6 — kirish (telefon + parol)
+ 'lgn_subtitle': "Do'kon bergan ma'lumot bilan kiring: do'kon kodi, telefon raqamingiz va parol.",
+ 'lgn_shop': "Do'kon kodi", 'lgn_shop_helper': "Masalan: savdo-dokon (do'kon egasi yuboradi)",
+ 'lgn_phone': 'Telefon raqami', 'lgn_password': 'Parol', 'lgn_login': 'Kirish', 'lgn_login_other': 'Boshqa hisob bilan kirish',
+ 'lgn_once': "Bir marta kiritiladi — keyingi safar ilova o'zi ochiladi.",
+ 'lgn_with_code': 'Ulash kodi bilan', 'lgn_later': 'Keyinroq',
+ 'lgn_err_shop': "Do'kon kodi noto'g'ri", 'lgn_err_phone': "Telefon raqami noto'g'ri (masalan: +998 90 123 45 67)",
+ 'lgn_err_no_phone': "Bu raqam shu do'konda ro'yxatdan o'tmagan. Do'kon egasidan qo'shib qo'yishni so'rang.",
+ 'lgn_err_password': "Parol noto'g'ri", 'lgn_err_password_short': 'Parol kamida %1$d belgi',
+ 'lgn_err_net': "Kirib bo'lmadi. Internetni tekshiring.",
+ 'lgn_welcome': 'Xush kelibsiz, %1$s!',
+ 'lgn_revoked': "Kirish bekor qilindi: do'kon egasi bu telefonni o'chirgan yoki parolni almashtirgan. Yangi parol bilan qayta kiring.",
+ 'lgn_as': 'Telefon: %1$s · %2$s',
+ 'home_link_title': 'Kirish kerak',
+ 'home_link_text': "Do'kon egasi yuborgan do'kon kodi, telefon raqami va parol bilan kiring.",
+ 'err_denied': "Ruxsat yo'q. Qayta kiring yoki do'kon egasidan yangi parol so'rang.",
+ # v2.6 — buyurtma savatchasi
+ 'home_order': 'Buyurtma berish',
+ 'home_order_hint': "Tovar yonidagi \"+\" ni bosing, miqdorni yozing, keyin pastdagi \"Yuborish\".",
+ 'cart_add': "Buyurtmaga qo'shish", 'cart_qty': 'Miqdori', 'cart_put': 'Savatchaga', 'cart_remove': 'Olib tashlash',
+ 'cart_last': 'Oxirgi marta: %1$s · %2$s',
+ 'cart_bar': 'Buyurtma: %1$d xil tovar', 'cart_send': 'Yuborish',
+ 'cart_clear': 'Savatchani tozalash', 'cart_clear_msg': "Buyurtma savatchasidagi hamma tovarlar olib tashlanadi.",
+ 'cart_title': 'Yangi buyurtma',
+ 'cart_hint': "Miqdorni tekshiring. Bu savdo emas: do'kon egasi tasdiqlasa, uning savatchasiga tushadi va rasmiylashtiriladi. Narxlar taxminiy.",
 })
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

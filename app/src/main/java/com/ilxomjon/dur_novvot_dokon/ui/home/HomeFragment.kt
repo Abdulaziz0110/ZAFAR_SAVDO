@@ -54,14 +54,18 @@ class HomeFragment : Fragment() {
         binding.cardPayment.setOnClickListener { navigator().openTab(R.id.nav_payment) }
         binding.cardReport.setOnClickListener { navigator().openTab(R.id.nav_report) }
         binding.cardLedger.setOnClickListener {
+            if (com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.state.value.newOrders > 0) {
+                com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager)
+                return@setOnClickListener
+            }
             val hist = parentFragmentManager.findFragmentByTag("tab_" + R.id.nav_history) as? com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment
             com.ilxomjon.dur_novvot_dokon.ui.history.HistoryFragment.open1C(navigator(), hist)
         }
         launchOnStarted {
             com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.state.collect { st ->
                 val bb = _binding ?: return@collect
-                bb.cardLedger.show(st.clientId.isNotEmpty() && st.entries > 0)
-                bb.tvLedgerTitle.text = getString(R.string.home_ledger_title, st.clientName)
+                bb.cardLedger.show((st.clientId.isNotEmpty() && st.entries > 0) || st.newOrders > 0)
+                bb.tvLedgerTitle.text = if (st.newOrders > 0) getString(R.string.home_orders_title) else getString(R.string.home_ledger_title, st.clientName)
                 bb.tvLedgerInfo.text = when {
                     st.newOrders > 0 -> getString(R.string.ord_banner, st.newOrders)
                     st.coverage.isNotEmpty() -> getString(R.string.home_ledger_info, uz.imsoft.shared.report.Stamp.formatDate(st.coverage.maxOf { it.to }))
@@ -70,6 +74,7 @@ class HomeFragment : Fragment() {
             }
         }
         viewLifecycleOwner.lifecycleScope.launch { runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.load() } }
+        com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HOME)
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
 
         launchOnStarted { vm.state.collect { render(it) } }

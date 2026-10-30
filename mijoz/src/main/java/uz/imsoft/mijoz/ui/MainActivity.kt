@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import androidx.lifecycle.repeatOnLifecycle
 import uz.imsoft.mijoz.Locator
 import uz.imsoft.mijoz.R
 import uz.imsoft.mijoz.databinding.ActivityMainBinding
@@ -33,6 +34,28 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.bottomNav.setOnItemSelectedListener { showTab(it.itemId); true }
+        // Orqaga: avval bosh sahifaga, keyin 2 soniya ichida ikki marta bosilsa chiqadi.
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (supportFragmentManager.backStackEntryCount > 0) { supportFragmentManager.popBackStack(); return }
+                if (loginShown()) {
+                    val now0 = System.currentTimeMillis()
+                    if (now0 - lastBackAt < 2000L) finish()
+                    else { lastBackAt = now0; android.widget.Toast.makeText(this@MainActivity, R.string.back_again_to_exit, android.widget.Toast.LENGTH_SHORT).show() }
+                    return
+                }
+                if (binding.bottomNav.selectedItemId != R.id.nav_home && Locator.prefs.link != null) {
+                    binding.bottomNav.selectedItemId = R.id.nav_home
+                    return
+                }
+                val now = System.currentTimeMillis()
+                if (now - lastBackAt < 2000L) finish()
+                else {
+                    lastBackAt = now
+                    android.widget.Toast.makeText(this@MainActivity, R.string.back_again_to_exit, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
         updatePrinterTab()
         if (savedInstanceState == null) {
             val start = when (intent.getStringExtra(EXTRA_TAB)) {
@@ -43,6 +66,14 @@ class MainActivity : AppCompatActivity() {
             showTab(start)
         }
         handleUsb(intent)
+        if (savedInstanceState == null) uz.imsoft.mijoz.ui.ledger.SecretPrefs.countLaunch(this)
+        if (Locator.prefs.link == null && !Locator.prefs.skipLogin && intent.getStringExtra(EXTRA_TAB) != TAB_PRINTER) showLogin()
+        // Kirish bekor qilinsa (1-ilovada telefon o'chirildi) — kirish oynasi.
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                Locator.data.state.collect { if (it.revoked && !loginShown()) showLogin() }
+            }
+        }
         // Printer servisi yoqilgan bo'lsa (masalan ilova yangilangandan keyin) — qayta ishga tushiriladi.
         if (Locator.prefs.printerSection && Locator.prefs.printerOn && !PrinterHub.state.value.running) {
             runCatching { PrintService.start(this) }
@@ -53,6 +84,11 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         handleUsb(intent)
         if (intent.getStringExtra(EXTRA_TAB) == TAB_PRINTER && Locator.prefs.printerSection) binding.bottomNav.selectedItemId = R.id.nav_printer
+    }
+
+    override fun onResume() {
+        super.onResume()
+        uz.imsoft.mijoz.ui.ledger.SecretPrefs.apply(this)
     }
 
     override fun onStart() {
@@ -73,6 +109,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun openTab(id: Int) { binding.bottomNav.selectedItemId = id }
+
+    /** Pastki menyu ustidan ochiladigan ekran (masalan sirli menyu). "Orqaga" — yopadi. */
+    fun push(f: Fragment) {
+        supportFragmentManager.beginTransaction().setReorderingAllowed(true).add(R.id.container, f).addToBackStack(null).commit()
+    }
+
+    private fun loginShown() = supportFragmentManager.findFragmentByTag(TAG_LOGIN) != null
+
+    /** Kirish oynasi (telefon + parol). Pastki menyu yashiriladi. */
+    fun showLogin() {
+        if (loginShown()) return
+        binding.bottomNav.visibility = android.view.View.GONE
+        supportFragmentManager.beginTransaction().setReorderingAllowed(true)
+            .add(R.id.container, uz.imsoft.mijoz.ui.login.LoginFragment(), TAG_LOGIN).commitAllowingStateLoss()
+    }
+
+    fun closeLogin() {
+        supportFragmentManager.findFragmentByTag(TAG_LOGIN)?.let { supportFragmentManager.beginTransaction().remove(it).commitAllowingStateLoss() }
+        binding.bottomNav.visibility = android.view.View.VISIBLE
+        binding.bottomNav.selectedItemId = R.id.nav_home
+        (supportFragmentManager.findFragmentByTag("tab_" + R.id.nav_home) as? HomeFragment)?.let { uz.imsoft.mijoz.ui.tour.Tour.show(it, uz.imsoft.mijoz.ui.tour.Tour.HOME) }
+    }
+
+    private var lastBackAt = 0L
 
     private fun create(id: Int): Fragment = when (id) {
         R.id.nav_prices -> PricesFragment()
@@ -97,5 +157,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_TAB = "tab"
         const val TAB_PRINTER = "printer"
+        private const val TAG_LOGIN = "login"
     }
 }

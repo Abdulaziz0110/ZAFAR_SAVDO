@@ -1,5 +1,55 @@
 # CHANGELOG
 
+## 2.6 (versionCode 8) + Savdo Mijoz 1.2 (versionCode 3) — 2026-10-30
+Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
+C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida (eski v2.5 sozlamasi bir marta ko'chiriladi).
+
+### Mayda tuzatishlar (ikkala ilova)
+* "Orqaga" ikki marta bosilganda chiqadi (2 soniya ichida); 2-ilovada avval bosh sahifaga qaytadi.
+* Standart: qorong'i rejim va shrift 90% (o'zingiz o'zgartirgan sozlama saqlanadi).
+* "−" ni uzoq bosish — tovar nolga tushadi (pastda "Qaytarish" bor). "+" ni uzoq bosish — blok (avvalgidek).
+* "Printer 3" -> **"Printersiz"** (chek chiqmaydigan savdo).
+* Yangi nom va ikonka: **Savdo Agent** (1-ilova), **Savdo Mijoz** (2-ilova).
+
+### Universal: istalgan do'kon, barcha mijozlar
+* 1-ilova ▸ **Mijozlar**: kompyuterdagi barcha mijoz va yuk beruvchilar. Har biriga — 1C tarixi, telefonlar, chek printeri.
+  Excel yuklansa mijoz fayldagi nomdan o'zi topiladi (yangi bo'lsa qo'shiladi). Tarix ▸ 1C tarixi — mijozni tanlash.
+* Har do'konning o'z Firebase loyihasi va **do'kon kodi**. Qadamma-qadam yo'riqnoma ilova ichida.
+* 2-ilovaga **kirish oynasi**: do'kon kodi + telefon + parol, bir marta. Bitta mijozga bir nechta telefon (masalan 3 ta ishchi) —
+  hammasi faqat o'sha mijoz ma'lumotini ko'radi. Telefonni o'chirsangiz u kira olmaydi, qolganlar o'zi qayta ulanadi.
+
+### Buyurtma (2-ilova -> 1-ilova)
+* 2-ilova: Bosh sahifa ▸ **Buyurtma berish** / Narxlar ▸ tovar yonidagi **+** ▸ miqdor ▸ pastdagi **Yuborish** (izoh bilan).
+  Sirli menyuda "Oxirgi xaridni takrorlash".
+* 1-ilova: bildirishnoma, Bosh sahifa kartasi, "Buyurtmalar" ro'yxati (qaysi mijoz, kim yubordi). Tasdiqlash -> savatcha.
+
+### Kompyuterdan avtomatik (1C -> Excel -> telefon)
+* `pc/onec_export.py` (+ `discover.bat`, `start_export.bat`, `onec_export.vbs`): har 1/2/3 soatda (1-ilovada tanlanadi)
+  har bir kontragent kartochkasini Excel qilib yuboradi; telefon o'zi import qiladi. Faqat o'zgarganlari yuboriladi.
+  1C'ga hech narsa yozilmaydi. Holat 1-ilovada ko'rinadi.
+
+### Shtrix kod bilan savdo (1-ilova)
+* Savdo ekrani ▸ qidiruv yonidagi **skaner** tugmasi -> **skaner savdosi** ekrani: tepada ixcham kamera oynasi (doim yoniq,
+  to'xtamasdan ketma-ket o'qiydi, chiroq, pauza, hisoblagich), ostida natija qatori, qidiruv va tovarlar ro'yxati (qo'lda ham
+  +/− bilan qo'shiladi, "Savatchada" filtri), pastda jami va "Savatcha". Narx odatdagi qoida bilan (savdo turi, valyuta, kurs).
+* Kod topilmasa kamera TO'XTAMAYDI: natija qatori "ro'yxatdan tovarni bosing" deydi — bosilgan tovar shu kodga bog'lanadi
+  (eslab qolinadi) va qo'shiladi; bir nechta topilmagan kod navbatda turadi.
+* Ulanadigan **Bluetooth/USB skaner** (klaviatura kabi): Savdo ekrani ochiq bo'lsa kodni o'qiting — tovar savatchaga tushadi.
+* **Tarozi yorlig'i**: prefiks + tovar kodi + og'irlik — og'irlik miqdor bo'lib tushadi. 1C'dagi vazn tovarlarining 7 xonali
+  kodlari (masalan `2900027`) yorliq boshiga mos keladi — tovar so'ramasdan topiladi; prefikslar (28, 29) importda o'zi sozlanadi.
+  1C'da tekshiruv raqamisiz saqlangan o'z kodlarimiz (`250000000031`) EAN-13 bo'lib chop etilsa ham topiladi. Format sozlanadi
+  (prefikslar, kod/og'irlik uzunligi, gramm/10 gramm, tekshiruv raqami).
+* Sozlamalar ▸ **Shtrix kodlar**: 1C'dan "Вывести список" bilan saqlangan Excel'ni yuklash (ustunlar o'zi topiladi, tovarga
+  avval kod, keyin nom bo'yicha bog'lanadi), sinash maydoni va kamera bilan sinash.
+* Noma'lum kod — "qaysi tovar?" deb so'raladi va eslab qolinadi (tarozi kodi bo'lsa — shu kodli hamma yorliqlar).
+
+### O'rgatish va sirli menyu
+* Ekranlar birinchi ochilganda tugmalar yoritilib, qisqa izoh chiqadi (har ekran bir marta; sirli menyudan qayta yoqiladi).
+* Versiya yozuvini uzoq bosing — **Sirli xona**: qidiruv laboratoriyasi, top-10 tovar, CSV eksport, kurs kalkulyatori,
+  tovar ruleti, kun hikmati, avto-qorong'i, ekran himoyasi, ko'rsatmalar, bildirishnoma sinovi, fon ishlari, qurilma pasporti,
+  kesh tozalash, bayram 🎉; 1-ilovada + statistika, kunlik maqsad, savdo soatlari, turbo sinxron, bulut pasporti, sinov cheki;
+  2-ilovada + statistika, qarz dinamikasi, oxirgi xaridni takrorlash, tezkor yangilash, ulanish pasporti.
+
 ## 2.5 (versionCode 7) + IMSOFT Mijoz 1.1 (versionCode 2) — 2026-10-29
 Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
 C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida; yangi funksiyalar sozlamada o'chiriladi.

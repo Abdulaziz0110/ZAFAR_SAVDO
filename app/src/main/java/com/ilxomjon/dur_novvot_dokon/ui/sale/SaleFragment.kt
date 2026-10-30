@@ -49,6 +49,7 @@ class SaleFragment : Fragment() {
         vm = viewModel {
             SaleViewModel(ServiceLocator.catalog, ServiceLocator.draft, ServiceLocator.history, ServiceLocator.appPrefs, ServiceLocator.parked, ServiceLocator.kpi)
         }
+        com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.SALE)
 
         adapter = ProductAdapter(
             onPlus = { p, price, amount ->
@@ -58,6 +59,13 @@ class SaleFragment : Fragment() {
             },
             onMinus = { p, price -> vm.minus(p, price) },
             onEdit = { p, focusPrice -> vm.tap(); ItemEditSheet.show(childFragmentManager, p.id, focusPrice, vm.showCost.value) },
+            onZero = { p ->
+                val before = vm.draft.value.lines
+                if (vm.zero(p)) {
+                    com.google.android.material.snackbar.Snackbar.make(binding.root, getString(R.string.sale_zeroed, p.name), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                        .setAction(R.string.cart_undo) { vm.undo(before) }.show()
+                }
+            },
         )
         adapter.haptics = ServiceLocator.appPrefs.fHaptics
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
@@ -116,6 +124,17 @@ class SaleFragment : Fragment() {
             vm.setFilter(chip?.tag as? ListFilter ?: ListFilter.All)
         }
         binding.edtSearch.onTextChanged { vm.setQuery(it) }
+        // v2.6: shtrix kod — kamera yoki ulanadigan skaner (klaviatura kabi yozib, Enter bosadi)
+        binding.btnScan.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment()) }
+        binding.edtSearch.setOnEditorActionListener { v, _, ev ->
+            if (ev != null && ev.action != android.view.KeyEvent.ACTION_DOWN && ev.action != android.view.KeyEvent.ACTION_UP) return@setOnEditorActionListener false
+            hardwareScan(v.text?.toString().orEmpty())
+        }
+        binding.edtSearch.setOnKeyListener { v, code, ev ->
+            if ((code == android.view.KeyEvent.KEYCODE_ENTER || code == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) && ev.action == android.view.KeyEvent.ACTION_UP) {
+                hardwareScan((v as android.widget.EditText).text?.toString().orEmpty())
+            } else false
+        }
         binding.btnCart.setOnClickListener { vm.tap(); navigator().push(CartFragment()) }
         binding.btnSmart.setOnClickListener { onSmart() }
         binding.btnPark.setOnClickListener {
@@ -192,9 +211,25 @@ class SaleFragment : Fragment() {
         vm.reloadFavorites()
     }
 
+    /** Qidiruv maydoniga skaner yozgan kod (Enter bilan). Kod emas — oddiy qidiruv bo'lib qoladi. */
+    fun onHardwareScan(text: String): Boolean = _binding != null && hardwareScan(text)
+
+    private fun hardwareScan(text: String): Boolean {
+        if (!com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.looksScanned(text)) return false
+        binding.edtSearch.setText("")
+        com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.handle(this, text.trim(), onAdded = { a ->
+            _binding?.let { b ->
+                com.google.android.material.snackbar.Snackbar.make(b.root, a.product.name + "\n" + com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.describe(requireContext(), a), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT)
+                    .setAction(R.string.scan_undo) { com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.undo(a) }.show()
+            }
+        }, onIdle = { _binding?.edtSearch?.requestFocus() })
+        return true
+    }
+
     override fun onHiddenChanged(hidden: Boolean) {
         if (!hidden) vm.reloadFavorites()
         super.onHiddenChanged(hidden)
+        if (!hidden) com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.SALE)
         if (hidden) autoPicked = false else maybeAutoPickStore()
     }
 

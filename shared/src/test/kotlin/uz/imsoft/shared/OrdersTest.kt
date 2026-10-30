@@ -53,6 +53,18 @@ class OrdersTest {
         assertEquals(listOf(OrderLine("A", 1.0)), back.lines)
     }
 
+    @Test fun orderCarriesSender() {
+        val fake = FakeRtdb(secret)
+        val rk = CloudDb.newKey()
+        val client = CloudDb("https://x.firebaseio.com", "", fake.http())
+        val id = OrderCodec.newId()
+        client.put("s/$rk/ord/$id", OrderCodec.toCloud("tez", "cart", listOf(OrderLine("Pista", 5.0, "T1")), "Ali (ishchi)"))
+        val back = OrderCodec.fromCloud(id, client.get("s/$rk/ord/$id"))!!
+        assertEquals("Ali (ishchi)", back.by)
+        assertEquals("cart", back.source)
+        assertTrue(CloudDb.RULES.contains("\"by\""))
+    }
+
     @Test fun rulesContainOrders() {
         val r = Json.parse(CloudDb.RULES)
         assertNotNull(r)

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Savdo Mijoz" belgisi: chek + tasdiq -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,31h34a3,3 0,0 1,3 3v44l-5.5,-3.5 -5.5,3.5 -5.5,-3.5 -5.5,3.5 -5.5,-3.5 -5.5,3.5 -5.5,-3.5V34a3,3 0,0 1,3 -3z" />
+    <path
+        android:pathData="M43,41h22M43,49h22M43,57h12"
+        android:strokeWidth="4"
+        android:strokeColor="#00695C"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00695C"
+        android:pathData="M64,55a7,7 0,1 1,0 14a7,7 0,1 1,0 -14z" />
+    <path
+        android:pathData="M60.5,62l2.5,2.5 4.5,-5"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

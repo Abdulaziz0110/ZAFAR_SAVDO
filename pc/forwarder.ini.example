@@ -1,10 +1,28 @@
-; Bu faylni 1-ilova o'zi yaratib beradi: Sozlamalar ▸ Mijoz ilovasi ▸ "Kompyuter uchun chek sozlamasi".
+; Bu faylni 1-ilova o'zi yaratib beradi: Mijozlar ▸ "Kompyuter sozlamasi".
 ; Ichida maxfiy kalit (secret) bor — faqat o'z kompyuteringizda saqlang.
 [firebase]
-url = https://imsoft-12345-default-rtdb.firebaseio.com
+url = https://savdo-dokon-default-rtdb.firebaseio.com
 secret = BU_YERGA_SECRET
+; chek printeri navbati (forwarder.py uchun; printer yoqilmagan bo'lsa bo'sh)
 queue = BU_YERGA_32_BELGILI_NAVBAT_KALITI
+; 1C eksporti kirish qutisi (onec_export.py uchun)
+inbox = BU_YERGA_32_BELGILI_KIRISH_KALITI
 
 [local]
 host = 127.0.0.1
 port = 9100
+
+[onec]
+; 1C 8.3 ga ulanish (COM, oddiy foydalanuvchi)
+connection = File="D:\1C\Baza";
+user = Agent
+password =
+; discover.txt ga qarab to'ldiriladi
+report =
+build = skd
+period_from = НачалоПериода
+period_to = КонецПериода
+client_field = Контрагент
+catalog = Контрагенты
+supplier_flag =
+active_register =

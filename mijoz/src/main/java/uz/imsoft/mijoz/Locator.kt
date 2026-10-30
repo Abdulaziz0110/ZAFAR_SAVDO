@@ -17,7 +17,9 @@ object Locator {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val prefs: MijozPrefs by lazy { MijozPrefs(app) }
-    val data: SnapshotRepository by lazy { SnapshotRepository(app, prefs) }
+    val login: uz.imsoft.mijoz.data.LoginRepository by lazy { uz.imsoft.mijoz.data.LoginRepository(app, prefs) }
+    val cart: uz.imsoft.mijoz.data.OrderCart by lazy { uz.imsoft.mijoz.data.OrderCart(app) }
+    val data: SnapshotRepository by lazy { SnapshotRepository(app, prefs) { force -> login.relogin(force) } }
 
     fun init(a: Application) {
         if (::app.isInitialized) return

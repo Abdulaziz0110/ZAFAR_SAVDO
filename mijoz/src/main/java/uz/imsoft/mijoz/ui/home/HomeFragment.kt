@@ -19,7 +19,6 @@ import uz.imsoft.mijoz.ui.describe
 import uz.imsoft.mijoz.ui.launchOnStarted
 import uz.imsoft.mijoz.ui.money
 import uz.imsoft.mijoz.ui.money2
-import uz.imsoft.mijoz.ui.settings.LinkDialog
 import uz.imsoft.mijoz.ui.show
 import uz.imsoft.shared.report.ClientStats
 import uz.imsoft.shared.report.Stamp
@@ -35,9 +34,15 @@ class HomeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        b.btnLink.setOnClickListener { LinkDialog.show(this) }
+        if (uz.imsoft.mijoz.Locator.prefs.link != null) uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.HOME)
+        b.btnLink.setText(R.string.lgn_login)
+        b.btnLink.setOnClickListener { (activity as? uz.imsoft.mijoz.ui.MainActivity)?.showLogin() }
         b.btnRefresh.setOnClickListener { refresh() }
         b.btnPrices.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_prices) }
+        b.btnOrder.setOnClickListener {
+            (activity as? MainActivity)?.openTab(R.id.nav_prices)
+            activity?.let { a -> com.google.android.material.snackbar.Snackbar.make(a.findViewById(android.R.id.content), R.string.home_order_hint, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show() }
+        }
         b.btnReport.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_report) }
         launchOnStarted { Locator.data.state.collect { render(it) } }
     }
@@ -66,6 +71,7 @@ class HomeFragment : Fragment() {
         bb.progress.show(s.loading)
         bb.btnRefresh.isEnabled = !s.loading && s.linked
         bb.cardLink.show(s.loaded && !s.linked)
+        bb.btnOrder.show(s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true)
         val snap = s.snapshot
         bb.toolbar.title = snap?.clientName?.ifEmpty { null } ?: Locator.prefs.link?.clientName?.ifEmpty { null } ?: getString(R.string.app_name)
         // Qarz: faqat server (1-ilova) ma'lumoti; vaqti bilan.
@@ -128,6 +134,11 @@ class HomeFragment : Fragment() {
             R.string.home_coverage2, snap.coverage.joinToString(", ") { Stamp.formatDate(it.from) + "–" + Stamp.formatDate(it.to) },
             if (snap.lastImportAt > 0) Fmt.dateTime(snap.lastImportAt) else "—",
         )
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) { if (uz.imsoft.mijoz.Locator.prefs.link != null) uz.imsoft.mijoz.ui.tour.Tour.show(this, uz.imsoft.mijoz.ui.tour.Tour.HOME) }
     }
 
     override fun onDestroyView() {

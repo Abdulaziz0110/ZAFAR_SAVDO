@@ -1,3 +1,32 @@
+# Test hisoboti — v2.6 + Savdo Mijoz 1.2 (2026-10-30)
+
+## Natija (shu muhitda bajarilgan)
+| Tekshiruv | Natija |
+|---|---|
+| Kotlin kompilyatsiyasi: `app` + `shared` (Android SDK, JDK'siz) | **0 xato** |
+| Kotlin kompilyatsiyasi: `mijoz` + `shared` | **0 xato** |
+| `BarcodesTest` (6) — EAN/UPC tekshiruv raqami, kanonik kalit (UPC-A = EAN-13 = Excel soni); tarozi yorlig'i (gramm, 10 gramm, 6+4 xonali, xato tekshiruv, 0 og'irlik); 1C "Вывести список" jadvalidan ustunlarni topish (sarlavha, bo'shliqli kod, son bo'lib qolgan kod); narx ro'yxatini rad etish; kod -> nom bog'lash (ikki ma'noli nom bog'lanmaydi); resolver (tarozi kodi — tasdiq bilan) | 6/6 |
+| Haqiqiy 1C shtrix kodlar fayli (`.xls`, repoga kiritilmagan): 4 212 qator, ustunlar to'g'ri topildi, 89 ms; tarozi prefikslari 28/29; UPC-A, tarozi yorlig'i (1,234 kg), tekshiruvsiz o'z kodi — hammasi topildi | qo'lda |
+| Do'kondagi haqiqiy yorliqlar (rasm): `2900025002028` -> Keshu 210, 0,202 kg; `2500000024375` -> Saryog Asal 200 gr (`BarcodesTest.realLabels`) | o'tdi |
+| JUnit (`app` + `shared`) | **131/131 o'tdi** (v2.5 dagi 116 ta o'zgarmagan holda yashil) |
+| `LoginTest` (6) — PBKDF2 JDK bilan bir xil; shifrlash/ochish; noto'g'ri parol; kalit (telefon formati farqi yo'q); do'kon kodi <-> manzil; soxta Firebase'da `a/` qoidasi (qisqa kalit o'qilmaydi, yozib bo'lmaydi) | 6/6 |
+| `OrdersTest.orderCarriesSender` — `by` (kim yubordi) maydoni bulut orqali, uzunlik cheklovi | 1/1 |
+| `pc/test_onec_export.py` (9) — sozlama va ulanish qatori; davr; jadval; xesh (xlsx vaqt belgisiz); faqat o'zgarganlar yuboriladi; davr o'zgarsa qayta; xatoda ulanish uziladi; yuklash formati (gzip+base64); kalit/nom | 9/9 |
+| `pc/test_forwarder.py` | 8/8 |
+| Resurs havolalari (ikkala modul), satrlar (lotin + kirill avtomatik) | xatosiz |
+
+## Tekshirib bo'lmagan narsalar (ochiq)
+1. Haqiqiy telefon: kirish oynasi, o'rgatuvchi ko'rsatmalar (yoritish joyi), sirli menyu, buyurtma savatchasi.
+2. Haqiqiy Firebase qoidalari v3 (`a/`) — soxta server bilan sinaldi; 1-ilova birinchi ochilishda o'zi o'rnatadi.
+3. `onec_export.py` haqiqiy 1C bilan: hisobot nomi va parametrlari `--discover` natijasidan keyin sozlanadi. COM qismi
+   (V83.COMConnector, `СкомпоноватьРезультат`, `ТабличныйДокумент.Записать(XLSX)`) Windows'siz sinab bo'lmaydi.
+4. Eski telefon (Android 6–7) da PBKDF2 (120 000) tezligi — kirishda 1–3 soniya kutilishi mumkin.
+5. Kamera skaneri (zxing-android-embedded) va Bluetooth/USB skaner haqiqiy telefonda; kutubxona shu muhitda yuklab bo'lmadi —
+   kompilyatsiya API stub bilan tekshirildi, GitHub build haqiqiy kutubxonani oladi. Tarozi yorlig'i formati namunalar bilan tasdiqlanishi kerak.
+
+
+---
+
 # Test hisoboti — v2.5 + IMSOFT Mijoz 1.1 (2026-10-29)
 
 ## Natija (shu muhitda bajarilgan)

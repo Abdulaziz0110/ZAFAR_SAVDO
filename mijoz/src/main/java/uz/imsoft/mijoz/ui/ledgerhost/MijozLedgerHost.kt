@@ -37,7 +37,7 @@ object MijozLedgerHost : LedgerHost {
     override val receiptHeader: String get() = Locator.data.state.value.snapshot?.shopName.orEmpty()
     override val fuzzySearch: Boolean get() = Locator.prefs.fuzzy
 
-    private fun ordersEnabled() = Locator.data.state.value.snapshot?.features?.contains(ClientSnapshot.FEATURE_ORDERS) == true
+    fun ordersEnabled() = Locator.data.state.value.snapshot?.features?.contains(ClientSnapshot.FEATURE_ORDERS) == true
 
     override fun repeatLabel(doc: LedgerDoc): Int = if (doc.kind == EntryKind.SALE && ordersEnabled()) R.string.lgm_reorder else 0
 
@@ -58,9 +58,21 @@ object MijozLedgerHost : LedgerHost {
     }
 
     override suspend fun submitRepeat(ctx: Context, plan: RepeatPlan, lines: List<RepeatLine>, wholesale: Boolean, note: String, option: Int): String {
-        Locator.data.sendOrder(note, plan.tag as? String ?: "", lines.map { OrderLine(it.name, it.qty, it.productId) })
+        val src = plan.tag as? String ?: ""
+        Locator.data.sendOrder(note, src, lines.map { OrderLine(it.name, it.qty, it.productId) })
+        if (src == CART) Locator.cart.clear()
         return ctx.getString(R.string.lgm_sent)
     }
+
+    const val CART = "cart"
+
+    /** "Narxlar" dan yig'ilgan savatcha -> buyurtma oynasi (miqdorni tekshirish/o'zgartirish, izoh). */
+    fun planForCart(ctx: Context): RepeatPlan = RepeatPlan(
+        title = ctx.getString(R.string.cart_title),
+        lines = Locator.cart.items.value.map { RepeatLine(it.name, it.qty, it.productId, MatchStatus.UNCHECKED, "", checked = true) },
+        showPriceType = false, defaultWholesale = true, showNote = true,
+        confirmLabel = R.string.lgm_send, hint = ctx.getString(R.string.cart_hint), tag = CART,
+    )
 
     override fun printTargets(ctx: Context): List<PrintTarget> {
         if (!Locator.prefs.printerSection) return emptyList()

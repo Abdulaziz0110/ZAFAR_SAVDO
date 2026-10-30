@@ -76,7 +76,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
                 R.id.action_pdf -> {
                     val lf = childFragmentManager.findFragmentByTag(TAG_LEDGER) as? com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerFragment
                     if (lf != null) {
-                        val html = com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerPdf.html(requireContext(), ServiceLocator.shareStore.clientName, lf.currentState())
+                        val html = com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerPdf.html(requireContext(), ServiceLocator.share.currentClient()?.name.orEmpty(), lf.currentState())
                         com.ilxomjon.dur_novvot_dokon.ui.ledger.ReceiptActions.printHtml(requireContext(), html, "1C_tarixi")
                     }
                     true
@@ -86,9 +86,12 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
             }
         }
         binding.btnOrdersBanner.setOnClickListener { com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager) }
+        binding.btnClientPick.setOnClickListener { pickClient() }
         launchOnStarted {
             ServiceLocator.share.state.collect { st ->
                 val bb = _binding ?: return@collect
+                bb.btnClientPick.show(st.clients.size > 1)
+                bb.btnClientPick.text = getString(R.string.hist_client, st.clientName)
                 bb.btnOrdersBanner.text = getString(R.string.ord_banner, st.newOrders)
                 bb.btnOrdersBanner.show(st.newOrders > 0 && st.acceptOrders)
             }
@@ -99,6 +102,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
             override fun onTabReselected(tab: TabLayout.Tab?) = Unit
         })
         launchOnStarted { vm.state.collect { last = it; render() } }
+        com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HISTORY)
     }
 
     override fun onResume() {
@@ -110,9 +114,24 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
     /** "1C tarixi" yorlig'i mijoz tanlangandan keyin paydo bo'ladi; boshqa ekrandan so'ralgan yorliq tanlanadi. */
     private fun ensureTabs() {
         val b = _binding ?: return
-        if (b.tabs.tabCount == 2 && ServiceLocator.shareStore.clientId.isNotEmpty()) b.tabs.addTab(b.tabs.newTab().setText(R.string.history_1c))
+        if (b.tabs.tabCount == 2 && ServiceLocator.shareStore.clients().isNotEmpty()) b.tabs.addTab(b.tabs.newTab().setText(R.string.history_1c))
         if (pendingTab >= 0 && pendingTab < b.tabs.tabCount) b.tabs.getTabAt(pendingTab)?.select()
         pendingTab = -1
+    }
+
+    /** 1C tarixi qaysi mijozniki — ro'yxatdan tanlash (yuk beruvchilar belgilanadi). */
+    private fun pickClient() {
+        val st = ServiceLocator.share.state.value
+        val list = st.clients
+        if (list.isEmpty()) return
+        val labels = list.map { c -> c.name + (if (c.kind == "s") " · " + getString(R.string.cl_kind_supplier_short) else "") + (if (c.entries > 0) "  (" + c.entries + ")" else "") }
+        val cur = list.indexOfFirst { it.id == st.clientId }
+        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.hist_pick_client)
+            .setSingleChoiceItems(labels.toTypedArray(), cur) { d, i ->
+                d.dismiss()
+                viewLifecycleOwner.lifecycleScope.launch { ServiceLocator.share.select(list[i].id) }
+            }
+            .setNegativeButton(R.string.cancel, null).show()
     }
 
     /** "Takrorlash": savatcha bo'sh bo'lmasa — nima qilishni so'raydi. */
@@ -149,7 +168,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        if (!hidden) { vm.refresh(); ensureTabs() }
+        if (!hidden) { vm.refresh(); ensureTabs(); com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HISTORY) }
     }
 
     private fun render() {

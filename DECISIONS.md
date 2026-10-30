@@ -129,3 +129,52 @@ uzunlik cheklangan, vaqt server vaqti. Qoidalar versiyasi (`RULES_VERSION=2`) �
 surface container rollari ham aniqlangan (aks holda Material standart binafsha tusni qo'yadi). Ekran standarti 100%.
 1C tarixi UI kodi 1-ilovada yoziladi va `tools/sync_ledger_kit.py` bilan 2-ilovaga ko'chiriladi (qo'lda tahrirlanmaydi).
 
+
+## v2.6 / Savdo Mijoz 1.2 (2026-10-30)
+**D-036. Universal: har do'konning o'z Firebase loyihasi.** Ilova ichida hech qanday do'konga xos manzil yo'q. 1-ilovaga
+Firebase manzili va secret kiritiladi; "do'kon kodi" = Firebase loyiha nomi (`x` -> `https://x-default-rtdb.firebaseio.com`,
+mintaqa bo'lsa `x@europe-west1`). Do'stlar o'z bazasi bilan shu ilovalarni ishlatadi, ma'lumotlar aralashmaydi.
+
+**D-037. Ko'p mijozli 1-ilova.** Har bir mijoz yoki yuk beruvchining alohida o'qish kaliti, alohida 1C tarixi fayli
+(`share/ledger_{id}.json`), ixtiyoriy chek printeri navbati va telefonlari bor. v2.5 dagi yagona mijoz bir marta avtomatik
+ro'yxatga ko'chiriladi (fayl o'sha id bilan qoladi). Excel import qilinganda mijoz fayldagi nomdan aniqlanadi (yangi bo'lsa qo'shiladi).
+
+**D-038. 2-ilovaga kirish: do'kon kodi + telefon + parol (Firebase Auth'siz).** `a/{sha256(baza|telefon)[:40]}` yozuvida mijoz
+kaliti AES-GCM bilan shifrlangan, kalit = PBKDF2-HMAC-SHA256(parol, tuz, 120 000). Parol bulutga chiqmaydi. Google akkaunt
+orqali kirish qo'shilmadi: har do'konda Firebase Auth va Google sozlamasini talab qiladi (do'stlarga o'rnatish qiyinlashadi).
+Parol 1 marta so'raladi (2-ilovada Keystore bilan shifrlangan holda saqlanadi). Telefon o'chirilsa — mijoz kaliti almashadi,
+qolgan telefonlar jimgina qayta kiradi, o'chirilgan telefon kira olmaydi. Kalit almashganda kutilayotgan buyurtmalar yangi kalit
+ostiga ko'chiriladi. Avtomatik parol 8 belgi (4 harf + 4 raqam). Eski "ulash kodi" ham ishlaydi.
+
+**D-039. Buyurtma savatchasi (2-ilova) — savdo emas.** "Narxlar"da "+" bilan tanlanadi, 1-ilovaga buyurtma bo'lib boradi
+(`by` — kim yubordi). 1-ilova egasi tasdiqlasa savatchasiga tushadi (narx JORIY katalogdan) va odatdagidek rasmiylashtiriladi.
+Faqat 1-ilova "Buyurtma qabul qilish" yoqiq bo'lsa ko'rinadi.
+
+**D-040. Kompyuterdan avtomatik 1C eksporti (COM, faqat o'qish).** `pc/onec_export.py` oddiy 1C foydalanuvchisi bilan
+`V83.COMConnector` orqali ulanadi, kartochka hisobotini (SKD yoki eksport protsedura) har kontragent uchun tuzib, `.xlsx`
+qilib `in/{inbox}` ga qo'yadi. Faqat o'zgarganlari yuboriladi (xlsx ichidagi vaqt belgilari xeshga kirmaydi). Jadval
+(1/2/3 soat, 0 — o'chiq) 1-ilovadan bulut orqali boshqariladi (`p/{inbox}/exp`), holat `p/{inbox}/st` ga yoziladi.
+Hisobot nomi va parametrlari bazaga bog'liq — `--discover` natijasiga qarab `forwarder.ini [onec]` da sozlanadi.
+1C'ga hech narsa yozilmaydi; har aylanishdan keyin ulanish uziladi (litsenziya band bo'lib turmasin).
+
+**D-041. O'rgatuvchi ko'rsatmalar ekranning o'zida (coach marks).** Ekran birinchi ochilganda kerakli tugma yoritiladi va qisqa
+izoh chiqadi; har ekran bir marta. Yoritilgan joyga tegish asl tugmani bosmaydi (tasodifiy amal bo'lmasin). Dvigatel umumiy
+(`ui/ledger/CoachMarks.kt`), qadamlar har ilovada. Sozlash (Firebase, kompyuter, telefonlar) uchun qadamma-qadam oynalar.
+
+**D-042. Sirli menyu (versiya yozuvini uzoq bosish).** 1-ilovada 20, 2-ilovada 19 band. Hech biri serverga (1C/SQL) yozmaydi,
+secret va parollar faqat yashirilgan holda (`abc••••••yz (32)`) ko'rinadi. Umumiy qism `ui/ledger/Secret.kt` da.
+
+**D-044. Shtrix kod bilan savdo: lokal ro'yxat + o'rganish, ZXing.** 1C'dagi shtrix kodlar bazadan to'g'ridan-to'g'ri
+o'qilmaydi (serverga tegilmaydi): ega "Вывести список" dan Excel saqlab yuklaydi; ustunlar avtomatik topiladi, kod -> nom
+tartibida katalogga bog'lanadi (bir xil nomli ikki tovar nom bo'yicha bog'lanmaydi). Kalit — oldidagi nollarsiz raqam
+(UPC-A/EAN-13/Excel soni bir xil). Noma'lum kod bir marta tanlanadi va eslab qolinadi (import almashganda ham saqlanadi).
+Haqiqiy 1C ro'yxati (4 214 qator) tahlili: vazn tovarlari 7 xonali "prefiks+kod" (28/29) — yorliqning boshi bo'yicha
+topiladi; 12 xonali o'z kodlari tekshiruv raqamisiz — EAN-13 o'qilganda oxirgi raqamsiz ham qidiriladi.
+Skaner ekrani kamerani to'xtatmaydi (bir kod 1,2 s ichida qayta sanalmaydi), topilmagan kod ro'yxatdan bosib bog'lanadi.
+Tarozi yorlig'i formati sozlanadi; yorliqdagi kod 1C kodiga mos kelsa ham BIRINCHI marta tasdiq so'raladi (noto'g'ri tovar
+jimgina tushmasin), "ishonish" sozlamasi bilan o'chiriladi. Kamera kutubxonasi — zxing-android-embedded 4.3.0 + core 3.3.0
+(minSdk 23 bilan mos, ML yo'q, internet shart emas). Skaner faqat savatchaga qo'shadi — savdo odatdagidek rasmiylashtiriladi.
+
+**D-043. Standart: qorong'i rejim, shrift 90%; "orqaga" — ikki marta bosilganda chiqish.** "Printer 3" -> "Printersiz"
+(protokoldagi qiymat "3" o'zgarmagan). "−" ni uzoq bosish — tovarni nolga tushiradi (qaytarish mumkin).
+1-ilova nomi "Savdo Agent", 2-ilova "Savdo Mijoz", yangi ikonkalar; applicationId o'zgarmagan.

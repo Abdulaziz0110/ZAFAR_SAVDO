@@ -27,6 +27,19 @@ class MijozPrefs(context: Context) {
             .putLong("meta_at", 0L).apply()
     }
 
+    // ---------------- kirish (v2.6: telefon + parol) ----------------
+    /** Kirilgan telefon (998...). Bo'sh — "ulash kodi" bilan yoki ulanmagan. Parol alohida, shifrlangan joyda. */
+    var loginPhone: String get() = s("login_phone"); set(v) = put("login_phone", v)
+    /** 1-ilovada shu telefonga yozilgan ism (buyurtmada "kim" bo'lib boradi). */
+    var memberName: String get() = s("member_name"); set(v) = put("member_name", v)
+    var loginClientId: String get() = s("login_client"); set(v) = put("login_client", v)
+    /** Oxirgi kiritilgan do'kon kodi (keyingi safar tayyor tursin). */
+    var lastShopCode: String get() = s("last_shop"); set(v) = put("last_shop", v)
+    /** Kirish bekor qilingan vaqt (1-ilovada telefon o'chirildi yoki parol almashdi). */
+    var revokedAt: Long get() = p.getLong("revoked_at", 0L); set(v) = p.edit().putLong("revoked_at", v).apply()
+    /** Kirish oynasini "keyinroq" deb yopgan (faqat shu ochilishda). */
+    var skipLogin: Boolean = false
+
     /** Oxirgi yuklangan ma'lumotning server vaqti (Firebase). */
     var metaAt: Long get() = p.getLong("meta_at", 0L); set(v) = p.edit().putLong("meta_at", v).apply()
     var fetchedAt: Long get() = p.getLong("fetched_at", 0L); set(v) = p.edit().putLong("fetched_at", v).apply()
@@ -34,7 +47,7 @@ class MijozPrefs(context: Context) {
 
     // ---------------- ko'rinish ----------------
     var language: String get() = s("language", "lat"); set(v) = put("language", v)
-    var theme: String get() = s("theme", "system"); set(v) = put("theme", v)
+    var theme: String get() = s("theme", "dark"); set(v) = put("theme", v)
     var uiScale: Float
         get() {
             // v2.5: eski "Ixcham" (0.92) standart edi — ro'yxatlar mayda ko'rinardi. Bir marta "Odatiy" ga o'tkaziladi.
@@ -47,7 +60,7 @@ class MijozPrefs(context: Context) {
             return p.getFloat("ui_scale", 1.0f)
         }
         set(v) = p.edit().putFloat("ui_scale", v).apply()
-    var fontScale: Float get() = p.getFloat("font_scale", 1.0f); set(v) = p.edit().putFloat("font_scale", v).apply()
+    var fontScale: Float get() = p.getFloat("font_scale", 0.9f); set(v) = p.edit().putFloat("font_scale", v).apply()
     /** Narxlar: "cash" (Naqd) / "wholesale" (Optom). */
     var priceType: String get() = s("price_type", "wholesale"); set(v) = put("price_type", v)
     /** "som" / "usd". */

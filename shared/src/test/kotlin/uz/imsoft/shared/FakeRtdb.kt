@@ -37,6 +37,7 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
     private fun canRead(p: List<String>): Boolean = when {
         p.isEmpty() -> false
         p[0] in setOf("s", "q", "p") && p.size >= 2 -> p[1].length >= 24
+        p[0] == "a" && p.size >= 2 -> p[1].length >= 40
         else -> false
     }
 
@@ -52,12 +53,13 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
     private fun orderOk(id: String, v: Any?): Boolean {
         val m = v as? Map<*, *> ?: return false
         if (id.length !in 10..40 || !m.containsKey("at") || !m.containsKey("l")) return false
-        if (m.keys.any { it !in setOf("at", "v", "src", "n", "l") }) return false
+        if (m.keys.any { it !in setOf("at", "v", "src", "n", "l", "by") }) return false
         if ((m["at"] as? Number)?.toLong() != now - 1) return false // {".sv":"timestamp"} == now
         val l = m["l"] as? String ?: return false
         if (l.length > 30000) return false
         (m["n"])?.let { if (it !is String || it.length > 300) return false }
         (m["src"])?.let { if (it !is String || it.length > 200) return false }
+        (m["by"])?.let { if (it !is String || it.length > 80) return false }
         return true
     }
 

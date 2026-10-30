@@ -148,3 +148,77 @@ Birinchi ochilishda ekran o'lchami 100% bo'ladi (oldingi "Ixcham" o'rniga). Kich
 * Telefon faqat internet bor va batareya kam bo'lmaganda tekshiradi. Xiaomi'da ishonchli ishlashi uchun: Sozlamalar ▸ Ilovalar ▸
   ilova ▸ Batareya ▸ **Cheklovsiz**.
 
+
+# 2.6 — yangi qismlar
+
+## (n) Yangilash: 1-ilova 2.6, 2-ilova 1.2
+Oddiy yangilash: GitHub ▸ Actions ▸ oxirgi yashil build ▸ ikkala APK ▸ telefonlarda "Yangilash". Ma'lumotlar joyida qoladi.
+
+1-ilovada:
+* avvalgi mijoz (Dadaxon Aka) **Mijozlar** ro'yxatiga o'zi ko'chadi;
+* 2-ilova eski "ulash kodi" bilan ishlashda davom etadi.
+
+Telefon raqami bilan kirish uchun (p) bandiga qarang.
+
+## (o) Mijozlar (1-ilova ▸ Sozlamalar ▸ Mijozlar va 2-ilova)
+* **Excel yuklash**: mijoz fayl ichidagi nomdan topiladi, ro'yxatda bo'lmasa qo'shiladi. Oyna pastida "…ga saqlash" ham bor.
+* **Mijoz qo'shish**: do'konlar ro'yxatidan yoki nomi bilan. Yuk beruvchilar uchun mijoz sahifasida ▸ Turi ▸ **Yuk beruvchi**.
+* Mijozni bosing. Mijoz sahifasida:
+  * telefonlar;
+  * 1C tarixi (Excel yoki serverdan);
+  * chek printeri;
+  * do'konga bog'lash: savatchaga olish va serverdan olish uchun kerak;
+  * kalitlarni almashtirish va o'chirish.
+* 1-ilova ▸ Tarix ▸ 1C tarixi: tepadagi **Mijoz: …** tugmasi bilan boshqa mijozni tanlaysiz.
+
+## (p) 2-ilovaga telefon raqami bilan kirish
+1. 1-ilova ▸ Mijozlar ▸ mijoz ▸ **Telefon qo'shish**: ism va raqam kiriting, parol o'zi yaratiladi.
+2. **Saqlash** ▸ **Yuborish**: Telegram/SMS orqali do'kon kodi, telefon va parol ketadi.
+3. 2-ilova ▸ **Kirish**: shu uchtasini kiriting. Faqat bir marta so'raladi.
+* Bitta mijozga bir nechta telefon qo'shish mumkin (masalan, do'kondagi 3 ta ishchi). Hammasi faqat shu mijoz ma'lumotini ko'radi.
+  Buyurtmada kim yuborgani yoziladi.
+* Ishchi ketsa: uning telefonini o'chiring. U boshqa kira olmaydi, qolganlar o'zi qayta ulanadi.
+* Parolni unutishsa: telefonni o'chirib, qaytadan qo'shing (yangi parol chiqadi).
+
+## (q) Buyurtma (2-ilova)
+1. 2-ilova ▸ Bosh sahifa ▸ **Buyurtma berish** (yoki Narxlar): tovar yonidagi **+** ▸ miqdor ▸ **Savatchaga**.
+2. Pastdagi **Yuborish**: miqdorlarni tekshiring, izoh yozing ▸ **1-ilovaga yuborish**.
+3. 1-ilovaga bildirishnoma keladi. Bosh sahifa yoki Mijozlar ▸ **Buyurtmalar** ▸ buyurtma ▸ **Savatchaga qo'shish**.
+   Narx joriy katalogdan olinadi. Keyin odatdagidek rasmiylashtiring.
+
+Buyurtma o'zi savdo emas: siz tasdiqlamaguningizcha hech narsa serverga ketmaydi.
+
+## (r) Kompyuterdan avtomatik (1C → Excel → telefon)
+1. 1-ilova ▸ Mijozlar ▸ **Kompyuterdan avtomatik**: har 1 / 2 / 3 soat (yoki o'chiq). Shu yerda **Kompyuter sozlamasi** matnini
+   oling va kompyuterdagi `pc` papkasiga `forwarder.ini` nomi bilan saqlang.
+2. Kompyuterda bir marta o'rnating: Python 3 va `pip install pywin32`.
+3. `forwarder.ini` ▸ `[onec]` bo'limiga quyidagilarni yozing:
+   * `connection`, masalan `File="D:\1C\Baza";`;
+   * `user`, `password`: oddiy 1C foydalanuvchisi; konfigurator paroli kerak emas.
+4. `discover.bat` ni ishga tushiring. U `discover.txt` faylini yaratadi — **shu faylni dasturchiga yuboring**: hisobot nomi
+   sozlab beriladi (bu baza tuzilishiga bog'liq, bir marta qilinadi).
+5. `start_export.bat` ni ishga tushiring. Ishlasa, `onec_export.vbs` yorlig'ini `Win+R ▸ shell:startup` papkasiga qo'ying.
+
+Holat 1-ilovada (shu bo'limda) ko'rinadi. Telefon kelgan fayllarni o'zi import qiladi. Batafsil: `pc/README_PC.md`.
+
+## (s0) Shtrix kod bilan savdo
+1. **Ro'yxatni yuklash** (bir marta, keyin yangi tovar qo'shilganda qayta):
+   1. 1C'da shtrix kodlar ro'yxatini oching ▸ **Действия ▸ Вывести список...** ▸ OK.
+   2. **Файл ▸ Сохранить как ▸ Лист Excel (*.xlsx)**.
+   3. Faylni telefonga o'tkazing.
+   4. Ilovada: Sozlamalar ▸ **Shtrix kodlar** ▸ **Excel**.
+2. **Savdo**: do'konni tanlang ▸ qidiruv yonidagi **skaner** tugmasi ▸ tovarlarni to'xtamasdan ketma-ket ko'rsating.
+   Pastdagi ro'yxatdan qo'lda ham qo'shish mumkin. Oxirida **Savatcha** ni bosing.
+   * Bluetooth/USB skaner: Savdo ekrani ochiq bo'lsa shunchaki o'qiting.
+   * Kod topilmasa kamera to'xtamaydi: qizil qatorda "Topilmadi" chiqadi. Ro'yxatdan (qidirib) to'g'ri tovarni bosing.
+     Kod shu tovarga bog'lanadi va keyingi safar o'zi taniladi.
+3. **Tarozi**: yorliqdagi og'irlik miqdor bo'lib tushadi. Format to'g'riligini tekshirish:
+   * Shtrix kodlar ▸ **Sinash** maydoniga yorliq raqamlarini yozing;
+   * kerak bo'lsa prefiks, uzunliklar va birlikni o'zgartiring.
+
+## (s) Ko'rsatmalar va sirli menyu
+* Har ekran birinchi ochilganda kerakli tugmalar yoritilib, izoh chiqadi. "O'tkazib yuborish" — shu ekran uchun yopiladi.
+* **Sirli xona**: Sozlamalar ▸ eng pastdagi versiya yozuvini **uzoq bosing**. U yerda:
+  * o'rgatuvchi ko'rsatmalarni qayta yoqish yoki butunlay o'chirish;
+  * avto-qorong'i rejim, ekran himoyasi;
+  * kunlik maqsad, CSV eksport, sinov cheki va boshqalar.

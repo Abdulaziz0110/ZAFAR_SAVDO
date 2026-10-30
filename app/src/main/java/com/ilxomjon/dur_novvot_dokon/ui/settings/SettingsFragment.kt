@@ -53,6 +53,7 @@ class SettingsFragment : Fragment() {
         }
         binding.toolbar.setNavigationOnClickListener { navigator().pop() }
         binding.btnServer.setOnClickListener { navigator().push(ServerSettingsFragment()) }
+        binding.btnBarcodes.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment()) }
         binding.btnShare.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.ShareFragment()) }
         binding.btnExtras.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.extras.ExtrasFragment()) }
         binding.btnRemoteHelp.setOnClickListener {
@@ -128,6 +129,13 @@ class SettingsFragment : Fragment() {
             requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
         }.getOrNull().orEmpty()
         binding.tvVersion.text = getString(R.string.settings_version, version)
+        // Sirli menyu: versiya yozuvini uzoq bosish
+        binding.tvVersion.setOnLongClickListener {
+            it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            navigator().push(AgentSecretFragment())
+            true
+        }
+        com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.SETTINGS)
 
         launchOnStarted { vm.state.collect { render(it) } }
         launchOnStarted {

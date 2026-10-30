@@ -24,7 +24,8 @@ class AppPrefs(context: Context) {
         set(v) = prefs.edit().putString("language", v.code).apply()
 
     var theme: UiTheme
-        get() = UiTheme.fromCode(prefs.getString("theme", null))
+        // v2.6: standart — qorong'i mavzu (egasi tanlovi)
+        get() = prefs.getString("theme", null)?.let { UiTheme.fromCode(it) } ?: UiTheme.DARK
         set(v) = prefs.edit().putString("theme", v.code).apply()
 
     var lastSyncAt: Long
@@ -81,7 +82,7 @@ class AppPrefs(context: Context) {
         }
         set(v) = prefs.edit().putFloat("ui_scale", v).apply()
     /** Shrift ko'paytuvchisi (telefon sozlamasiga qo'shimcha): 0.9 / 1.0 / 1.15. */
-    var fontScale: Float get() = prefs.getFloat("font_scale", 1.0f); set(v) = prefs.edit().putFloat("font_scale", v).apply()
+    var fontScale: Float get() = prefs.getFloat("font_scale", 0.9f); set(v) = prefs.edit().putFloat("font_scale", v).apply()
     /** Imlo xatolariga chidamli qidiruv. */
     var fFuzzySearch: Boolean get() = flag("f_fuzzy"); set(v) = setFlag("f_fuzzy", v)
     /** Klaviatura tartibi adashganda ham topish (ЙЦУКЕН/QWERTY). */

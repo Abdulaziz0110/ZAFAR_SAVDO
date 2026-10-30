@@ -76,7 +76,7 @@ object ServiceLocator {
             // v2.4: 2-ilova bilan ulashish (sozlangan bo'lsa)
             runCatching {
                 share.load()
-                catalog.onChanged = { share.markDirty(); if (shareStore.isConfigured && shareStore.autoPublish) ShareWorker.kick(app) }
+                catalog.onChanged = { barcodes.invalidate(); share.markDirty(); if (shareStore.isConfigured && shareStore.autoPublish) ShareWorker.kick(app) }
                 if (shareStore.isConfigured) ShareWorker.schedule(app)
             }
             runCatching { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.onAppStart(app) }
@@ -115,6 +115,7 @@ object ServiceLocator {
     val repeatSale by lazy { com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale(catalog, draft, parked) }
     val shareStore by lazy { ShareStore(app) }
     val share by lazy { ShareRepository(app, shareStore, catalog, api) }
+    val barcodes by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository(app, catalog) }
     val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox) }
 
     fun applyUiPrefs() {

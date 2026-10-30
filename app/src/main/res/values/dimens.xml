@@ -5,4 +5,6 @@
     <dimen name="space_m">12dp</dimen>
     <dimen name="space_l">16dp</dimen>
     <dimen name="space_xl">24dp</dimen>
+    <!-- v2.6: skaner savdosida kamera oynasi balandligi (shtrix kod uchun yetarli, ro'yxatga joy qoladi) -->
+    <dimen name="scan_camera_height">210dp</dimen>
 </resources>

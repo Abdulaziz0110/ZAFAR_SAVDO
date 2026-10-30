@@ -23,6 +23,8 @@ class ProductAdapter(
     private val onPlus: (Product, Double, Double) -> Unit,
     private val onMinus: (Product, Double) -> Unit,
     private val onEdit: (Product, Boolean) -> Unit,
+    /** "−" uzoq bosilsa: tovar savatchadan butunlay olinadi (nol). */
+    private val onZero: (Product) -> Unit = {},
 ) : RecyclerView.Adapter<ProductAdapter.VH>() {
 
     private var products: List<Product> = emptyList()
@@ -105,6 +107,12 @@ class ProductAdapter(
                 true
             }
             b.btnMinus.setOnClickListener { current()?.let { onMinus(it, priceOf(it)) } }
+            b.btnMinus.setOnLongClickListener { v ->
+                val p = current() ?: return@setOnLongClickListener false
+                if (haptics) v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onZero(p)
+                true
+            }
             b.tvQty.setOnClickListener { current()?.let { onEdit(it, false) } }
             b.tvPrice.setOnClickListener { current()?.let { onEdit(it, true) } }
             b.root.setOnClickListener { current()?.let { onEdit(it, false) } }

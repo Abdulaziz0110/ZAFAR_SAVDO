@@ -66,7 +66,7 @@ class Config:
         cp = configparser.ConfigParser()
         if not os.path.exists(path):
             raise SystemExit("forwarder.ini topilmadi: %s\n1-ilova ▸ Sozlamalar ▸ Mijoz ilovasi ▸ 'Kompyuter uchun chek sozlamasi'." % path)
-        cp.read(path, encoding="utf-8")
+        cp.read(path, encoding="utf-8-sig")  # Bloknot BOM qo'shsa ham o'qiladi
         fb = cp["firebase"] if cp.has_section("firebase") else {}
         self.url = normalize_url(fb.get("url", ""))
         self.secret = fb.get("secret", "").strip()

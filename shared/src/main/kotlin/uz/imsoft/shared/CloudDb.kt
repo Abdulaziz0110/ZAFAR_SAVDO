@@ -103,8 +103,8 @@ class CloudDb(
         /** Server vaqti belgisi (Firebase o'zi qo'yadi — telefon soati noto'g'ri bo'lsa ham). */
         val SERVER_TIME: Map<String, Any?> = mapOf(".sv" to "timestamp")
 
-        /** Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma). */
-        const val RULES_VERSION = 2
+        /** Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish). */
+        const val RULES_VERSION = 3
 
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
@@ -123,11 +123,15 @@ class CloudDb(
             "v": { ".validate": "newData.isNumber()" },
             "src": { ".validate": "newData.isString() && newData.val().length <= 200" },
             "n": { ".validate": "newData.isString() && newData.val().length <= 300" },
+            "by": { ".validate": "newData.isString() && newData.val().length <= 80" },
             "l": { ".validate": "newData.isString() && newData.val().length <= 30000" },
             "${'$'}other": { ".validate": false }
           }
         }
       }
+    },
+    "a": {
+      "${'$'}h": { ".read": "${'$'}h.length >= 40" }
     },
     "q": {
       "${'$'}qk": {

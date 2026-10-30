@@ -239,6 +239,16 @@
                     app:icon="@drawable/ic_history" />
             </LinearLayout>
 
+            <!-- v2.6: buyurtma berish (1-ilova qabul qilsa) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOrder"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/home_order"
+                android:visibility="gone"
+                app:icon="@drawable/ic_cart" />
+
             <TextView
                 android:id="@+id/tvCoverage"
                 android:layout_width="match_parent"

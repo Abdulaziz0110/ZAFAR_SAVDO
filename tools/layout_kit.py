@@ -170,3 +170,104 @@ def screen(title, body):
     </ScrollView>
 </LinearLayout>
 '''
+
+def text(id_, style='?attr/textAppearanceBodyMedium', top='6dp', color=None, gone=False, extra=''):
+    c = f'\n                        android:textColor="{color}"' if color else ''
+    g = '\n                        android:visibility="gone"' if gone else ''
+    i = f'\n                        android:id="@+id/{id_}"' if id_ else ''
+    return f'''                    <TextView{i}
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="{top}"
+                        android:layout_marginEnd="16dp"
+                        android:lineSpacingExtra="2dp"{extra}
+                        android:textAppearance="{style}"{c}{g} />
+'''
+
+def container(id_):
+    return f'''                    <LinearLayout
+                        android:id="@+id/{id_}"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="vertical" />
+'''
+
+def card_title(t):
+    return f'''                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginEnd="16dp"
+                        android:text="{t}"
+                        android:textAppearance="@style/TextAppearance.App.Section" />
+'''
+
+def field(til_id, edt_id, hint, input_type='text', helper=None):
+    h = f'\n                        app:helperText="{helper}"' if helper else ''
+    return f'''                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/{til_id}"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginEnd="16dp"
+                        android:hint="{hint}"{h}>
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/{edt_id}"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="{input_type}"
+                            android:maxLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+'''
+
+def screen_progress(title, body, menu=None):
+    m = f'\n        app:menu="@menu/{menu}"' if menu else ''
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<!-- tools/gen_share_layouts.py yaratgan -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back"{m}
+        app:title="{title}" />
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="invisible" />
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
+{body}        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
+'''

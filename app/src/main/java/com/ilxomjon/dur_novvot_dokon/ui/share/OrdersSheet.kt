@@ -12,6 +12,7 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
+import com.ilxomjon.dur_novvot_dokon.data.share.ClientOrder
 import com.ilxomjon.dur_novvot_dokon.databinding.ItemOrderBinding
 import com.ilxomjon.dur_novvot_dokon.databinding.SheetOrdersBinding
 import com.ilxomjon.dur_novvot_dokon.ui.formatDateTime
@@ -22,7 +23,7 @@ import kotlinx.coroutines.launch
 import uz.imsoft.shared.OrderRequest
 import uz.imsoft.shared.receipt.NumFmt
 
-/** 2-ilovadan kelgan "qayta buyurtma"lar. Ochilganda bulutdan yangilanadi. */
+/** 2-ilovadan (hamma mijozlardan) kelgan buyurtmalar. Ochilganda bulutdan yangilanadi. Tasdiqlansa — savatchaga. */
 class OrdersSheet : BottomSheetDialogFragment() {
     private var _b: SheetOrdersBinding? = null
     private val b get() = _b!!
@@ -42,16 +43,18 @@ class OrdersSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun render(list: List<OrderRequest>) {
+    private fun render(list: List<ClientOrder>) {
         val bb = _b ?: return
         bb.list.removeAllViews()
         bb.tvEmpty.show(list.isEmpty())
         val inf = LayoutInflater.from(requireContext())
-        for (o in list) {
+        for (co in list) {
+            val o = co.order
             val ib = ItemOrderBinding.inflate(inf, bb.list, false)
-            ib.tvTitle.text = getString(R.string.ord_item_title, formatDateTime(o.at))
+            ib.tvTitle.text = co.clientName.ifBlank { getString(R.string.ord_item_title, formatDateTime(o.at)) }
             val names = o.lines.take(4).joinToString(", ") { it.name + " " + NumFmt.qty(it.qty) }
             ib.tvSub.text = listOfNotNull(
+                formatDateTime(o.at) + (if (o.by.isNotBlank()) " · " + o.by else ""),
                 getString(R.string.ord_item_lines, o.lines.size) + " · " + names + if (o.lines.size > 4) " …" else "",
                 o.note.takeIf { it.isNotBlank() }?.let { getString(R.string.ord_note, it) },
             ).joinToString("\n")
@@ -63,7 +66,7 @@ class OrdersSheet : BottomSheetDialogFragment() {
                     else -> MaterialColors.getColor(ib.root, com.google.android.material.R.attr.colorTertiary)
                 },
             )
-            ib.root.setOnClickListener { open(o) }
+            ib.root.setOnClickListener { open(co) }
             bb.list.addView(ib.root)
         }
     }
@@ -76,18 +79,20 @@ class OrdersSheet : BottomSheetDialogFragment() {
         },
     )
 
-    private fun open(o: OrderRequest) {
+    private fun open(co: ClientOrder) {
+        val o = co.order
         val ctx = requireContext()
-        val text = o.lines.joinToString("\n") { "• " + it.name + " — " + NumFmt.qty(it.qty) } + if (o.note.isNotBlank()) "\n\n" + getString(R.string.ord_note, o.note) else ""
+        val head = co.clientName + (if (o.by.isNotBlank()) " · " + getString(R.string.ord_by, o.by) else "") + "\n\n"
+        val text = head + o.lines.joinToString("\n") { "• " + it.name + " — " + NumFmt.qty(it.qty) } + if (o.note.isNotBlank()) "\n\n" + getString(R.string.ord_note, o.note) else ""
         val fm = parentFragmentManager
         MaterialAlertDialogBuilder(ctx).setTitle(getString(R.string.ord_item_title, formatDateTime(o.at))).setMessage(text)
             .setPositiveButton(R.string.lgh_to_cart) { _, _ ->
                 dismiss()
-                RepeatSheet.showPlan(fm, DokonLedgerHost.planForOrder(ctx, o))
+                RepeatSheet.showPlan(fm, DokonLedgerHost.planForOrder(ctx, co))
             }
             .setNeutralButton(R.string.ord_reject) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
-                    runCatching { ServiceLocator.share.setOrderStatus(o.id, OrderRequest.Status.REJECTED) }
+                    runCatching { ServiceLocator.share.setOrderStatus(co.clientId, o.id, OrderRequest.Status.REJECTED) }
                     render(ServiceLocator.share.orders.value)
                 }
             }

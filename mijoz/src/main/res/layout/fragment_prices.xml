@@ -149,4 +149,52 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
     </FrameLayout>
+
+    <!-- v2.6: buyurtma savatchasi -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cartBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="2dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:id="@+id/tvCart"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?attr/colorOnPrimaryContainer" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCartClear"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="@string/cart_clear"
+                app:icon="@drawable/ic_delete"
+                app:iconTint="?attr/colorOnPrimaryContainer" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCartSend"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="@string/cart_send"
+                app:icon="@drawable/ic_cart" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

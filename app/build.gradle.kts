@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "2.5"
+        versionCode = 8
+        versionName = "2.6"
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {
@@ -91,6 +91,9 @@ dependencies {
     implementation(libs.jtds)
     // Ilova yopiq bo'lsa ham navbatni ishonchli yuborish (internet paydo bo'lganda)
     implementation(libs.androidx.work.runtime.ktx)
+    // v2.6: shtrix kod skaneri. transitive=false + core 3.3.0: minSdk 23 bilan mos (zxing-android-embedded README)
+    implementation(libs.zxing.android.embedded) { isTransitive = false }
+    implementation(libs.zxing.core)
 
     // Faqat JVM unit testlar (APK ichiga kirmaydi)
     testImplementation(libs.junit)

@@ -19,6 +19,8 @@ data class OrderRequest(
     val lines: List<OrderLine>,
     val status: Status = Status.SENT,
     val statusAt: Long = 0L,
+    /** Kim yubordi (ishchi/mijoz ismi yoki telefoni). */
+    val by: String = "",
 ) {
     enum class Status(val code: String) {
         SENT(""), SEEN("seen"), TAKEN("taken"), REJECTED("rejected");
@@ -41,9 +43,9 @@ object OrderCodec {
         Json.write(lines.take(MAX_LINES).map { listOf(it.name.take(200), it.qty, it.productId.take(64)) })
 
     /** 2-ilova yozadigan obyekt ("at" — server vaqti). */
-    fun toCloud(note: String, source: String, lines: List<OrderLine>): Map<String, Any?> = linkedMapOf(
+    fun toCloud(note: String, source: String, lines: List<OrderLine>, by: String = ""): Map<String, Any?> = linkedMapOf<String, Any?>(
         "at" to CloudDb.SERVER_TIME, "v" to VERSION, "src" to source.take(200), "n" to note.take(MAX_NOTE), "l" to linesJson(lines),
-    )
+    ).apply { if (by.isNotBlank()) put("by", by.take(80)) }
 
     @Suppress("UNCHECKED_CAST")
     fun fromCloud(id: String, value: Any?): OrderRequest? {
@@ -60,7 +62,7 @@ object OrderCodec {
         val st = o.obj("st")
         return OrderRequest(
             id, o.long("at"), o.str("n"), o.str("src"), lines,
-            OrderRequest.Status.of(st?.str("s").orEmpty()), st?.long("at") ?: 0L,
+            OrderRequest.Status.of(st?.str("s").orEmpty()), st?.long("at") ?: 0L, o.str("by"),
         )
     }
 

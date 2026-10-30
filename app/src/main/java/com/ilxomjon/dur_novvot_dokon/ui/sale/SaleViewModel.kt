@@ -268,6 +268,13 @@ class SaleViewModel(
 
     fun plus(p: Product, price: Double, amount: Double = 1.0) { kpi.tap(); draftRepo.adjust(p, amount, price) }
     fun minus(p: Product, price: Double) { kpi.tap(); draftRepo.adjust(p, -1.0, price) }
+    /** "−" uzoq bosilganda: tovar savatchadan olinadi. @return true — olindi. */
+    fun zero(p: Product): Boolean {
+        if (draft.value.lineFor(p.id) == null) return false
+        kpi.tap()
+        draftRepo.removeLine(p.id)
+        return true
+    }
     fun tap() = kpi.tap()
 
     /** "Bekor qilish": savatchani oldingi holatiga qaytaradi. */
