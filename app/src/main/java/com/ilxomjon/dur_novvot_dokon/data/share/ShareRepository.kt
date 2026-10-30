@@ -135,6 +135,12 @@ class ShareRepository(
     private val api: ServerApi,
 ) {
     private val mutex = Mutex()
+    /** v2.7: kompyuterdan kelgan tovar kodlari (PLU, shtrix) — narx yorliqlari bo'limi qabul qiladi. */
+    var codesHook: (suspend (ByteArray) -> Unit)? = null
+    /** v2.7: tovar id -> tarozi PLU (2-ilovada ko'rsatiladi). */
+    var pluOf: (String) -> String? = { null }
+    /** v2.6: 1-ilova savdolari -> 2-ilova (tarix va chek). */
+    val mirror = SaleMirror(context, store)
     private val _state = MutableStateFlow(ShareState())
     val state: StateFlow<ShareState> = _state.asStateFlow()
 
@@ -253,6 +259,11 @@ class ShareRepository(
     fun setAnswer(v: Boolean) { store.answerRequests = v; publishState() }
     fun setAcceptOrders(v: Boolean) { store.acceptOrders = v; store.markAllDirty(); publishState() }
     fun setReceiptHeader(v: String) { store.receiptHeader = v.trim().take(60); store.markAllDirty(); publishState() }
+    fun setReceiptFooter(v: String) {
+        val t = v.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.take(6).joinToString("\n").take(300)
+        if (t != store.receiptFooter) { store.receiptFooter = t; store.markAllDirty(); publishState() }
+    }
+    fun setReceiptStaff(v: String) { store.receiptStaff = v.trim().take(40) }
     fun setSyncMinutes(v: Int) { store.syncMinutes = v; publishState() }
 
     // ---------------- mijozlar ----------------
@@ -436,6 +447,8 @@ class ShareRepository(
         if (store.inboxKey.isEmpty()) store.inboxKey = CloudDb.newKey()
         val printer = store.current()?.queueKey?.ifEmpty { null } ?: store.clients().firstOrNull { it.queueKey.isNotEmpty() }?.queueKey.orEmpty()
         return "[firebase]\nurl = ${store.dbUrl}\nsecret = ${store.secret}\nqueue = $printer\ninbox = ${store.inboxKey}\n\n" +
+            "[labels]\n; Narx yorlig'i printeri (label_printer.py). printer — Windows'dagi nomi (bo'sh: Xprinter o'zi qidiriladi)\n" +
+            "key = ${store.labelKey}\nprinter = \nmode = gdi\nport = 9110\n\n" +
             "[onec]\n; 1C 8.3 ga ulanish (COM, oddiy foydalanuvchi). Masalan: File=\"D:\\1C\\Baza\";  yoki  Srvr=\"server\";Ref=\"baza\";\n" +
             "connection = \nuser = \npassword = \n" +
             "; Quyidagilar: python onec_export.py --discover natijasiga qarab to'ldiriladi\n" +
@@ -561,6 +574,7 @@ class ShareRepository(
         val db = cloud()
         val keys = withContext(Dispatchers.IO) { runCatching { db.keys("in/${store.inboxKey}") }.getOrDefault(emptyList()) }.sorted()
         var n = 0
+        var codesChanged = false
         for (k in keys) {
             @Suppress("UNCHECKED_CAST")
             val item = withContext(Dispatchers.IO) { runCatching { db.get("in/${store.inboxKey}/$k", timeoutMs = 60_000) as? Map<String, Any?> }.getOrNull() } ?: continue
@@ -568,6 +582,12 @@ class ShareRepository(
             val ok = runCatching {
                 val raw = B64.decode(o.str("b"))
                 val bytes = if (o.bool("gz")) B64.gunzip(raw) else raw
+                if (o.str("k") == "codes") {
+                    // Tovar kodlari (1C: PLU va shtrix) — mijoz hisoboti emas
+                    (codesHook ?: throw IllegalStateException("codes")).invoke(bytes)
+                    codesChanged = true
+                    return@runCatching
+                }
                 val name = o.str("n").ifEmpty { "pc.xlsx" }
                 val report = withContext(Dispatchers.Default) { CardParser.parse(TableReader.read(bytes, name)) }
                 val hint = o.str("c")
@@ -586,6 +606,8 @@ class ShareRepository(
             if (ok) n++
         }
         if (n > 0) mutex.withLock { publishState() }
+        // PLU 2-ilovada ham ko'rinsin: mijozlar "yangilanishi kerak" deb belgilanadi (navbatdagi yuborishda ketadi)
+        if (codesChanged) mutex.withLock { withContext(Dispatchers.IO) { for (c in store.clients()) store.update(c.id) { it.copy(dirty = true) } }; publishState() }
         return n
     }
 
@@ -615,14 +637,15 @@ class ShareRepository(
                 p.id, p.name, groupName[p.groupId].orEmpty(),
                 Pricing.unitPrice(p, PriceType.CASH, Currency.SOM, cat.rate), Pricing.unitPrice(p, PriceType.CASH, Currency.USD, cat.rate),
                 Pricing.unitPrice(p, PriceType.WHOLESALE, Currency.SOM, cat.rate), Pricing.unitPrice(p, PriceType.WHOLESALE, Currency.USD, cat.rate),
+                plu = pluOf(p.id).orEmpty(),
             )
         }
         val debt = if (c.storeId.isEmpty()) null else runCatching { catalog.knownDebt(c.storeId) }.getOrNull()?.let { DebtInfo(it.som, it.usd, it.fetchedAt, "server") }
         val features = if (store.acceptOrders && store.rulesVersion >= 2 && c.kind == "c") setOf(ClientSnapshot.FEATURE_ORDERS) else emptySet()
         return ClientSnapshot(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
-            items.sortedBy { it.name.lowercase() }, b.entries, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
-            features = features, shopName = store.receiptHeader,
+            items.sortedBy { it.name.lowercase() }, b.entries + mirror.entriesFor(c.id, b.entries, b.coverage), b.coverage, cat.lastSyncAt, reportBalance = b.balance,
+            features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
         )
     }
 
@@ -702,7 +725,25 @@ class ShareRepository(
         val sent = if (served.isNotEmpty() || imported > 0 || (store.autoPublish && store.clients().any { it.dirty })) publish() else false
         if (sent) for ((id, req) in served) store.update(id) { it.copy(lastRequestServed = req) }
         if (store.acceptOrders && store.rulesVersion >= 2) runCatching { refreshOrders(notify = true) }
+        runCatching { mirror.retryPending() }
         return sent
+    }
+
+    /**
+     * 1-ilovada savdo navbatga qo'yilganda: mijoz ro'yxatda bo'lsa — uning 2-ilovasiga darhol yuboriladi (tarixda ko'rinadi)
+     * va 2-ilovada yoqilgan bo'lsa chek printer navbatiga qo'yiladi. Internet bo'lmasa — keyin (fon ishchisi).
+     */
+    suspend fun onSale(sent: com.ilxomjon.dur_novvot_dokon.domain.SentOrder, outboxId: Long, code: String) {
+        if (!store.isConfigured) return
+        // Chek uchun "oldingi qarz" — serverdan oxirgi yuklangan qiymat (so'm savdosida)
+        val debt = if (sent.currency == com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM) catalog.storeById(sent.storeId)?.debtSom else null
+        val (c, s) = mirror.record(sent, outboxId, code, debt) ?: return
+        store.update(c.id) { it.copy(dirty = true) }
+        mutex.withLock { publishState() }
+        val fresh = store.client(c.id) ?: c
+        runCatching { mirror.pushReceipt(fresh, s) }
+        if (store.autoPublish) runCatching { publishOne(c.id) }.onFailure { ShareWorker.kick(context) }
+        else ShareWorker.kick(context)
     }
 
     // ---------------- 2-ilovadan buyurtmalar ----------------

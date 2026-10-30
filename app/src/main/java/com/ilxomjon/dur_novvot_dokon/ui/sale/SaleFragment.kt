@@ -126,6 +126,8 @@ class SaleFragment : Fragment() {
         binding.edtSearch.onTextChanged { vm.setQuery(it) }
         // v2.6: shtrix kod — kamera yoki ulanadigan skaner (klaviatura kabi yozib, Enter bosadi)
         binding.btnScan.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment()) }
+        // Uzoq bosish — kod yozish rejimi (bazada yo'q shtrix kodlarni tovarlarga bog'lash)
+        binding.btnScan.setOnLongClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment.link()); true }
         binding.edtSearch.setOnEditorActionListener { v, _, ev ->
             if (ev != null && ev.action != android.view.KeyEvent.ACTION_DOWN && ev.action != android.view.KeyEvent.ACTION_UP) return@setOnEditorActionListener false
             hardwareScan(v.text?.toString().orEmpty())

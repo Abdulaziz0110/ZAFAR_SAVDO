@@ -487,6 +487,60 @@
                             android:inputType="textCapWords"
                             android:maxLines="2" />
                     </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilStaff"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginEnd="16dp"
+                        android:hint="@string/rc_staff_field"
+                        app:helperText="@string/rc_staff_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edtStaff"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapWords"
+                            android:maxLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilFooter"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginEnd="16dp"
+                        android:hint="@string/rc_footer_field"
+                        app:helperText="@string/rc_footer_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edtFooter"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textMultiLine"
+                            android:maxLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnReceiptPreview"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="@string/rc_preview"
+                            app:icon="@drawable/ic_print" />
+                    </LinearLayout>
                     <Space android:layout_width="match_parent" android:layout_height="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

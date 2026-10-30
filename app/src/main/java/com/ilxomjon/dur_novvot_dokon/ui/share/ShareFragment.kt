@@ -91,11 +91,41 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
         binding.edtHeader.setText(ServiceLocator.shareStore.receiptHeader)
         binding.edtHeader.setOnFocusChangeListener { _, focus -> if (!focus) repo.setReceiptHeader(binding.edtHeader.text?.toString().orEmpty()) }
         binding.edtHeader.setOnEditorActionListener { v, _, _ -> repo.setReceiptHeader(v.text?.toString().orEmpty()); v.clearFocus(); false }
+        binding.edtStaff.setText(ServiceLocator.shareStore.receiptStaff)
+        binding.edtFooter.setText(ServiceLocator.shareStore.receiptFooter)
+        binding.edtStaff.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
+        binding.edtFooter.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
+        binding.btnReceiptPreview.setOnClickListener { saveReceiptFields(); previewReceipt() }
         binding.tvShopCode.setOnClickListener { copy(repo.state.value.shopCode) }
 
         launchOnStarted { repo.state.collect { render(it) } }
         viewLifecycleOwner.lifecycleScope.launch { repo.load(); runCatching { repo.refreshPcStatus() } }
         Tour.show(this, Tour.SHARE)
+    }
+
+    private fun saveReceiptFields() {
+        val b = _binding ?: return
+        repo.setReceiptHeader(b.edtHeader.text?.toString().orEmpty())
+        repo.setReceiptStaff(b.edtStaff.text?.toString().orEmpty())
+        repo.setReceiptFooter(b.edtFooter.text?.toString().orEmpty())
+    }
+
+    override fun onPause() {
+        saveReceiptFields()
+        super.onPause()
+    }
+
+    /** Namuna chek (sozlamalar qanday chiqishini ko'rish uchun). */
+    private fun previewReceipt() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                uz.imsoft.shared.android.ReceiptBitmap.render(repo.mirror.sampleReceipt(), 576)
+            }
+            val iv = android.widget.ImageView(ctx).apply { setImageBitmap(bmp); adjustViewBounds = true; setPadding(24, 24, 24, 24) }
+            val sv = android.widget.ScrollView(ctx).apply { addView(iv) }
+            MaterialAlertDialogBuilder(ctx).setTitle(R.string.rc_preview).setView(sv).setPositiveButton(R.string.close, null).show()
+        }
     }
 
     private fun addClient() {

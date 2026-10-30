@@ -201,11 +201,19 @@ class PricesFragment : Fragment() {
                 }
                 b.tvPrice.text = if (r.item.id.isEmpty() || price == 0.0) ctx.getString(R.string.price_none) else ctx.money(price, usd)
                 val last = r.last
-                b.tvMeta.text = if (last == null) "" else {
+                // v2.7: tovar kodi va tarozi PLU raqami (1-ilovadan)
+                val code = when {
+                    r.item.id.isEmpty() -> ""
+                    r.item.plu.isNotEmpty() -> ctx.getString(R.string.price_code_plu, r.item.id, r.item.plu)
+                    else -> ctx.getString(R.string.price_code, r.item.id)
+                }
+                val lastText = if (last == null) "" else {
                     val lp = if (last.price.som != 0.0) ctx.money(last.price.som, false) else if (last.price.usd != 0.0) ctx.money(last.price.usd, true) else "—"
                     ctx.getString(R.string.price_last, Stamp.formatDate(last.stamp), Fmt.qty(last.qty), lp)
                 }
-                b.tvMeta.show(last != null)
+                val meta = listOf(code, lastText).filter { it.isNotEmpty() }.joinToString("\n")
+                b.tvMeta.text = meta
+                b.tvMeta.show(meta.isNotEmpty())
                 b.btnAdd.show(ordersOn)
                 val inCart = Locator.cart.qty(r.key)
                 b.btnAdd.text = if (inCart > 0) Fmt.qty(inCart) else ""

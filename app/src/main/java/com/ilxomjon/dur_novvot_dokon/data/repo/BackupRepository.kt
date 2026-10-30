@@ -12,6 +12,7 @@ import com.ilxomjon.dur_novvot_dokon.domain.ServerConfig
 import com.ilxomjon.dur_novvot_dokon.domain.outbox.CheckReason
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -54,6 +55,8 @@ class BackupException(val kind: Kind, message: String? = null, cause: Throwable?
  *  - Tiklashdan oldin: ko'rib chiqish (preview), versiya va yaxlitlik tekshiruvi, joriy bazalar nusxasi (xato bo'lsa qaytariladi).
  *  - Tiklangan navbatdagi yuborilmagan qatorlar "Tekshirish kerak" holatiga o'tadi va o'zi yuborilmaydi (takroriy buyurtma xavfi).
  */
+private const val BARCODES = "barcodes.json"
+
 class BackupRepository(
     private val context: Context,
     private val localDb: LocalDb,
@@ -92,6 +95,8 @@ class BackupRepository(
         ZipOutputStream(bos).use { zip ->
             addFile(zip, LocalDb.NAME, context.getDatabasePath(LocalDb.NAME))
             addFile(zip, HistoryDb.NAME, context.getDatabasePath(HistoryDb.NAME))
+            // v2.6: telefonda yozilgan shtrix kodlar (bo'lsa) — telefon almashsa ham yo'qolmasin
+            File(context.filesDir, BARCODES).takeIf { it.exists() }?.let { addFile(zip, BARCODES, it) }
             val cfg = secure.serverConfig
             val json = JSONObject()
                 .put("host", cfg.host).put("db", cfg.database).put("login", cfg.login).put("remote", cfg.remoteHost)
@@ -105,6 +110,17 @@ class BackupRepository(
                 .put("history_db_version", HistoryDb.VERSION).put("local_db_version", LocalDb.VERSION).toString())
         }
         return bos.toByteArray()
+    }
+
+    /** Zaxiradagi shtrix kodlar (eskiroq zaxirada bo'lmaydi — unda hech narsa o'zgarmaydi). */
+    private fun restoreBarcodes(src: File) {
+        runCatching {
+            val dst = File(context.filesDir, BARCODES)
+            val tmp = File(context.filesDir, "$BARCODES.tmp")
+            src.copyTo(tmp, overwrite = true)
+            if (!tmp.renameTo(dst)) { dst.delete(); tmp.renameTo(dst) }
+            com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.appScope.launch { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.barcodes.reloadFromDisk() }
+        }
     }
 
     private fun putText(zip: ZipOutputStream, name: String, text: String) {
@@ -170,6 +186,7 @@ class BackupRepository(
                         localDb.readableDatabase
                         val n = historyDb.markAllUnfinishedNeedsCheck(CheckReason.RESTORED)
                         File(dir, "settings.json").takeIf { it.exists() }?.let { applySettings(JSONObject(it.readText())) }
+                        File(dir, BARCODES).takeIf { it.exists() }?.let { restoreBarcodes(it) }
                         n
                     } catch (t: Throwable) {
                         runCatching { localDb.close(); historyDb.close() }
@@ -206,7 +223,7 @@ class BackupRepository(
                 var e = zip.nextEntry
                 while (e != null) {
                     val name = e.name
-                    if (name == LocalDb.NAME || name == HistoryDb.NAME || name == "settings.json" || name == "manifest.json") {
+                    if (name == LocalDb.NAME || name == HistoryDb.NAME || name == "settings.json" || name == "manifest.json" || name == BARCODES) {
                         File(tmp, name).outputStream().use { zip.copyTo(it) }
                     }
                     e = zip.nextEntry

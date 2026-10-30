@@ -1,0 +1,230 @@
+package com.ilxomjon.dur_novvot_dokon.ui.labels
+
+import android.app.Dialog
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.ilxomjon.dur_novvot_dokon.R
+import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
+import com.ilxomjon.dur_novvot_dokon.data.labels.LabelPrinterClient
+import com.ilxomjon.dur_novvot_dokon.data.labels.LabelState
+import com.ilxomjon.dur_novvot_dokon.databinding.SheetLabelPrinterBinding
+import com.ilxomjon.dur_novvot_dokon.ui.describeError
+import com.ilxomjon.dur_novvot_dokon.ui.formatDateTime
+import com.ilxomjon.dur_novvot_dokon.ui.share.ImportUi
+import com.ilxomjon.dur_novvot_dokon.ui.show
+import com.ilxomjon.dur_novvot_dokon.ui.showInvisible
+import kotlinx.coroutines.launch
+
+/** Yorliq printeri: kompyuterni topish (Wi-Fi), manzil, bulut orqali, yorliq o'lchami, sinov va kompyuter sozlamasi. */
+class LabelPrinterSheet : BottomSheetDialogFragment() {
+    private var _b: SheetLabelPrinterBinding? = null
+    private val b get() = _b!!
+    private val repo get() = ServiceLocator.labels
+    private var busy = false
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val d = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+        d.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        d.behavior.skipCollapsed = true
+        d.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        return d
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _b = SheetLabelPrinterBinding.inflate(inflater, container, false)
+        return b.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val s = repo.state.value
+        b.edtHost.setText(s.host)
+        b.edtPort.setText(s.port.toString())
+        val cloudReady = ServiceLocator.shareStore.isCloudReady
+        b.swCloud.isChecked = s.cloud && cloudReady
+        b.swCloud.isEnabled = cloudReady
+        b.tvCloudHint.setText(if (cloudReady) R.string.lb_cloud_hint else R.string.lb_cloud_off)
+        b.swCloud.setOnCheckedChangeListener { _, on -> repo.setCloud(on); renderStatus() }
+        b.tgSize.check(sizeId(s.wMm, s.hMm))
+        b.tgDpi.check(if (s.dpi >= 300) R.id.dpi300 else R.id.dpi203)
+        b.tgSize.addOnButtonCheckedListener { _, id, checked -> if (checked) saveSize(id) }
+        b.tgDpi.addOnButtonCheckedListener { _, _, checked -> if (checked) saveSize(b.tgSize.checkedButtonId) }
+        b.btnFind.setOnClickListener { find() }
+        b.btnCheck.setOnClickListener { saveHost(); check() }
+        b.btnTest.setOnClickListener { saveHost(); test() }
+        b.btnIni.setOnClickListener { showIni() }
+        renderStatus()
+        if (s.host.isNotBlank() || cloudReady) check()
+    }
+
+    private fun sizeId(w: Double, h: Double): Int = when {
+        w == 58.0 && h == 30.0 -> R.id.size5830
+        w == 40.0 && h == 30.0 -> R.id.size4030
+        w == 30.0 && h == 20.0 -> R.id.size3020
+        w == 58.0 && h == 40.0 -> R.id.size5840
+        else -> View.NO_ID
+    }
+
+    private fun saveSize(id: Int) {
+        val (w, h) = when (id) {
+            R.id.size5830 -> 58.0 to 30.0
+            R.id.size4030 -> 40.0 to 30.0
+            R.id.size3020 -> 30.0 to 20.0
+            R.id.size5840 -> 58.0 to 40.0
+            else -> repo.state.value.wMm to repo.state.value.hMm
+        }
+        repo.setSize(w, h, if (b.tgDpi.checkedButtonId == R.id.dpi300) 300 else 203)
+        renderStatus()
+    }
+
+    private fun saveHost() {
+        val host = b.edtHost.text?.toString()?.trim().orEmpty()
+        val port = b.edtPort.text?.toString()?.toIntOrNull()?.takeIf { it in 1..65535 } ?: 9110
+        b.tilHost.error = if (host.isNotEmpty() && !IP.matches(host)) getString(R.string.lb_host_bad) else null
+        if (host.isEmpty() || IP.matches(host)) repo.setHost(host, port)
+    }
+
+    private fun renderStatus() {
+        val bb = _b ?: return
+        val s: LabelState = repo.state.value
+        val i = s.info
+        val cloudOk = s.cloud && ServiceLocator.shareStore.isCloudReady
+        bb.tvStatus.text = when {
+            s.host.isNotBlank() && i != null && s.infoError.isEmpty() -> getString(R.string.lb_st_ok, i.printer.ifBlank { "?" })
+            s.host.isNotBlank() && s.infoError.isNotEmpty() -> getString(R.string.lb_st_offline, s.host)
+            s.host.isBlank() && cloudOk && i != null -> getString(R.string.lb_st_cloud, i.printer.ifBlank { "?" })
+            s.host.isBlank() && cloudOk -> getString(R.string.lb_st_cloud_unknown)
+            else -> getString(R.string.lb_st_none)
+        }
+        val sub = ArrayList<String>()
+        if (i != null) {
+            if (i.host.isNotBlank()) sub += getString(R.string.lb_st_pc, i.host)
+            if (i.wMm > 0 && i.hMm > 0) sub += getString(R.string.lb_st_paper, Math.round(i.wMm).toInt(), Math.round(i.hMm).toInt(), i.dpi)
+            if (i.at > 0) sub += getString(R.string.lb_st_seen, formatDateTime(i.at))
+            if (i.text.isNotBlank()) sub += i.text
+        }
+        if (s.infoError.isNotEmpty() && s.host.isNotBlank()) sub += getString(R.string.lb_st_err, s.infoError.take(80))
+        if (s.host.isNotBlank() && s.infoError.isNotEmpty() && cloudOk) sub += getString(R.string.lb_printer_cloud_fallback)
+        bb.tvStatusSub.text = sub.joinToString("\n")
+        bb.tvStatusSub.show(sub.isNotEmpty())
+        val (w, h) = repo.sizePx()
+        val fromPc = i != null && i.wPx in 80..3000 && i.hPx in 60..3000
+        bb.tvSize.text = if (fromPc) getString(R.string.lb_size_from_pc, w, h) else getString(R.string.lb_size_manual, w, h)
+    }
+
+    private fun setBusy(on: Boolean) {
+        busy = on
+        val bb = _b ?: return
+        bb.progress.showInvisible(on)
+        bb.btnFind.isEnabled = !on; bb.btnCheck.isEnabled = !on; bb.btnTest.isEnabled = !on
+    }
+
+    private fun check() {
+        if (busy) return
+        setBusy(true)
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { repo.refreshInfo() }
+            setBusy(false)
+            renderStatus()
+        }
+    }
+
+    private fun find() {
+        if (busy) return
+        setBusy(true)
+        b.foundList.removeAllViews()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val found = runCatching { repo.discover() }.getOrDefault(emptyList())
+            setBusy(false)
+            val bb = _b ?: return@launch
+            if (found.isEmpty()) {
+                MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_find_pc).setMessage(R.string.lb_find_none)
+                    .setPositiveButton(R.string.close, null).show()
+                return@launch
+            }
+            if (found.size == 1) { use(found[0].ip, found[0].port); return@launch }
+            for (pc in found) {
+                bb.foundList.addView(
+                    MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                        text = getString(R.string.lb_found_item, pc.host.ifBlank { pc.ip }, pc.ip, pc.printer.ifBlank { "?" })
+                        isAllCaps = false
+                        setOnClickListener { use(pc.ip, pc.port) }
+                    },
+                )
+            }
+        }
+    }
+
+    private fun use(ip: String, port: Int) {
+        val bb = _b ?: return
+        bb.foundList.removeAllViews()
+        bb.edtHost.setText(ip)
+        bb.edtPort.setText(port.toString())
+        repo.setHost(ip, port)
+        check()
+    }
+
+    private fun test() {
+        if (busy) return
+        val app = requireContext().applicationContext
+        setBusy(true)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val r = repo.printTest(getString(R.string.lb_test_name))
+                Toast.makeText(
+                    app,
+                    when (r) {
+                        is LabelPrinterClient.Sent.Printed -> app.getString(R.string.lb_printed, r.count, r.printer.ifBlank { "Xprinter" })
+                        is LabelPrinterClient.Sent.Queued -> app.getString(R.string.lb_queued, r.count)
+                    },
+                    Toast.LENGTH_LONG,
+                ).show()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val reason = (e as? LabelPrinterClient.PrintError)?.reason
+                val msg = when {
+                    reason == "no_printer" -> getString(R.string.lb_err_no_route)
+                    reason == "bad_key" -> getString(R.string.lb_err_key)
+                    reason != null && reason.startsWith("printer") -> getString(R.string.lb_err_printer, reason.substringAfter(':', "").trim().ifEmpty { reason })
+                    else -> getString(R.string.lb_err_net, reason ?: requireContext().describeError(e))
+                }
+                if (_b != null) MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_print_fail).setMessage(msg).setPositiveButton(R.string.close, null).show()
+            } finally {
+                setBusy(false)
+                renderStatus()
+            }
+        }
+    }
+
+    /** Kompyuterdagi forwarder.ini: bulut sozlangan bo'lsa to'liq (chek + yorliq), bo'lmasa faqat [labels]. */
+    private fun showIni() {
+        val ini = if (ServiceLocator.shareStore.isCloudReady) ServiceLocator.share.forwarderIni() else repo.iniForPc()
+        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.b_pc_settings).setMessage(R.string.lb_ini_text)
+            .setPositiveButton(R.string.share_send) { _, _ -> ImportUi.shareText(requireContext(), ini) }
+            .setNegativeButton(R.string.close, null).show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _b = null
+    }
+
+    companion object {
+        private val IP = Regex("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$")
+        fun show(fm: FragmentManager) {
+            if (fm.findFragmentByTag("label_printer") != null) return
+            LabelPrinterSheet().show(fm, "label_printer")
+        }
+    }
+}

@@ -167,6 +167,14 @@ STRINGS.update({
 STRINGS.update({
  # v2.6
  'back_again_to_exit': 'Chiqish uchun yana bir marta bosing',
+ # v2.6 — 1-ilova savdolari cheklari
+ 'sr_title': "1-ilova savdolari cheklari",
+ 'sr_hint': "Yoqilsa, do'kon sizga qilgan har yangi savdoning cheki shu telefonning printer navbatiga tushadi. Printer ulanishi bilan navbatdagi hamma cheklar ketma-ket chiqadi (Printer bo'limida servis yoniq bo'lishi kerak).",
+ 'sr_no_queue': "Do'kon egasi 1-ilovada siz uchun chek printerini yoqmagan — so'rang.",
+ 'sr_need_service': "Cheklar chiqishi uchun Printer bo'limida servisni yoqing (bir marta).",
+ 'sr_failed': "Saqlab bo'lmadi — internetni tekshiring.",
+ 'sr_list': 'Navbatdagi cheklar', 'sr_list_empty': "Navbat bo'sh — hamma cheklar chiqqan",
+ 'sr_list_offline': "Ro'yxatni olib bo'lmadi (internet yo'q)", 'sr_from_pc': 'Kompyuterdan kelgan chek',
  # v2.6 — sirli menyu (2-ilova)
  'sx_stats': 'Statistika', 'sx_stats_sub': "Ma'lumot hajmi, yangilanish vaqtlari, buyurtmalar",
  'sx_st_client': 'Mijoz: %1$s', 'sx_st_data': "Tovarlar: %1$d · 1C yozuvlari: %2$d · davrlar: %3$d",
@@ -176,11 +184,14 @@ STRINGS.update({
  'sx_debt_note': "1C hisobotidagi qoldiq bo'yicha (taxminiy, rasmiy hisob-kitob emas).",
  'sx_last_cart': 'Oxirgi xaridni takrorlash', 'sx_last_cart_sub': "Oxirgi xarid tovarlari buyurtma savatchasiga",
  'sx_last_cart_done': "%1$d ta tovar savatchaga qo'shildi (%2$s)",
- 'sx_turbo': 'Tezkor yangilash', 'sx_turbo_sub': "Hozir yangilash va vaqtini o'lchash",
- 'sx_turbo_run': 'Yangilanmoqda…', 'sx_turbo_ok': 'Tayyor: %1$d ms', 'sx_turbo_fail': "Bo'lmadi (%1$d ms)",
- 'sx_link': 'Ulanish pasporti', 'sx_link_sub': "Qaysi do'kon va telefon bilan ulangan (kalitlar yashirilgan)",
- 'sx_ln_shop': "Do'kon kodi: %1$s", 'sx_ln_client': 'Mijoz: %1$s', 'sx_ln_phone': 'Kirish: %1$s · %2$s',
- 'sx_ln_code': 'ulash kodi bilan', 'sx_ln_key': "O'qish kaliti: %1$s", 'sx_ln_printer': 'Chek printeri navbati: %1$s',
+ 'sx_turbo': 'Hozir yangilash', 'sx_turbo_sub': "Do'kondan eng yangi ma'lumotni olish",
+ 'sx_turbo_run': 'Yangilanmoqda…', 'sx_turbo_ok': 'Yangilandi', 'sx_turbo_fail': "Yangilab bo'lmadi",
+ 'sx_title': "Qo'shimcha sozlamalar",
+ 'price_code': 'Kod %1$s', 'price_code_plu': 'Kod %1$s · PLU %2$s',
+ 'sx_start': "Ochilish sahifasi", 'sx_start_sub': 'Ilova shu bo\'limdan ochiladi: %1$s',
+ 'sx_screen': "Ekran o'chmasin", 'sx_screen_sub': "Ilova ochiq turganda (buyurtma, chek chiqarish)",
+ 'sx_on': 'Yoqilgan', 'sx_off': "O'chiq",
+ 'sx_hint': "Ilovani o'zingizga moslang. Bu yerda faqat sozlamalar — kalit va ulanish ma'lumotlari yo'q.",
  # v2.6 — o'rgatuvchi ko'rsatmalar
  'tour_m_debt_t': 'Qarz', 'tour_m_debt': "Joriy qarzingiz — do'kon yuborgan ma'lumot bo'yicha, vaqti bilan.",
  'tour_m_refresh_t': 'Yangilash', 'tour_m_refresh': "Eng so'nggi ma'lumotni darhol oladi. Ilova o'zi ham har 1–2 soatda yangilab turadi.",

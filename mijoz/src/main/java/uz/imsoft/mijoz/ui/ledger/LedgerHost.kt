@@ -48,6 +48,10 @@ interface LedgerHost {
     val ledgerData: StateFlow<LedgerData>
     /** Chek sarlavhasi (do'kon nomi). */
     val receiptHeader: String
+    /** Chek osti: telefonlar va h.k. (har qator alohida). v2.6 */
+    val receiptFooter: String get() = ""
+    /** Chekdagi "Xodim". Bo'sh — qator chiqmaydi. */
+    val receiptStaff: String get() = ""
     val fuzzySearch: Boolean
     /** "Takrorlash" (1-ilova) yoki "Qayta buyurtma" (2-ilova); 0 — tugma yo'q. */
     fun repeatLabel(doc: LedgerDoc): Int

@@ -696,6 +696,117 @@ STRINGS.update({
 
 })
 
+STRINGS.update({
+ # v2.6 — kod yozish rejimi
+ 'link_title': 'Kod yozish (bazada yo\'q kodlar)', 'link_live': '● Kod yozish',
+ 'link_hint': "Tovarning shtrix kodini o'qiting, keyin pastdagi ro'yxatdan shu tovarni bosing — kod telefonga yoziladi",
+ 'link_scan_first': "Avval tovarning shtrix kodini kameraga ko'rsating",
+ 'link_known': 'Bu kod allaqachon bor: %1$s', 'link_change': "O'zgartirish",
+ 'link_done': '✓ Yozildi: %1$s', 'link_session': 'Bu safar yozildi: %1$d ta', 'link_total': 'Telefonda: %1$d ta kod',
+ 'link_export': "Excel'ga", 'b_export': "Excel'ga",
+
+})
+
+STRINGS.update({
+ 'home_scan_sale': 'Shtrix kod bilan savdo',
+
+})
+
+STRINGS.update({
+ # v2.6 — savdo 2-ilovaga ham
+ 'mir_receipt_sale': 'Savdo cheki', 'mir_receipt_return': 'Qaytarish cheki',
+ 'mir_receipt_note': '%1$s · Savdo Agent',
+ 'cl_printer_hint': "Chek printeri mijozning kompyuterida yoki uning 2-ilova telefoniga ulangan bo'lishi mumkin — cheklar bulut orqali o'sha yerda chiqadi. 2-ilova sozlamasida «1-ilova savdolari cheklari» yoqilsa, shu mijozga qilingan har yangi savdo cheki ham o'zi boradi.",
+
+})
+
+STRINGS.update({
+ # v2.6 — chek ko'rinishi (do'kon chekidek)
+ 'rc_staff_field': 'Xodim (chekda)', 'rc_staff_hint': 'Masalan: Dokon. Bo\'sh bo\'lsa chiqmaydi',
+ 'rc_footer_field': 'Chek osti (telefonlar)', 'rc_footer_hint': "Har qator alohida, masalan: Tel: +998 93 647 46 46",
+ 'rc_preview': "Namuna chekni ko'rish",
+ 'rc_paid_som': "Naqd (So'm)", 'rc_paid_usd': 'Naqd ($)',
+ 'rc_note_estimate': "Qarz qoldig'i telefon hisobi (≈), rasmiysi — 1C'da",
+
+})
+
+STRINGS.update({
+ # v2.6: narx yorliqlari (Xprinter)
+ 'home_labels': "Narx yorlig'i",
+ 'lb_title': 'Narx yorliqlari', 'lb_settings_sum': 'Xprinter: PLU va shtrixli narx yorliqlari',
+ 'lb_price_cash': 'Naqd narx', 'lb_price_wholesale': 'Optom narx',
+ 'lb_filter_all': 'Hammasi', 'lb_filter_selected': 'Tanlangan', 'lb_filter_selected_n': 'Tanlangan: %1$d',
+ 'lb_filter_plu': 'PLU bor', 'lb_filter_barcode': 'Shtrix bor',
+ 'lb_print_plu': 'PLU narx', 'lb_print_barcode': 'Shtrixli narx',
+ 'lb_printer_title': 'Yorliq printeri', 'lb_import_plu': "PLU ro'yxatini yuklash",
+ 'lb_clear': "Ro'yxatni tozalash", 'lb_clear_msg': "Tanlangan tovarlar ro'yxatdan olib tashlanadi. PLU raqamlari saqlanib qoladi.",
+ 'lb_preview': "Ko'rinishi", 'lb_find_pc': 'Kompyuterni topish', 'lb_check': 'Tekshirish',
+ 'lb_host': 'Kompyuter IP manzili', 'lb_host_hint': "Masalan 192.168.1.10 (bo'sh — faqat internet orqali)", 'lb_host_bad': "IP manzil noto'g'ri",
+ 'lb_port': 'Port', 'lb_cloud': 'Internet orqali ham yuborish',
+ 'lb_cloud_hint': "Telefon do'kon Wi-Fi tarmog'ida bo'lmasa, yorliqlar navbatga qo'yiladi va kompyuter internetdan olib chiqaradi.",
+ 'lb_cloud_off': "Internet orqali yuborish uchun avval Sozlamalar ▸ \"Mijozlar va 2-ilova\" da Firebase ni sozlang.",
+ 'lb_size': "Yorliq o'lchami (mm)", 'lb_size_5840': '58×40', 'lb_size_5830': '58×30', 'lb_size_4030': '40×30', 'lb_size_3020': '30×20',
+ 'lb_dpi_203': '203 dpi', 'lb_dpi_300': '300 dpi',
+ 'lb_test': "Sinov yorlig'i", 'lb_test_name': "Sinov yorlig'i — Xprinter",
+ 'lb_setup_hint': "Kompyuterda (bir marta): pip install pillow pywin32, keyin \"Kompyuter sozlamasi\" ni forwarder.ini nomi bilan {{pc}} papkasiga saqlang va start_labels.bat ni ishga tushiring. Telefon va kompyuter bitta Wi-Fi tarmog'ida bo'lsa yorliq darhol chiqadi.",
+ 'lb_ini_text': "Bu matnni kompyuterdagi {{pc}} papkasiga forwarder.ini nomi bilan saqlang (bor bo'lsa — almashtiring). Unda maxfiy kalit bor — faqat o'zingizning kompyuteringizga yuboring.",
+ 'lb_count': '%1$d ta yorliq · %2$d ta tovar', 'lb_count_none': 'Tovar tanlang: + bosing yoki skanerlang',
+ 'lb_empty_selected': 'Hali tovar tanlanmagan',
+ 'lb_note_plu': 'PLU %1$s', 'lb_note_barcode': 'shtrix ✓', 'lb_note_manual_price': "narx qo'lda",
+ 'lb_printer_lan': '%1$s · %2$s (Wi-Fi)', 'lb_printer_offline': 'Kompyuter javob bermadi: %1$s',
+ 'lb_printer_cloud_fallback': 'internet orqali yuboriladi', 'lb_printer_cloud': '%1$s · internet orqali',
+ 'lb_printer_none': 'Printer sozlanmagan — bosing',
+ 'lb_copies': 'Nechta yorliq', 'lb_price_manual': "Narx (qo'lda, ixtiyoriy)", 'lb_price_auto': "Bo'sh qolsa: %1$s",
+ 'lb_plu': 'PLU raqami (tarozi)', 'lb_plu_hint': "Tarozidagi tovar raqami; bo'sh — o'chiriladi", 'lb_remove': "Ro'yxatdan olish",
+ 'lb_plu_pv': "Faylda %1$d ta PLU topildi, %2$d tasi tovarlarga bog'landi.",
+ 'lb_plu_pv_missing': "Bog'lanmaganlar (nomi katalogdagidan farq qiladi): %1$d ta",
+ 'lb_plu_saved': 'PLU raqamlari saqlandi: %1$d ta',
+ 'lb_plu_not_found': "Faylda PLU raqamlari topilmadi. 1C'dagi \"PLU Narx\" shaklini (hamma tarozi tovarlari bilan) Excel yoki MXL qilib saqlang, yoki PLU ustuni bor jadvalni tanlang.",
+ 'lb_print_plu_title': "PLU narx yorlig'i", 'lb_print_barcode_title': "Shtrixli narx yorlig'i",
+ 'lb_summary': '%1$d ta yorliq (%2$d ta tovar) · %3$d×%4$d mm',
+ 'lb_nothing': "Chiqadigan yorliq yo'q", 'lb_print_n': 'Chop etish (%1$d ta)',
+ 'lb_route_lan_cloud': "Printer: %1$s · %2$s (Wi-Fi, bo'lmasa internet)", 'lb_route_lan': 'Printer: %1$s · %2$s (Wi-Fi)',
+ 'lb_route_cloud': 'Printer: %1$s · internet orqali', 'lb_route_none': 'Printer sozlanmagan — bosing',
+ 'lb_skip_plu': "PLU raqami yo'q — chiqmaydi: %1$d ta", 'lb_skip_barcode': "Shtrix kodi yo'q — chiqmaydi: %1$d ta",
+ 'lb_skip_price': "Narxi yo'q — chiqmaydi: %1$d ta", 'lb_skip_catalog': "Katalogda yo'q: %1$d ta",
+ 'lb_and_more': 'va yana %1$d ta', 'lb_fix_plu': 'PLU raqamlarini kiritish', 'lb_fix_barcode': 'Shtrix kod yozish (skaner)',
+ 'lb_n_of': '%1$d / %2$d', 'lb_skip': "O'tkazish", 'lb_copies_n': '× %1$d',
+ 'lb_printed': '%1$d ta yorliq chiqarildi (%2$s)', 'lb_queued': "%1$d ta yorliq navbatga qo'yildi — kompyuter chiqaradi",
+ 'lb_print_fail': "Chop etib bo'lmadi",
+ 'lb_err_net': "Kompyuterga ulanib bo'lmadi: %1$s\n\nKompyuter yoniqmi, start_labels.bat ishlayaptimi va telefon o'sha Wi-Fi tarmog'idami — tekshiring.",
+ 'lb_err_no_route': "Printer sozlanmagan: kompyuter IP manzilini kiriting (\"Kompyuterni topish\") yoki internet orqali yuborishni yoqing.",
+ 'lb_err_key': "Kompyuterdagi kalit mos emas. \"Kompyuter sozlamasi\" ni qayta yuborib, forwarder.ini ni almashtiring.",
+ 'lb_err_printer': "Printer xatosi: %1$s\n\nPrinter yoniqmi, qog'oz bormi — tekshiring.",
+ 'lb_st_ok': 'Ulangan: %1$s', 'lb_st_offline': 'Kompyuter javob bermadi (%1$s)', 'lb_st_cloud': 'Internet orqali: %1$s',
+ 'lb_st_cloud_unknown': "Internet orqali (kompyuter hali ko'rinmadi)", 'lb_st_none': 'Printer sozlanmagan',
+ 'lb_st_pc': 'Kompyuter: %1$s', 'lb_st_paper': "Qog'oz: %1$d×%2$d mm, %3$d dpi", 'lb_st_seen': 'Oxirgi aloqa: %1$s', 'lb_st_err': 'Xato: %1$s',
+ 'lb_find_none': "Wi-Fi tarmog'ida kompyuter topilmadi. Kompyuterda start_labels.bat ishlayotganini va telefon o'sha Wi-Fi tarmog'ida ekanini tekshiring. IP manzilni qo'lda ham yozish mumkin.",
+ 'lb_found_item': '%1$s (%2$s) · %3$s',
+ 'lb_size_from_pc': 'Kompyuterdagi printer sozlamasidan: %1$d×%2$d nuqta',
+ 'lb_size_manual': "%1$d×%2$d nuqta (kompyuter o'lcham aytmasa shu ishlatiladi)",
+ 'lb_scan_live': 'Yorliq uchun skanerlang', 'lb_scan_hint': "Tovar kodini skanerlang — yorliqlar ro'yxatiga qo'shiladi",
+ 'lb_hw_unknown': "Kod topilmadi: %1$s — skaner tugmasi orqali tovarga bog'lang",
+ 'lb_scan_done': "Ro'yxatga", 'lb_scan_count': '%1$d ta yorliq', 'lb_scan_products': '%1$d ta tovar', 'lb_scan_added': "Ro'yxatda: %1$d ta",
+
+})
+
+STRINGS.update({
+ # v2.7: tovar kodlari (1C -> kompyuter -> telefon)
+ 'meta_code': 'Kod %1$s', 'meta_code_plu': 'Kod %1$s · PLU %2$s',
+ 'lb_codes': "Kompyuterdan kodlar (1C)",
+ 'lb_codes_last': "Oxirgi: %1$s\nPLU: %2$d ta tovar · shtrix kod: %3$d ta",
+ 'lb_codes_src': "1C'dagi joyi: %1$s",
+ 'lb_codes_never': "Kompyuterdan hali kod kelmagan.",
+ 'lb_codes_how': "Kompyuterdagi onec_export.py 1C'dan tarozi PLU raqamlari va shtrix kodlarni o'zi oladi (har 6 soatda va siz so'raganda) — har bir tovarni qo'lda yozish shart emas. Qo'lda yozilgan PLU ustun turadi.",
+ 'lb_codes_now': 'Hozir yangilash',
+ 'lb_codes_wait': "So'rov yuborildi. Kompyuter 1-3 daqiqada yuboradi — kuting…",
+ 'lb_codes_done': "Yangilandi: PLU %1$d ta, shtrix kod %2$d ta",
+ 'lb_codes_timeout': "Kompyuterdan javob kelmadi. Kompyuter yoniqmi va onec_export.py ishlayaptimi — tekshiring.",
+ 'lb_codes_fail': "So'rov yuborilmadi: %1$s",
+ 'lb_codes_no_cloud': "Avval Firebase sozlang (Sozlamalar ▸ Mijozlar va 2-ilova) va kompyuterga sozlamani yuboring.",
+
+})
+
 # kirillni qo'lda to'g'rilash kerak bo'lgan joylar
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from strings_ledger import LEDGER  # noqa: E402
@@ -739,7 +850,8 @@ PROTECT = re.compile(r'(%\d*\$?[sdf]|%%|\{\{.*?\}\})')
 # Lotinda qolishi kerak bo'lgan nomlar (v2.4): avtomatik {{...}} ichiga olinadi.
 BRANDS = ['Gmail', 'Wi-Fi', 'Excel', 'HTML', 'Telegram', 'SMS', 'Firebase', 'Google', 'Tailscale', 'Play Market', 'PIN', 'KB',
           'xlsx', 'xls', 'htm', 'mxl', 'VPN', 'IMSOFT', 'Click', 'USB', 'ESC/POS', 'forwarder.ini', 'forwarder.py', 'Python',
-          'OTG', 'Xiaomi', 'HyperOS', 'Redmi', 'DOKON', 'Windows']
+          'OTG', 'Xiaomi', 'HyperOS', 'Redmi', 'DOKON', 'Windows', 'Xprinter', 'PLU', 'IP', 'dpi', 'MXL',
+          'start_labels.bat', 'label_printer.py', 'pip install pillow pywin32', 'onec_export.py']
 
 def protect_brands(s):
     for b in sorted(BRANDS, key=len, reverse=True):

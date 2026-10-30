@@ -1,7 +1,18 @@
 # Kompyuter dasturlari
 
-Ikkalasi ham bitta `forwarder.ini` sozlamasidan foydalanadi. Uni 1-ilova (Savdo Agent) beradi: **Mijozlar ▸ "Kompyuter sozlamasi"**.
-Ichida Firebase secret bor — faqat o'z kompyuteringizda saqlang, boshqalarga bermang.
+Hammasi bitta papkada turadi (masalan `C:\imsoft\`). Kerak: Python 3.8+ va bir marta `pip install pywin32 pillow`.
+
+| Dastur | Nima uchun | Birinchi marta (oynada) | Doimiy (yorlig'i `Win+R` ▸ `shell:startup` ga) |
+|---|---|---|---|
+| `onec_export.py` | 1C → telefon: mijoz kartochkalari + **PLU va shtrix kodlar** | `start_export.bat`, `codes.bat`, `discover.bat` | `onec_export.vbs` |
+| `label_printer.py` | Telefon → Xprinter (narx yorliqlari) | `start_labels.bat` (+ kerak bo'lsa `allow_firewall.bat` administrator sifatida) | `label_printer.vbs` |
+| `forwarder.py` | 1C cheki → 2-filial printeri (faqat shu kerak bo'lsa) | `python forwarder.py --test` | `forwarder.vbs` |
+
+Sozlama fayllari:
+* `forwarder.ini` — 1-ilova beradi (Mijozlar ▸ "Kompyuter sozlamasi" yoki Narx yorliqlari ▸ Yorliq printeri ▸ "Kompyuter sozlamasi").
+  Ichida Firebase secret bor — faqat o'z kompyuteringizda saqlang. Yangisi kelsa — shunchaki almashtiring.
+* `onec.ini` — **o'zingiz yozasiz** (namuna: `onec.ini.example`): `[onec]` (1C ga ulanish, hisobot) va kerak bo'lsa `[codes]`. Alohida faylda turgani uchun
+  `forwarder.ini` almashtirilganda o'chib ketmaydi (eski usul — `[onec]` ni `forwarder.ini` ichida saqlash — ham ishlaydi).
 
 ## 1. `onec_export.py` — 1C → Excel → telefon (avtomatik)
 
@@ -46,6 +57,16 @@ Ichida Firebase secret bor — faqat o'z kompyuteringizda saqlang, boshqalarga b
 
 Jurnal: `onec_export.log`. Holat 1-ilovada ham ko'rinadi (**Mijozlar ▸ Kompyuterdan avtomatik**).
 
+### Tovar kodlari (PLU va shtrix) — v2.7
+`onec_export.py` 1C'dan **tarozi PLU raqamlari** va **shtrix kodlarni** ham oladi (faqat o'qiydi) va telefonga yuboradi:
+har 6 soatda (`[codes] hours`), o'zgargan bo'lsa, yoki 1-ilova ▸ Narx yorliqlari ▸ ⋮ ▸ "Kompyuterdan kodlar (1C)" ▸
+**Hozir yangilash** bosilganda (kompyuter 2 daqiqada bir tekshiradi). `[onec] report` bo'sh bo'lsa ham ishlaydi.
+
+* Joyi 1C tuzilishidan o'zi topiladi: PLU — tovarning "PLU/Код весов" rekviziti yoki "весы / оборудование / PLU" registri;
+  shtrix — "Штрихкод" maydonli registr. Qaysi biri olinganini `python onec_export.py --codes` ko'rsatadi (`codes.json` ham yoziladi).
+* Topilmasa: `python onec_export.py --discover` ▸ `discover.txt` ning oxiridagi "Tovar kodlari" bo'limini yuboring
+  yoki `[codes] plu = ...` ni qo'lda yozing (`forwarder.ini.example` da namunalar).
+
 ## 2. `forwarder.py` — chek uzatgichi
 
 1C → Windows printer `filial2` (127.0.0.1:9100, Raw) → **forwarder.py** → Google Firebase → mijoz telefonidagi
@@ -69,9 +90,30 @@ Fayllar:
 
 Chek baytlari o'zgartirilmaydi. Bulutga o'zgarmas kalit bilan yoziladi, shuning uchun javob yo'qolib qayta yuborilsa ham faqat bitta chek chiqadi.
 
+## 3. `label_printer.py` — narx yorlig'i printeri (Xprinter, USB)
+
+1-ilova ▸ **Narx yorliqlari** ▸ "PLU narx" / "Shtrixli narx" → telefon yorliqni rasm qilib chizadi →
+Wi-Fi orqali shu kompyuterga (TCP 9110) yoki internet orqali (Firebase `L/{kalit}`) → **label_printer.py** → USB Xprinter.
+
+* Kerak: Python 3.8+, `pip install pillow pywin32`.
+* `forwarder.ini` dagi `[labels]` bo'limi: 1-ilova ▸ Narx yorliqlari ▸ Yorliq printeri ▸ **Kompyuter sozlamasi** (fayl bor bo'lsa almashtiring).
+* `mode = gdi` (standart): Windows drayveri orqali, 1C kabi. Yorliq o'lchami drayverdagi qog'oz o'lchamidan olinadi va telefonga aytiladi
+  (Printerlar ▸ Xprinter ▸ Свойства ▸ Настройка ▸ Бумага: 58×40 mm kabi). `mode = tspl` — drayversiz, to'g'ridan-to'g'ri TSPL.
+* Telefon kompyuterni o'zi topadi (UDP 9111). Topmasa: `allow_firewall.bat` ni administrator sifatida bir marta ishga tushiring
+  yoki IP manzilni qo'lda yozing (`start_labels.bat` oynasida ko'rinadi).
+* Bitta ish ikki yo'ldan (Wi-Fi va internet) kelsa ham bir marta chiqadi (`labels_done.json`).
+
+| Buyruq | Nima qiladi |
+|---|---|
+| `start_labels.bat` | Printerlar ro'yxati + oynada ishga tushirish (birinchi marta shuni oching) |
+| `python label_printer.py --list` | Windows printerlari, yorliq o'lchami, qaysi biri tanlanadi |
+| `python label_printer.py --test` | Sinov yorlig'i |
+| `label_printer.vbs` | Oynasiz ishga tushirish (yorlig'ini `shell:startup` ga qo'ying) |
+
 ## Testlar (1C va internetsiz)
 
 ```
 python pc/test_forwarder.py
 python pc/test_onec_export.py
+python pc/test_label_printer.py
 ```

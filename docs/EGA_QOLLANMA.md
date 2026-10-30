@@ -192,7 +192,7 @@ Buyurtma o'zi savdo emas: siz tasdiqlamaguningizcha hech narsa serverga ketmaydi
 1. 1-ilova ▸ Mijozlar ▸ **Kompyuterdan avtomatik**: har 1 / 2 / 3 soat (yoki o'chiq). Shu yerda **Kompyuter sozlamasi** matnini
    oling va kompyuterdagi `pc` papkasiga `forwarder.ini` nomi bilan saqlang.
 2. Kompyuterda bir marta o'rnating: Python 3 va `pip install pywin32`.
-3. `forwarder.ini` ▸ `[onec]` bo'limiga quyidagilarni yozing:
+3. `onec.ini` faylini yarating (forwarder.ini yonida) va `[onec]` bo'limiga quyidagilarni yozing (alohida faylda — telefondan yangi forwarder.ini kelganda o'chmaydi):
    * `connection`, masalan `File="D:\1C\Baza";`;
    * `user`, `password`: oddiy 1C foydalanuvchisi; konfigurator paroli kerak emas.
 4. `discover.bat` ni ishga tushiring. U `discover.txt` faylini yaratadi — **shu faylni dasturchiga yuboring**: hisobot nomi
@@ -212,9 +212,52 @@ Holat 1-ilovada (shu bo'limda) ko'rinadi. Telefon kelgan fayllarni o'zi import q
    * Bluetooth/USB skaner: Savdo ekrani ochiq bo'lsa shunchaki o'qiting.
    * Kod topilmasa kamera to'xtamaydi: qizil qatorda "Topilmadi" chiqadi. Ro'yxatdan (qidirib) to'g'ri tovarni bosing.
      Kod shu tovarga bog'lanadi va keyingi safar o'zi taniladi.
-3. **Tarozi**: yorliqdagi og'irlik miqdor bo'lib tushadi. Format to'g'riligini tekshirish:
+3. **Bazada yo'q kodlar** (masalan, 1C'da bitta kodi bor sokning 10 xili): Shtrix kodlar ▸ **Kod yozish** (yoki Savdo ▸ skaner
+   tugmasini uzoq bosing). Kodni o'qiting ▸ pastdagi ro'yxatdan tovarni bosing ▸ keyingisiga o'ting. Kod telefonga yoziladi.
+   Xohlasangiz **Excel'ga** — ro'yxatni 1C'ga kiritish uchun yuboradi.
+4. **Tarozi**: yorliqdagi og'irlik miqdor bo'lib tushadi. Format to'g'riligini tekshirish:
    * Shtrix kodlar ▸ **Sinash** maydoniga yorliq raqamlarini yozing;
    * kerak bo'lsa prefiks, uzunliklar va birlikni o'zgartiring.
+
+## (s1) Savdo mijozning 2-ilovasida va uning printerida
+* 1-ilova ▸ Mijozlar ▸ mijoz **do'konga bog'langan** bo'lsa, unga qilingan savdo 2-ilovasida darhol ko'rinadi.
+* Chek ham chiqishi uchun:
+  1. 1-ilova ▸ mijoz ▸ **Chek printerini yoqish**.
+  2. 2-ilova ▸ Sozlamalar ▸ **1-ilova savdolari cheklari** ni yoqing.
+  3. 2-ilova ▸ Printer ▸ servisni yoqing.
+
+  Printer ulanishi bilan navbatdagi hamma cheklar chiqadi.
+* Chek ko'rinishi: 1-ilova ▸ Mijozlar ▸ **Chek** bo'limida do'kon nomi, Xodim va telefonlarni yozing. **Namuna chekni ko'rish**
+  bilan tekshiring.
+
+## (s2) Narx yorliqlari (Xprinter) — PLU va shtrixli narx
+
+**Bir marta sozlash (kompyuter):**
+1. Xprinter USB bilan kompyuterga ulangan, Windows'da drayveri o'rnatilgan, 1C'dan yorliq chiqayotgan bo'lsin.
+2. `cmd` ▸ `pip install pillow pywin32`.
+3. 1-ilova ▸ Bosh sahifa ▸ **Narx yorlig'i** ▸ yuqoridagi printer belgisi ▸ **Kompyuter sozlamasi** ▸ yuborish ▸
+   kompyuterdagi `pc` papkasiga `forwarder.ini` nomi bilan saqlang (eski fayl bo'lsa almashtiring).
+4. `pc\start_labels.bat` ni oching: printer nomi, yorliq o'lchami va kompyuter IP manzili chiqadi. Windows "Брандмауэр"
+   so'rasa — **Частные сети** ga ruxsat bering (yoki `allow_firewall.bat` ni administrator sifatida bir marta).
+5. Telefonda: Yorliq printeri ▸ **Kompyuterni topish** ▸ **Sinov yorlig'i**. Chiqsa — `label_printer.vbs` yorlig'ini
+   `Win+R` ▸ `shell:startup` ga qo'ying.
+
+**PLU va shtrix kodlar — avtomatik (1C'dan):** kompyuterdagi `onec_export.py` ularni 1C'dan o'zi oladi va telefonga yuboradi
+(har 6 soatda va so'ralganda). Birinchi marta: kompyuterda `python onec_export.py --codes` — oynada "PLU manbasi" va
+"shtrix" topilganini ko'ring. Topilmasa `--discover` qilib `discover.txt` ni yuboring. Telefonda: Narx yorliqlari ▸ ⋮ ▸
+**Kompyuterdan kodlar (1C)** ▸ **Hozir yangilash**. Shundan keyin har tovar ostida "Kod 2555 · PLU 501" ko'rinadi
+(1-ilovada savdo, skaner va yorliq ro'yxatlarida; 2-ilovada Narxlar ro'yxatida).
+
+Zaxira yo'llar: 1C'dagi "PLU Narx" shaklini hamma vaznli tovarlar bilan bir marta Excel/MXL qilib yuklash (⋮ ▸ PLU ro'yxatini
+yuklash) yoki tovarni bosib PLU ni qo'lda yozish (qo'lda yozilgani doim ustun).
+
+**Har kuni:**
+1. Narx yorlig'i ▸ tovarlarni **+** bilan tanlang (qidiruv, filtr "PLU bor"/"Shtrix bor") yoki skaner tugmasi bilan skanerlang.
+   Nechta yorliq kerak bo'lsa — + ni shuncha bosing yoki tovarni bosib son yozing.
+2. Yuqorida narx turi: **Naqd** yoki **Optom** (tovarni bosib narxni qo'lda ham yozish mumkin).
+3. Pastda **PLU narx** (tarozi yorlig'i: nom, KOD, narx) yoki **Shtrixli narx** (nom, narx, shtrix kod) ▸ ko'rinishini tekshiring ▸
+   **Chop etish**. PLU yoki shtrix kodi yo'q tovarlar ro'yxatda alohida ko'rsatiladi va chiqmaydi.
+4. Telefon do'kon Wi-Fi'sida bo'lmasa (internet yoqilgan bo'lsa) yorliqlar navbatga qo'yiladi — kompyuter internetdan olib chiqaradi.
 
 ## (s) Ko'rsatmalar va sirli menyu
 * Har ekran birinchi ochilganda kerakli tugmalar yoritilib, izoh chiqadi. "O'tkazib yuborish" — shu ekran uchun yopiladi.
@@ -222,3 +265,6 @@ Holat 1-ilovada (shu bo'limda) ko'rinadi. Telefon kelgan fayllarni o'zi import q
   * o'rgatuvchi ko'rsatmalarni qayta yoqish yoki butunlay o'chirish;
   * avto-qorong'i rejim, ekran himoyasi;
   * kunlik maqsad, CSV eksport, sinov cheki va boshqalar.
+* 2-ilovada (Savdo Mijoz) xuddi shu joyda **Qo'shimcha sozlamalar**: ochilish sahifasi (Bosh sahifa / Narxlar / Tarix),
+  "Ekran o'chmasin", avto-qorong'i, ekran himoyasi, ko'rsatmalar, oxirgi xaridni takrorlash, qarz dinamikasi, top-10 tovar,
+  CSV, kurs kalkulyatori, hozir yangilash. Kalitlar, do'kon kodi va ulanish ma'lumotlari u yerda ko'rsatilmaydi.

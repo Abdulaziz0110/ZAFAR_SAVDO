@@ -1,10 +1,42 @@
 # CHANGELOG
 
+## 2.7 (versionCode 9) + Savdo Mijoz 1.3 (versionCode 4) — 2026-10-30
+Server, protokol (tur 1, 3, 4, 5), baza, applicationId va imzo o'zgarmagan.
+
+### Tovar kodlari: PLU va shtrix 1C'dan avtomatik
+* `pc/onec_export.py` 1C'dan tarozi PLU raqamlari va shtrix kodlarni oladi (joyi metama'lumotdan o'zi topiladi; faqat o'qiydi)
+  va telefonga yuboradi: har 6 soatda (o'zgargan bo'lsa) yoki 1-ilovada "Kompyuterdan kodlar (1C)" ▸ "Hozir yangilash".
+  Yangi buyruq: `python onec_export.py --codes`; `--discover` oxirida "Tovar kodlari" bo'limi.
+* 1-ilova: kelgan kodlar narx yorliqlari va shtrix kod bo'limiga yoziladi (qo'lda yozilgan PLU ustun), katalog yangilansa qayta bog'lanadi.
+* Ro'yxatlarda har tovar ostida **"Kod 2555 · PLU 501"**: 1-ilovada savdo, skaner, yorliqlar; 2-ilovada Narxlar (PLU bo'yicha qidirish ham).
+
+### Savdo Mijoz: yashirin menyu -> "Qo'shimcha sozlamalar"
+* Faqat ilova sozlamalari va o'z ma'lumotingiz bo'yicha foydali bandlar: **ochilish sahifasi** (Bosh sahifa / Narxlar / Tarix),
+  **ekran o'chmasin**, avto-qorong'i, ekran himoyasi, ko'rsatmalar, bildirishnoma sinovi, kesh tozalash, oxirgi xaridni
+  takrorlash, qarz dinamikasi, top-10 tovar, CSV, kurs kalkulyatori, hozir yangilash.
+* Olib tashlandi: "Ulanish pasporti" (do'kon kodi, kalitlar), fon ishlari, qurilma pasporti, qidiruv laboratoriyasi,
+  rulet/hikmat/bayram. 1-ilovaning sirli menyusi o'zgarmagan.
+
+### Narx yorliqlari (Xprinter) — 1-ilova
+* Bosh sahifa ▸ **Narx yorlig'i** (Sozlamalar ▸ Narx yorliqlari): tovarlarni qidirib yoki skanerlab ro'yxatga yig'ish,
+  har biriga nechta yorliq; Naqd/Optom narx yoki qo'lda narx; filtrlar "Tanlangan", "PLU bor", "Shtrix bor".
+* Ikki tugma: **PLU narx** (nom, "KOD: 501", katta narx — tarozi tovarlari) va **Shtrixli narx** (nom, narx, EAN-13/EAN-8/Code 128).
+  Chop etishdan oldin namunalar; PLU/shtrix kodi yo'qlar sababi bilan ko'rsatiladi va shu yerning o'zida tuzatiladi.
+* PLU raqamlari 1C "PLU Narx" faylidan (Excel yoki .mxl) yuklanadi yoki qo'lda yoziladi.
+* Kamera (to'xtamasdan) yoki ulanadigan Bluetooth/USB skaner bilan tovar qo'shish; topilmagan kod ro'yxatdan bog'lanadi.
+* Printer kompyuterda (USB): yangi `pc/label_printer.py` — Wi-Fi orqali darhol, bo'lmasa internet (Firebase) navbati;
+  telefon kompyuterni o'zi topadi; o'lcham Windows drayveridan olinadi; bitta ish ikki marta chiqmaydi. "Sinov yorlig'i".
+
 ## 2.6 (versionCode 8) + Savdo Mijoz 1.2 (versionCode 3) — 2026-10-30
 Server, `savollar`/`javoblar` protokoli (tur 1, 3, 4, 5) va fixture testlari, mavjud baza jadvallari, applicationId va
 C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida (eski v2.5 sozlamasi bir marta ko'chiriladi).
 
 ### Mayda tuzatishlar (ikkala ilova)
+* Hisobot ▸ chop etish/PDF bosilganda ilova yopilib qolardi ("Can print only from an activity") — tuzatildi (chek va 1C tarixi
+  PDF'i ham). Chop etishda hisobot doim oq qog'ozda.
+* Hisobot qorong'i rejimda: oq fon ustida och kulrang (ko'rinmas) matnlar va kesilgan ustunlar — bitta mavzuga keltirildi,
+  sarlavha/jami qatorlari ajratilgan, summalar bo'linmaydi, keng jadval yon tomonga suriladi.
+* Bosh sahifa: "Yangi savdo" ostida bir xil katta **"Shtrix kod bilan savdo"** tugmasi.
 * "Orqaga" ikki marta bosilganda chiqadi (2 soniya ichida); 2-ilovada avval bosh sahifaga qaytadi.
 * Standart: qorong'i rejim va shrift 90% (o'zingiz o'zgartirgan sozlama saqlanadi).
 * "−" ni uzoq bosish — tovar nolga tushadi (pastda "Qaytarish" bor). "+" ni uzoq bosish — blok (avvalgidek).
@@ -17,6 +49,17 @@ C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida (eski v2.5 soz
 * Har do'konning o'z Firebase loyihasi va **do'kon kodi**. Qadamma-qadam yo'riqnoma ilova ichida.
 * 2-ilovaga **kirish oynasi**: do'kon kodi + telefon + parol, bir marta. Bitta mijozga bir nechta telefon (masalan 3 ta ishchi) —
   hammasi faqat o'sha mijoz ma'lumotini ko'radi. Telefonni o'chirsangiz u kira olmaydi, qolganlar o'zi qayta ulanadi.
+
+### 1-ilovadagi savdo -> mijozning 2-ilovasi
+* Ro'yxatdagi mijozga (do'konga bog'langan) qilingan har savdo/qaytarish uning 2-ilovasida **darhol** ko'rinadi (Tarix,
+  "1-ilovadan" belgisi bilan — 1C hisoboti shu vaqtni qamragach o'zi 1C'dagi asl yozuv bilan almashadi).
+* 2-ilova ▸ Sozlamalar ▸ **"1-ilova savdolari cheklari"** yoqilsa, har yangi savdo cheki uning printer navbatiga tushadi;
+  printer ulanishi bilan navbatdagi hamma cheklar ketma-ket chiqadi. Printer bo'limida navbatdagi cheklar ro'yxati.
+  Internet bo'lmasa chek 1-ilovada kutadi va keyin yuboriladi; bitta chek ikki marta chiqmaydi.
+* **Chek ko'rinishi do'kon chekidek**: katta do'kon nomi, Xodim / Chek № / Vaqt va sana, Mijoz, oldingi qarz,
+  "QAYTIB OLISH !!!", ramkali qatorlar ("1 ) Nom" / "40 x 117 000 = 4 680 000"), katta "Summa", to'lov, qarz qoldig'i (≈),
+  telefonlar. 1-ilova ▸ Mijozlar ▸ Chek: do'kon nomi, Xodim, chek osti (telefonlar), "Namuna chekni ko'rish".
+  1C tarixidagi cheklar ham shu ko'rinishda.
 
 ### Buyurtma (2-ilova -> 1-ilova)
 * 2-ilova: Bosh sahifa ▸ **Buyurtma berish** / Narxlar ▸ tovar yonidagi **+** ▸ miqdor ▸ pastdagi **Yuborish** (izoh bilan).
@@ -41,6 +84,9 @@ C8 biznes qoidalari **o'zgarmagan**. Yangi lokal ma'lumot alohida (eski v2.5 soz
   (prefikslar, kod/og'irlik uzunligi, gramm/10 gramm, tekshiruv raqami).
 * Sozlamalar ▸ **Shtrix kodlar**: 1C'dan "Вывести список" bilan saqlangan Excel'ni yuklash (ustunlar o'zi topiladi, tovarga
   avval kod, keyin nom bo'yicha bog'lanadi), sinash maydoni va kamera bilan sinash.
+* **Kod yozish rejimi** (Shtrix kodlar ▸ "Kod yozish" yoki Savdo ▸ skaner tugmasini uzoq bosish): do'kon bo'ylab yurib
+  bazada yo'q kodlarni o'qitasiz va ro'yxatdan tovarni bosasiz — kod telefonga yoziladi (bir tovarga bir nechta kod ham).
+  "Excel'ga" — yozilganlar CSV (kod, tovar, shtrix kod) bo'lib ulashiladi, 1C'ga kiritish uchun. Zaxiraga ham kiradi.
 * Noma'lum kod — "qaysi tovar?" deb so'raladi va eslab qolinadi (tarozi kodi bo'lsa — shu kodli hamma yorliqlar).
 
 ### O'rgatish va sirli menyu

@@ -1,4 +1,4 @@
-; Bu faylni 1-ilova o'zi yaratib beradi: Mijozlar ▸ "Kompyuter sozlamasi".
+; Bu faylni 1-ilova o'zi yaratib beradi (yangisi kelsa almashtiring; [onec] va [codes] — onec.ini da): Mijozlar ▸ "Kompyuter sozlamasi".
 ; Ichida maxfiy kalit (secret) bor — faqat o'z kompyuteringizda saqlang.
 [firebase]
 url = https://savdo-dokon-default-rtdb.firebaseio.com
@@ -8,21 +8,17 @@ queue = BU_YERGA_32_BELGILI_NAVBAT_KALITI
 ; 1C eksporti kirish qutisi (onec_export.py uchun)
 inbox = BU_YERGA_32_BELGILI_KIRISH_KALITI
 
+[labels]
+; Narx yorlig'i printeri (label_printer.py). Kalitni 1-ilova beradi: Narx yorliqlari > Yorliq printeri > Kompyuter sozlamasi
+key = BU_YERGA_32_BELGILI_YORLIQ_KALITI
+; Windows'dagi printer nomi (qismi ham bo'ladi). Bo'sh: Xprinter/Label nomli printer o'zi topiladi
+printer =
+; gdi  - Windows drayveri orqali (1C kabi, o'lcham drayverdan); tspl - to'g'ridan-to'g'ri TSPL; file - labels_out/ ga PNG
+mode = gdi
+port = 9110
+; faqat tspl uchun (bo'sh qolsa rasm o'lchamidan): width_mm = 58, height_mm = 40, gap_mm = 2, density = 8, speed = 4
+; yorliq teskari (oq-qora almashgan) chiqsa: invert = 1
+
 [local]
 host = 127.0.0.1
 port = 9100
-
-[onec]
-; 1C 8.3 ga ulanish (COM, oddiy foydalanuvchi)
-connection = File="D:\1C\Baza";
-user = Agent
-password =
-; discover.txt ga qarab to'ldiriladi
-report =
-build = skd
-period_from = НачалоПериода
-period_to = КонецПериода
-client_field = Контрагент
-catalog = Контрагенты
-supplier_flag =
-active_register =

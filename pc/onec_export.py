@@ -17,9 +17,15 @@ Buyruqlar:
   python onec_export.py --once       — hozir bir marta eksport qilish
   python onec_export.py --one "Dadaxon Aka (TRZ)"  — faqat bitta mijoz (sinov; fayl export/ papkada qoladi)
   python onec_export.py --status     — bulutdagi jadval va oxirgi holat
+  python onec_export.py --codes      — tovar kodlari (PLU va shtrix kodlar) ni hozir yuborish (natija: codes.json)
   python onec_export.py              — doimiy ishlash (odatda onec_export.vbs orqali oynasiz)
 
 Sozlama: forwarder.ini ([firebase] url/secret/inbox — 1-ilova beradi; [onec] — o'zingiz to'ldirasiz).
+
+Tovar kodlari (v2.7): 1C'dagi tarozi PLU raqamlari va shtrix kodlar har [codes] hours soatda (standart 6) yoki
+1-ilovada "Kompyuterdan yangilash" bosilganda `in/{inbox}/` ga "codes" bo'lib yuboriladi. Qayerda saqlanishi
+1C metama'lumotidan o'zi topiladi (PLU — tovar rekviziti yoki "весы/оборудование/PLU" registri; shtrix — "Штрихкод"
+maydonli registr). Topilmasa: --discover natijasini yuboring yoki [codes] plu/barcode ni qo'lda yozing.
 """
 import argparse
 import base64
@@ -45,6 +51,8 @@ LOG = os.path.join(HERE, "onec_export.log")
 STATE = os.path.join(HERE, "export_state.json")
 OUT_DIR = os.path.join(HERE, "export")
 DISCOVER = os.path.join(HERE, "discover.txt")
+CODES_OUT = os.path.join(HERE, "codes.json")
+TICK_SEC = 120                    # jadval va telefon so'rovi shuncha vaqtda bir tekshiriladi
 
 MAX_FILE = 8 * 1024 * 1024        # bitta Excel shundan katta bo'lsa yuborilmaydi (jurnalga yoziladi)
 POLL_SEC = 10 * 60                # jadval o'chiq bo'lsa — shuncha vaqtda bir tekshiriladi
@@ -84,7 +92,8 @@ class Config:
         if not os.path.exists(path):
             raise SystemExit("forwarder.ini topilmadi: %s\n1-ilova ▸ Mijozlar ▸ 'Kompyuter sozlamasi' matnini shu nom bilan saqlang." % path)
         cp = configparser.ConfigParser(interpolation=None)
-        cp.read(path, encoding="utf-8-sig")
+        # onec.ini (ixtiyoriy) — [onec] va [codes] shu yerda tursa, telefondan yangi forwarder.ini kelganda o'chib ketmaydi
+        cp.read([path, os.path.join(os.path.dirname(os.path.abspath(path)), "onec.ini")], encoding="utf-8-sig")
         fb = cp["firebase"] if cp.has_section("firebase") else {}
         self.url = normalize_url(fb.get("url", ""))
         self.secret = fb.get("secret", "").strip()
@@ -110,6 +119,14 @@ class Config:
         self.skip = [x.strip() for x in g("skip").split(";") if x.strip()]
         self.default_hours = int(g("hours", "2") or 2)
         self.default_days = int(g("days", "7") or 7)
+        cd = cp["codes"] if cp.has_section("codes") else {}
+        gc = lambda k, d="": (cd.get(k, d) or d).strip()  # noqa: E731
+        self.codes_on = gc("enabled", "1") not in ("0", "no", "false", "yoq")
+        self.goods = gc("goods", "Номенклатура")
+        # Qo'lda: "attr:<Rekvizit>" yoki "<RegistrSvedeniy>:<tovar maydoni>:<qiymat maydoni>"
+        self.plu_src = gc("plu")
+        self.barcode_src = gc("barcode")
+        self.codes_hours = max(1, int(gc("hours", "6") or 6))
 
     def check_cloud(self):
         if not self.url or not self.secret:
@@ -164,6 +181,11 @@ class Cloud:
         """1-ilova yozgan jadval: {h: soat (0 — o'chiq), d: necha kunlik}."""
         v = self.call("GET", "p/%s/exp" % self.cfg.inbox, timeout=30) or {}
         return v if isinstance(v, dict) else {}
+
+    def codes_request(self):
+        """1-ilova "Kompyuterdan yangilash" bosgan vaqt (ms) yoki 0."""
+        v = self.call("GET", "p/%s/creq" % self.cfg.inbox, timeout=30)
+        return v if isinstance(v, (int, float)) else 0
 
     def status(self, text, ok):
         self.call("PUT", "p/%s/st" % self.cfg.inbox, {"at": {".sv": "timestamp"}, "text": text[:300], "ok": bool(ok)}, timeout=30, print="silent")
@@ -330,6 +352,92 @@ class OneC:
             except OSError:
                 pass
 
+    # --- tovar kodlari (PLU, shtrix) ---
+    def _type_names(self, field):
+        """Maydon turlari: ["Справочник.Номенклатура", "Число", ...]."""
+        out = []
+        try:
+            for t in self.items(field.Тип.Типы()):
+                m = self.c.Метаданные.НайтиПоТипу(t)
+                if m is not None:
+                    out.append(str(m.ПолноеИмя()))
+                else:
+                    out.append(str(self.c.Строка(t)))
+        except Exception:
+            pass
+        return out
+
+    def meta_summary(self):
+        """1C tuzilishidan faqat kerakli qism (sof ma'lumot — tanlash mantig'i shu bilan testlanadi)."""
+        md = self.c.Метаданные
+        goods = []
+        cat = md.Справочники.Найти(self.cfg.goods)
+        if cat is not None:
+            for a in self.items(cat.Реквизиты):
+                goods.append({"name": a.Имя, "syn": str(a.Синоним), "types": self._type_names(a)})
+        regs = []
+        for r in self.items(md.РегистрыСведений):
+            fields = []
+            for col in ("Измерения", "Ресурсы", "Реквизиты"):
+                try:
+                    for f in self.items(getattr(r, col)):
+                        fields.append({"name": f.Имя, "syn": str(f.Синоним), "types": self._type_names(f)})
+                except Exception:
+                    pass
+            regs.append({"name": r.Имя, "syn": str(r.Синоним), "fields": fields})
+        return {"goods_name": self.cfg.goods, "goods_found": cat is not None, "goods": goods, "regs": regs}
+
+    def goods_codes(self, summary=None):
+        """[{c, n, p, b}] — har tovar: 1C kodi, nomi, PLU, shtrix kodlar. Faqat o'qiydi."""
+        summary = summary or self.meta_summary()
+        plu = parse_src(self.cfg.plu_src) or pick_plu(summary)
+        bc = parse_src(self.cfg.barcode_src) or pick_barcode(summary)
+        items = {}
+
+        def item(code, name):
+            code = norm_code(code)
+            name = str(name or "").strip()
+            k = code or ("n:" + name.lower())
+            it = items.get(k)
+            if it is None:
+                it = items[k] = {"c": code, "n": name, "p": "", "b": []}
+            return it
+
+        goods = self.cfg.goods
+        if plu and plu[0] == "attr":
+            for r in self._goods_rows("Т.%s КАК Знач" % plu[1]):
+                v = norm_plu(r["Знач"])
+                if v:
+                    item(r["Код"], r["Наименование"])["p"] = v
+        elif plu:
+            for r in self.query(reg_query(plu, goods, summary), ["Код", "Наименование", "Знач"]):
+                v = norm_plu(r["Знач"])
+                if v:
+                    item(r["Код"], r["Наименование"])["p"] = v
+        if bc and bc[0] == "attr":
+            for r in self._goods_rows("Т.%s КАК Знач" % bc[1]):
+                v = str(r["Знач"] or "").strip()
+                if v:
+                    it = item(r["Код"], r["Наименование"])
+                    if v not in it["b"]:
+                        it["b"].append(v)
+        elif bc:
+            for r in self.query(reg_query(bc, goods, summary), ["Код", "Наименование", "Знач"]):
+                v = str(r["Знач"] or "").strip()
+                if v:
+                    it = item(r["Код"], r["Наименование"])
+                    if v not in it["b"]:
+                        it["b"].append(v)
+        src = {"plu": src_text(plu), "bc": src_text(bc)}
+        return [it for it in items.values() if it["p"] or it["b"]], src
+
+    def _goods_rows(self, extra):
+        base = "ВЫБРАТЬ Т.Код КАК Код, Т.Наименование КАК Наименование, %s ИЗ Справочник.%s КАК Т ГДЕ НЕ Т.ПометкаУдаления" % (extra, self.cfg.goods)
+        try:
+            return self.query(base + " И НЕ Т.ЭтоГруппа", ["Код", "Наименование", "Знач"])
+        except Exception:
+            return self.query(base, ["Код", "Наименование", "Знач"])
+
     # --- discover ---
     def discover(self):
         c = self.c
@@ -395,6 +503,11 @@ class OneC:
         w("== Hujjatlar (Документы) ==")
         for d in self.items(md.Документы):
             w("%s — %s" % (d.Имя, d.Синоним))
+        w("")
+        try:
+            w(codes_report(self.meta_summary(), self.cfg))
+        except Exception as e:
+            w("== Tovar kodlari ==\n(o'qilmadi: %s)" % str(e)[:200])
         return "\n".join(str(x) for x in out)
 
 
@@ -490,6 +603,181 @@ def run_once(cfg, cloud, onec, days, state=None, now=None, only=None):
     return sent, checked, errors
 
 
+# ---------------------------------------------------------------- tovar kodlari: manbani tanlash (sof mantiq)
+
+PLU_REG = re.compile(r"(?i)plu|плу|весы|весов|оборудован|offline|tarozi|scale")
+PLU_FIELD = re.compile(r"(?i)^(plu|плу|код|кодplu|кодплу|номерplu|номерплу|номер|кодтовара|кодтовараplu)$")
+BC_FIELD = re.compile(r"(?i)^(штрихкод|штрих_код|штрихкодтовара|barcode|shtrixkod|ean)$")
+GOODS_FIELD = re.compile(r"(?i)^(номенклатура|товар|владелец|tovar|номенклатурa)$")
+
+
+def _goods_field(fields, goods):
+    """Tovarga ishora qiluvchi maydon: (nomi, faqat tovarmi). Avval turi bo'yicha, keyin nomi bo'yicha."""
+    full = "Справочник." + goods
+    for f in fields:
+        if full in f.get("types", []):
+            return f["name"], len(f["types"]) == 1
+    for f in fields:
+        if GOODS_FIELD.match(f["name"]):
+            return f["name"], len(f.get("types", [])) <= 1
+    return None
+
+
+def pick_plu(summary):
+    """PLU qayerda: ("attr", rekvizit) yoki ("reg", registr, tovar maydoni, qiymat maydoni, faqat_tovar)."""
+    for a in summary.get("goods", []):
+        text = a["name"] + " " + a.get("syn", "")
+        types = a.get("types", [])
+        if "Булево" in types or any(t.startswith("Справочник.") for t in types):
+            continue  # "Весовой" (ha/yo'q) belgisi yoki boshqa ma'lumotnomaga havola — PLU emas
+        if re.search(r"(?i)plu|плу", text) or (re.search(r"(?i)вес|tarozi|scale", text) and re.search(r"(?i)код|номер|kod|code", text)):
+            return ("attr", a["name"])
+    best = None
+    for r in summary.get("regs", []):
+        title = r["name"] + " " + r.get("syn", "")
+        if not PLU_REG.search(title):
+            continue
+        g = _goods_field(r["fields"], summary.get("goods_name", "Номенклатура"))
+        if g is None:
+            continue
+        val = None
+        for f in r["fields"]:
+            if f["name"] == g[0]:
+                continue
+            if PLU_FIELD.match(f["name"]) or re.search(r"(?i)plu|плу", f["name"] + " " + f.get("syn", "")):
+                if val is None or "Число" in f.get("types", []):
+                    val = f["name"]
+        if val is None:
+            continue
+        score = (3 if re.search(r"(?i)plu|плу", title) else 0) + (2 if re.search(r"(?i)весы|весов|tarozi|scale", title) else 0) + \
+            (1 if re.search(r"(?i)оборудован|offline", title) else 0)
+        if best is None or score > best[0]:
+            best = (score, ("reg", r["name"], g[0], val, g[1]))
+    return best[1] if best else None
+
+
+def pick_barcode(summary):
+    best = None
+    for r in summary.get("regs", []):
+        val = next((f["name"] for f in r["fields"] if BC_FIELD.match(f["name"])), None)
+        if val is None:
+            continue
+        g = _goods_field([f for f in r["fields"] if f["name"] != val], summary.get("goods_name", "Номенклатура"))
+        if g is None:
+            continue
+        score = (2 if re.search(r"(?i)штрих|barcode", r["name"]) else 0) + (1 if g[1] else 0)
+        if best is None or score > best[0]:
+            best = (score, ("reg", r["name"], g[0], val, g[1]))
+    if best:
+        return best[1]
+    for a in summary.get("goods", []):
+        if BC_FIELD.match(a["name"]):
+            return ("attr", a["name"])
+    return None
+
+
+def parse_src(s):
+    """forwarder.ini [codes]: "attr:ПЛУ" yoki "ТоварыНаВесах:Номенклатура:Код"."""
+    s = (s or "").strip()
+    if not s:
+        return None
+    if s.lower().startswith("attr:"):
+        return ("attr", s[5:].strip())
+    parts = [x.strip() for x in s.split(":")]
+    if len(parts) == 3 and all(parts):
+        return ("reg", parts[0], parts[1], parts[2], False)
+    raise SystemExit("forwarder.ini [codes]: noto'g'ri yozuv '%s' (attr:Rekvizit yoki Registr:TovarMaydoni:QiymatMaydoni)" % s)
+
+
+def reg_query(src, goods, summary=None):
+    _, reg, gf, vf, only_goods = src
+    ref = "Р.%s" % gf if only_goods else "ВЫРАЗИТЬ(Р.%s КАК Справочник.%s)" % (gf, goods)
+    where = "" if only_goods else " ГДЕ Р.%s ССЫЛКА Справочник.%s" % (gf, goods)
+    return ("ВЫБРАТЬ %s.Код КАК Код, %s.Наименование КАК Наименование, Р.%s КАК Знач ИЗ РегистрСведений.%s КАК Р%s"
+            % (ref, ref, vf, reg, where))
+
+
+def src_text(src):
+    if not src:
+        return ""
+    if src[0] == "attr":
+        return "rekvizit " + src[1]
+    return "РегистрСведений.%s (%s -> %s)" % (src[1], src[2], src[3])
+
+
+def norm_code(v):
+    if isinstance(v, float) and v == int(v):
+        v = int(v)
+    return str(v if v is not None else "").strip()
+
+
+def norm_plu(v):
+    """PLU: faqat raqam, oldidagi nollarsiz (0 — yo'q)."""
+    if isinstance(v, float) and v == int(v):
+        v = int(v)
+    d = re.sub(r"\D", "", str(v if v is not None else ""))
+    d = d.lstrip("0")
+    return d
+
+
+def codes_report(summary, cfg):
+    plu = parse_src(cfg.plu_src) or pick_plu(summary)
+    bc = parse_src(cfg.barcode_src) or pick_barcode(summary)
+    out = ["== Tovar kodlari (PLU, shtrix) =="]
+    out.append("Tovarlar ma'lumotnomasi: Справочник.%s%s" % (summary.get("goods_name"), "" if summary.get("goods_found") else " — TOPILMADI ([codes] goods = ...)"))
+    out.append("  rekvizitlar: " + ", ".join("%s (%s)" % (a["name"], a.get("syn", "")) for a in summary.get("goods", [])))
+    out.append("PLU manbasi: %s" % (src_text(plu) or "TOPILMADI"))
+    out.append("Shtrix kod manbasi: %s" % (src_text(bc) or "TOPILMADI"))
+    out.append("Nomzod registrlar:")
+    for r in summary.get("regs", []):
+        names = " ".join(f["name"] for f in r["fields"])
+        if re.search(r"(?i)plu|плу|вес|оборуд|штрих|код|номенклат|товар", r["name"] + " " + r.get("syn", "") + " " + names):
+            out.append("  %s — %s: %s" % (r["name"], r.get("syn", ""), ", ".join(
+                "%s[%s]" % (f["name"], "/".join(f.get("types", [])[:3])) for f in r["fields"])))
+    return "\n".join(out)
+
+
+def codes_payload(items, src):
+    items = sorted(items, key=lambda x: (x["c"], x["n"]))
+    return {"v": 1, "src": src, "items": items}
+
+
+def run_codes(cfg, cloud, onec, state=None, force=False):
+    """Tovar kodlarini yuboradi (o'zgargan bo'lsa yoki force). @return (yuborildimi, soni, src)."""
+    state = load_state() if state is None else state
+    onec.connect()
+    try:
+        items, src = onec.goods_codes()
+    finally:
+        onec.close()
+    payload = codes_payload(items, src)
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    try:
+        with open(CODES_OUT, "wb") as f:
+            f.write(raw)
+    except OSError:
+        pass
+    sig = hashlib.sha256(raw).hexdigest()
+    if not items:
+        return False, 0, src
+    if not force and state.get("__codes__") == sig:
+        return False, len(items), src
+    cloud.upload(file_key("codes", int(time.time() * 1000)), "codes.json", raw, "", "codes")
+    state["__codes__"] = sig
+    save_state(state)
+    log.info("tovar kodlari yuborildi: %d ta (PLU: %s; shtrix: %s)", len(items), src.get("plu") or "-", src.get("bc") or "-")
+    return True, len(items), src
+
+
+def codes_status(sent, n, src):
+    t = "Tovar kodlari: %d ta" % n + (" yuborildi" if sent else " (o'zgarmagan)")
+    if not src.get("plu"):
+        t += "; PLU manbasi topilmadi"
+    if not src.get("bc"):
+        t += "; shtrix manbasi topilmadi"
+    return t
+
+
 def status_text(sent, checked, errors):
     t = "%d ta yangilandi, %d ta tekshirildi" % (sent, checked)
     if errors:
@@ -516,6 +804,7 @@ def loop(cfg):
     cloud = Cloud(cfg)
     onec = OneC(cfg)
     last_run = 0.0
+    last_codes = 0.0
     while True:
         try:
             sch = cloud.schedule()
@@ -523,10 +812,7 @@ def loop(cfg):
             log.warning("jadvalni o'qib bo'lmadi: %s", e)
             sch = {}
         hours, days = parse_schedule(sch, cfg)
-        if hours <= 0:
-            time.sleep(POLL_SEC)
-            continue
-        if time.time() - last_run >= hours * 3600 - 60:
+        if hours > 0 and cfg.report and time.time() - last_run >= hours * 3600 - 60:
             last_run = time.time()
             try:
                 sent, checked, errors = run_once(cfg, cloud, onec, days)
@@ -536,10 +822,44 @@ def loop(cfg):
             except SystemExit as e:
                 log.error("%s", e)
                 safe_status(cloud, str(e), False)
-            except Exception as e:
+            except Exception:
                 log.exception("eksport xatosi")
-                safe_status(cloud, "Xato: %s" % str(e)[:200], False)
-        time.sleep(min(POLL_SEC, max(60, hours * 3600 - (time.time() - last_run))))
+                safe_status(cloud, "Xato: eksport", False)
+        if cfg.codes_on:
+            codes_tick(cfg, cloud, onec, last_codes)
+            st = load_state()
+            last_codes = st.get("__codes_at__", last_codes)
+        time.sleep(TICK_SEC)
+
+
+def codes_tick(cfg, cloud, onec, last_codes, now=None):
+    """Tovar kodlari: vaqti kelgan bo'lsa yoki telefon so'ragan bo'lsa. @return bajarildimi."""
+    now = now or time.time()
+    try:
+        req = cloud.codes_request()
+    except Exception:
+        req = 0
+    st = load_state()
+    asked = req and req > st.get("__creq__", 0)
+    if not asked and now - last_codes < cfg.codes_hours * 3600:
+        return False
+    try:
+        sent, n, src = run_codes(cfg, cloud, onec, st, force=bool(asked))
+        msg = codes_status(sent, n, src)
+        log.info(msg)
+        safe_status(cloud, msg, n > 0)
+    except SystemExit as e:
+        log.error("%s", e)
+        safe_status(cloud, "Tovar kodlari: %s" % e, False)
+    except Exception as e:
+        log.exception("tovar kodlari xatosi")
+        safe_status(cloud, "Tovar kodlari xatosi: %s" % str(e)[:200], False)
+    st = load_state()
+    st["__codes_at__"] = now
+    if asked:
+        st["__creq__"] = req
+    save_state(st)
+    return True
 
 
 def safe_status(cloud, text, ok):
@@ -555,6 +875,7 @@ def main():
     ap.add_argument("--once", action="store_true", help="hozir bir marta eksport")
     ap.add_argument("--one", metavar="NOM", help="faqat bitta kontragent (fayl export/ papkada ham qoladi)")
     ap.add_argument("--status", action="store_true", help="bulutdagi jadval va holat")
+    ap.add_argument("--codes", action="store_true", help="tovar kodlari (PLU, shtrix) ni hozir yuborish")
     ap.add_argument("--days", type=int, help="necha kunlik (jadvaldagini almashtiradi)")
     ap.add_argument("--config", default=CONFIG)
     ap.add_argument("-v", action="store_true")
@@ -578,6 +899,20 @@ def main():
         print("Jadval:", cloud.schedule() or "(1-ilova hali yozmagan — standart %d soat)" % cfg.default_hours)
         print("Holat:", cloud.call("GET", "p/%s/st" % cfg.inbox, timeout=30))
         print("Kutayotgan fayllar:", len(cloud.call("GET", "in/%s" % cfg.inbox, timeout=30, shallow="true") or {}))
+        return
+    if a.codes:
+        cfg.check_onec(need_report=False)
+        sent, n, src = run_codes(cfg, cloud, OneC(cfg), force=True)
+        msg = codes_status(sent, n, src)
+        safe_status(cloud, msg, n > 0)
+        print(msg)
+        print("PLU manbasi:", src.get("plu") or "topilmadi", "| shtrix:", src.get("bc") or "topilmadi")
+        print("Fayl:", CODES_OUT)
+        return
+    if not a.once and not a.one and not cfg.report:
+        cfg.check_onec(need_report=False)
+        log.info("Ishga tushdi (faqat tovar kodlari — [onec] report bo'sh)")
+        loop(cfg)
         return
     cfg.check_onec()
     days = a.days or parse_schedule(cloud.schedule(), cfg)[1]

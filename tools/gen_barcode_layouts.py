@@ -12,8 +12,10 @@ b = ''
 b += section('@string/bc_list') + card_open()
 b += text('tvStatus', style='@style/TextAppearance.App.ItemTitle', top='8dp')
 b += text('tvStatusSub', style='?attr/textAppearanceBodySmall', color='?attr/colorOnSurfaceVariant')
-b += buttons([('btnImport', '@string/b_excel', FILLED, 'ic_download'), ('btnHow', '@string/b_how', TEXT, 'ic_info')])
-b += buttons([('btnLearned', '@string/bc_learned_btn', TEXT, 'ic_list'), ('btnClear', '@string/b_clear', TEXT, 'ic_delete')])
+b += buttons([('btnLinkMode', '@string/link_title', FILLED, 'ic_scan')])
+b += buttons([('btnImport', '@string/b_excel', TONAL, 'ic_download'), ('btnHow', '@string/b_how', TEXT, 'ic_info')])
+b += buttons([('btnLearned', '@string/bc_learned_btn', TEXT, 'ic_list'), ('btnExport', '@string/b_export', TEXT, 'ic_share')])
+b += buttons([('btnClear', '@string/b_clear', TEXT, 'ic_delete')])
 b += CARD_CLOSE
 b += section('@string/bc_scale') + card_open()
 b += switch_row('swScale', '@string/bc_scale_on', '@string/bc_scale_hint')

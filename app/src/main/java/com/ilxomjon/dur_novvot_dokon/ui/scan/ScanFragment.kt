@@ -54,6 +54,12 @@ class ScanFragment : Fragment() {
     private var _b: FragmentScanBinding? = null
     private val b get() = _b!!
     private val testMode get() = arguments?.getBoolean(ARG_TEST) == true
+    /** Kod yozish rejimi: skanerlangan kod ro'yxatdan tanlangan tovarga bog'lanadi (savatchaga qo'shilmaydi). */
+    private val linkMode get() = arguments?.getBoolean(ARG_LINK) == true
+    /** Narx yorlig'i rejimi: skanerlangan tovar yorliqlar ro'yxatiga qo'shiladi (savatchaga emas). */
+    private val labelMode get() = arguments?.getBoolean(ARG_LABEL) == true
+    private var lastLabel: String? = null
+    private var linkedNow = 0
 
     private var lastText = ""
     private var lastAt = 0L
@@ -89,6 +95,8 @@ class ScanFragment : Fragment() {
         b.btnPause.setOnClickListener { setPaused(!paused) }
         b.btnResult.setOnClickListener { onResultButton() }
         b.btnCart.setOnClickListener {
+            if (linkMode) { exportCsv(); return@setOnClickListener }
+            if (labelMode) { navigator().pop(); return@setOnClickListener }
             val nav = navigator()
             nav.pop()
             if (!testMode) nav.push(CartFragment())
@@ -103,6 +111,20 @@ class ScanFragment : Fragment() {
             b.searchRow.show(false); b.recycler.show(false); b.bottomBar.show(false)
             b.tvResult.setText(R.string.bc_test_scan_hint)
         }
+        if (linkMode) {
+            b.chipInCart.show(false)
+            b.tvLive.setText(R.string.link_live)
+            b.tvResult.setText(R.string.link_hint)
+            b.btnCart.setText(R.string.link_export)
+            b.btnCart.setIconResource(R.drawable.ic_share)
+            launchOnStarted { ServiceLocator.barcodes.state.collect { renderLinkBar() } }
+        }
+        if (labelMode) {
+            b.tvLive.setText(R.string.lb_scan_live)
+            b.tvResult.setText(R.string.lb_scan_hint)
+            b.btnCart.setText(R.string.lb_scan_done)
+            b.btnCart.setIconResource(R.drawable.ic_label)
+        }
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) startCamera()
         else askCamera.launch(Manifest.permission.CAMERA)
         viewLifecycleOwner.lifecycleScope.launch { ServiceLocator.barcodes.load() }
@@ -112,10 +134,28 @@ class ScanFragment : Fragment() {
 
     private fun setupList() {
         adapter = ProductAdapter(
-            onPlus = { p, price, amount -> if (!assignPending(p)) { ServiceLocator.kpi.tap(); ServiceLocator.draft.adjust(p, amount, price) } },
-            onMinus = { p, price -> ServiceLocator.draft.adjust(p, -1.0, price) },
-            onEdit = { p, focusPrice -> if (!assignPending(p)) ItemEditSheet.show(childFragmentManager, p.id, focusPrice, false) },
-            onZero = { p -> ServiceLocator.draft.state.value.lineFor(p.id)?.let { l -> ServiceLocator.draft.adjust(p, -l.qty, l.price) } },
+            onPlus = { p, price, amount ->
+                if (!assignPending(p)) {
+                    if (linkMode) showResult(Mode.INFO, getString(R.string.link_scan_first), null, null)
+                    else if (labelMode) ServiceLocator.labels.add(p.id, 1)
+                    else { ServiceLocator.kpi.tap(); ServiceLocator.draft.adjust(p, amount, price) }
+                }
+            },
+            onMinus = { p, price ->
+                if (labelMode) ServiceLocator.labels.setCopies(p.id, ServiceLocator.labels.copies(p.id) - 1)
+                else if (!linkMode) ServiceLocator.draft.adjust(p, -1.0, price)
+            },
+            onEdit = { p, focusPrice ->
+                if (!assignPending(p)) {
+                    if (linkMode) showResult(Mode.INFO, getString(R.string.link_scan_first), null, null)
+                    else if (labelMode) ServiceLocator.labels.add(p.id, 1)
+                    else ItemEditSheet.show(childFragmentManager, p.id, focusPrice, false)
+                }
+            },
+            onZero = { p ->
+                if (labelMode) ServiceLocator.labels.remove(p.id)
+                else if (!linkMode) ServiceLocator.draft.state.value.lineFor(p.id)?.let { l -> ServiceLocator.draft.adjust(p, -l.qty, l.price) }
+            },
         )
         adapter.haptics = ServiceLocator.appPrefs.fHaptics
         b.recycler.layoutManager = LinearLayoutManager(requireContext())
@@ -128,10 +168,32 @@ class ScanFragment : Fragment() {
         )
         b.edtSearch.onTextChanged { refreshList() }
         b.chipInCart.setOnCheckedChangeListener { _, on -> inCartOnly = on; refreshList() }
+        if (labelMode) {
+            launchOnStarted {
+                combine(ServiceLocator.labels.state, ServiceLocator.catalog.state) { l, c -> l to c }.collect { (l, c) ->
+                    val bb = _b ?: return@collect
+                    val repo = ServiceLocator.labels
+                    adapter.setPricing(PricingCtx(l.priceType, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM, c.rate), false)
+                    adapter.setCart(
+                        l.items.mapNotNull { i ->
+                            val p = c.productsById[i.productId] ?: return@mapNotNull null
+                            i.productId to com.ilxomjon.dur_novvot_dokon.domain.CartLine(0L, p.id, p.name, 0.0, i.copies.toDouble(), repo.priceOf(p, i))
+                        }.toMap(),
+                    )
+                    bb.tvCartCount.text = getString(R.string.lb_scan_count, l.total)
+                    bb.tvTotal.text = getString(R.string.lb_scan_products, l.items.size)
+                    bb.btnCart.isEnabled = true
+                    bb.chipInCart.text = getString(R.string.lb_filter_selected_n, l.items.size)
+                    if (inCartOnly || indexOf !== c.products) refreshList()
+                }
+            }
+            return
+        }
         launchOnStarted {
             combine(ServiceLocator.draft.state, ServiceLocator.catalog.state) { d, c -> d to c }.collect { (d, c) ->
                 val bb = _b ?: return@collect
                 adapter.setPricing(PricingCtx(d.priceType, d.currency, c.rate), false)
+                if (linkMode) return@collect
                 adapter.setCart(d.lines.associateBy { it.productId })
                 bb.tvCartCount.text = getString(R.string.sale_items_count, d.itemCount)
                 bb.tvTotal.text = requireContext().money(d.total, d.currency)
@@ -149,7 +211,8 @@ class ScanFragment : Fragment() {
             if (q.isNotBlank()) delay(120)
             val all = ServiceLocator.catalog.state.value.products
             val idx = index.takeIf { indexOf === all } ?: SearchIndex(all, { it.name }, { it.id }).also { index = it; indexOf = all }
-            val inCart = ServiceLocator.draft.state.value.lines.mapTo(HashSet()) { it.productId }
+            val inCart = if (labelMode) ServiceLocator.labels.state.value.items.mapTo(HashSet()) { it.productId }
+            else ServiceLocator.draft.state.value.lines.mapTo(HashSet()) { it.productId }
             val prefs = ServiceLocator.appPrefs
             val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 val base = if (q.isBlank()) all.sortedBy { it.searchKey } else idx.search(q, SearchOptions(prefs.fFuzzySearch, prefs.fLayoutFix)).map { it.item }
@@ -213,7 +276,12 @@ class ScanFragment : Fragment() {
             when (val s = ServiceLocator.barcodes.resolve(text)) {
                 is BarcodeRepository.Scan.Found -> {
                     ScanUi.feedback(requireContext(), true)
-                    added(ScanUi.add(s.product, s.qty))
+                    if (linkMode) {
+                        // Allaqachon bog'langan: ko'rsatamiz; oddiy kod bo'lsa — "O'zgartirish" bilan boshqa tovarga bog'lash mumkin
+                        rebind = if (ServiceLocator.barcodes.scale.parse(text) == null) s.raw else null
+                        showResult(Mode.INFO, getString(R.string.link_known, s.product.name), s.raw, if (rebind != null) getString(R.string.link_change) else null)
+                    } else if (labelMode) labelAdded(s.product)
+                    else added(ScanUi.add(s.product, s.qty))
                 }
                 is BarcodeRepository.Scan.Missing -> {
                     ScanUi.feedback(requireContext(), false)
@@ -230,6 +298,17 @@ class ScanFragment : Fragment() {
     private fun added(a: ScanUi.Added) {
         lastAdded = a
         showResult(Mode.OK, a.product.name, ScanUi.describe(requireContext(), a), getString(R.string.scan_undo))
+        if (pending.isNotEmpty()) mainHandlerPostShowPending()
+    }
+
+    /** Yorliq rejimi: tovar ro'yxatga +1 yorliq. */
+    private fun labelAdded(p: Product) {
+        val repo = ServiceLocator.labels
+        repo.add(p.id, 1)
+        lastLabel = p.id
+        val plu = repo.pluFor(p.id)
+        val sub = getString(R.string.lb_scan_added, repo.copies(p.id)) + (plu?.let { " · " + getString(R.string.lb_note_plu, it) }.orEmpty())
+        showResult(Mode.OK, p.name, sub, getString(R.string.scan_undo))
         if (pending.isNotEmpty()) mainHandlerPostShowPending()
     }
 
@@ -261,7 +340,15 @@ class ScanFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             ServiceLocator.barcodes.learn(u.result, p.id)
             ScanUi.feedback(requireContext(), true)
-            added(ScanUi.add(p, u.result.qty))
+            if (linkMode) {
+                linkedNow++
+                showResult(Mode.OK, getString(R.string.link_done, p.name), u.result.raw, null)
+                _b?.edtSearch?.setText("")
+                renderLinkBar()
+                if (pending.isNotEmpty()) mainHandlerPostShowPending()
+                return@launch
+            }
+            if (labelMode) labelAdded(p) else added(ScanUi.add(p, u.result.qty))
             _b?.edtSearch?.setText("")
             if (pending.isNotEmpty()) mainHandlerPostShowPending()
         }
@@ -269,15 +356,49 @@ class ScanFragment : Fragment() {
     }
 
     private fun onResultButton() {
+        val rb = rebind
+        if (linkMode && pending.isEmpty() && rb != null) {
+            rebind = null
+            enqueue(BarcodeRepository.Scan.Unknown(BarcodeResolver.Result.Unknown(rb, null, null), null))
+            return
+        }
         val u = pending.firstOrNull()
         if (u != null) {
             if (u.suggestion != null) assignPending(u.suggestion)
             else { pending.removeFirst(); if (pending.isNotEmpty()) showPending() else showResult(Mode.IDLE, getString(R.string.scan_hint), null, null) }
             return
         }
+        if (labelMode) {
+            lastLabel?.let { id -> ServiceLocator.labels.setCopies(id, ServiceLocator.labels.copies(id) - 1) }
+            lastLabel = null
+        }
         lastAdded?.let { ScanUi.undo(it) }
         lastAdded = null
         showResult(Mode.IDLE, getString(R.string.scan_undone), null, null)
+    }
+
+    // ---------------- kod yozish rejimi ----------------
+
+    private var rebind: String? = null
+
+    private fun renderLinkBar() {
+        val bb = _b ?: return
+        val st = ServiceLocator.barcodes.state.value
+        bb.tvCartCount.text = getString(R.string.link_session, linkedNow)
+        bb.tvTotal.text = getString(R.string.link_total, st.learned + st.scaleLearned)
+        bb.btnCart.isEnabled = st.learned + st.scaleLearned > 0
+    }
+
+    /** Telefonda yozilgan kodlarni Excel (CSV) qilib ulashish — 1C'ga kiritish uchun. */
+    private fun exportCsv() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val f = ServiceLocator.barcodes.exportLearnedCsv(java.io.File(ctx.cacheDir, "share"))
+            val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+            startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/csv"; putExtra(android.content.Intent.EXTRA_STREAM, uri); addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }, getString(R.string.link_export)))
+        }
     }
 
     // ---------------- natija qatori ----------------
@@ -344,6 +465,12 @@ class ScanFragment : Fragment() {
         private const val SAME_CODE_MS = 1200L
         /** Har qanday ikki o'qish orasidagi eng kam vaqt. */
         private const val ANY_CODE_MS = 250L
+        private const val ARG_LINK = "link"
+        private const val ARG_LABEL = "label"
+        /** Narx yorliqlari uchun tovar yig'ish (skanerlab). */
+        fun labels() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_LABEL, true) } }
         fun test() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_TEST, true) } }
+        /** Do'kon bo'ylab yurib, bazada yo'q shtrix kodlarni tovarlarga bog'lash. */
+        fun link() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_LINK, true) } }
     }
 }

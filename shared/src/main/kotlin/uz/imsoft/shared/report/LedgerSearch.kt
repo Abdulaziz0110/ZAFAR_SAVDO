@@ -292,7 +292,7 @@ object LedgerQuery {
     }
 
     fun parse(query: String, today: Long): Parsed {
-        val raw = query.lowercase().replace(' ', ' ').replace('’', '\'').replace('ʻ', '\'').replace('‘', '\'')
+        val raw = query.lowercase().replace('\u00A0', ' ').replace('’', '\'').replace('ʻ', '\'').replace('‘', '\'')
             .split(' ', '\t', '\n').filter { it.isNotBlank() }
         val tokens = mergeTokens(raw)
         val conds = ArrayList<Cond>()

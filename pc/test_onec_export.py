@@ -5,7 +5,9 @@ import datetime as dt
 import gzip
 import importlib.util
 import io
+import json
 import os
+import time
 import tempfile
 import unittest
 import zipfile
@@ -99,6 +101,15 @@ class T(unittest.TestCase):
         c.connection = 'Srvr="srv";Ref="baza"'
         self.assertEqual(c.conn_string(), 'Srvr="srv";Ref="baza";Usr="Agent";Pwd="p""w";')
 
+    def test_onec_ini_kept_separately(self):
+        with open(self.ini, "w", encoding="utf-8") as f:
+            f.write(INI.split("[onec]")[0])  # telefondan kelgan yangi forwarder.ini — [onec] yo'q
+        with open(os.path.join(self.tmp, "onec.ini"), "w", encoding="utf-8") as f:
+            f.write("[onec]\nconnection = D:\\Baza\nreport = Kartochka\n\n[codes]\nplu = attr:ПЛУ\n")
+        c = self.m.Config(self.ini)
+        self.assertEqual((c.report, c.plu_src), ("Kartochka", "attr:ПЛУ"))
+        self.assertTrue(c.inbox)
+
     def test_bad_inbox(self):
         self.cfg.inbox = "short"
         with self.assertRaises(SystemExit):
@@ -170,6 +181,124 @@ class T(unittest.TestCase):
         self.assertRegex(k, r"^\d{13}_[0-9a-f]{10}$")
         self.assertEqual(self.m.safe_name('A/B:"C"'), "A B C")
         self.assertEqual(self.m.status_text(1, 5, ["X: y"]), "1 ta yangilandi, 5 ta tekshirildi; 1 ta xato: X: y")
+
+
+def F(name, *types, syn=""):
+    return {"name": name, "syn": syn, "types": list(types)}
+
+
+UT11 = {
+    "goods_name": "Номенклатура", "goods_found": True,
+    "goods": [F("Артикул", "Строка"), F("Весовой", "Булево", syn="Весовой товар"), F("ЕдиницаИзмерения", "Справочник.УпаковкиЕдиницыИзмерения")],
+    "regs": [
+        {"name": "ЦеныНоменклатуры", "syn": "Цены", "fields": [F("Номенклатура", "Справочник.Номенклатура"), F("Цена", "Число")]},
+        {"name": "ТоварыНаПодключаемомОборудовании", "syn": "Товары на подключаемом оборудовании",
+         "fields": [F("ПодключаемоеОборудование", "Справочник.ПодключаемоеОборудование"), F("Номенклатура", "Справочник.Номенклатура"),
+                    F("Код", "Число"), F("ДатаИзменения", "Дата")]},
+        {"name": "Штрихкоды", "syn": "Штрихкоды", "fields": [F("Штрихкод", "Строка"),
+                    F("Владелец", "Справочник.Номенклатура", "Справочник.ХарактеристикиНоменклатуры"), F("ЕдиницаИзмерения", "Справочник.Ед")]},
+    ],
+}
+
+
+class Codes(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.m = load(self.tmp)
+        self.m.CODES_OUT = os.path.join(self.tmp, "codes.json")
+        ini = os.path.join(self.tmp, "forwarder.ini")
+        with open(ini, "w", encoding="utf-8") as f:
+            f.write(INI)
+        self.cfg = self.m.Config(ini)
+
+    def test_pick_register(self):
+        self.assertEqual(self.m.pick_plu(UT11), ("reg", "ТоварыНаПодключаемомОборудовании", "Номенклатура", "Код", True))
+        self.assertEqual(self.m.pick_barcode(UT11), ("reg", "Штрихкоды", "Владелец", "Штрихкод", False))
+
+    def test_pick_attr_and_ignore_flag(self):
+        s = {"goods_name": "Номенклатура", "goods": [F("Весовой", "Булево"), F("НомерPLU", "Число"), F("Штрихкод", "Строка")], "regs": []}
+        self.assertEqual(self.m.pick_plu(s), ("attr", "НомерPLU"))
+        self.assertEqual(self.m.pick_barcode(s), ("attr", "Штрихкод"))
+        s2 = {"goods_name": "Номенклатура", "goods": [F("КодВесов", "Строка", syn="Код на весах")], "regs": []}
+        self.assertEqual(self.m.pick_plu(s2), ("attr", "КодВесов"))
+        s3 = {"goods_name": "Номенклатура", "goods": [F("Весовой", "Булево"), F("ВесНетто", "Число")], "regs": []}
+        self.assertIsNone(self.m.pick_plu(s3))
+
+    def test_query_text(self):
+        q = self.m.reg_query(("reg", "Штрихкоды", "Владелец", "Штрихкод", False), "Номенклатура")
+        self.assertIn("ВЫРАЗИТЬ(Р.Владелец КАК Справочник.Номенклатура).Код КАК Код", q)
+        self.assertIn("ГДЕ Р.Владелец ССЫЛКА Справочник.Номенклатура", q)
+        q2 = self.m.reg_query(("reg", "ТоварыНаВесах", "Номенклатура", "Код", True), "Номенклатура")
+        self.assertEqual(q2, "ВЫБРАТЬ Р.Номенклатура.Код КАК Код, Р.Номенклатура.Наименование КАК Наименование, Р.Код КАК Знач ИЗ РегистрСведений.ТоварыНаВесах КАК Р")
+
+    def test_parse_src_and_norm(self):
+        self.assertEqual(self.m.parse_src("attr: ПЛУ"), ("attr", "ПЛУ"))
+        self.assertEqual(self.m.parse_src("Весы:Товар:PLU"), ("reg", "Весы", "Товар", "PLU", False))
+        self.assertIsNone(self.m.parse_src(""))
+        with self.assertRaises(SystemExit):
+            self.m.parse_src("nimadir")
+        self.assertEqual(self.m.norm_plu(501.0), "501")
+        self.assertEqual(self.m.norm_plu("00151"), "151")
+        self.assertEqual(self.m.norm_plu(0), "")
+        self.assertEqual(self.m.norm_code(2555.0), "2555")
+
+    def test_goods_codes_merge(self):
+        m = self.m
+        rows = {
+            "Код КАК Знач": [{"Код": 2555.0, "Наименование": "Orik Bargak Balonchik", "Знач": 501.0},
+                             {"Код": "00241", "Наименование": "Orik Subxon 116", "Знач": 151}],
+            "Штрихкод КАК Знач": [{"Код": 2555.0, "Наименование": "Orik Bargak Balonchik", "Знач": "2901740"},
+                                  {"Код": 2555.0, "Наименование": "Orik Bargak Balonchik", "Знач": "2901740"},
+                                  {"Код": "4307", "Наименование": "Mirinda 0.3 L", "Знач": "012000800214"}],
+        }
+
+        class O(m.OneC):
+            def query(self, text, fields, **p):
+                for k, v in rows.items():
+                    if k in text:
+                        return v
+                raise AssertionError(text)
+        items, src = O(self.cfg, conn=object()).goods_codes(UT11)
+        by = {i["c"]: i for i in items}
+        self.assertEqual(by["2555"], {"c": "2555", "n": "Orik Bargak Balonchik", "p": "501", "b": ["2901740"]})
+        self.assertEqual(by["00241"]["p"], "151")
+        self.assertEqual(by["4307"]["b"], ["012000800214"])
+        self.assertIn("ТоварыНаПодключаемомОборудовании", src["plu"])
+
+    def test_run_codes_and_request(self):
+        m = self.m
+
+        class One:
+            def __init__(self, items):
+                self.items = items
+            def connect(self):
+                return self
+            def close(self):
+                pass
+            def goods_codes(self):
+                return self.items, {"plu": "rekvizit PLU", "bc": ""}
+        cloud = FakeCloud()
+        items = [{"c": "1", "n": "A", "p": "5", "b": []}]
+        self.assertEqual(m.run_codes(self.cfg, cloud, One(items))[0], True)
+        self.assertEqual(cloud.uploads[0][4], "codes")
+        body = json.loads(cloud.uploads[0][2])
+        self.assertEqual(body["items"], items)
+        self.assertEqual(m.run_codes(self.cfg, cloud, One(items))[0], False, "o'zgarmagan — yuborilmaydi")
+        self.assertEqual(m.run_codes(self.cfg, cloud, One(items), force=True)[0], True)
+        self.assertEqual(m.codes_status(False, 1, {"plu": "x", "bc": ""}), "Tovar kodlari: 1 ta (o'zgarmagan); shtrix manbasi topilmadi")
+        # telefon so'rovi: vaqti kelmagan bo'lsa ham bajariladi, bir marta
+        cloud.codes_request = lambda: 5000
+        n0 = len(cloud.uploads)
+        self.assertTrue(m.codes_tick(self.cfg, cloud, One(items), last_codes=time.time()))
+        self.assertEqual(len(cloud.uploads), n0 + 1)
+        self.assertFalse(m.codes_tick(self.cfg, cloud, One(items), last_codes=time.time()))
+        cloud.codes_request = lambda: 0
+        self.assertTrue(m.codes_tick(self.cfg, cloud, One(items), last_codes=time.time() - 7 * 3600))
+
+    def test_report(self):
+        t = self.m.codes_report(UT11, self.cfg)
+        self.assertIn("PLU manbasi: РегистрСведений.ТоварыНаПодключаемомОборудовании", t)
+        self.assertIn("Shtrix kod manbasi: РегистрСведений.Штрихкоды", t)
 
 
 if __name__ == "__main__":

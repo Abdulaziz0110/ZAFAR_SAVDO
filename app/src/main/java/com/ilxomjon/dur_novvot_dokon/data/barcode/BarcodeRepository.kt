@@ -50,6 +50,11 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
     private var codes: Map<String, String> = emptyMap()
     private var learned: MutableMap<String, String> = HashMap()
     private var scaleLearned: MutableMap<String, String> = HashMap()
+    /** O'rganilgan kodning asl ko'rinishi (oldidagi nollar bilan) — eksport uchun. */
+    private var learnedRaw: MutableMap<String, String> = HashMap()
+    /** Import qilingan kodning asl ko'rinishi (oldidagi nollar bilan) — narx yorlig'ida chizish uchun. kanonik -> asl. */
+    private var importedRaw: MutableMap<String, String> = HashMap()
+    @Volatile private var byProduct: Map<String, List<String>>? = null
     private var meta = BarcodeState()
     private var loaded = false
     @Volatile private var resolver: BarcodeResolver? = null
@@ -73,23 +78,27 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
         if (f.exists()) runCatching {
             val o = JObj.parse(f.readText())
             fun map(k: String): MutableMap<String, String> = (o.obj(k)?.map ?: emptyMap()).mapValues { it.value.toString() }.toMutableMap()
-            imported = map("imp"); codes = map("codes"); learned = map("learned"); scaleLearned = map("scale")
+            imported = map("imp"); codes = map("codes"); learned = map("learned"); scaleLearned = map("scale"); learnedRaw = map("raw"); importedRaw = map("iraw")
             meta = BarcodeState(imported.size, o.long("at"), o.str("file"), o.long("unmatched").toInt())
         }
         loaded = true
         publish()
     }
 
+    /** Zaxiradan tiklangandan keyin fayldan qayta o'qish. */
+    suspend fun reloadFromDisk() = mutex.withLock { withContext(Dispatchers.IO) { loaded = false; resolver = null; loadLocked() } }
+
     private fun saveLocked() {
         val body = linkedMapOf<String, Any?>(
             "v" to 1, "at" to meta.importedAt, "file" to meta.fileName, "unmatched" to meta.unmatched,
-            "imp" to imported, "codes" to codes, "learned" to learned, "scale" to scaleLearned,
+            "imp" to imported, "codes" to codes, "learned" to learned, "scale" to scaleLearned, "raw" to learnedRaw, "iraw" to importedRaw,
         )
         val f = file()
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeText(Json.write(body))
         if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
         resolver = null
+        byProduct = null
         publish()
     }
 
@@ -112,6 +121,8 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
             loadLocked()
             imported = HashMap(p.linked.map)
             codes = HashMap(p.linked.codes)
+            importedRaw = HashMap()
+            for (r in p.parsed.rows) { val k = Ean.canonical(r.barcode); if (imported.containsKey(k)) importedRaw.putIfAbsent(k, r.barcode.trim()) }
             meta = BarcodeState(imported.size, System.currentTimeMillis(), p.fileName, p.linked.unmatched.size)
             // 1C'dagi vazn tovarlari prefiksi (masalan 28, 29) — tarozi yorlig'ini tanish uchun
             if (p.parsed.scalePrefixes.isNotEmpty()) scale = scale.copy(enabled = true, prefixes = p.parsed.scalePrefixes)
@@ -119,12 +130,36 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
         }
     }
 
+    /** Kompyuterdan (1C) kelgan shtrix kodlar — Excel importi kabi, ro'yxatni almashtiradi. */
+    suspend fun commitRows(rows: List<BarcodeImport.Row>, fileName: String): BarcodePreview {
+        val parsed = BarcodeImport.Result(rows, -1, -1, -1, 0)
+        val p = withContext(Dispatchers.Default) { BarcodePreview(fileName, parsed, BarcodeLink.link(rows, catalog.state.value.products, { it.id }, { it.name })) }
+        commit(p)
+        return p
+    }
+
     suspend fun clearImported() = mutex.withLock {
-        withContext(Dispatchers.IO) { loadLocked(); imported = emptyMap(); codes = emptyMap(); meta = BarcodeState(); saveLocked() }
+        withContext(Dispatchers.IO) { loadLocked(); imported = emptyMap(); codes = emptyMap(); importedRaw = HashMap(); meta = BarcodeState(); saveLocked() }
     }
 
     suspend fun clearLearned() = mutex.withLock {
-        withContext(Dispatchers.IO) { loadLocked(); learned.clear(); scaleLearned.clear(); saveLocked() }
+        withContext(Dispatchers.IO) { loadLocked(); learned.clear(); scaleLearned.clear(); learnedRaw.clear(); saveLocked() }
+    }
+
+    /**
+     * Tovarning shtrix kodlari (asl ko'rinishda): import + skanerda o'rganilgan. Narx yorlig'i uchun.
+     * Avval chizsa bo'ladiganlari (EAN-13/8), tarozi kodlari (7 xona) oxirida.
+     */
+    suspend fun barcodesFor(productId: String): List<String> {
+        if (!loaded) load()
+        val m = byProduct ?: mutex.withLock {
+            val acc = HashMap<String, MutableList<String>>()
+            for ((k, pid) in imported) acc.getOrPut(pid) { ArrayList() } += importedRaw[k] ?: k
+            for ((k, pid) in learned) acc.getOrPut(pid) { ArrayList() } += learnedRaw[k] ?: k
+            acc.mapValues { (_, l) -> l.distinct().sortedBy { c -> if (uz.imsoft.shared.barcode.BarcodeEncode.forShopCode(c)?.kind == uz.imsoft.shared.barcode.BarcodeEncode.Kind.EAN13) 0 else if (uz.imsoft.shared.barcode.BarcodeEncode.forShopCode(c) != null) 1 else 2 } }
+                .also { byProduct = it }
+        }
+        return m[productId].orEmpty()
     }
 
     fun learnedItems(): List<LearnedItem> =
@@ -138,8 +173,33 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
     suspend fun learn(r: BarcodeResolver.Result.Unknown, productId: String) = mutex.withLock {
         withContext(Dispatchers.IO) {
             loadLocked()
-            if (r.scaleCode != null) scaleLearned[r.scaleCode!!] = productId else learned[Ean.canonical(r.raw)] = productId
+            if (r.scaleCode != null) scaleLearned[r.scaleCode!!] = productId
+            else { val k = Ean.canonical(r.raw); learned[k] = productId; learnedRaw[k] = r.raw.trim() }
             saveLocked()
+        }
+    }
+
+    /**
+     * Telefonda yozilgan (o'rganilgan) kodlar — CSV (Excel ochadi): tovar kodi, nomi, shtrix kod. 1C'ga qo'lda kiritish uchun.
+     * Tarozi kodlari alohida belgi bilan ("tarozi: 00025").
+     */
+    suspend fun exportLearnedCsv(dir: File): File = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            loadLocked()
+            val byId = catalog.state.value.productsById
+            fun q(v: String) = "\"" + v.replace("\"", "\"\"") + "\""
+            dir.mkdirs()
+            val f = File(dir, "yangi_shtrix_kodlar.csv")
+            f.bufferedWriter(Charsets.UTF_8).use { w ->
+                w.write("\uFEFF")
+                w.write("Kod;Tovar;Shtrix kod\n")
+                for ((bc, pid) in learned.entries.sortedBy { byId[it.value]?.name ?: it.value }) {
+                    // Excel uzun raqamni "1.2E+12" qilmasin — matn sifatida
+                    w.write(listOf(q(pid), q(byId[pid]?.name ?: "?"), "=\"" + (learnedRaw[bc] ?: bc) + "\"").joinToString(";") + "\n")
+                }
+                for ((code, pid) in scaleLearned) w.write(listOf(q(pid), q(byId[pid]?.name ?: "?"), q("tarozi: $code")).joinToString(";") + "\n")
+            }
+            f
         }
     }
 

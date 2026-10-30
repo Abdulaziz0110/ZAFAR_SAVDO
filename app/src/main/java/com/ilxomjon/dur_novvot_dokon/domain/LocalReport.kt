@@ -69,7 +69,7 @@ object LocalReport {
 
     /** Buyurtma qatorlari: har tovar bitta qator. BOM bilan (Excel kirillni to'g'ri ochishi uchun). */
     fun ordersCsv(orders: List<SentOrder>, receipt: (SentOrder) -> String, status: (SentOrder) -> String): String {
-        val sb = StringBuilder("﻿")
+        val sb = StringBuilder("\uFEFF")
         sb.append("Kvitansiya;Sana;Do'kon;Rejim;Narx turi;Valyuta;Tovar kodi;Tovar;Soni;Narx;Summa;Chegirma (buyurtma);Holat\r\n")
         for (o in orders.sortedBy { it.sentAt }) {
             val mode = if (o.mode == DealMode.RETURN) "Qaytarish" else "Sotuv"
@@ -86,7 +86,7 @@ object LocalReport {
     }
 
     fun paymentsCsv(payments: List<SentPayment>, receipt: (SentPayment) -> String, status: (SentPayment) -> String): String {
-        val sb = StringBuilder("﻿")
+        val sb = StringBuilder("\uFEFF")
         sb.append("Kvitansiya;Sana;Do'kon;Naqd;O'tkazma;Click;Jami;Izoh;Holat\r\n")
         for (p in payments.sortedBy { it.sentAt }) {
             sb.append(csv(receipt(p))).append(';').append(dt(p.sentAt)).append(';').append(csv(p.storeName)).append(';')

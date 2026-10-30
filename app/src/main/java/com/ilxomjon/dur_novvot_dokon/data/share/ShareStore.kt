@@ -75,10 +75,17 @@ class ShareStore(private val context: Context) {
     var seenOrders: String get() = s("seen_orders"); set(v) = put("seen_orders", v)
     /** Chek sarlavhasi (do'kon nomi), bo'sh bo'lishi mumkin. */
     var receiptHeader: String get() = s("receipt_header"); set(v) = put("receipt_header", v)
+    /** Chek osti (telefonlar), har qator alohida. v2.6 */
+    var receiptFooter: String get() = s("receipt_footer"); set(v) = put("receipt_footer", v)
+    /** Chekdagi "Xodim" (masalan "Dokon"). Bo'sh — chiqmaydi. */
+    var receiptStaff: String get() = s("receipt_staff"); set(v) = put("receipt_staff", v)
     /** Fon yangilanishi oralig'i, daqiqa (0 — o'chiq). */
     var syncMinutes: Int get() = prefs.getInt("sync_min", 60); set(v) = prefs.edit().putInt("sync_min", v).apply()
     /** Kompyuterdan avtomatik eksport (1C COM) uchun "kirish qutisi" kaliti. */
     var inboxKey: String get() = s("inbox_key"); set(v) = put("inbox_key", v)
+    /** Narx yorlig'i printeri (kompyuter) bilan kalit: LAN va bulut navbati shu bilan. v2.6 */
+    val labelKey: String
+        get() = s("label_key").ifEmpty { CloudDb.newKey().also { put("label_key", it) } }
     /** Kompyuter necha soatda bir eksport qilsin (0 — o'chiq) va necha kunlik. Bulut orqali kompyuterga yetkaziladi. */
     var pcHours: Int get() = prefs.getInt("pc_hours", 2); set(v) = prefs.edit().putInt("pc_hours", v).apply()
     var pcDays: Int get() = prefs.getInt("pc_days", 7); set(v) = prefs.edit().putInt("pc_days", v).apply()

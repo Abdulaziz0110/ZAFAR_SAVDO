@@ -36,7 +36,18 @@ class MainActivity : AppCompatActivity(), Navigator {
         override fun handleOnBackPressed() { moveTaskToBack(true) }
     }
 
+    /**
+     * Shrift/o'lcham uchun o'ralgan kontekst PrintManager'ga Activity'ni ko'rsatmaydi ("Can print only from an activity").
+     * Chop etish xizmati asl kontekstdan olinadi (uning "tashqi" konteksti — shu Activity).
+     */
+    private var originalBase: android.content.Context? = null
+
+    override fun getSystemService(name: String): Any? =
+        if (name == android.content.Context.PRINT_SERVICE) originalBase?.getSystemService(name) ?: super.getSystemService(name)
+        else super.getSystemService(name)
+
     override fun attachBaseContext(newBase: android.content.Context) {
+        originalBase = newBase
         // Sozlamalar ▸ Qulayliklar ▸ Ekran o'lchami / Shrift
         val wrapped = runCatching {
             com.ilxomjon.dur_novvot_dokon.data.extras.Extras.wrap(newBase, com.ilxomjon.dur_novvot_dokon.data.AppPrefs(newBase))
@@ -87,16 +98,19 @@ class MainActivity : AppCompatActivity(), Navigator {
     private var scanAt = 0L
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
-        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.device?.isVirtual == false && currentFocus !is android.widget.EditText &&
-            supportFragmentManager.backStackEntryCount == 0
-        ) {
-            val sale = supportFragmentManager.findFragmentByTag(tabTag(R.id.nav_sale)) as? SaleFragment
-            if (sale != null && sale.isVisible) {
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.device?.isVirtual == false && currentFocus !is android.widget.EditText) {
+            // Savdo ekrani (asosiy) yoki ochiq turgan "Narx yorliqlari" ekrani
+            val target: ((String) -> Boolean)? = if (supportFragmentManager.backStackEntryCount == 0) {
+                (supportFragmentManager.findFragmentByTag(tabTag(R.id.nav_sale)) as? SaleFragment)?.takeIf { it.isVisible }?.let { f -> { c: String -> f.onHardwareScan(c) } }
+            } else {
+                (supportFragmentManager.findFragmentById(R.id.container) as? com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment)?.takeIf { it.isVisible }?.let { f -> { c: String -> f.onHardwareScan(c) } }
+            }
+            if (target != null) {
                 val now = System.currentTimeMillis()
                 if (event.keyCode == android.view.KeyEvent.KEYCODE_ENTER || event.keyCode == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) {
                     val code = scanBuf.toString()
                     scanBuf.setLength(0)
-                    if (sale.onHardwareScan(code)) return true
+                    if (target(code)) return true
                 } else {
                     val c = event.unicodeChar
                     if (c > 0 && !Character.isISOControl(c)) {

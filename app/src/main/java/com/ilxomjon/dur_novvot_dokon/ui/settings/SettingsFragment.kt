@@ -54,6 +54,7 @@ class SettingsFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { navigator().pop() }
         binding.btnServer.setOnClickListener { navigator().push(ServerSettingsFragment()) }
         binding.btnBarcodes.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment()) }
+        binding.btnLabels.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) }
         binding.btnShare.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.ShareFragment()) }
         binding.btnExtras.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.extras.ExtrasFragment()) }
         binding.btnRemoteHelp.setOnClickListener {

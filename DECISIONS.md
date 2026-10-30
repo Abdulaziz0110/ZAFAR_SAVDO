@@ -175,6 +175,35 @@ Tarozi yorlig'i formati sozlanadi; yorliqdagi kod 1C kodiga mos kelsa ham BIRINC
 jimgina tushmasin), "ishonish" sozlamasi bilan o'chiriladi. Kamera kutubxonasi — zxing-android-embedded 4.3.0 + core 3.3.0
 (minSdk 23 bilan mos, ML yo'q, internet shart emas). Skaner faqat savatchaga qo'shadi — savdo odatdagidek rasmiylashtiriladi.
 
+**D-045. Savdo ko'zgusi va avtomatik chek.** 1-ilova savdosi navbatga qo'yilishi bilan mijozning 2-ilovasiga (snapshot)
+"1-ilovadan" belgili yozuv bo'lib boradi — bu server tasdig'i emas, 1C hisoboti shu vaqtni qamragach olib tashlanadi.
+Chek faqat mijoz 2-ilovada o'zi yoqqanda (`p/{navbat}/auto`) yuboriladi; navbat kaliti savdo id sidan — qayta yuborilsa
+ham bitta chek. Chekdagi qarz qoldig'i 1-ilova hisobi ("≈" bilan va izoh bilan), rasmiysi 1C'da. Chek ko'rinishi do'konning
+qog'oz chekidan olindi; rasm bo'lib chop etiladi (kirill/lotin printerga bog'liq emas).
+
 **D-043. Standart: qorong'i rejim, shrift 90%; "orqaga" — ikki marta bosilganda chiqish.** "Printer 3" -> "Printersiz"
 (protokoldagi qiymat "3" o'zgarmagan). "−" ni uzoq bosish — tovarni nolga tushiradi (qaytarish mumkin).
 1-ilova nomi "Savdo Agent", 2-ilova "Savdo Mijoz", yangi ikonkalar; applicationId o'zgarmagan.
+
+**D-046. Narx yorliqlari: telefonda chizish, kompyuter orqali chop etish.** Xprinter kompyuterga USB bilan ulangan
+(tarmoq porti yo'q), shuning uchun telefon to'g'ridan-to'g'ri printerga emas, kompyuterdagi `label_printer.py` ga yuboradi:
+avval Wi-Fi/LAN (oddiy TCP "SLBL"+uzunlik+JSON — HTTP emas, Android cleartext cheklovi tegmaydi; UDP qidiruv), bo'lmasa
+Firebase `L/{yorliq kaliti}` navbati. Kalit 1-ilovada yaratiladi va faqat `forwarder.ini` ga beriladi (2-ilovaga emas).
+Yorliq telefonda 1C "PLU Narx" / "Shtrix chek" shakllari kabi rasm qilib chiziladi (qora-oq, shtrix modullari butun
+nuqtada) — kompyuterda shrift/kirill muammosi yo'q. O'lcham: `gdi` rejimida Windows drayveridagi qog'oz (1C ham shundan
+foydalanadi) telefonga aytiladi; bo'lmasa sozlamadagi mm × dpi. Ish raqami bo'yicha takror chop etilmaydi (LAN javobi
+yo'qolib bulutga ham ketsa ham). PLU raqami — tarozidagi alohida ma'lumot (1C kodi ham, yorliq kodi ham emas):
+"PLU Narx" faylidan (Excel/MXL) yoki qo'lda; lokal saqlanadi. Shtrix: 13 xonali — EAN-13, 12 xonali o'z kodlari — oxiriga
+tekshiruv raqami (do'kondagi yorliqlardagidek), 8 — EAN-8, boshqasi — Code 128; vaznli (7 xonali "2...") — PLU yorlig'i.
+Narx — katalogdagi Naqd/Optom (tanlanadi) yoki qo'lda. 1C/SQL'ga hech narsa yozilmaydi.
+
+**D-047. 2-ilovadagi yashirin menyu — faqat foydalanuvchi sozlamalari.** Mijoz telefoni boshqa odam qo'liga tushishi
+mumkin, shuning uchun 2-ilovada kalit, do'kon kodi, navbat va texnik ma'lumot ko'rsatadigan bandlar yo'q (`userOnly`).
+Umumiy kod (ui/ledger/Secret.kt) bir xil qoladi, 1-ilova menyusi o'zgarmagan.
+
+**D-048. PLU va shtrix kodlar 1C'dan kompyuter orqali.** Tahlil: PLU tarozidagi alohida raqam — 1C kodi (2555) ham,
+vazn shtrix kodidagi tovar kodi (2901740 -> 01740) ham emas, demak 1C'da alohida saqlanadi ("PLU Narx" shakli shuni chiqaradi).
+SQL/1C ga tegmasdan olishning yagona yo'li — mavjud `onec_export.py` (COM, oddiy foydalanuvchi, faqat so'rov). Joyi
+metama'lumotdan topiladi (tovar rekviziti yoki "весы/оборудование/PLU" registri; Булево "Весовой" va boshqa havolalar
+hisobga olinmaydi), qo'lda `[codes]` bilan almashtiriladi. Firebase `in/{inbox}` orqali (k = "codes"), faqat o'zgarganda.
+2-ilovaga PLU `PriceItem` ning 8-elementi (additiv; eski 2-ilova o'qimaydi). Kelgan narx 2-ilovaga baribir yuborilmaydi.

@@ -84,4 +84,7 @@ LEDGER = {
  'lg_sx_d_storage': "Ma'lumot: %1$d KB · kesh: %2$d KB", 'lg_sx_d_usage': 'Ochilgan: %1$d marta · %2$d kundan beri',
  'lg_sx_cache': 'Keshni tozalash', 'lg_sx_cache_sub': "Vaqtinchalik fayllar (ma'lumotlarga tegmaydi)", 'lg_sx_cache_done': "Tozalandi: %1$d KB bo'shadi",
  'lg_sx_party': 'Bayram!', 'lg_sx_party_sub': 'Ilova %1$d marta ochilgan — nishonlaymiz', 'lg_sx_found': 'Topilgan sirlar: %1$d ta 🎉',
+ 'lg_from_app': "1-ilovadan (1C'da hali yo'q)",
+ 'lg_rc_sum': 'Summa', 'lg_rc_staff': 'Xodim', 'lg_rc_number': 'Chek №', 'lg_rc_time': 'Vaqt',
+ 'lg_rc_return': 'QAYTIB OLISH !!!', 'lg_rc_debt': "Qarz qoldig'i (So'm)",
 }

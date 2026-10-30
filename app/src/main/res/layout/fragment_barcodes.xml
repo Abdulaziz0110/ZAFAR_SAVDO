@@ -85,8 +85,26 @@
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnImport"
+                            android:id="@+id/btnLinkMode"
                             style="@style/Widget.App.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:text="@string/link_title"
+                            app:icon="@drawable/ic_scan" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnImport"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
                             android:layout_height="48dp"
                             android:layout_marginEnd="6dp"
@@ -124,11 +142,29 @@
                             app:icon="@drawable/ic_list" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnClear"
+                            android:id="@+id/btnExport"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
                             android:layout_height="48dp"
                             android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:text="@string/b_export"
+                            app:icon="@drawable/ic_share" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnClear"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
                             android:text="@string/b_clear"
                             app:icon="@drawable/ic_delete" />

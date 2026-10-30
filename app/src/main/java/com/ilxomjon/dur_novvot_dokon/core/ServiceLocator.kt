@@ -106,7 +106,12 @@ object ServiceLocator {
     val outbox by lazy { OutboxRepository(app, historyDb, api, appScope) }
     val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) }
     val kpi by lazy { KpiTracker(historyDb, appPrefs) }
-    val orders by lazy { OrderRepository(catalog, draft, outbox, kpi) }
+    val orders by lazy {
+        OrderRepository(catalog, draft, outbox, kpi).also { r ->
+            // v2.6: savdo -> mijozning 2-ilovasi (sozlanmagan bo'lsa onSale hech narsa qilmaydi)
+            r.onOrderQueued = { s, id, code -> appScope.launch(Dispatchers.IO) { runCatching { share.onSale(s, id, code) } } }
+        }
+    }
     val reports by lazy { ReportRepository(api, catalog) }
     val history by lazy { HistoryRepository(historyDb) }
     val parked by lazy { ParkedCartRepository(localDb, draft, catalog) }
@@ -114,8 +119,14 @@ object ServiceLocator {
     val diagnostics by lazy { DiagnosticsRepository(app, secure, api, network, outbox, historyDb, localDb) }
     val repeatSale by lazy { com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale(catalog, draft, parked) }
     val shareStore by lazy { ShareStore(app) }
-    val share by lazy { ShareRepository(app, shareStore, catalog, api) }
+    val share by lazy {
+        ShareRepository(app, shareStore, catalog, api).also { s ->
+            s.codesHook = { bytes -> labels.applyCodes(bytes) }
+            s.pluOf = { id -> labels.pluFor(id) }
+        }
+    }
     val barcodes by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository(app, catalog) }
+    val labels by lazy { com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository(app, catalog, barcodes, shareStore) }
     val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox) }
 
     fun applyUiPrefs() {

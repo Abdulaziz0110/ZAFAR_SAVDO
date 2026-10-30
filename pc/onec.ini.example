@@ -1,0 +1,27 @@
+; onec.ini — o'zingiz to'ldirasiz (forwarder.ini yonida). Telefondan yangi forwarder.ini kelganda bu fayl o'zgarmaydi.
+[onec]
+; 1C 8.3 ga ulanish (COM, oddiy foydalanuvchi)
+connection = File="D:\1C\Baza";
+user = Agent
+password =
+; discover.txt ga qarab to'ldiriladi
+report =
+build = skd
+period_from = НачалоПериода
+period_to = КонецПериода
+client_field = Контрагент
+catalog = Контрагенты
+supplier_flag =
+active_register =
+
+[codes]
+; Tovar kodlari (tarozi PLU va shtrix kodlar) 1C'dan -> telefon. Odatda bo'sh qoldiring: joyi o'zi topiladi.
+; Topilmasa "python onec_export.py --discover" -> discover.txt oxiridagi "Tovar kodlari" bo'limiga qarab yozing:
+;   plu = attr:НомерPLU                                (tovar rekviziti)
+;   plu = ТоварыНаПодключаемомОборудовании:Номенклатура:Код   (registr:tovar maydoni:qiymat maydoni)
+;   barcode = Штрихкоды:Владелец:Штрихкод
+enabled = 1
+goods = Номенклатура
+plu =
+barcode =
+hours = 6

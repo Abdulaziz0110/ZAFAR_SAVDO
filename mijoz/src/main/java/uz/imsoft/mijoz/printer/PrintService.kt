@@ -139,7 +139,7 @@ class PrintService : Service() {
         val printed = prefs.printed().toHashSet()
         var left = keys.size
         for (key in keys) {
-            if (key in printed) { runCatching { db.delete("q/$qk/$key") }; left--; continue }
+            if (key in printed) { runCatching { db.delete("q/$qk/$key") }; runCatching { db.delete("p/$qk/jl/$key") }; left--; continue }
             if (key == prefs.inflight) continue
             @Suppress("UNCHECKED_CAST")
             val item = (db.get("q/$qk/$key") as? Map<String, Any?>)?.let { JObj(it) } ?: continue
@@ -147,6 +147,7 @@ class PrintService : Service() {
             val days = prefs.skipOlderDays
             if (days > 0 && t > 0 && System.currentTimeMillis() - t > days * 86_400_000L) {
                 runCatching { db.delete("q/$qk/$key") }
+                runCatching { db.delete("p/$qk/jl/$key") }
                 PrinterHub.log(getString(R.string.pr_log_skipped_old))
                 left--
                 continue
@@ -181,6 +182,7 @@ class PrintService : Service() {
         PrinterHub.update { it.copy(printedTotal = prefs.printedTotal, lastPrintAt = prefs.lastPrintAt, unknownKey = "") }
         PrinterHub.log(getString(R.string.pr_log_printed, bytes.size))
         runCatching { db.delete("q/$qk/$key") }
+        runCatching { db.delete("p/$qk/jl/$key") }
         return true
     }
 

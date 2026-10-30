@@ -87,8 +87,9 @@ class ReportFragment : Fragment() {
 
     /** Hisobotni PDF qilib saqlash yoki chop etish (tizim oynasi ochiladi). */
     private fun printReport() {
-        val pm = requireContext().getSystemService(android.content.Context.PRINT_SERVICE) as android.print.PrintManager
-        pm.print(getString(R.string.report_title), binding.webView.createPrintDocumentAdapter(getString(R.string.report_title)), null)
+        // Qog'ozga doim yorug' (oq fon, qora matn) — qorong'i rejimda ham
+        val html = vm.state.value.html ?: return
+        com.ilxomjon.dur_novvot_dokon.ui.ledger.ReceiptActions.printHtml(requireActivity(), ReportHtml.wrap(html, dark = false), "Hisobot")
     }
 
     private fun pickPeriod() {

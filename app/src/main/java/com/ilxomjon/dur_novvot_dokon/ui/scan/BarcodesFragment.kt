@@ -51,6 +51,18 @@ class BarcodesFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.bc_how_title).setMessage(R.string.bc_how_text).setPositiveButton(R.string.close, null).show()
         }
         b.btnLearned.setOnClickListener { showLearned() }
+        b.btnLinkMode.setOnClickListener { navigator().push(ScanFragment.link()) }
+        b.btnExport.setOnClickListener {
+            val ctx = requireContext()
+            if (repo.state.value.learned + repo.state.value.scaleLearned == 0) { snack(getString(R.string.bc_learned_none)); return@setOnClickListener }
+            viewLifecycleOwner.lifecycleScope.launch {
+                val f = repo.exportLearnedCsv(java.io.File(ctx.cacheDir, "share"))
+                val uri = androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
+                startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/csv"; putExtra(android.content.Intent.EXTRA_STREAM, uri); addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }, getString(R.string.link_export)))
+            }
+        }
         b.btnClear.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.bc_clear_title)
                 .setItems(arrayOf(getString(R.string.bc_clear_imported), getString(R.string.bc_clear_learned))) { _, i ->

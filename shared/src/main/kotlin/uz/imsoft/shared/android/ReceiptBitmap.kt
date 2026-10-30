@@ -13,66 +13,120 @@ import uz.imsoft.shared.receipt.Receipt
 import java.io.File
 import java.io.FileOutputStream
 
-/** Chekni rasmga chizish (oq fon, qora matn) — ulashish (PNG) va chek printeri (rastr) uchun. */
+/**
+ * Chekni rasmga chizish (oq fon, qora matn) — ulashish (PNG) va chek printeri (rastr) uchun.
+ * Ko'rinish do'konning qog'oz chekiga o'xshatilgan: katta do'kon nomi, Xodim/Chek №/Vaqt, Mijoz, ramkali qatorlar,
+ * katta "Summa", qarz qoldig'i va telefonlar. Rasm bo'lgani uchun kirill/lotin printer kod sahifasiga bog'liq emas.
+ */
 object ReceiptBitmap {
     /** [width] — nuqtalarda: 80 mm = 576, 58 mm = 384. */
     fun render(r: Receipt, width: Int = 576): Bitmap {
         val k = width / 576f
-        val pad = (16 * k)
+        val pad = 10 * k
         val inner = (width - 2 * pad).toInt()
-        fun paint(size: Float, bold: Boolean = false) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        fun paint(size: Float, bold: Boolean = false, serif: Boolean = false, spacing: Float = 0f) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
             textSize = size * k
-            typeface = Typeface.create(Typeface.DEFAULT, if (bold) Typeface.BOLD else Typeface.NORMAL)
+            typeface = Typeface.create(if (serif) Typeface.SERIF else Typeface.DEFAULT, if (bold) Typeface.BOLD else Typeface.NORMAL)
+            if (bold && serif) isFakeBoldText = true
+            letterSpacing = spacing
         }
-        val pHeader = paint(34f, true)
-        val pTitle = paint(28f, true)
-        val pMeta = paint(24f)
-        val pName = paint(26f, true)
-        val pText = paint(25f)
-        val pTotal = paint(26f)
-        val pTotalB = paint(32f, true)
-        val pNote = paint(20f)
+        val pHeader = paint(46f, bold = true, serif = true)
+        val pInfo = paint(24f)
+        val pClient = paint(30f, bold = true)
+        val pBanner = paint(32f, bold = true, spacing = 0.25f)
+        val pName = paint(27f)
+        val pFormula = paint(27f)
+        val pTotal = paint(27f)
+        val pSum = paint(38f, bold = true)
+        val pFooter = paint(30f, bold = true, spacing = 0.06f)
+        val pNote = paint(19f)
+        val line = Paint().apply { color = Color.BLACK; strokeWidth = 2.5f * k; style = Paint.Style.STROKE }
 
-        // Avval balandlikni hisoblash uchun ikki marta chiziladi: o'lchash va chizish.
+        // Avval balandlikni hisoblash uchun: har bir "op" o'z balandligi va chizish funksiyasi bilan.
         class Op(val h: Float, val draw: (Canvas, Float) -> Unit)
         val ops = ArrayList<Op>()
-        fun block(text: String, p: TextPaint, align: Layout.Alignment, gapAfter: Float = 4f) {
+        fun layout(text: String, p: TextPaint, w: Int, align: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL): StaticLayout =
+            StaticLayout.Builder.obtain(text, 0, text.length, p, w.coerceAtLeast(10)).setAlignment(align).setIncludePad(false).build()
+        fun gap(h: Float) { ops += Op(h * k) { _, _ -> } }
+        fun block(text: String, p: TextPaint, align: Layout.Alignment, after: Float = 4f, x0: Float = pad, w: Int = inner) {
             if (text.isEmpty()) return
-            val sl = StaticLayout.Builder.obtain(text, 0, text.length, p, inner).setAlignment(align).setIncludePad(false).build()
-            ops += Op(sl.height + gapAfter * k) { c, y -> c.save(); c.translate(pad, y); sl.draw(c); c.restore() }
+            val sl = layout(text, p, w, align)
+            ops += Op(sl.height + after * k) { c, y -> c.save(); c.translate(x0, y); sl.draw(c); c.restore() }
         }
-        fun row(left: String, right: String, p: TextPaint, gapAfter: Float = 6f) {
-            val rw = p.measureText(right)
-            val lw = (inner - rw - 12 * k).toInt().coerceAtLeast((inner * 0.4f).toInt())
-            val sl = StaticLayout.Builder.obtain(left, 0, left.length, p, lw).setIncludePad(false).build()
-            val h = maxOf(sl.height.toFloat(), p.fontSpacing)
-            ops += Op(h + gapAfter * k) { c, y ->
-                c.save(); c.translate(pad, y); sl.draw(c); c.restore()
-                c.drawText(right, width - pad - rw, y - p.ascent(), p)
+        /** Chapda yorliq, o'ngda qiymat (bir qatorda; chap uzun bo'lsa o'raladi). */
+        fun row(left: String, right: String, p: TextPaint, pr: TextPaint = p, after: Float = 6f, indent: Float = 0f) {
+            val rw = pr.measureText(right)
+            val lw = (inner - indent * k - rw - 14 * k).toInt().coerceAtLeast((inner * 0.35f).toInt())
+            val sl = layout(left, p, lw)
+            val h = maxOf(sl.height.toFloat(), pr.fontSpacing)
+            ops += Op(h + after * k) { c, y ->
+                c.save(); c.translate(pad + indent * k, y + (h - sl.height) / 2); sl.draw(c); c.restore()
+                c.drawText(right, width - pad - rw, y + (h - pr.fontSpacing) / 2 - pr.ascent(), pr)
             }
         }
-        fun sep() {
-            ops += Op(18 * k) { c, y ->
-                val sp = Paint().apply { color = Color.BLACK; strokeWidth = 2 * k }
-                var x = pad
-                while (x < width - pad) { c.drawLine(x, y + 8 * k, minOf(x + 10 * k, width - pad), y + 8 * k, sp); x += 18 * k }
+        fun rule(after: Float = 6f) { ops += Op((4 + after) * k) { c, y -> c.drawLine(pad, y + 2 * k, width - pad, y + 2 * k, line) } }
+
+        gap(6f)
+        block(r.header, pHeader, Layout.Alignment.ALIGN_CENTER, 14f)
+        if (r.info.isEmpty()) {
+            block(r.title, pClient, Layout.Alignment.ALIGN_CENTER, 2f)
+            block(r.dateText, pInfo, Layout.Alignment.ALIGN_CENTER, 8f)
+        } else {
+            // Yorliqlar o'ng tomonga tekislangan ustun (qog'oz chekdagidek): "   Xodim:  Dokon"
+            val labelW = r.info.maxOf { pInfo.measureText(it.first + ":") } + 0f
+            val col = maxOf(pad + 120 * k, width * 0.36f - labelW / 2)
+            for ((idx, kv) in r.info.withIndex()) {
+                val lab = kv.first + ":"
+                val lw = pInfo.measureText(lab)
+                val date = if (idx == r.info.lastIndex) r.date else ""
+                ops += Op(pInfo.fontSpacing + 4 * k) { c, y ->
+                    val base = y - pInfo.ascent()
+                    c.drawText(lab, col + labelW - lw, base, pInfo)
+                    c.drawText(kv.second, col + labelW + 12 * k, base, pInfo)
+                    if (date.isNotEmpty()) c.drawText(date, width - pad - pInfo.measureText(date), base, pInfo)
+                }
             }
+            gap(6f)
         }
-        ops += Op(8 * k) { _, _ -> }
-        block(r.header, pHeader, Layout.Alignment.ALIGN_CENTER, 6f)
-        block(r.title, pTitle, Layout.Alignment.ALIGN_CENTER, 6f)
-        block(r.client, pMeta, Layout.Alignment.ALIGN_CENTER, 2f)
-        block(r.dateText, pMeta, Layout.Alignment.ALIGN_CENTER, 6f)
-        sep()
+        if (r.clientLabel.isNotEmpty()) {
+            val lab = r.clientLabel + ":"
+            val lw = pClient.measureText(lab)
+            val sl = layout(r.clientName, pClient, (inner - lw - 40 * k).toInt())
+            ops += Op(sl.height + 8 * k) { c, y ->
+                c.drawText(lab, pad, y - pClient.ascent(), pClient)
+                c.save(); c.translate(pad + lw + 40 * k, y); sl.draw(c); c.restore()
+            }
+        } else block(r.client, pInfo, Layout.Alignment.ALIGN_CENTER, 8f)
+        for (t in r.before) row(t.label + ":", t.value, pInfo, pTotal, 6f)
+        if (r.banner.isNotEmpty()) {
+            gap(4f); rule(8f)
+            block(r.banner, pBanner, Layout.Alignment.ALIGN_CENTER, 8f)
+            rule(4f)
+        }
+        gap(8f)
+        // Ramkali qatorlar: "1 ) Nomi" va o'ngda "40 x 117 000 = 4 680 000"
+        val cellPad = 8 * k
         for ((i, x) in r.lines.withIndex()) {
-            block("${i + 1}. ${x.name}", pName, Layout.Alignment.ALIGN_NORMAL, 2f)
-            row(x.detail, x.amount, pText, 10f)
+            val nl = layout("${i + 1} ) ${x.name}", pName, (inner - 2 * cellPad).toInt())
+            val fl = layout(x.formula, pFormula, (inner - 2 * cellPad).toInt(), Layout.Alignment.ALIGN_OPPOSITE)
+            val h = cellPad + nl.height + 2 * k + fl.height + cellPad * 0.6f
+            ops += Op(h) { c, y ->
+                c.drawRect(pad, y, width - pad, y + h, line)
+                c.save(); c.translate(pad + cellPad, y + cellPad * 0.6f); nl.draw(c); c.restore()
+                c.save(); c.translate(pad + cellPad, y + cellPad * 0.6f + nl.height + 2 * k); fl.draw(c); c.restore()
+            }
         }
-        sep()
-        for (t in r.totals) row(t.label, t.value, if (t.bold) pTotalB else pTotal, 6f)
-        for (n in r.notes) { ops += Op(10 * k) { _, _ -> }; block(n, pNote, Layout.Alignment.ALIGN_CENTER) }
-        ops += Op(16 * k) { _, _ -> }
+        gap(16f)
+        for (t in r.totals) {
+            if (t.bold) row(t.label + ":", t.value, pSum, pSum, 10f, indent = 50f)
+            else row(t.label + ":", t.value, pTotal, pTotal, 6f, indent = 50f)
+        }
+        for (t in r.after) row(t.label + ":", t.value, pTotal, pTotal, 6f, indent = 50f)
+        if (r.footer.isNotEmpty()) gap(8f)
+        for (f in r.footer) block(f, pFooter, Layout.Alignment.ALIGN_NORMAL, 6f, pad + 40 * k, (inner - 40 * k).toInt())
+        for (n in r.notes) { gap(10f); block(n, pNote, Layout.Alignment.ALIGN_CENTER) }
+        gap(18f)
 
         val height = ops.sumOf { it.h.toDouble() }.toInt().coerceAtLeast(10)
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

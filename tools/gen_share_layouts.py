@@ -39,6 +39,9 @@ b += switch_row('swAnswer', '@string/share_answer', '@string/share_answer_hint')
 b += CARD_CLOSE
 b += section('@string/share_receipt_title') + card_open()
 b += field('tilHeader', 'edtHeader', '@string/share_receipt_header', 'textCapWords', '@string/share_receipt_header_hint')
+b += field('tilStaff', 'edtStaff', '@string/rc_staff_field', 'textCapWords', '@string/rc_staff_hint')
+b += field('tilFooter', 'edtFooter', '@string/rc_footer_field', 'textMultiLine', '@string/rc_footer_hint')
+b += buttons([('btnReceiptPreview', '@string/rc_preview', TEXT, 'ic_print')])
 b += '                    <Space android:layout_width="match_parent" android:layout_height="12dp" />\n'
 b += CARD_CLOSE
 b += section('@string/share_setup') + card_open()

@@ -52,6 +52,8 @@ object LedgerUi {
 
     /** Ro'yxatdagi sarlavha: "Savdo · 4 xil tovar", "To'lov · Click". */
     fun docTitle(ctx: Context, d: LedgerDoc): String = when {
+        // 1-ilovada qilingan, 1C hisobotida hali yo'q savdo — tasdiqlangan deb ko'rsatilmaydi
+        uz.imsoft.shared.report.AppSale.isApp(d.kindText) -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_from_app)
         d.isGoods -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_items_n, d.goods.size)
         d.comment.contains("click", ignoreCase = true) -> kindTitle(ctx, d.kind) + " · Click"
         else -> kindTitle(ctx, d.kind)
@@ -105,12 +107,18 @@ object LedgerUi {
         return s
     }
 
-    fun receipt(ctx: Context, d: LedgerDoc, header: String, client: String): Receipt = ReceiptBuilder.fromDoc(
-        d, header, client,
-        ReceiptBuilder.Labels(
+    fun receipt(ctx: Context, d: LedgerDoc, header: String, client: String, footer: String = "", staff: String = ""): Receipt = ReceiptBuilder.fromDoc(
+        d, header, client, labels(ctx), footerLines(footer), staff,
+    )
+
+    fun footerLines(footer: String): List<String> = footer.split('\n').map { it.trim() }.filter { it.isNotEmpty() }.take(6)
+
+    /** Chek yozuvlari (ikki ilovada bir xil). */
+    fun labels(ctx: Context): ReceiptBuilder.Labels = ReceiptBuilder.Labels(
             som(ctx), { k -> ctx.getString(R.string.lg_receipt_title, kindTitle(ctx, k)) }, ctx.getString(R.string.lg_client),
             ctx.getString(R.string.lg_total), ctx.getString(R.string.lg_discount), ctx.getString(R.string.lg_payable),
-            ctx.getString(R.string.lg_balance_after), ctx.getString(R.string.lg_items_qty), ctx.getString(R.string.lg_receipt_note),
-        ),
-    )
+            ctx.getString(R.string.lg_rc_debt), ctx.getString(R.string.lg_items_qty), ctx.getString(R.string.lg_receipt_note),
+            sum = ctx.getString(R.string.lg_rc_sum), staff = ctx.getString(R.string.lg_rc_staff), number = ctx.getString(R.string.lg_rc_number),
+            time = ctx.getString(R.string.lg_rc_time), returnBanner = ctx.getString(R.string.lg_rc_return),
+        )
 }

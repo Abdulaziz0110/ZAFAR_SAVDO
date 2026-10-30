@@ -151,6 +151,15 @@ abstract class SecretFragment : Fragment() {
     protected open fun products(): List<Pair<String, String>> = emptyList()
     /** Fon ishlari nomlari (WorkManager unique work). */
     protected open fun workNames(): List<String> = emptyList()
+    /**
+     * true — faqat foydalanuvchi sozlamalari va foydali bandlar (2-ilova): texnik (fon ishlari, qurilma, qidiruv
+     * laboratoriyasi) va o'yin bandlari ko'rsatilmaydi, ilova bandlari birinchi turadi.
+     */
+    protected open val userOnly: Boolean = false
+    /** Ekran sarlavhasi. */
+    protected open fun screenTitle(): String = getString(R.string.lg_sx_title)
+    /** Sarlavha ostidagi izoh ([n] — bandlar soni). */
+    protected open fun screenHint(n: Int): String = getString(R.string.lg_sx_hint, n)
 
     private var taps = 0
 
@@ -162,14 +171,14 @@ abstract class SecretFragment : Fragment() {
             isClickable = true
         }
         val tb = MaterialToolbar(ctx).apply {
-            title = getString(R.string.lg_sx_title)
+            title = screenTitle()
             setNavigationIcon(R.drawable.ic_arrow_back)
             setNavigationOnClickListener { close() }
         }
         root.addView(tb, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
         val scroll = ScrollView(ctx)
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(4), dp(12), dp(24)) }
-        val items = commonItems() + appItems()
+        val items = if (userOnly) appItems() + commonItems() else commonItems() + appItems()
         val head = TextView(ctx).apply {
             text = "🔮"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 56f)
@@ -180,9 +189,9 @@ abstract class SecretFragment : Fragment() {
                 if (taps == 7) { taps = 0; SecretPrefs.markFound(ctx, "crystal"); ConfettiView.burst(requireActivity()); snack(getString(R.string.lg_sx_crystal)) }
             }
         }
-        list.addView(head)
+        if (!userOnly) list.addView(head)
         list.addView(TextView(ctx).apply {
-            text = getString(R.string.lg_sx_hint, items.size)
+            text = screenHint(items.size)
             gravity = Gravity.CENTER
             setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
             setTextColor(MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY))
@@ -252,21 +261,21 @@ abstract class SecretFragment : Fragment() {
     private fun commonItems(): List<SecretItem> {
         val l = ArrayList<SecretItem>()
         if (ledgerHost != null) {
-            l += SecretItem("🧪", s(R.string.lg_sx_lab), s(R.string.lg_sx_lab_sub)) { searchLab() }
+            if (!userOnly) l += SecretItem("🧪", s(R.string.lg_sx_lab), s(R.string.lg_sx_lab_sub)) { searchLab() }
             l += SecretItem("🏆", s(R.string.lg_sx_top), s(R.string.lg_sx_top_sub)) { topProducts() }
             l += SecretItem("📤", s(R.string.lg_sx_csv), s(R.string.lg_sx_csv_sub)) { exportCsv() }
         }
         l += SecretItem("💱", s(R.string.lg_sx_calc), s(R.string.lg_sx_calc_sub)) { calculator() }
-        if (products().isNotEmpty()) l += SecretItem("🎰", s(R.string.lg_sx_roulette), s(R.string.lg_sx_roulette_sub)) { roulette() }
-        l += SecretItem("📜", s(R.string.lg_sx_quote), s(R.string.lg_sx_quote_sub)) { quote() }
+        if (!userOnly && products().isNotEmpty()) l += SecretItem("🎰", s(R.string.lg_sx_roulette), s(R.string.lg_sx_roulette_sub)) { roulette() }
+        if (!userOnly) l += SecretItem("📜", s(R.string.lg_sx_quote), s(R.string.lg_sx_quote_sub)) { quote() }
         l += SecretItem("🌙", s(R.string.lg_sx_autodark), autoDarkSub()) { autoDark() }
         l += SecretItem("🛡️", s(R.string.lg_sx_secure), s(if (SecretPrefs.secure(requireContext())) R.string.lg_sx_on else R.string.lg_sx_off) + " · " + s(R.string.lg_sx_secure_sub)) { secure() }
         l += SecretItem("🎓", s(R.string.lg_sx_tours), s(R.string.lg_sx_tours_sub)) { tours() }
         l += SecretItem("🔔", s(R.string.lg_sx_notif), s(R.string.lg_sx_notif_sub)) { testNotification() }
-        if (workNames().isNotEmpty()) l += SecretItem("⚙️", s(R.string.lg_sx_work), s(R.string.lg_sx_work_sub)) { workStatus() }
-        l += SecretItem("📱", s(R.string.lg_sx_device), s(R.string.lg_sx_device_sub)) { deviceInfo() }
+        if (!userOnly && workNames().isNotEmpty()) l += SecretItem("⚙️", s(R.string.lg_sx_work), s(R.string.lg_sx_work_sub)) { workStatus() }
+        if (!userOnly) l += SecretItem("📱", s(R.string.lg_sx_device), s(R.string.lg_sx_device_sub)) { deviceInfo() }
         l += SecretItem("🧹", s(R.string.lg_sx_cache), s(R.string.lg_sx_cache_sub)) { clearCache() }
-        l += SecretItem("🎉", s(R.string.lg_sx_party), s(R.string.lg_sx_party_sub, SecretPrefs.launches(requireContext()))) { party() }
+        if (!userOnly) l += SecretItem("🎉", s(R.string.lg_sx_party), s(R.string.lg_sx_party_sub, SecretPrefs.launches(requireContext()))) { party() }
         return l
     }
 
@@ -333,7 +342,7 @@ abstract class SecretFragment : Fragment() {
                 fun q(s: String) = "\"" + s.replace("\"", "\"\"") + "\""
                 fun m(c: Col, e: uz.imsoft.shared.report.LedgerEntry) = e.v(c).let { if (it.usd != 0.0) it.usd.toString() + "$" else if (it.som != 0.0) "%.0f".format(it.som) else "" }
                 file.bufferedWriter(Charsets.UTF_8).use { w ->
-                    w.write("﻿")
+                    w.write("\uFEFF")
                     w.write("Sana;Turi;Tovar;Miqdor;Narx;Summa;To'lov;Qaytarish;Qoldiq\n")
                     for (e in d.entries.sortedBy { it.stamp }) {
                         w.write(listOf(Stamp.formatDateTime(e.stamp), q(e.kindText), q(e.product), NumFmt.qty(e.qty), m(Col.PRICE, e), m(Col.SUM, e), m(Col.PAYMENT, e), m(Col.RETURN, e), m(Col.BALANCE, e)).joinToString(";"))
@@ -358,11 +367,11 @@ abstract class SecretFragment : Fragment() {
             val e = TextInputEditText(til.context).apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL; setText(v) }
             til.addView(e); box.addView(til); e
         }
-        val eRate = field(getString(R.string.lg_sx_rate), if (rate0 > 0) NumFmt.qty(rate0).replace(" ", "").replace(" ", "") else "")
+        val eRate = field(getString(R.string.lg_sx_rate), if (rate0 > 0) NumFmt.qty(rate0).replace(" ", "").replace("\u00A0", "") else "")
         val eUsd = field("$", "100")
         val out = TextView(ctx).apply { setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium); setPadding(0, dp(12), 0, 0) }
         box.addView(out)
-        fun num(e: TextInputEditText) = e.text?.toString().orEmpty().replace(" ", "").replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
+        fun num(e: TextInputEditText) = e.text?.toString().orEmpty().replace(" ", "").replace("\u00A0", "").replace(',', '.').toDoubleOrNull() ?: 0.0
         val upd = {
             val r = num(eRate); val u = num(eUsd)
             out.text = if (r > 0) "= " + NumFmt.qty(Math.round(u * r).toDouble()) + " " + getString(R.string.lg_unit_som) + "\n1 000 000 " + getString(R.string.lg_unit_som) + " = " + "%.2f".format(1_000_000 / r) + " $" else "—"

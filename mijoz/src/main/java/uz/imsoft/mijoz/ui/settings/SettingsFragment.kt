@@ -15,6 +15,7 @@ import uz.imsoft.mijoz.databinding.FragmentSettingsBinding
 import uz.imsoft.mijoz.printer.PrintService
 import uz.imsoft.mijoz.ui.MainActivity
 import uz.imsoft.mijoz.ui.launchOnStarted
+import uz.imsoft.mijoz.ui.describe
 
 class SettingsFragment : Fragment() {
     private var _b: FragmentSettingsBinding? = null
@@ -68,6 +69,25 @@ class SettingsFragment : Fragment() {
             if (!on) PrintService.stop(requireContext())
             (activity as? MainActivity)?.updatePrinterTab()
         }
+        b.swSaleReceipts.setOnCheckedChangeListener { sw, on ->
+            if (rendering) return@setOnCheckedChangeListener
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    uz.imsoft.mijoz.data.SaleReceipts.set(on)
+                    if (on && !uz.imsoft.mijoz.printer.PrinterHub.state.value.running) {
+                        MaterialAlertDialogBuilder(requireContext()).setMessage(R.string.sr_need_service).setPositiveButton(R.string.ok, null).show()
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    rendering = true; sw.isChecked = !on; rendering = false
+                    MaterialAlertDialogBuilder(requireContext()).setMessage(getString(R.string.sr_failed) + "\n" + requireContext().describe(e)).setPositiveButton(R.string.ok, null).show()
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            uz.imsoft.mijoz.data.SaleReceipts.fetch()?.let { v -> _b?.let { rendering = true; it.swSaleReceipts.isChecked = v; rendering = false } }
+        }
         onToggle(b.tgSkip) { id -> p.skipOlderDays = when (id) { R.id.skip1 -> 1; R.id.skip3 -> 3; R.id.skip7 -> 7; else -> 0 } }
         val version = runCatching { requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName }.getOrNull().orEmpty()
         b.tvAbout.text = getString(R.string.st_about_text, version)
@@ -110,6 +130,9 @@ class SettingsFragment : Fragment() {
         bb.swAutoRefresh.isChecked = p.autoRefresh
         bb.swFuzzy.isChecked = p.fuzzy
         bb.swPrinter.isChecked = p.printerSection
+        bb.swSaleReceipts.isChecked = p.saleReceipts
+        bb.swSaleReceipts.isEnabled = uz.imsoft.mijoz.data.SaleReceipts.available
+        bb.tvSaleReceipts.setText(if (uz.imsoft.mijoz.data.SaleReceipts.available) R.string.sr_hint else R.string.sr_no_queue)
         bb.tgSkip.check(when (p.skipOlderDays) { 1 -> R.id.skip1; 3 -> R.id.skip3; 7 -> R.id.skip7; else -> R.id.skip0 })
         rendering = false
     }

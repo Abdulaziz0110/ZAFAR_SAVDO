@@ -125,6 +125,9 @@ class ReportImportTest {
         val back = SnapshotCodec.unpack(SnapshotCodec.pack(snap))
         assertEquals(snap, back)
         assertNotNull(back.debt)
+        // v2.6: chek osti (telefonlar) ham boradi
+        val withFoot = snap.copy(shopName = "ZAFAR QURUQ MEVALARI", shopFooter = "Tel: +998936474646\nTel: +998907788510")
+        assertEquals(withFoot, SnapshotCodec.unpack(SnapshotCodec.pack(withFoot)))
     }
 
     @Test fun merge_replacesOnlyReportPeriod() {

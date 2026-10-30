@@ -34,9 +34,20 @@ class ProductAdapter(
     private var showCost = false
     private var suggested: Map<String, Double> = emptyMap()
     private var explanations: Map<String, String> = emptyMap()
+    /** Har doim ko'rinadigan izoh (masalan narx yorlig'ida "PLU 501 · shtrix kod bor"). */
+    private var notes: Map<String, String> = emptyMap()
     private var highlights: Map<String, List<IntRange>> = emptyMap()
     /** Sozlamalar ▸ Qulayliklar ▸ Tebranish. */
     var haptics: Boolean = true
+    /** v2.7: har tovar ostida "Kod 2555 · PLU 501" (PLU — kompyuterdan 1C'dan yoki qo'lda). */
+    var showCodes: Boolean = true
+    var pluOf: (String) -> String? = { id -> com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.labels.pluFor(id) }
+
+    fun setNotes(map: Map<String, String>) {
+        if (map == notes) return
+        notes = map
+        notifyItemRangeChanged(0, itemCount, PAYLOAD_CART)
+    }
 
     /** Qidiruvda mos kelgan qismlar (nom ichida qalin). [setProducts] dan oldin chaqiriladi. */
     fun setHighlights(map: Map<String, List<IntRange>>) { highlights = map }
@@ -124,13 +135,18 @@ class ProductAdapter(
             val ctxt = b.root.context
             val line = lines[p.id]
             if (full) b.tvName.text = Highlight.apply(p.name, highlights[p.id], ctxt)
-            val parts = ArrayList<String>(2)
+            val parts = ArrayList<String>(3)
+            if (showCodes) {
+                val plu = pluOf(p.id)
+                parts += if (plu != null) ctxt.getString(R.string.meta_code_plu, p.id, plu) else ctxt.getString(R.string.meta_code, p.id)
+            }
+            notes[p.id]?.let { parts += it }
             if (line == null) {
                 val ex = explanations[p.id]
                 if (ex != null) parts += ex else suggested[p.id]?.let { parts += ctxt.getString(R.string.meta_usual, Money.qtyDisplay(it)) }
             }
             if (showCost) parts += ctxt.getString(R.string.meta_cost, ctxt.money(Pricing.costPrice(p, ctx.currency, ctx.rate), ctx.currency))
-            if (parts.isEmpty() && p.hasBlock) parts += ctxt.getString(R.string.block_info, Money.qtyDisplay(p.blockSize))
+            if (parts.size <= (if (showCodes) 1 else 0) && p.hasBlock) parts += ctxt.getString(R.string.block_info, Money.qtyDisplay(p.blockSize))
             val meta = parts.joinToString(" · ")
             b.tvMeta.text = meta
             b.tvMeta.show(meta.isNotEmpty())

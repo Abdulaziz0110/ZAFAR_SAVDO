@@ -1,4 +1,4 @@
-# Test hisoboti — v2.6 + Savdo Mijoz 1.2 (2026-10-30)
+# Test hisoboti — v2.7 + Savdo Mijoz 1.3 (2026-10-30)
 
 ## Natija (shu muhitda bajarilgan)
 | Tekshiruv | Natija |
@@ -8,10 +8,19 @@
 | `BarcodesTest` (6) — EAN/UPC tekshiruv raqami, kanonik kalit (UPC-A = EAN-13 = Excel soni); tarozi yorlig'i (gramm, 10 gramm, 6+4 xonali, xato tekshiruv, 0 og'irlik); 1C "Вывести список" jadvalidan ustunlarni topish (sarlavha, bo'shliqli kod, son bo'lib qolgan kod); narx ro'yxatini rad etish; kod -> nom bog'lash (ikki ma'noli nom bog'lanmaydi); resolver (tarozi kodi — tasdiq bilan) | 6/6 |
 | Haqiqiy 1C shtrix kodlar fayli (`.xls`, repoga kiritilmagan): 4 212 qator, ustunlar to'g'ri topildi, 89 ms; tarozi prefikslari 28/29; UPC-A, tarozi yorlig'i (1,234 kg), tekshiruvsiz o'z kodi — hammasi topildi | qo'lda |
 | Do'kondagi haqiqiy yorliqlar (rasm): `2900025002028` -> Keshu 210, 0,202 kg; `2500000024375` -> Saryog Asal 200 gr (`BarcodesTest.realLabels`) | o'tdi |
-| JUnit (`app` + `shared`) | **131/131 o'tdi** (v2.5 dagi 116 ta o'zgarmagan holda yashil) |
+| `AppSalesTest`, `ReceiptTest` (yangi chek: "40 x 182 000 = 7 280 000", Xodim/Vaqt/sana, QAYTIB OLISH banneri, qarz qoldig'i), snapshot'da chek osti | o'tdi |
+| Chek rasmi: Android chizish kodining Python nusxasi bilan ko'rinish do'kon chekiga solishtirildi (savdo va qaytarish) | qo'lda |
+| `LabelsTest` (7) — EAN-13/EAN-8/Code 128 modullari (mustaqil dekoder zxing-cpp bilan 13/13 o'qildi); do'kon kodidan tur tanlash (12 xonali o'z kodi -> EAN-13 + tekshiruv raqami, vaznli -> yo'q); "PLU Narx" MXL matnidan, Excel shaklidan va PLU ustunli jadvaldan o'qish; katalogga bog'lash; PLU yo'q fayl rad etiladi; narx "60 000" | 7/7 |
+| Yorliq ko'rinishi: chizish kodining Python nusxasi 58×40, 58×30, 40×30, 30×20 mm da — shtrix kodlar zxing-cpp bilan o'qildi (8/8) | qo'lda |
+| Telefon klienti (Kotlin `LabelPrinterClient`, JVM'da) <-> `label_printer.py` (file rejimi): info, chop etish, takror ish (chop etilmadi), noto'g'ri kalit, kompyuter yo'q | o'tdi |
+| `pc/test_label_printer.py` (18) — sozlama; printer nomini topish; chop etish va takrorlanmaslik (qayta ishga tushgandan keyin ham, bulut bo'laklari ham); kalit/id/PNG tekshiruvi; nusxa chegarasi; printer xatosi (ish bajarilmagan hisoblanadi); file rejimi; info; TSPL baytlari (o'lcham, 0=qora, teskari, to'ldirish); TCP ramka (katta ish 300 yorliq, buzuq JSON); UDP qidiruv; bulut navbati (eskirgan va begona kalitli ish o'chiriladi, LAN'dan keyin bulut — bitta), printer xatosida ish navbatda qoladi; holat yozish | 18/18 |
+| `LabelsTest.codesPayload`, `snapshotCarriesPlu` — kompyuter yuborgan kodlar (PLU nollarsiz, takror shtrix, raqam ko'rinishidagi kod), katalogga bog'lash (kod, keyin nom); 2-ilovaga PLU va eski formatdagi ma'lumot | 2/2 |
+| `pc/test_onec_export.py` (+7) — PLU/shtrix manbasini tanlash (UT11 kabi registr, tovar rekviziti, "Весовой" belgisi olinmaydi), so'rov matni (ВЫРАЗИТЬ/ССЫЛКА), qo'lda yozilgan manba, birlashtirish, faqat o'zgarganda yuborish, telefon so'rovi, hisobot | 16/16 |
+| Python `codes.json` -> Kotlin `CodesPayload` (JVM) | o'tdi |
+| JUnit (`app` + `shared`) | **145/145 o'tdi** (avvalgi 136 ta o'zgarmagan holda yashil) |
 | `LoginTest` (6) — PBKDF2 JDK bilan bir xil; shifrlash/ochish; noto'g'ri parol; kalit (telefon formati farqi yo'q); do'kon kodi <-> manzil; soxta Firebase'da `a/` qoidasi (qisqa kalit o'qilmaydi, yozib bo'lmaydi) | 6/6 |
 | `OrdersTest.orderCarriesSender` — `by` (kim yubordi) maydoni bulut orqali, uzunlik cheklovi | 1/1 |
-| `pc/test_onec_export.py` (9) — sozlama va ulanish qatori; davr; jadval; xesh (xlsx vaqt belgisiz); faqat o'zgarganlar yuboriladi; davr o'zgarsa qayta; xatoda ulanish uziladi; yuklash formati (gzip+base64); kalit/nom | 9/9 |
+| `pc/test_onec_export.py` (9, v2.6) — sozlama va ulanish qatori; davr; jadval; xesh (xlsx vaqt belgisiz); faqat o'zgarganlar yuboriladi; davr o'zgarsa qayta; xatoda ulanish uziladi; yuklash formati (gzip+base64); kalit/nom | 9/9 |
 | `pc/test_forwarder.py` | 8/8 |
 | Resurs havolalari (ikkala modul), satrlar (lotin + kirill avtomatik) | xatosiz |
 
@@ -21,7 +30,10 @@
 3. `onec_export.py` haqiqiy 1C bilan: hisobot nomi va parametrlari `--discover` natijasidan keyin sozlanadi. COM qismi
    (V83.COMConnector, `СкомпоноватьРезультат`, `ТабличныйДокумент.Записать(XLSX)`) Windows'siz sinab bo'lmaydi.
 4. Eski telefon (Android 6–7) da PBKDF2 (120 000) tezligi — kirishda 1–3 soniya kutilishi mumkin.
-5. Kamera skaneri (zxing-android-embedded) va Bluetooth/USB skaner haqiqiy telefonda; kutubxona shu muhitda yuklab bo'lmadi —
+5. PLU'ning 1C'dagi haqiqiy joyi: avtomatik topish soxta metama'lumotda sinaldi; do'kon bazasida `--codes` natijasi kerak.
+6. Narx yorliqlari haqiqiy Xprinter bilan: `gdi` (pywin32 + drayver) va `tspl` rejimlari Windows'siz sinab bo'lmadi;
+   yorliq o'lchami drayverdan to'g'ri kelishi va PLU fayli (hamma vaznli tovarlar bilan) hali tekshirilmagan.
+7. Kamera skaneri (zxing-android-embedded) va Bluetooth/USB skaner haqiqiy telefonda; kutubxona shu muhitda yuklab bo'lmadi —
    kompilyatsiya API stub bilan tekshirildi, GitHub build haqiqiy kutubxonani oladi. Tarozi yorlig'i formati namunalar bilan tasdiqlanishi kerak.
 
 

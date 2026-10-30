@@ -23,6 +23,9 @@ class OrderRepository(
     private val outbox: OutboxRepository,
     private val kpi: KpiTracker,
 ) {
+    /** v2.6: savdo navbatga qo'yilgach (mijozning 2-ilovasiga ko'zgu). Xatosi savdoga ta'sir qilmaydi. */
+    var onOrderQueued: ((SentOrder, Long, String) -> Unit)? = null
+
     /** Ikki marta bosish / ikki ekrandan bir vaqtda yuborishdan himoya. */
     private val sendLock = Mutex()
 
@@ -49,7 +52,9 @@ class OrderRepository(
         draft.finishNow()
         kpi.finish(sent.lines.size)
         outbox.kick()
-        OutboxEntry.receiptOf(OutboxKind.ORDER, id)
+        val code = OutboxEntry.receiptOf(OutboxKind.ORDER, id)
+        runCatching { onOrderQueued?.invoke(sent, id, code) }
+        code
     }
 
     /** @return kvitansiya kodi (masalan "T-0013") */

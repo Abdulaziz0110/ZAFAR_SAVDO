@@ -13,6 +13,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import uz.imsoft.mijoz.Locator
 import uz.imsoft.mijoz.R
@@ -60,7 +62,28 @@ class PrinterFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.pr_usb_list)
                 .setMessage(UsbPrinter.describeAll(requireContext())).setPositiveButton(R.string.close, null).show()
         }
-        launchOnStarted { PrinterHub.state.collect { render(it) } }
+        launchOnStarted { PrinterHub.state.collect { render(it); refreshPending(it.queue) } }
+    }
+
+    private var pendingFor = Int.MIN_VALUE
+    private var pendingJob: kotlinx.coroutines.Job? = null
+
+    /** Navbatdagi cheklar ro'yxati (navbat soni o'zgarganda yangilanadi). */
+    private fun refreshPending(queue: Int) {
+        if (queue == pendingFor) return
+        pendingFor = queue
+        pendingJob?.cancel()
+        pendingJob = viewLifecycleOwner.lifecycleScope.launch {
+            val list = runCatching { uz.imsoft.mijoz.data.SaleReceipts.pending() }.getOrNull()
+            val bb = _b ?: return@launch
+            bb.tvPending.text = when {
+                list == null -> getString(R.string.sr_list_offline)
+                list.isEmpty() -> getString(R.string.sr_list_empty)
+                else -> list.take(30).joinToString("\n") { p ->
+                    "• " + (if (p.at > 0) Fmt.dateTime(p.at) + " · " else "") + p.text.ifBlank { getString(R.string.sr_from_pc) }
+                } + if (list.size > 30) "\n…" else ""
+            }
+        }
     }
 
     private fun startService() {

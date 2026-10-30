@@ -19,19 +19,39 @@ class ReceiptTest {
         val e2 = LedgerEntry(20261029161619, EntryKind.SALE, "Savdo So'm", "Bodom <M> & Co", 2.5,
             mapOf(Col.PRICE to Money2(120000.0, 0.0), Col.SUM to Money2(300_000.0, 0.0), Col.DISCOUNT to Money2(5000.0, 0.0)))
         val doc = LedgerDocs.build(listOf(e1, e2)).single()
-        val r = ReceiptBuilder.fromDoc(doc, "IMSOFT", "Dadaxon Aka", labels)
+        val r = ReceiptBuilder.fromDoc(doc, "ZAFAR QURUQ MEVALARI", "Dadaxon Aka", labels, footer = listOf("Tel: +998936474646"), staff = "Dokon")
         assertEquals("29.10.2026 16:16", r.dateText)
         assertEquals(2, r.lines.size)
-        assertEquals("40 × 182 000", r.lines[0].detail)
-        assertEquals("7 280 000 so'm", r.lines[0].amount)
-        assertEquals("2,5 × 120 000", r.lines[1].detail)
-        assertTrue(r.totals.any { it.label == "To'lanadi" && it.value == "7 575 000 so'm" && it.bold })
-        assertTrue(r.totals.any { it.label == "Qoldiq" })
+        // Do'kon chekidagidek: "40 x 182 000 = 7 280 000"
+        assertEquals("40 x 182 000", r.lines[0].detail)
+        assertEquals("7 280 000", r.lines[0].amount)
+        assertEquals("40 x 182 000 = 7 280 000", r.lines[0].formula)
+        assertEquals("2,5 x 120 000", r.lines[1].detail)
+        assertTrue(r.totals.any { it.label == "To'lanadi" && it.value == "7 575 000" && it.bold })
+        assertTrue(r.after.any { it.label == "Qoldiq" && it.value == "9 000 000" })
+        assertEquals(listOf("Xodim" to "Dokon", "Vaqt" to "16:16:19"), r.info)
+        assertEquals("29.10.26", r.date)
+        assertEquals("Dadaxon Aka", r.clientName)
+        assertEquals("", r.banner)
         val text = ReceiptBuilder.toText(r)
-        assertTrue(text.contains("1. Pista Dolana (D)"))
+        assertTrue(text.contains("1) Pista Dolana (D)"))
+        assertTrue(text.contains("40 x 182 000 = 7 280 000"))
+        assertTrue(text.contains("Tel: +998936474646"))
         assertTrue(text.contains("1C hisobotidan nusxa"))
         val html = ReceiptBuilder.toHtml(r)
         assertTrue(html.contains("Bodom &lt;M&gt; &amp; Co"))
+    }
+
+    @Test fun returnReceiptHasBanner() {
+        val e = LedgerEntry(20261014151618, EntryKind.RETURN, "Qaytarish", "Keshu 160", 1.76,
+            mapOf(Col.PRICE to Money2(160000.0, 0.0), Col.RETURN to Money2(281_600.0, 0.0)))
+        val r = ReceiptBuilder.fromDoc(LedgerDocs.build(listOf(e)).single(), "ZAFAR", "Izzattilo Aka", labels)
+        assertEquals("QAYTIB OLISH !!!", r.banner)
+        assertEquals("1,76 x 160 000 = 281 600", r.lines[0].formula)
+        assertTrue(r.totals.single().bold)
+        assertEquals("Summa", r.totals.single().label)
+        assertEquals("281 600", r.totals.single().value)
+        assertTrue(ReceiptBuilder.toHtml(r).contains("QAYTIB OLISH !!!"))
     }
 
     @Test fun numFmt() {

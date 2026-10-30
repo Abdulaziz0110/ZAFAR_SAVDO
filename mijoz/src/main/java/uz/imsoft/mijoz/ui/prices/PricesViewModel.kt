@@ -42,7 +42,7 @@ class PricesViewModel : ViewModel() {
 
     private val prepared = Locator.data.state.map { it.snapshot }.distinctUntilChanged { a, b -> a === b }.map { snap ->
         val items = snap?.products.orEmpty()
-        Prepared(snap, SearchIndex(items, { it.name }, { it.id }, { it.group }), ClientStats.lastPurchases(snap?.ledger.orEmpty()),
+        Prepared(snap, SearchIndex(items, { it.name }, { it.id }, { if (it.plu.isEmpty()) it.group else it.group + " " + it.plu }), ClientStats.lastPurchases(snap?.ledger.orEmpty()),
             items.map { it.group }.filter { it.isNotEmpty() }.distinct().sorted())
     }.flowOn(Dispatchers.Default)
 

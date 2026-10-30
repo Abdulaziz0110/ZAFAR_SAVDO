@@ -11,3 +11,17 @@
 *.jks
 *.keystore
 keystore.properties
+
+# PC: ish fayllari
+pc/*.log
+pc/labels_done.json
+pc/labels_out/
+pc/outbox/
+pc/failed/
+__pycache__/
+pc/codes.json
+pc/discover.txt
+pc/export_state.json
+pc/export/
+pc/forwarder.ini
+pc/onec.ini

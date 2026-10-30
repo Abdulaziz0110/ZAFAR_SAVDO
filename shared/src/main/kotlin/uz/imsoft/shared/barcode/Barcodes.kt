@@ -18,7 +18,7 @@ object Ean {
 
     /** Faqat raqam (bo'shliq/tire olib tashlangan) bo'lsa — o'sha raqamlar, aks holda null. */
     fun numeric(raw: String): String? {
-        val t = raw.trim().replace(" ", "").replace(" ", "").replace("-", "")
+        val t = raw.trim().replace(" ", "").replace("\u00A0", "").replace("-", "")
         return if (t.isNotEmpty() && t.all { it in '0'..'9' }) t else null
     }
 
@@ -161,7 +161,7 @@ object BarcodeImport {
             if (!seen.add(key + "|" + (if (codeCol >= 0) text(g, r, codeCol) else ""))) continue
             val code = if (codeCol >= 0) text(g, r, codeCol) else ""
             val name = if (nameCol >= 0) text(g, r, nameCol) else ""
-            rows += Row(code.replace(" ", "").replace(" ", ""), name, b.replace(" ", ""))
+            rows += Row(code.replace(" ", "").replace("\u00A0", ""), name, b.replace(" ", ""))
         }
         if (rows.isEmpty()) throw NotBarcodes("no_rows")
         return Result(rows, barcodeCol, codeCol, nameCol, skipped)
@@ -181,7 +181,7 @@ object BarcodeLink {
     )
 
     fun codeKey(code: String): String {
-        val t = code.trim().replace(" ", "").replace(" ", "")
+        val t = code.trim().replace(" ", "").replace("\u00A0", "")
         return if (t.isNotEmpty() && t.all { it.isDigit() }) t.trimStart('0').ifEmpty { "0" } else t.uppercase()
     }
 

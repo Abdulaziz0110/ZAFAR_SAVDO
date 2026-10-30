@@ -86,7 +86,7 @@ class BusinessRulesTest {
         assertEquals(1, s.returnOrders); assertEquals(500.0, s.returnSom, 0.0)
         assertEquals(1200.0, s.payTotal, 0.0); assertEquals(1, s.unsentOrders); assertEquals(1, s.unsentPayments)
         val csv = LocalReport.paymentsCsv(p, { "T-0001" }, { "Navbatda" })
-        assertTrue(csv.startsWith("﻿"))
+        assertTrue(csv.startsWith("\uFEFF"))
         assertTrue(csv.contains("\"izoh; \"\"qo'shtirnoq\"\"\""))   // ; va " to'g'ri qochirilgan
         val oc = LocalReport.ordersCsv(o, { "B-1" }, { "ok" })
         assertEquals(1 + 3, oc.trim().split("\r\n").size)

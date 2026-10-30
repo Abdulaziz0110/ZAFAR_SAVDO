@@ -97,7 +97,7 @@ class DocSheet : BottomSheetDialogFragment() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun share(doc: LedgerDoc, host: LedgerHost?, client: String) {
-        val r = LedgerUi.receipt(requireContext(), doc, host?.receiptHeader.orEmpty(), client)
+        val r = LedgerUi.receipt(requireContext(), doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty())
         val items = arrayOf(getString(R.string.lg_share_image), getString(R.string.lg_share_text), getString(R.string.lg_copy_text))
         MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lg_share)
             .setItems(items) { _, i ->

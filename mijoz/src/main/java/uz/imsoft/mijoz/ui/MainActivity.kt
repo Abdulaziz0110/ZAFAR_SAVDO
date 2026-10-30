@@ -25,7 +25,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val tabs = listOf(R.id.nav_home, R.id.nav_prices, R.id.nav_report, R.id.nav_printer, R.id.nav_settings)
 
+    /**
+     * Shrift/o'lcham uchun o'ralgan kontekst PrintManager'ga Activity'ni ko'rsatmaydi ("Can print only from an activity").
+     * Chop etish xizmati asl kontekstdan olinadi (uning "tashqi" konteksti — shu Activity).
+     */
+    private var originalBase: android.content.Context? = null
+
+    override fun getSystemService(name: String): Any? =
+        if (name == android.content.Context.PRINT_SERVICE) originalBase?.getSystemService(name) ?: super.getSystemService(name)
+        else super.getSystemService(name)
+
     override fun attachBaseContext(newBase: Context) {
+        originalBase = newBase
         super.attachBaseContext(runCatching { wrapScale(newBase, Locator.prefs(newBase)) }.getOrDefault(newBase))
     }
 
@@ -60,7 +71,11 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             val start = when (intent.getStringExtra(EXTRA_TAB)) {
                 TAB_PRINTER -> if (Locator.prefs.printerSection) R.id.nav_printer else R.id.nav_home
-                else -> if (Locator.prefs.link == null) R.id.nav_settings else R.id.nav_home
+                else -> if (Locator.prefs.link == null) R.id.nav_settings else when (Locator.prefs.startTab) {
+                    "prices" -> R.id.nav_prices
+                    "report" -> R.id.nav_report
+                    else -> R.id.nav_home
+                }
             }
             binding.bottomNav.selectedItemId = start
             showTab(start)
@@ -89,6 +104,13 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         uz.imsoft.mijoz.ui.ledger.SecretPrefs.apply(this)
+        applyKeepScreenOn()
+    }
+
+    /** Qo'shimcha sozlamalar ▸ "Ekran o'chmasin". */
+    fun applyKeepScreenOn() {
+        if (Locator.prefs.keepScreenOn) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onStart() {

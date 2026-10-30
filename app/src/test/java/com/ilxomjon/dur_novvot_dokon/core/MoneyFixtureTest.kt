@@ -44,7 +44,7 @@ class MoneyFixtureTest(private val locale: Locale) {
             "format.som" to { Money.format(1234.5, Currency.SOM) },
             "qtyDisplay" to { Money.qtyDisplay(5.0) },
             "parse.spaces.comma" to { Money.parse("1 250 000,50").toString() },
-            "parse.nbsp" to { Money.parse("1 250").toString() },
+            "parse.nbsp" to { Money.parse("1\u00A0250").toString() },
             "parse.dot" to { Money.parse("12.5").toString() },
             "parse.empty" to { Money.parse("").toString() },
             "parse.null" to { Money.parse(null).toString() },

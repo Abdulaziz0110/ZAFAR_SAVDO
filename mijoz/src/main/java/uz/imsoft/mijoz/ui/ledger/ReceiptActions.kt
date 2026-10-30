@@ -34,7 +34,7 @@ object ReceiptActions {
 
     fun preview(f: Fragment, doc: LedgerDoc, host: LedgerHost?, client: String) {
         val ctx = f.requireContext()
-        val r = LedgerUi.receipt(ctx, doc, host?.receiptHeader.orEmpty(), client)
+        val r = LedgerUi.receipt(ctx, doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty())
         f.viewLifecycleOwner.lifecycleScope.launch {
             val bmp = withContext(Dispatchers.Default) { ReceiptBitmap.render(r, 576) }
             val vb = DialogReceiptPreviewBinding.inflate(LayoutInflater.from(ctx))
@@ -102,7 +102,10 @@ object ReceiptActions {
         wv.settings.javaScriptEnabled = false
         wv.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String?) {
-                val pm = ctx.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                // Chop etish faqat Activity orqali (o'ralgan kontekstdan emas)
+                var c: Context = ctx
+                while (c !is android.app.Activity && c is android.content.ContextWrapper) c = c.baseContext
+                val pm = c.getSystemService(Context.PRINT_SERVICE) as PrintManager
                 val safe = name.filter { it.isLetterOrDigit() || it == '_' || it == '.' }.take(40).ifEmpty { "chek" }
                 pm.print(safe, view.createPrintDocumentAdapter(safe), PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build())
             }

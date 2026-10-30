@@ -80,7 +80,13 @@ class MijozPrefs(context: Context) {
     var printerSection: Boolean get() = b("printer_section", false); set(v) = putB("printer_section", v)
     /** Servis yoqilgan (foydalanuvchi "Serverni yoqish" bosgan). */
     var printerOn: Boolean get() = b("printer_on", false); set(v) = putB("printer_on", v)
+    /** 1-ilova savdolari chekini qabul qilish (bulutdagi sozlamaning nusxasi). */
+    var saleReceipts: Boolean get() = b("sale_receipts", false); set(v) = putB("sale_receipts", v)
     var autostart: Boolean get() = b("autostart", true); set(v) = putB("autostart", v)
+    /** Qo'shimcha sozlamalar: ilova qaysi bo'limdan ochilsin ("home", "prices", "report"). */
+    var startTab: String get() = s("start_tab", "home"); set(v) = put("start_tab", v)
+    /** Qo'shimcha sozlamalar: ilova ochiq turganda ekran o'chmasin. */
+    var keepScreenOn: Boolean get() = b("keep_screen_on", false); set(v) = putB("keep_screen_on", v)
     /** Shuncha kundan eski cheklar o'zi chop etilmaydi (0 — hammasi chiqadi). */
     var skipOlderDays: Int get() = p.getInt("skip_older", 0); set(v) = p.edit().putInt("skip_older", v).apply()
 

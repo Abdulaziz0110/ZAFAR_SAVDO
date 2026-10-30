@@ -14,6 +14,8 @@ data class PriceItem(
     val cashUsd: Double,
     val wholesaleSom: Double,
     val wholesaleUsd: Double,
+    /** Tarozi PLU raqami (v2.7, bo'sh bo'lishi mumkin). Eski 2-ilova bu maydonni o'qimaydi. */
+    val plu: String = "",
 )
 
 data class DebtInfo(val som: Double, val usd: Double, val at: Long, val source: String)
@@ -40,6 +42,8 @@ data class ClientSnapshot(
     val features: Set<String> = emptySet(),
     /** Chek sarlavhasi (1-ilova sozlamasidan, bo'sh bo'lishi mumkin). */
     val shopName: String = "",
+    /** Chek osti (telefonlar va h.k., har qator alohida) — 1-ilova sozlamasidan. v2.6 */
+    val shopFooter: String = "",
 ) {
     /** Eng oxirgi import vaqti (telefon soati, ms). */
     val lastImportAt: Long get() = coverage.maxOfOrNull { it.importedAt } ?: 0L
@@ -59,12 +63,13 @@ object SnapshotCodec {
         linkedMapOf(
             "v" to s.version, "at" to s.createdAt, "cid" to s.clientId, "cn" to s.clientName, "rate" to s.rate, "pat" to s.pricesAt,
             "debt" to s.debt?.let { linkedMapOf("s" to it.som, "u" to it.usd, "at" to it.at, "src" to it.source) },
-            "p" to s.products.map { listOf(it.id, it.name, it.group, it.cashSom, it.cashUsd, it.wholesaleSom, it.wholesaleUsd) },
+            "p" to s.products.map { listOf(it.id, it.name, it.group, it.cashSom, it.cashUsd, it.wholesaleSom, it.wholesaleUsd, it.plu) },
             "l" to s.ledger.map { entryToList(it) },
             "cov" to s.coverage.map { listOf(it.from, it.to, it.importedAt, it.source) },
             "rb" to s.reportBalance?.let { listOf(it.first, it.second.som, it.second.usd) },
             "f" to s.features.sorted(),
             "shop" to s.shopName,
+            "foot" to s.shopFooter,
         ),
     )
 
@@ -97,7 +102,10 @@ object SnapshotCodec {
         fun d(x: Any?) = (x as? Number)?.toDouble() ?: 0.0
         val products = o.arr("p").mapNotNull { x ->
             val l = x as? List<Any?> ?: return@mapNotNull null
-            PriceItem(l[0].toString(), l[1].toString(), l.getOrNull(2)?.toString().orEmpty(), d(l.getOrNull(3)), d(l.getOrNull(4)), d(l.getOrNull(5)), d(l.getOrNull(6)))
+            PriceItem(
+                l[0].toString(), l[1].toString(), l.getOrNull(2)?.toString().orEmpty(), d(l.getOrNull(3)), d(l.getOrNull(4)), d(l.getOrNull(5)), d(l.getOrNull(6)),
+                l.getOrNull(7)?.toString().orEmpty(),
+            )
         }
         val ledger = o.arr("l").mapNotNull { x -> (x as? List<Any?>)?.let { runCatching { entryFromList(it) }.getOrNull() } }
         val cov = o.arr("cov").mapNotNull { x ->
@@ -107,7 +115,7 @@ object SnapshotCodec {
         val debt = o.obj("debt")?.let { DebtInfo(it.num("s"), it.num("u"), it.long("at"), it.str("src")) }
         val rb = (o.map["rb"] as? List<Any?>)?.let { l -> (l.getOrNull(0) as? Number)?.toLong()?.let { st -> st to Money2(d(l.getOrNull(1)), d(l.getOrNull(2))) } }
         val features = o.arr("f").mapNotNull { it?.toString() }.toSet()
-        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb, features, o.str("shop"))
+        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb, features, o.str("shop"), o.str("foot"))
     }
 
     /** Bulutga yoziladigan ko'rinish: gzip + base64 (Firebase satr sifatida saqlaydi). */

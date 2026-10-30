@@ -50,9 +50,14 @@ class HomeFragment : Fragment() {
         binding.btnQueue.setOnClickListener { navigator().push(OutboxFragment()) }
         binding.btnDayEnd.setOnClickListener { navigator().push(DayEndFragment()) }
         binding.cardSale.setOnClickListener { startDeal(DealMode.SALE) }
+        binding.cardScan.setOnClickListener {
+            startDeal(DealMode.SALE)
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment())
+        }
         binding.cardReturn.setOnClickListener { startDeal(DealMode.RETURN) }
         binding.cardPayment.setOnClickListener { navigator().openTab(R.id.nav_payment) }
         binding.cardReport.setOnClickListener { navigator().openTab(R.id.nav_report) }
+        binding.cardLabels.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) }
         binding.cardLedger.setOnClickListener {
             if (com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.state.value.newOrders > 0) {
                 com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager)

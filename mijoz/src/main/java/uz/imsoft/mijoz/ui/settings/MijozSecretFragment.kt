@@ -13,19 +13,22 @@ import uz.imsoft.mijoz.ui.ledger.SecretFragment
 import uz.imsoft.mijoz.ui.ledger.SecretItem
 import uz.imsoft.mijoz.ui.ledgerhost.MijozLedgerHost
 import uz.imsoft.mijoz.ui.money
-import uz.imsoft.shared.Phone
-import uz.imsoft.shared.ShopCode
 import uz.imsoft.shared.report.Col
 import uz.imsoft.shared.report.EntryKind
 import uz.imsoft.shared.report.LedgerMerge
 import uz.imsoft.shared.report.Stamp
 
-/** 2-ilova (Savdo Mijoz) sirli menyusi: umumiy bandlar + mijozga xoslari. Faqat o'qiydi (buyurtma savatchasidan tashqari). */
+/**
+ * 2-ilova (Savdo Mijoz) qo'shimcha sozlamalari (yashirin menyu): faqat ilovani qulay qiladigan sozlamalar va o'z
+ * ma'lumotingiz bo'yicha foydali bandlar. Kalitlar, do'kon kodi, ulanish ma'lumotlari va texnik bandlar YO'Q.
+ */
 class MijozSecretFragment : SecretFragment() {
     override val ledgerHost: LedgerHost get() = MijozLedgerHost
     override fun close() { parentFragmentManager.popBackStack() }
     override fun usdRate(): Double = Locator.data.state.value.snapshot?.rate ?: 0.0
-    override fun workNames() = listOf("auto_refresh")
+    override val userOnly: Boolean = true
+    override fun screenTitle(): String = getString(R.string.sx_title)
+    override fun screenHint(n: Int): String = getString(R.string.sx_hint)
 
     override fun products(): List<Pair<String, String>> =
         Locator.data.state.value.snapshot?.products.orEmpty().filter { it.wholesaleSom > 0 || it.wholesaleUsd > 0 }.map { p ->
@@ -34,12 +37,39 @@ class MijozSecretFragment : SecretFragment() {
 
     override fun appItems(): List<SecretItem> {
         val l = ArrayList<SecretItem>()
+        val p = Locator.prefs
+        l += SecretItem("🏠", getString(R.string.sx_start), getString(R.string.sx_start_sub, startName(p.startTab))) { startTab() }
+        l += SecretItem("🔆", getString(R.string.sx_screen), getString(if (p.keepScreenOn) R.string.sx_on else R.string.sx_off) + " · " + getString(R.string.sx_screen_sub)) { keepScreen() }
         l += SecretItem("📊", getString(R.string.sx_stats), getString(R.string.sx_stats_sub)) { stats() }
         l += SecretItem("📈", getString(R.string.sx_debt), getString(R.string.sx_debt_sub)) { debtTrend() }
         if (MijozLedgerHost.ordersEnabled()) l += SecretItem("🛒", getString(R.string.sx_last_cart), getString(R.string.sx_last_cart_sub)) { lastToCart() }
         l += SecretItem("⚡", getString(R.string.sx_turbo), getString(R.string.sx_turbo_sub)) { turbo() }
-        l += SecretItem("🔑", getString(R.string.sx_link), getString(R.string.sx_link_sub)) { passport() }
         return l
+    }
+
+    private val tabs = listOf("home", "prices", "report")
+
+    private fun startName(t: String) = getString(
+        when (t) { "prices" -> R.string.nav_prices; "report" -> R.string.nav_report; else -> R.string.nav_home },
+    )
+
+    private fun startTab() {
+        val names = tabs.map { startName(it) }.toTypedArray()
+        val cur = tabs.indexOf(Locator.prefs.startTab).coerceAtLeast(0)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.sx_start)
+            .setSingleChoiceItems(names, cur) { d, i ->
+                Locator.prefs.startTab = tabs[i]
+                d.dismiss()
+                snack(getString(R.string.sx_start_sub, names[i]))
+            }
+            .setNegativeButton(R.string.cancel, null).show()
+    }
+
+    private fun keepScreen() {
+        val v = !Locator.prefs.keepScreenOn
+        Locator.prefs.keepScreenOn = v
+        (activity as? MainActivity)?.applyKeepScreenOn()
+        snack(getString(R.string.sx_screen) + ": " + getString(if (v) R.string.sx_on else R.string.sx_off))
     }
 
     private fun stats() {
@@ -92,23 +122,8 @@ class MijozSecretFragment : SecretFragment() {
     private fun turbo() {
         snack(getString(R.string.sx_turbo_run))
         viewLifecycleOwner.lifecycleScope.launch {
-            val t0 = System.currentTimeMillis()
             val r = runCatching { Locator.data.refresh(askFresh = true) }
-            val ms = System.currentTimeMillis() - t0
-            snack(r.fold({ getString(R.string.sx_turbo_ok, ms) + " · " + it.name }, { getString(R.string.sx_turbo_fail, ms) + "\n" + requireContext().describe(it) }))
+            snack(r.fold({ getString(R.string.sx_turbo_ok) }, { getString(R.string.sx_turbo_fail) + "\n" + requireContext().describe(it) }))
         }
-    }
-
-    private fun passport() {
-        val p = Locator.prefs
-        val link = p.link
-        val text = listOf(
-            getString(R.string.sx_ln_shop, link?.dbUrl?.let { ShopCode.fromUrl(it) }?.ifEmpty { null } ?: "—"),
-            getString(R.string.sx_ln_client, link?.clientName?.ifEmpty { null } ?: "—"),
-            getString(R.string.sx_ln_phone, if (p.loginPhone.isNotEmpty()) Phone.pretty(p.loginPhone) else getString(R.string.sx_ln_code), p.memberName.ifBlank { "—" }),
-            getString(R.string.sx_ln_key, link?.readKey?.let { mask(it) } ?: "—"),
-            getString(R.string.sx_ln_printer, if (link?.queueKey.isNullOrEmpty()) "—" else mask(link!!.queueKey)),
-        ).joinToString("\n")
-        info(getString(R.string.sx_link), text)
     }
 }

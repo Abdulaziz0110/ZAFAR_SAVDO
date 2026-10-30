@@ -126,7 +126,7 @@ object Stamp {
 /** Raqamni hisobotdagi matndan o'qish: "3 740 000", "2,5", "-1 250,50", "11 130 000.00". */
 object Num {
     fun parse(text: String): Double? {
-        val t = text.replace(' ', ' ').replace(' ', ' ').trim()
+        val t = text.replace('\u00A0', ' ').replace('\u202F', ' ').trim()
         if (t.isEmpty()) return null
         var s = t.filter { it != ' ' && it != '\'' }
         var neg = false

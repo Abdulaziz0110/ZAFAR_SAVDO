@@ -35,6 +35,7 @@ object MijozLedgerHost : LedgerHost {
     }
 
     override val receiptHeader: String get() = Locator.data.state.value.snapshot?.shopName.orEmpty()
+    override val receiptFooter: String get() = Locator.data.state.value.snapshot?.shopFooter.orEmpty()
     override val fuzzySearch: Boolean get() = Locator.prefs.fuzzy
 
     fun ordersEnabled() = Locator.data.state.value.snapshot?.features?.contains(ClientSnapshot.FEATURE_ORDERS) == true
