@@ -1,7 +1,7 @@
-# IMSOFT DOKON - Savdo Agent (app) + Savdo Mijoz (mijoz)
+# IMSOFT DOKON - Savdo Agent + Savdo Admin (app, flavors agent/admin) + Savdo Mijoz (mijoz)
 # Repo root: upload IMSOFT_DOKON-project.zip and commit. This workflow:
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
-#   2) builds both APKs (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
+#   2) builds three APKs - Agent, Admin, Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
 #   3) runs unit tests, lint and the PC script tests; reports go to the "reports" artifact.
 # Secrets (Settings > Secrets and variables > Actions), optional:
 #   SIGNING_KEYSTORE_B64, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD
@@ -112,14 +112,15 @@ jobs:
 
       - name: Build APKs
         shell: bash
-        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug :mijoz:assembleDebug
+        run: ./gradlew --no-daemon --stacktrace :app:assembleAgentDebug :app:assembleAdminDebug :mijoz:assembleDebug
 
       - name: Collect APKs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          cp app/build/outputs/apk/debug/*.apk "out/SavdoAgent-${{ steps.sign.outputs.tag }}.apk"
+          cp app/build/outputs/apk/agent/debug/*.apk "out/SavdoAgent-${{ steps.sign.outputs.tag }}.apk"
+          cp app/build/outputs/apk/admin/debug/*.apk "out/SavdoAdmin-${{ steps.sign.outputs.tag }}.apk"
           cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
 
@@ -134,13 +135,13 @@ jobs:
         id: tests
         continue-on-error: true
         shell: bash
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :mijoz:testDebugUnitTest
+        run: ./gradlew --no-daemon :app:testAgentDebugUnitTest :mijoz:testDebugUnitTest
 
       - name: Lint
         id: lint
         continue-on-error: true
         shell: bash
-        run: ./gradlew --no-daemon :app:lintDebug :mijoz:lintDebug
+        run: ./gradlew --no-daemon :app:lintAgentDebug :app:lintAdminDebug :mijoz:lintDebug
 
       - name: PC script tests
         id: pctests
