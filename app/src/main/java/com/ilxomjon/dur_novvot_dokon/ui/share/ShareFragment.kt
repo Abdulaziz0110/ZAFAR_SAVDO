@@ -88,14 +88,30 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
             repo.setSyncMinutes(m)
             if (repo.state.value.cloudReady) ShareWorker.schedule(requireContext().applicationContext, m)
         }
-        binding.edtHeader.setText(ServiceLocator.shareStore.receiptHeader)
-        binding.edtHeader.setOnFocusChangeListener { _, focus -> if (!focus) repo.setReceiptHeader(binding.edtHeader.text?.toString().orEmpty()) }
-        binding.edtHeader.setOnEditorActionListener { v, _, _ -> repo.setReceiptHeader(v.text?.toString().orEmpty()); v.clearFocus(); false }
-        binding.edtStaff.setText(ServiceLocator.shareStore.receiptStaff)
-        binding.edtFooter.setText(ServiceLocator.shareStore.receiptFooter)
-        binding.edtStaff.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
-        binding.edtFooter.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
-        binding.btnReceiptPreview.setOnClickListener { saveReceiptFields(); previewReceipt() }
+        // Agent: chek sarlavhasi/xodim/osti va namuna (2.8 dagidek). Admin: "Chek ko'rinishi" ekrani (logo, shrift va h.k.)
+        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        binding.tilHeader.show(!admin)
+        binding.tilStaff.show(!admin)
+        binding.tilFooter.show(!admin)
+        binding.btnReceiptPreview.show(!admin)
+        binding.tvReceiptStyleHint.show(admin)
+        binding.btnReceiptStyle.show(admin)
+        binding.btnReceiptStyle.setOnClickListener { navigator().push(ReceiptStyleFragment()) }
+        // v3.0 Admin: agentlar ko'prigi
+        binding.tvRelaySection.show(admin)
+        binding.cardRelay.show(admin)
+        binding.tvRelay.text = getString(if (ServiceLocator.shareStore.relayOn) R.string.rl_on_short else R.string.rl_off_short)
+        binding.btnRelay.setOnClickListener { navigator().push(RelayFragment()) }
+        if (!admin) {
+            binding.edtHeader.setText(ServiceLocator.shareStore.receiptHeader)
+            binding.edtHeader.setOnFocusChangeListener { _, focus -> if (!focus) repo.setReceiptHeader(binding.edtHeader.text?.toString().orEmpty()) }
+            binding.edtHeader.setOnEditorActionListener { v, _, _ -> repo.setReceiptHeader(v.text?.toString().orEmpty()); v.clearFocus(); false }
+            binding.edtStaff.setText(ServiceLocator.shareStore.receiptStaff)
+            binding.edtFooter.setText(ServiceLocator.shareStore.receiptFooter)
+            binding.edtStaff.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
+            binding.edtFooter.setOnFocusChangeListener { _, focus -> if (!focus) saveReceiptFields() }
+            binding.btnReceiptPreview.setOnClickListener { saveReceiptFields(); previewReceipt() }
+        }
         binding.tvShopCode.setOnClickListener { copy(repo.state.value.shopCode) }
 
         launchOnStarted { repo.state.collect { render(it) } }
@@ -105,6 +121,7 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
 
     private fun saveReceiptFields() {
         val b = _binding ?: return
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) return
         repo.setReceiptHeader(b.edtHeader.text?.toString().orEmpty())
         repo.setReceiptStaff(b.edtStaff.text?.toString().orEmpty())
         repo.setReceiptFooter(b.edtFooter.text?.toString().orEmpty())
@@ -115,12 +132,14 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
         super.onPause()
     }
 
-    /** Namuna chek (sozlamalar qanday chiqishini ko'rish uchun). */
+    /** Namuna chek (sozlamalar qanday chiqishini ko'rish uchun) — Agent. */
     private fun previewReceipt() {
         val ctx = requireContext()
         viewLifecycleOwner.lifecycleScope.launch {
+            val style = repo.receiptStyle
+            val logo = uz.imsoft.shared.android.LogoCache.get(ServiceLocator.shareStore.receiptLogo)
             val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                uz.imsoft.shared.android.ReceiptBitmap.render(repo.mirror.sampleReceipt(), 576)
+                uz.imsoft.shared.android.ReceiptBitmap.render(repo.mirror.sampleReceipt(), style, logo)
             }
             val iv = android.widget.ImageView(ctx).apply { setImageBitmap(bmp); adjustViewBounds = true; setPadding(24, 24, 24, 24) }
             val sv = android.widget.ScrollView(ctx).apply { addView(iv) }

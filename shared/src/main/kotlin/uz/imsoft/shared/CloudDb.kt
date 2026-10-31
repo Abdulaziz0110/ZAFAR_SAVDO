@@ -103,8 +103,11 @@ class CloudDb(
         /** Server vaqti belgisi (Firebase o'zi qo'yadi — telefon soati noto'g'ri bo'lsa ham). */
         val SERVER_TIME: Map<String, Any?> = mapOf(".sv" to "timestamp")
 
-        /** Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish). */
-        const val RULES_VERSION = 3
+        /**
+         * Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish,
+         * v4: agentlar "Admin orqali" — g/{kalit}/...).
+         */
+        const val RULES_VERSION = 4
 
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
@@ -141,6 +144,56 @@ class CloudDb(
     },
     "p": {
       "${'$'}qk": { ".read": "${'$'}qk.length >= 24", ".write": "${'$'}qk.length >= 24" }
+    },
+    "g": {
+      "${'$'}gk": {
+        "cat": { ".read": "${'$'}gk.length >= 24" },
+        "codes": { ".read": "${'$'}gk.length >= 24" },
+        "hb": { ".read": "${'$'}gk.length >= 24" },
+        "sig": { ".write": "${'$'}gk.length >= 24", ".validate": "newData.isNumber()" },
+        "creq": { ".write": "${'$'}gk.length >= 24", ".validate": "newData.isNumber()" },
+        "rq": {
+          "${'$'}id": {
+            ".write": "${'$'}gk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}id.length >= 24 && ${'$'}id.length <= 64 && newData.hasChildren(['at', 'op', 'p'])",
+            "at": { ".validate": "newData.val() == now" },
+            "op": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "p": { ".validate": "newData.isString() && newData.val().length <= 4000" },
+            "${'$'}other": { ".validate": false }
+          }
+        },
+        "rs": {
+          "${'$'}id": { ".read": "${'$'}gk.length >= 24 && ${'$'}id.length >= 24", ".write": "${'$'}gk.length >= 24 && !newData.exists()" }
+        },
+        "ob": {
+          "${'$'}id": {
+            ".write": "${'$'}gk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}id.length == 40 && newData.hasChildren(['at', 'u', 't', 'p'])",
+            "at": { ".validate": "newData.val() == now" },
+            "u": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "t": { ".validate": "newData.val() == '1' || newData.val() == '4'" },
+            "p": { ".validate": "newData.isString() && newData.val().length <= 60000" },
+            "m": { ".validate": "newData.isString() && newData.val().length <= 60000" },
+            "${'$'}other": { ".validate": false }
+          }
+        },
+        "obr": {
+          "${'$'}id": { ".read": "${'$'}gk.length >= 24 && ${'$'}id.length == 40" }
+        },
+        "lb": {
+          "${'$'}id": {
+            ".write": "${'$'}gk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}id.length >= 24 && newData.hasChildren(['at', 'n', 'b'])",
+            "at": { ".validate": "newData.val() == now" },
+            "n": { ".validate": "newData.isNumber()" },
+            "b": { ".validate": "newData.isString() && newData.val().length <= 6000000" },
+            "${'$'}other": { ".validate": false }
+          }
+        },
+        "lbr": {
+          "${'$'}id": { ".read": "${'$'}gk.length >= 24 && ${'$'}id.length >= 24" }
+        }
+      }
     }
   }
 }"""

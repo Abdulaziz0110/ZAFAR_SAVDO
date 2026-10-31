@@ -473,7 +473,7 @@ def step_codes():
 
 
 def step_autostart():
-    step(6, TOTAL, "Avtozapusk: 1C kodlari har 6 soatda va telefondan so'ralganda yuboriladi")
+    step(6, TOTAL, "Avtozapusk: 1C kodlari har 6 soatda o'zi va telefondan so'ralganda yuboriladi")
     startup = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup")
     os.makedirs(startup, exist_ok=True)
     for f in glob.glob(os.path.join(startup, "*")):
@@ -486,6 +486,11 @@ def step_autostart():
     with open(path, "w", encoding="ascii", errors="replace", newline="") as f:
         f.write(startup_vbs(pythonw(), EXPORT, HERE))
     ok("avtozapuskka qo'yildi: %s" % path)
+    # Ehtiyot: har soatda tekshiruvchi vazifa — dastur to'xtab qolgan bo'lsa qayta ishga tushadi
+    # (ishlab turgan bo'lsa yangi nusxa o'zi chiqib ketadi — bir vaqtda faqat bitta ishlaydi).
+    c, o = run(["schtasks", "/create", "/tn", "IMSOFT 1C kodlar", "/tr", '"%s" "%s"' % (pythonw(), EXPORT),
+                "/sc", "hourly", "/rl", "highest", "/f"])
+    ok("Rejalashtiruvchi: har soatda tekshiriladi") if c == 0 else warn("rejalashtiruvchiga qo'shilmadi: %s" % o[:200])
     ps("Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'onec_export\\.py' } | "
        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }")
     time.sleep(1)

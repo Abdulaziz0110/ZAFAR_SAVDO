@@ -32,7 +32,7 @@ class LoginViewModel(private val auth: AuthRepository) : ViewModel() {
         _state.value = LoginState(loading = true)
         viewModelScope.launch {
             try {
-                val configured = withContext(Dispatchers.IO) { auth.serverConfig.isComplete }
+                val configured = withContext(Dispatchers.IO) { auth.isConfigured }
                 if (!configured) return@launch fail(LoginError.ServerMissing)
                 val ok = auth.login(phone.trim(), password)
                 _state.value = if (ok) LoginState(loggedIn = true) else LoginState(error = LoginError.Credentials)

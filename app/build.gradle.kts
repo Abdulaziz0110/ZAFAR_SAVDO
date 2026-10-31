@@ -20,12 +20,25 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.8"
+        versionCode = 12
+        versionName = "3.0"
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {
             generatedDensities?.clear()
+        }
+    }
+
+    // v3.0: bitta kod — ikki ilova. "agent" — ishchilar uchun (asl applicationId va imzo, hozirgi ilova shu bo'lib yangilanadi);
+    // "admin" — egasi uchun, hamma imkoniyat (alohida ilova, yonma-yon o'rnatiladi). Rol AppRole.isAdmin orqali.
+    flavorDimensions += "role"
+    productFlavors {
+        create("agent") {
+            dimension = "role"
+        }
+        create("admin") {
+            dimension = "role"
+            applicationIdSuffix = ".admin"
         }
     }
 

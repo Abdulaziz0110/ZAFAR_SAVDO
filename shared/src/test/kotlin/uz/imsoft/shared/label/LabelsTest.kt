@@ -127,4 +127,19 @@ class LabelsTest {
         val old = """{"v":1,"at":1,"cid":"c","cn":"M","rate":1,"pat":0,"p":[["1","A","",1,0,1,0]],"l":[],"cov":[]}"""
         assertEquals("", uz.imsoft.shared.report.SnapshotCodec.fromJson(old).products[0].plu)
     }
+
+    @Test
+    fun codesPrices() {
+        val json = """{"v":1,"src":{"plu":"","bc":"","price":"R","types":["1-narx","Optom"]},"items":[
+            {"c":"2555","n":"Orik","p":"501","b":[],"pr":{"1-narx":60000.0,"Optom":55000,"Bo'sh":0}},
+            {"c":"9","n":"Yong'oq","p":"","b":[]}]}"""
+        val d = CodesPayload.parse(json.toByteArray())
+        assertEquals(listOf("1-narx", "Optom"), d.priceTypes)
+        assertEquals(mapOf("1-narx" to 60000.0, "Optom" to 55000.0), d.items[0].prices)
+        assertTrue(d.items[1].prices.isEmpty())
+        data class P(val id: String, val name: String)
+        val link = CodesPayload.linkIds(d.items, listOf(P("2555", "boshqa nom"), P("x9", "Yong'oq")), { it.id }, { it.name })
+        assertEquals("2555", link[d.items[0]])
+        assertEquals("x9", link[d.items[1]])
+    }
 }

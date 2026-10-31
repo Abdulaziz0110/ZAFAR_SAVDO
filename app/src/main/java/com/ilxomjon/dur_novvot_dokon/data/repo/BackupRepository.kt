@@ -42,7 +42,17 @@ data class BackupPreview(
     val encrypted: Boolean,
     /** Zaxira bu ilovadan yangiroq versiyada qilingan — tiklab bo'lmaydi. */
     val tooNew: Boolean,
+    /** v3.0: ichida sozlamalar ham bor (server, bulut, printerlar) — parolli zaxira. */
+    val hasSettings: Boolean = false,
 )
+
+/** Ko'chiriladigan fayl yo'llari (sof — testlanadi). */
+object TransferPaths {
+    /** Zaxira ichidagi fayl yo'li ruxsat etilganmi: faqat ma'lum fayllar, ".." va mutlaq yo'l yo'q. */
+    fun allowed(rel: String): Boolean =
+        rel.isNotEmpty() && !rel.contains("..") && !rel.startsWith("/") && !rel.contains('\\') &&
+            TRANSFER_FILES.any { if (it.endsWith("/")) rel.startsWith(it) && rel.length > it.length else rel == it }
+}
 
 class BackupException(val kind: Kind, message: String? = null, cause: Throwable? = null) : Exception(message ?: kind.name, cause) {
     enum class Kind { NOT_BACKUP, WRONG_PASSWORD, TOO_NEW, CORRUPT, DISK_FULL, IO }
@@ -50,12 +60,19 @@ class BackupException(val kind: Kind, message: String? = null, cause: Throwable?
 
 /**
  * Ma'lumotni zaxiralash/tiklash.
- *  - Zaxiraga SQL Server PAROLI kiritilmaydi.
+ *  - Parolsiz zaxiraga SQL Server PAROLI va bulut kalitlari kiritilmaydi. v3.0: parol qo'yilsa, sozlamalar ham (server paroli,
+ *    bulut, mijozlar, yorliq/skaner) shifrlangan holda kiradi — Agent'dan Admin'ga yoki yangi telefonga ko'chirish uchun.
  *  - Ixtiyoriy parol bilan shifrlash (AES-256-GCM, PBKDF2). Parol hech qayerda saqlanmaydi — unutilsa, ochib bo'lmaydi.
  *  - Tiklashdan oldin: ko'rib chiqish (preview), versiya va yaxlitlik tekshiruvi, joriy bazalar nusxasi (xato bo'lsa qaytariladi).
  *  - Tiklangan navbatdagi yuborilmagan qatorlar "Tekshirish kerak" holatiga o'tadi va o'zi yuborilmaydi (takroriy buyurtma xavfi).
  */
 private const val BARCODES = "barcodes.json"
+/** v3.0: sozlamalar (faqat parolli zaxirada) — Agent -> Admin yoki yangi telefonga ko'chirish. */
+private const val TRANSFER = "transfer.json"
+private const val FILES = "files/"
+/** Ko'chiriladigan fayllar (filesDir ichida): mijozlar/1C tarixi, logo, 1C kodlari va narxlari. */
+private val TRANSFER_FILES = listOf("share/", "receipt_logo.png", "prices_1c.json", "codes_1c.json")
+private val TRANSFER_PREFS = listOf("app_prefs", "labels", "scan_prefs")
 
 class BackupRepository(
     private val context: Context,
@@ -66,7 +83,12 @@ class BackupRepository(
     private val catalog: CatalogRepository,
     private val draft: DraftRepository,
     private val outbox: OutboxRepository,
+    private val shareStore: com.ilxomjon.dur_novvot_dokon.data.share.ShareStore,
 ) {
+    /** Oxirgi tiklashda sozlamalar ham tiklandimi (bo'lsa ilova qayta ishga tushirilishi kerak). */
+    @Volatile var lastRestoredSettings: Boolean = false
+        private set
+
     private val userPrefs get() = context.getSharedPreferences("user", Context.MODE_PRIVATE)
     private val draftKeys = listOf("tan_dokon_id", "tan_region_id", "tan_dokon_nomi", "savdo_turi", "valyuta_turi", "vazvrat")
 
@@ -77,8 +99,9 @@ class BackupRepository(
                 try {
                     localDb.writableDatabase.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
                     historyDb.checkpoint()
-                    val zip = buildZip()
-                    val bytes = if (password != null && password.isNotEmpty()) Crypto.encrypt(zip, password) else zip
+                    val secret = password != null && password.isNotEmpty()
+                    val zip = buildZip(withSettings = secret)
+                    val bytes = if (password != null && secret) Crypto.encrypt(zip, password) else zip
                     val out = context.contentResolver.openOutputStream(target) ?: throw BackupException(BackupException.Kind.IO, "Fayl ochilmadi")
                     out.use { it.write(bytes); it.flush() }
                 } catch (e: BackupException) {
@@ -90,7 +113,7 @@ class BackupRepository(
         }
     }
 
-    private fun buildZip(): ByteArray {
+    private fun buildZip(withSettings: Boolean): ByteArray {
         val bos = ByteArrayOutputStream()
         ZipOutputStream(bos).use { zip ->
             addFile(zip, LocalDb.NAME, context.getDatabasePath(LocalDb.NAME))
@@ -106,11 +129,57 @@ class BackupRepository(
             json.put("draft", draftJson)
             putText(zip, "settings.json", json.toString())
             val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+            if (withSettings) addTransfer(zip)
             putText(zip, "manifest.json", JSONObject().put("format", 2).put("created_at", System.currentTimeMillis()).put("app_version", version)
                 .put("history_db_version", HistoryDb.VERSION).put("local_db_version", LocalDb.VERSION).toString())
         }
         return bos.toByteArray()
     }
+
+    /**
+     * Sozlamalar: server paroli, bulut (Firebase, mijozlar, kalitlar), yorliq/skaner sozlamalari va ularning fayllari.
+     * FAQAT parol bilan shifrlangan zaxiraga yoziladi.
+     */
+    private fun addTransfer(zip: ZipOutputStream) {
+        val prefsJson = JSONObject()
+        for (name in TRANSFER_PREFS) prefsJson.put(name, com.ilxomjon.dur_novvot_dokon.data.PrefsDump.toJson(context.getSharedPreferences(name, Context.MODE_PRIVATE).all))
+        val t = JSONObject().put("format", 1).put("from", context.packageName)
+            .put("server_password", secure.storedPassword())
+            .put("share", shareStore.exportAll())
+            .put("prefs", prefsJson)
+        putText(zip, TRANSFER, t.toString())
+        val root = context.filesDir
+        for (item in TRANSFER_FILES) {
+            val f = File(root, item.trimEnd('/'))
+            if (f.isDirectory) f.walkTopDown().filter { it.isFile }.forEach { addFile(zip, FILES + it.relativeTo(root).path.replace('\\', '/'), it) }
+            else if (f.isFile) addFile(zip, FILES + item, f)
+        }
+    }
+
+    /** Ko'chirilgan sozlamalarni yozadi. Ilova keyin qayta ishga tushirilishi kerak (xotiradagi holat eski). */
+    private fun applyTransfer(dir: File) {
+        val t = JSONObject(File(dir, TRANSFER).readText())
+        t.optString("server_password").takeIf { it.isNotEmpty() }?.let { secure.restorePassword(it) }
+        t.optJSONObject("share")?.let { shareStore.importAll(it) }
+        val p = t.optJSONObject("prefs")
+        if (p != null) for (name in TRANSFER_PREFS) p.optJSONObject(name)?.let {
+            com.ilxomjon.dur_novvot_dokon.data.PrefsDump.apply(context.getSharedPreferences(name, Context.MODE_PRIVATE), it)
+        }
+        val src = File(dir, FILES.trimEnd('/'))
+        if (src.isDirectory) {
+            File(context.filesDir, "share").deleteRecursively()
+            src.walkTopDown().filter { it.isFile }.forEach { f ->
+                val rel = f.relativeTo(src).path.replace('\\', '/')
+                if (allowedTransferPath(rel)) {
+                    val dst = File(context.filesDir, rel)
+                    dst.parentFile?.mkdirs()
+                    f.copyTo(dst, overwrite = true)
+                }
+            }
+        }
+    }
+
+    private fun allowedTransferPath(rel: String): Boolean = TransferPaths.allowed(rel)
 
     /** Zaxiradagi shtrix kodlar (eskiroq zaxirada bo'lmaydi — unda hech narsa o'zgarmaydi). */
     private fun restoreBarcodes(src: File) {
@@ -153,6 +222,7 @@ class BackupRepository(
                 unsent = if (hv >= 3) count(hist, "SELECT COUNT(*) FROM outbox WHERE state NOT IN ('SENT','SENT_MANUAL')") else count(hist, "SELECT COUNT(*) FROM outbox"),
                 encrypted = encrypted,
                 tooNew = hv > HistoryDb.VERSION,
+                hasSettings = File(dir, TRANSFER).exists(),
             )
         } finally {
             dir.deleteRecursively()
@@ -161,6 +231,7 @@ class BackupRepository(
 
     /** @return tekshirish kerak bo'lgan (avtomatik yuborilmaydigan) qatorlar soni */
     suspend fun import(source: Uri, password: CharArray?): Int {
+        lastRestoredSettings = false
         draft.flush()
         val needsCheck = outbox.paused {
             withContext(Dispatchers.IO) {
@@ -187,6 +258,7 @@ class BackupRepository(
                         val n = historyDb.markAllUnfinishedNeedsCheck(CheckReason.RESTORED)
                         File(dir, "settings.json").takeIf { it.exists() }?.let { applySettings(JSONObject(it.readText())) }
                         File(dir, BARCODES).takeIf { it.exists() }?.let { restoreBarcodes(it) }
+                        if (File(dir, TRANSFER).exists()) { applyTransfer(dir); lastRestoredSettings = true }
                         n
                     } catch (t: Throwable) {
                         runCatching { localDb.close(); historyDb.close() }
@@ -223,8 +295,13 @@ class BackupRepository(
                 var e = zip.nextEntry
                 while (e != null) {
                     val name = e.name
-                    if (name == LocalDb.NAME || name == HistoryDb.NAME || name == "settings.json" || name == "manifest.json" || name == BARCODES) {
+                    if (name == LocalDb.NAME || name == HistoryDb.NAME || name == "settings.json" || name == "manifest.json" || name == BARCODES || (name == TRANSFER && encrypted)) {
                         File(tmp, name).outputStream().use { zip.copyTo(it) }
+                    } else if (encrypted && name.startsWith(FILES) && !e.isDirectory && allowedTransferPath(name.removePrefix(FILES))) {
+                        // Sozlama fayllari faqat parolli zaxiradan olinadi
+                        val dst = File(tmp, name)
+                        dst.parentFile?.mkdirs()
+                        dst.outputStream().use { zip.copyTo(it) }
                     }
                     e = zip.nextEntry
                 }

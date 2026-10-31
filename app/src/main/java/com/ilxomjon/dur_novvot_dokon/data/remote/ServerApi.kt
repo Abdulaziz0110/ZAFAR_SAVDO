@@ -17,15 +17,15 @@ import java.sql.ResultSet
 import java.sql.SQLException
 
 /** Serverdagi jadvallar bilan ishlash. Barcha so'rovlar PreparedStatement orqali (SQL injection yo'q). */
-class ServerApi(private val server: SqlServer) : OutboxSink {
+class ServerApi(private val server: SqlServer) : Backend {
 
     /** Ulanishni tekshiradi va qaysi manzil orqali ulanganini qaytaradi. */
-    suspend fun testConnection(cfg: ServerConfig): String {
+    override suspend fun testConnection(cfg: ServerConfig): String {
         server.withConnection(cfg) { conn -> withContext(Dispatchers.IO) { conn.createStatement().use { it.execute("SELECT 1") } } }
         return server.lastHost.orEmpty()
     }
 
-    suspend fun login(phone: String, password: String): RawAgent? = server.withConnection { conn ->
+    override suspend fun login(phone: String, password: String): RawAgent? = server.withConnection { conn ->
         withContext(Dispatchers.IO) {
             wrap {
                 conn.prepareStatement("SELECT agent_id, fio, boshagan, telefon, parol FROM agentlar WHERE telefon = ? AND parol = ?").use { ps ->
@@ -39,7 +39,7 @@ class ServerApi(private val server: SqlServer) : OutboxSink {
         }
     }
 
-    suspend fun fetchSnapshot(agentId: String): CatalogSnapshot = server.withConnection { conn ->
+    override suspend fun fetchSnapshot(agentId: String): CatalogSnapshot = server.withConnection { conn ->
         withContext(Dispatchers.IO) {
             wrap {
                 val groups = query(conn, "SELECT gruppa_id, gruppa_nomi FROM gruppa") { Group(it.s(1), it.s(2)) }
@@ -67,17 +67,39 @@ class ServerApi(private val server: SqlServer) : OutboxSink {
         }
     }
 
+    /**
+     * v3.0 Admin ko'prigi uchun: telefon bo'yicha agent va uning serverdagi paroli (faqat Admin ichida, isbot hisoblash uchun —
+     * parol hech qayerga yuborilmaydi). Faqat o'qish.
+     */
+    suspend fun agentByPhone(phone: String): Pair<RawAgent, String>? = server.withConnection { conn ->
+        withContext(Dispatchers.IO) {
+            wrap {
+                conn.prepareStatement("SELECT agent_id, fio, boshagan, telefon, parol FROM agentlar WHERE telefon = ?").use { ps ->
+                    ps.setString(1, phone)
+                    ps.executeQuery().use { rs -> if (rs.next()) RawAgent(rs.s(1), rs.s(2), rs.s(3), rs.s(4)) to rs.s(5) else null }
+                }
+            }
+        }
+    }
+
+    /** v3.0: hamma agentlar (parolsiz) — Admin katalogga qo'shadi, agent o'z qatorini topadi. */
+    suspend fun agents(): List<RawAgent> = server.withConnection { conn ->
+        withContext(Dispatchers.IO) {
+            wrap { query(conn, "SELECT agent_id, fio, boshagan, telefon FROM agentlar") { RawAgent(it.s(1), it.s(2), it.s(3), it.s(4)) } }
+        }
+    }
+
     /** Do'kon qarzini so'raydi: javob "so'm:dollar". */
-    suspend fun fetchDebt(agentId: String, storeId: String): Pair<String, String> {
+    override suspend fun fetchDebt(agentId: String, storeId: String): Pair<String, String> {
         val answer = request(agentId, Protocol.TYPE_DEBT, storeId, timeoutMs = 20_000)
         return Protocol.parseDebt(answer)
     }
 
-    suspend fun fetchReport(agentId: String, payload: String): String =
+    override suspend fun fetchReport(agentId: String, payload: String): String =
         Protocol.reportHtml(request(agentId, Protocol.TYPE_REPORT, payload, timeoutMs = 60_000))
 
     /** Server vaqti (diagnostika va qurilma soatini tekshirish uchun). Faqat o'qish. */
-    suspend fun serverTimeMillis(): Long = server.withConnection { conn ->
+    override suspend fun serverTimeMillis(): Long = server.withConnection { conn ->
         withContext(Dispatchers.IO) {
             wrap { conn.createStatement().use { st -> st.executeQuery("SELECT GETDATE()").use { rs -> rs.next(); rs.getTimestamp(1).time } } }
         }

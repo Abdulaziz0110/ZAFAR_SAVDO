@@ -29,8 +29,16 @@ class ServerSettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        vm = viewModel { ServerSettingsViewModel(ServiceLocator.auth) }
+        vm = viewModel { ServerSettingsViewModel(ServiceLocator.auth, ServiceLocator.secure) }
         binding.toolbar.setNavigationOnClickListener { navigator().pop() }
+        // v3.0: ulanish turi faqat Agent'da (Admin har doim serverga o'zi ulanadi)
+        val agent = !com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        binding.tvModeTitle.show(agent)
+        binding.tgMode.show(agent)
+        if (savedInstanceState == null) binding.edtRelayCode.setText(vm.relayCode)
+        binding.tgMode.check(if (agent && vm.relayMode) R.id.btnModeAdmin else R.id.btnModeServer)
+        renderMode()
+        binding.tgMode.addOnButtonCheckedListener { _, _, checked -> if (checked) renderMode() }
 
         if (savedInstanceState == null) {
             val c = vm.current
@@ -41,10 +49,31 @@ class ServerSettingsFragment : Fragment() {
             binding.edtRemoteHost.setText(c.remoteHost)
         }
         binding.tilPassword.helperText = if (vm.hasPassword) getString(R.string.server_password_saved) else null
-        binding.btnTest.setOnClickListener { readConfig()?.let { vm.test(it) } }
-        binding.btnSave.setOnClickListener { readConfig()?.let { vm.save(it) } }
+        binding.btnTest.setOnClickListener {
+            if (relaySelected()) readRelay()?.let { vm.testRelay(it) } else readConfig()?.let { vm.test(it) }
+        }
+        binding.btnSave.setOnClickListener {
+            if (relaySelected()) readRelay()?.let { vm.saveRelay(it) } else readConfig()?.let { vm.save(it) }
+        }
 
         launchOnStarted { vm.state.collect { render(it) } }
+    }
+
+    private fun relaySelected(): Boolean = binding.tgMode.visibility == View.VISIBLE && binding.tgMode.checkedButtonId == R.id.btnModeAdmin
+
+    /** "Admin orqali": server maydonlari yashiriladi, Admin bergan kod so'raladi. */
+    private fun renderMode() {
+        val relay = relaySelected()
+        binding.tvModeHint.show(relay)
+        binding.tilRelayCode.show(relay)
+        for (v in listOf(binding.tilHost, binding.tilDb, binding.tilLogin, binding.tilPassword, binding.tilRemoteHost)) v.show(!relay)
+        binding.tvResult.show(false)
+    }
+
+    private fun readRelay(): com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config? {
+        val c = com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.decodeCode(binding.edtRelayCode.text?.toString().orEmpty())
+        binding.tilRelayCode.error = if (c == null) getString(R.string.srv_relay_code_bad) else null
+        return c
     }
 
     private fun readConfig(): ServerConfig? {
@@ -66,6 +95,7 @@ class ServerSettingsFragment : Fragment() {
         binding.progress.showInvisible(s.testing)
         binding.btnTest.isEnabled = !s.testing
         val msg = when {
+            s.testOk == true && s.adminAt > 0 -> getString(R.string.srv_relay_ok, com.ilxomjon.dur_novvot_dokon.ui.formatDateTime(s.adminAt))
             s.testOk == true -> getString(R.string.server_test_ok_via, s.via)
             s.testError != null -> requireContext().describeError(s.testError)
             else -> null

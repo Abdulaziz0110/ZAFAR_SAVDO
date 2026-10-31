@@ -3,7 +3,7 @@ package com.ilxomjon.dur_novvot_dokon.data.share
 import android.content.Context
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.data.remote.Protocol
-import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
+import com.ilxomjon.dur_novvot_dokon.data.remote.Backend
 import com.ilxomjon.dur_novvot_dokon.data.repo.CatalogRepository
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
 import com.ilxomjon.dur_novvot_dokon.domain.PriceType
@@ -132,7 +132,7 @@ class ShareRepository(
     private val context: Context,
     private val store: ShareStore,
     private val catalog: CatalogRepository,
-    private val api: ServerApi,
+    private val api: Backend,
 ) {
     private val mutex = Mutex()
     /** v2.7: kompyuterdan kelgan tovar kodlari (PLU, shtrix) — narx yorliqlari bo'limi qabul qiladi. */
@@ -264,6 +264,16 @@ class ShareRepository(
         if (t != store.receiptFooter) { store.receiptFooter = t; store.markAllDirty(); publishState() }
     }
     fun setReceiptStaff(v: String) { store.receiptStaff = v.trim().take(40) }
+
+    /** Chek ko'rinishi: hozirgi uslub (buzilgan bo'lsa standart). */
+    val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle get() = uz.imsoft.shared.receipt.ReceiptStyle.decode(store.receiptStyle)
+    fun setReceiptStyle(v: uz.imsoft.shared.receipt.ReceiptStyle) {
+        val t = v.normalized().encode()
+        if (t != store.receiptStyle) { store.receiptStyle = t; store.markAllDirty(); publishState() }
+    }
+    /** Logo (null — olib tashlash). 2-ilovalarga keyingi yuborishda boradi. */
+    fun setReceiptLogo(png: ByteArray?) { store.receiptLogo = png; store.markAllDirty(); publishState() }
+    val receiptLogo: ByteArray? get() = store.receiptLogo
     fun setSyncMinutes(v: Int) { store.syncMinutes = v; publishState() }
 
     // ---------------- mijozlar ----------------
@@ -359,6 +369,9 @@ class ShareRepository(
     }
 
     // ---------------- telefonlar (2-ilovaga kirish) ----------------
+
+    /** v3.0: Firebase qoidalari yangi (agentlar ko'prigi uchun) bo'lishi shart — eskisini yangilaydi. */
+    suspend fun ensureRulesNow() = ensureRules()
 
     private suspend fun ensureRules() {
         if (store.rulesVersion < CloudDb.RULES_VERSION && store.isCloudReady) {
@@ -524,7 +537,7 @@ class ShareRepository(
         val m = LedgerMerge.merge(b.entries, b.coverage, report, System.currentTimeMillis(), source)
         b.entries = m.entries
         b.coverage = m.coverage
-        report.closing?.let { c -> if (b.balance == null || c.first >= b.balance!!.first) b.balance = c }
+        report.closing?.let { c -> val cur = b.balance; if (cur == null || c.first >= cur.first) b.balance = c }
         b.log = listOf(ImportLog(System.currentTimeMillis(), name, source, m.added, m.removed, m.same, report.periodFrom ?: 0, report.periodTo ?: 0)) + b.log
         saveBook(id, b)
         store.update(id) { it.copy(dirty = true) }
@@ -646,6 +659,7 @@ class ShareRepository(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
             items.sortedBy { it.name.lowercase() }, b.entries + mirror.entriesFor(c.id, b.entries, b.coverage), b.coverage, cat.lastSyncAt, reportBalance = b.balance,
             features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
+            receiptStyle = store.receiptStyle, receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
         )
     }
 
@@ -733,11 +747,11 @@ class ShareRepository(
      * 1-ilovada savdo navbatga qo'yilganda: mijoz ro'yxatda bo'lsa — uning 2-ilovasiga darhol yuboriladi (tarixda ko'rinadi)
      * va 2-ilovada yoqilgan bo'lsa chek printer navbatiga qo'yiladi. Internet bo'lmasa — keyin (fon ishchisi).
      */
-    suspend fun onSale(sent: com.ilxomjon.dur_novvot_dokon.domain.SentOrder, outboxId: Long, code: String) {
+    suspend fun onSale(sent: com.ilxomjon.dur_novvot_dokon.domain.SentOrder, outboxId: Long, code: String, saleId: String? = null) {
         if (!store.isConfigured) return
         // Chek uchun "oldingi qarz" — serverdan oxirgi yuklangan qiymat (so'm savdosida)
         val debt = if (sent.currency == com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM) catalog.storeById(sent.storeId)?.debtSom else null
-        val (c, s) = mirror.record(sent, outboxId, code, debt) ?: return
+        val (c, s) = mirror.record(sent, outboxId, code, debt, saleId) ?: return
         store.update(c.id) { it.copy(dirty = true) }
         mutex.withLock { publishState() }
         val fresh = store.client(c.id) ?: c
@@ -802,12 +816,12 @@ class ShareRepository(
 
     /** Tayyor ESC/POS chekni joriy mijozning printer navbatiga qo'yadi (2-ilova chop etadi). */
     suspend fun sendToBranchPrinter(bytes: ByteArray, clientId: String = store.current()?.id.orEmpty()) = withContext(Dispatchers.IO) {
-        val c = store.client(clientId)
-        check(store.isCloudReady && c != null && c.queueKey.isNotEmpty()) { context.getString(R.string.cl_no_printer) }
+        val c = store.client(clientId)?.takeIf { store.isCloudReady && it.queueKey.isNotEmpty() }
+            ?: throw IllegalStateException(context.getString(R.string.cl_no_printer))
         val db = cloud()
         val key = "c" + (System.currentTimeMillis() * 1_000_000L + (System.nanoTime() % 1_000_000L).let { if (it < 0) -it else it })
         db.put(
-            "q/${c!!.queueKey}/$key",
+            "q/${c.queueKey}/$key",
             linkedMapOf("t" to CloudDb.SERVER_TIME, "b" to B64.encode(bytes), "n" to bytes.size, "src" to "1-ilova"),
             timeoutMs = 60_000,
         )

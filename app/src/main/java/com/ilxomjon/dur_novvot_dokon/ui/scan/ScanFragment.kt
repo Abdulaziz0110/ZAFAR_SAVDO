@@ -158,6 +158,7 @@ class ScanFragment : Fragment() {
             },
         )
         adapter.haptics = ServiceLocator.appPrefs.fHaptics
+        if (labelMode) adapter.priceOverride = { p -> ServiceLocator.labels.let { r -> if (r.state.value.price1c.isNotEmpty()) r.priceOf(p, null) else null } }
         b.recycler.layoutManager = LinearLayoutManager(requireContext())
         b.recycler.adapter = adapter
         b.recycler.addItemDecoration(
@@ -365,7 +366,7 @@ class ScanFragment : Fragment() {
         val u = pending.firstOrNull()
         if (u != null) {
             if (u.suggestion != null) assignPending(u.suggestion)
-            else { pending.removeFirst(); if (pending.isNotEmpty()) showPending() else showResult(Mode.IDLE, getString(R.string.scan_hint), null, null) }
+            else { pending.removeAt(0); if (pending.isNotEmpty()) showPending() else showResult(Mode.IDLE, getString(R.string.scan_hint), null, null) }
             return
         }
         if (labelMode) {

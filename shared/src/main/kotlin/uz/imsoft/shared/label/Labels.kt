@@ -144,13 +144,34 @@ object PluImport {
  * JSON: {"v":1,"src":{"plu":..,"bc":..},"items":[{"c":"2555","n":"Orik ..","p":"501","b":["2901740"]}]}
  */
 object CodesPayload {
-    class Item(val code: String, val name: String, val plu: String, val barcodes: List<String>)
-    class Data(val items: List<Item>, val pluSource: String, val barcodeSource: String) {
+    /** [prices] — 1C narx turlari bo'yicha (nomi -> narx), bo'lmasa bo'sh. */
+    class Item(val code: String, val name: String, val plu: String, val barcodes: List<String>, val prices: Map<String, Double> = emptyMap())
+    class Data(
+        val items: List<Item>, val pluSource: String, val barcodeSource: String,
+        val priceSource: String = "", val priceTypes: List<String> = emptyList(),
+    ) {
         val pluRows: List<PluImport.Row> get() = items.filter { it.plu.isNotEmpty() }.map { PluImport.Row(it.name, it.code, it.plu) }
         val barcodeRows: List<BarcodeImport.Row> get() = items.flatMap { i -> i.barcodes.map { BarcodeImport.Row(i.code, i.name, it) } }
     }
 
     @Suppress("UNCHECKED_CAST")
+    /** Kompyuterdan kelgan tovarni katalogdagisiga bog'lash: avval kod, keyin nom (ikki ma'noli nom bog'lanmaydi). */
+    fun <T> linkIds(items: List<Item>, catalog: List<T>, id: (T) -> String, name: (T) -> String): Map<Item, String> {
+        val byCode = HashMap<String, String>()
+        for (it in catalog) byCode.putIfAbsent(BarcodeLink.codeKey(id(it)), id(it))
+        val byName = HashMap<String, String?>()
+        for (it in catalog) {
+            val k = LedgerMerge.nameKey(name(it))
+            byName[k] = if (byName.containsKey(k) && byName[k] != id(it)) null else id(it)
+        }
+        val out = LinkedHashMap<Item, String>()
+        for (i in items) {
+            val pid = (if (i.code.isNotEmpty()) byCode[BarcodeLink.codeKey(i.code)] else null) ?: byName[LedgerMerge.nameKey(i.name)]
+            if (pid != null) out[i] = pid
+        }
+        return out
+    }
+
     fun parse(bytes: ByteArray): Data {
         val o = JObj.parse(String(bytes, Charsets.UTF_8))
         if (o.long("v", 0) < 1) throw IllegalArgumentException("codes: v")
@@ -161,10 +182,16 @@ object CodesPayload {
             if (code.isEmpty() && name.isEmpty()) return@mapNotNull null
             val plu = m.str("p").filter { it.isDigit() }.trimStart('0')
             val bc = (m.map["b"] as? List<Any?>).orEmpty().mapNotNull { it?.toString()?.trim()?.takeIf { s -> s.isNotEmpty() } }.distinct()
-            Item(code, name, plu, bc)
+            val pr = (m.map["pr"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) ->
+                val d = (v as? Number)?.toDouble() ?: v?.toString()?.toDoubleOrNull() ?: return@mapNotNull null
+                if (d > 0 && k.isNotBlank()) k.trim() to d else null
+            }.toMap()
+            Item(code, name, plu, bc, pr)
         }
         val src = o.obj("src")
-        return Data(items, src?.str("plu").orEmpty(), src?.str("bc").orEmpty())
+        val types = src?.arr("types").orEmpty().mapNotNull { it?.toString()?.trim()?.takeIf { t -> t.isNotEmpty() } }
+            .ifEmpty { items.flatMap { it.prices.keys }.distinct() }
+        return Data(items, src?.str("plu").orEmpty(), src?.str("bc").orEmpty(), src?.str("price").orEmpty(), types)
     }
 }
 

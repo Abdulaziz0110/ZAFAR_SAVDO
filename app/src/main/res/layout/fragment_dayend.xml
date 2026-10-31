@@ -27,8 +27,10 @@
             android:id="@+id/btnPrev"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="@string/dayend_prev" />
+            android:layout_height="wrap_content"
+            android:text="@string/dayend_prev"
+            android:minHeight="48dp"
+            android:maxLines="2" />
 
         <TextView
             android:id="@+id/tvDate"
@@ -42,8 +44,10 @@
             android:id="@+id/btnNext"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="@string/dayend_next" />
+            android:layout_height="wrap_content"
+            android:text="@string/dayend_next"
+            android:minHeight="48dp"
+            android:maxLines="2" />
     </LinearLayout>
 
     <WebView
@@ -62,20 +66,28 @@
             android:id="@+id/btnCsvOrders"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:text="@string/csv_orders"
-            app:icon="@drawable/ic_download" />
+            app:icon="@drawable/ic_download"
+            android:minHeight="52dp"
+            android:maxLines="2"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCsvPayments"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="match_parent"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:text="@string/csv_payments"
-            app:icon="@drawable/ic_download" />
+            app:icon="@drawable/ic_download"
+            android:minHeight="52dp"
+            android:maxLines="2"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
     </LinearLayout>
 </LinearLayout>

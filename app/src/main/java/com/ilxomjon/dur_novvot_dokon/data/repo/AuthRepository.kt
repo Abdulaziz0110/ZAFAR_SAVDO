@@ -2,19 +2,24 @@ package com.ilxomjon.dur_novvot_dokon.data.repo
 
 import com.ilxomjon.dur_novvot_dokon.data.SecureStore
 import com.ilxomjon.dur_novvot_dokon.data.local.CatalogDao
-import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
+import com.ilxomjon.dur_novvot_dokon.data.remote.Backend
 import com.ilxomjon.dur_novvot_dokon.domain.ServerConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class AuthRepository(
-    private val api: ServerApi,
+    private val api: Backend,
     private val dao: CatalogDao,
     private val secure: SecureStore,
     private val catalog: CatalogRepository,
     private val draft: DraftRepository,
+    /** v3.0: Agent "Admin orqali" sozlangan (server sozlamasi shart emas). */
+    private val relayReady: () -> Boolean = { false },
 ) {
     val serverConfig: ServerConfig get() = secure.serverConfig
+
+    /** Kirish uchun ulanish sozlanganmi: server yoki Admin orqali. */
+    val isConfigured: Boolean get() = relayReady() || secure.serverConfig.isComplete
 
     fun saveServerConfig(cfg: ServerConfig) { secure.serverConfig = cfg }
 

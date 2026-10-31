@@ -79,33 +79,41 @@
                             android:id="@+id/scale90"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_scale_small" />
+                            android:text="@string/ex_scale_small"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/scale100"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_scale_normal" />
+                            android:text="@string/ex_scale_normal"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/scale110"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_scale_large" />
+                            android:text="@string/ex_scale_large"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/scale120"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_scale_xlarge" />
+                            android:text="@string/ex_scale_xlarge"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                     <TextView
                         android:layout_width="match_parent"
@@ -130,25 +138,31 @@
                             android:id="@+id/font90"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_font_small" />
+                            android:text="@string/ex_font_small"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/font100"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_font_normal" />
+                            android:text="@string/ex_font_normal"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/font115"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_font_large" />
+                            android:text="@string/ex_font_large"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -194,25 +208,31 @@
                             android:id="@+id/sortServer"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_sort_server" />
+                            android:text="@string/ex_sort_server"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/sortName"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_sort_name" />
+                            android:text="@string/ex_sort_name"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/sortPopular"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_sort_popular" />
+                            android:text="@string/ex_sort_popular"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                     <TextView
                         android:layout_width="match_parent"
@@ -237,17 +257,21 @@
                             android:id="@+id/addPlus"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_add_plus" />
+                            android:text="@string/ex_add_plus"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/addAsk"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_add_ask" />
+                            android:text="@string/ex_add_ask"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -390,33 +414,41 @@
                             android:id="@+id/sync0"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_off" />
+                            android:text="@string/ex_off"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/sync1"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_h1" />
+                            android:text="@string/ex_h1"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/sync3"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_h3" />
+                            android:text="@string/ex_h3"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/sync6"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_h6" />
+                            android:text="@string/ex_h6"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -467,9 +499,13 @@
                             android:id="@+id/btnPinChange"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_pin_change" />
+                            android:text="@string/ex_pin_change"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                     <TextView
                         android:layout_width="match_parent"
@@ -494,33 +530,41 @@
                             android:id="@+id/lock0"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_lock_now" />
+                            android:text="@string/ex_lock_now"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/lock1"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_lock_1" />
+                            android:text="@string/ex_lock_1"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/lock5"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_lock_5" />
+                            android:text="@string/ex_lock_5"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/lock15"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/ex_lock_15" />
+                            android:text="@string/ex_lock_15"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -577,21 +621,29 @@
                             android:id="@+id/btnBackupNow"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/ex_backup_now"
-                            app:icon="@drawable/ic_backup" />
+                            app:icon="@drawable/ic_backup"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnBackupList"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/ex_backup_list_short"
-                            app:icon="@drawable/ic_restore" />
+                            app:icon="@drawable/ic_restore"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -642,10 +694,14 @@
                             android:id="@+id/btnReminderTime"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:text="@string/ex_reminder_time"
-                            app:icon="@drawable/ic_calendar" />
+                            app:icon="@drawable/ic_calendar"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"

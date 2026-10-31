@@ -135,21 +135,25 @@
                             android:id="@+id/btnCash"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/type_cash" />
+                            android:text="@string/type_cash"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnWholesale"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/type_wholesale" />
+                            android:text="@string/type_wholesale"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
 
                     <com.google.android.material.button.MaterialButtonToggleGroup
@@ -165,21 +169,25 @@
                             android:id="@+id/btnSom"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/currency_som" />
+                            android:text="@string/currency_som"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnUsd"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/currency_usd" />
+                            android:text="@string/currency_usd"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
 
@@ -195,7 +203,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
+                        android:layout_weight="1.25"
                         app:selectionRequired="true"
                         app:singleSelection="true">
 
@@ -203,21 +211,25 @@
                             android:id="@+id/btnSale"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/mode_sale" />
+                            android:text="@string/mode_sale"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnReturn"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/mode_return" />
+                            android:text="@string/mode_return"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -335,7 +347,8 @@
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/sale_suggest_add_all" />
+                    android:text="@string/sale_suggest_add_all"
+                    android:maxLines="2" />
             </LinearLayout>
 
             <TextView
@@ -403,7 +416,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/sale_other_store" />
+                android:text="@string/sale_other_store"
+                android:maxLines="2" />
         </LinearLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -454,8 +468,10 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCart"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:text="@string/sale_cart"
-            app:icon="@drawable/ic_cart" />
+            app:icon="@drawable/ic_cart"
+            android:minHeight="52dp"
+            android:maxLines="2" />
     </LinearLayout>
 </LinearLayout>

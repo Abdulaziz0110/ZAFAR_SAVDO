@@ -257,6 +257,37 @@ yuklash) yoki tovarni bosib PLU ni qo'lda yozish (qo'lda yozilgani doim ustun).
    **Chop etish**. PLU yoki shtrix kodi yo'q tovarlar ro'yxatda alohida ko'rsatiladi va chiqmaydi.
 4. Telefon do'kon Wi-Fi'sida bo'lmasa (internet yoqilgan bo'lsa) yorliqlar navbatga qo'yiladi — kompyuter internetdan olib chiqaradi.
 
+## (s3) Chek ko'rinishi (1-ilova 2.9, 2-ilova 1.4)
+1. 1-ilova ▸ Sozlamalar ▸ Mijozlar va 2-ilova ▸ **Chek ko'rinishi**. Tepada namuna — har o'zgarish darhol ko'rinadi.
+2. Andoza: **1C uslubi** (do'kondagi 1C chekiga o'xshash) yoki **Standart**; 58 mm printer bo'lsa **Ixcham 58 mm**.
+3. **Logo** ▸ Rasm tanlash (oq fonli logo yaxshi chiqadi) ▸ enini suring.
+4. Matnlar: do'kon nomi, manzil (sarlavha osti), xodim, telefonlar, oxirgi xabar ("Xaridingiz uchun rahmat!").
+5. "Chekda nimalar chiqsin" — keraksizini o'chiring. Chek oqarib chiqsa **Qoralik**ni oshiring.
+6. **Sinov cheki** — tanlangan mijozning printeriga boradi. 2-ilovalar yangi ko'rinishni keyingi yuborishdan keyin oladi
+   (Mijozlar ▸ Hozir yuborish).
+
+## (s4) Savdo Admin (3.0) — o'z telefoningizga
+1. Ishchilar telefoniga **SavdoAgent** APK — eski ilova ustidan yangilanadi, hamma narsa joyida qoladi.
+2. O'z telefoningizda avval Agent'ni ham yangilang. Agent ▸ Sozlamalar ▸ **Zaxira nusxa ▸ Saqlash** ▸ **parol qo'ying** ▸ faylni saqlang.
+3. **SavdoAdmin** APK ni o'rnating (yangi ilova, to'q ko'k belgi). Kirish ekranida **"Agent ilovadan ko'chirish"** ▸ faylni tanlang ▸
+   parol ▸ Tiklash ▸ ilova qayta ochiladi. Server, mijozlar, printerlar, 1C kodlari — hammasi o'tgan bo'ladi.
+4. Kompyuterda hech narsa o'zgartirmang (forwarder.ini kalitlari bir xil).
+5. Shundan keyin o'z telefoningizda 1C hisobotlari, mijozlar va chek ko'rinishi bilan **Admin**'da ishlang; Agent'ni o'chirib
+   tashlashingiz mumkin (ikkalasi bir vaqtda kompyuterdan kelgan ma'lumotni o'qimasin).
+
+## (s5) Agentlar faqat internet bilan ("Admin orqali")
+**Admin (o'z telefoningiz, Tailscale yoki do'kon Wi-Fi'si bilan):**
+1. Mijozlar va 2-ilova ▸ **Agentlar ko'prigi** ▸ "Ko'prik yoqilgan" ▸ bildirishnomaga ruxsat bering.
+2. **Kodni yuborish** ▸ Telegram orqali agentlarga (kodni faqat o'z agentlaringizga bering).
+3. Telefonda batareya cheklovini o'chiring (Sozlamalar ▸ Ilovalar ▸ Savdo Admin ▸ Batareya ▸ Cheklovsiz).
+
+**Agent (sherik telefoni, faqat internet):**
+1. Sozlamalar ▸ Server ▸ **Admin orqali (internet)** ▸ kodni qo'ying ▸ **Tekshirish** ("Admin bilan aloqa bor") ▸ Saqlash.
+2. Odatdagidek login va parol bilan kiring.
+
+* Admin telefoni internetda bo'lmasa: agentlar sotaveradi, savdolar "kutilmoqda"; Admin ulanganda hammasi serverga yoziladi.
+* Agentda "yuborildi" — faqat server tasdig'idan keyin. Navbatda "Admin'ga yetdi, server tasdig'i kutilmoqda" ko'rinishi mumkin.
+
 ## (s) Ko'rsatmalar va sirli menyu
 * Har ekran birinchi ochilganda kerakli tugmalar yoritilib, izoh chiqadi. "O'tkazib yuborish" — shu ekran uchun yopiladi.
 * **Sirli xona**: Sozlamalar ▸ eng pastdagi versiya yozuvini **uzoq bosing**. U yerda:

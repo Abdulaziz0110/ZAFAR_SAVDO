@@ -5,7 +5,7 @@ import com.ilxomjon.dur_novvot_dokon.data.AppPrefs
 import com.ilxomjon.dur_novvot_dokon.data.local.DebtCache
 import com.ilxomjon.dur_novvot_dokon.data.local.HistoryDb
 import com.ilxomjon.dur_novvot_dokon.data.local.CatalogDao
-import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
+import com.ilxomjon.dur_novvot_dokon.data.remote.Backend
 import com.ilxomjon.dur_novvot_dokon.domain.Agent
 import com.ilxomjon.dur_novvot_dokon.domain.Group
 import com.ilxomjon.dur_novvot_dokon.domain.Product
@@ -36,7 +36,7 @@ data class CatalogState(
 
 class CatalogRepository(
     private val dao: CatalogDao,
-    private val api: ServerApi,
+    private val api: Backend,
     private val prefs: AppPrefs,
     private val history: HistoryDb,
 ) {
@@ -72,7 +72,8 @@ class CatalogRepository(
             val snapshot = api.fetchSnapshot(agentId)
             mutex.withLock {
                 withContext(Dispatchers.IO) { dao.replaceAll(snapshot) }
-                prefs.lastSyncAt = System.currentTimeMillis()
+                // Admin orqali kelgan bo'lsa — Admin serverdan olgan vaqt (yangiroq ko'rsatilmasin)
+                prefs.lastSyncAt = snapshot.fetchedAt.takeIf { it > 0 } ?: System.currentTimeMillis()
                 reload()
             }
             runCatching { onChanged?.invoke() }

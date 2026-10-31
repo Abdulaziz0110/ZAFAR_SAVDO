@@ -54,6 +54,29 @@ class SecureStore(private val context: Context) {
     /** Foydalanuvchi o'zi saqlagan parol ("" — ilovaga o'rnatilgani ishlatiladi). Ekranga CHIQARILMAYDI. */
     fun storedPassword(): String = prefs.getString("password", null).orEmpty()
 
+    /** v3.0 Agent: "Admin orqali" ulanish (SQL server o'rniga). */
+    var relayMode: Boolean
+        get() = prefs.getBoolean("relay_mode", false)
+        set(v) { prefs.edit().putBoolean("relay_mode", v).apply() }
+
+    /** Admin bergan ulanish kodi ichidagi manzil va kalit. */
+    val relayConfig: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config?
+        get() {
+            val url = prefs.getString("relay_url", null).orEmpty()
+            val key = prefs.getString("relay_key", null).orEmpty()
+            return com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(url, key).takeIf { it.isValid }
+        }
+
+    fun setRelay(c: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config?, enabled: Boolean) {
+        prefs.edit().putString("relay_url", c?.dbUrl.orEmpty()).putString("relay_key", c?.key.orEmpty())
+            .putBoolean("relay_mode", enabled && c != null).apply()
+    }
+
+    /** v3.0: ko'chirishda (Agent -> Admin) — faqat parolli zaxiradan. */
+    fun restorePassword(password: String) {
+        prefs.edit().putString("password", password).commit()
+    }
+
     /** Parol saqlanganmi (o'zi kiritgan yoki ilovaga o'rnatilgan). Faqat "bor/yo'q" ko'rsatish uchun. */
     val hasPassword: Boolean get() = serverConfig.password.isNotEmpty()
 

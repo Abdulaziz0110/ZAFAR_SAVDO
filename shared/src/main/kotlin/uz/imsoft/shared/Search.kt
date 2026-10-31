@@ -214,7 +214,7 @@ class SearchIndex<T>(
 
     private fun best(e: Entry<T>, qt: Tok, fuzzy: Boolean): Match? {
         var best: Match? = null
-        fun offer(m: Match) { if (best == null || m.score > best!!.score) best = m }
+        fun offer(m: Match) { val cur = best; if (cur == null || m.score > cur.score) best = m }
         // Kod
         if (e.code.isNotEmpty()) {
             if (e.code == qt.text) offer(Match(120.0, -1, null, false))

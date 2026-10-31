@@ -52,6 +52,10 @@ interface LedgerHost {
     val receiptFooter: String get() = ""
     /** Chekdagi "Xodim". Bo'sh — qator chiqmaydi. */
     val receiptStaff: String get() = ""
+    /** Chek ko'rinishi (1-ilova sozlamasi; 2-ilovada do'kondan kelgan). v2.9 */
+    val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle get() = uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
+    /** Chek logosi (yo'q — null). */
+    val receiptLogo: android.graphics.Bitmap? get() = null
     val fuzzySearch: Boolean
     /** "Takrorlash" (1-ilova) yoki "Qayta buyurtma" (2-ilova); 0 — tugma yo'q. */
     fun repeatLabel(doc: LedgerDoc): Int

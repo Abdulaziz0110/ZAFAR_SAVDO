@@ -135,19 +135,29 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRefreshDebt"
                             style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="48dp"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
                             android:text="@string/payment_debt_refresh"
-                            app:icon="@drawable/ic_sync" />
+                            app:icon="@drawable/ic_sync"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFullDebt"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="48dp"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
                             android:layout_marginStart="8dp"
                             android:text="@string/payment_full_debt"
-                            android:visibility="gone" />
+                            android:visibility="gone"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -277,10 +287,12 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSend"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/payment_send"
-                app:icon="@drawable/ic_check" />
+                app:icon="@drawable/ic_check"
+                android:minHeight="56dp"
+                android:maxLines="2" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

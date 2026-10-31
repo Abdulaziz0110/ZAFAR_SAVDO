@@ -34,17 +34,21 @@
                 android:id="@+id/modeLpd"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_mode_lpd" />
+                android:text="@string/lb_mode_lpd"
+                android:minHeight="44dp"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/modeApp"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_mode_app" />
+                android:text="@string/lb_mode_app"
+                android:minHeight="44dp"
+                android:maxLines="2" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <TextView
@@ -77,21 +81,29 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnFind"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="match_parent"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:text="@string/lb_find_pc"
-                app:icon="@drawable/ic_search" />
+                app:icon="@drawable/ic_search"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCheck"
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="match_parent"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:text="@string/lb_check"
-                app:icon="@drawable/ic_sync" />
+                app:icon="@drawable/ic_sync"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
         </LinearLayout>
 
         <LinearLayout
@@ -206,33 +218,41 @@
                 android:id="@+id/size5840"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_size_5840" />
+                android:text="@string/lb_size_5840"
+                android:minHeight="44dp"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/size5830"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_size_5830" />
+                android:text="@string/lb_size_5830"
+                android:minHeight="44dp"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/size4030"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_size_4030" />
+                android:text="@string/lb_size_4030"
+                android:minHeight="44dp"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/size3020"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_size_3020" />
+                android:text="@string/lb_size_3020"
+                android:minHeight="44dp"
+                android:maxLines="2" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <com.google.android.material.button.MaterialButtonToggleGroup
@@ -247,17 +267,21 @@
                 android:id="@+id/dpi203"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_dpi_203" />
+                android:text="@string/lb_dpi_203"
+                android:minHeight="44dp"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/dpi300"
                 style="@style/Widget.App.Segment"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/lb_dpi_300" />
+                android:text="@string/lb_dpi_300"
+                android:minHeight="44dp"
+                android:maxLines="2" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
         <LinearLayout
@@ -270,21 +294,29 @@
                 android:id="@+id/btnTest"
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="match_parent"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:text="@string/lb_test"
-                app:icon="@drawable/ic_label" />
+                app:icon="@drawable/ic_label"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnIni"
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="match_parent"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:text="@string/b_pc_settings"
-                app:icon="@drawable/ic_server" />
+                app:icon="@drawable/ic_server"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
         </LinearLayout>
 
         <TextView

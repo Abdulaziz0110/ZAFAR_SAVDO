@@ -69,6 +69,13 @@ fun Fragment.navigator(): Navigator = requireActivity() as Navigator
 
 /** Xatoni foydalanuvchiga tushunarli o'zbekcha matnga aylantiradi. */
 fun Context.describeError(t: Throwable): String {
+    // v3.0 "Admin orqali" xatolari
+    when (t.message) {
+        "admin_offline" -> return getString(R.string.err_admin_offline)
+        "admin_never" -> return getString(R.string.err_admin_never)
+        "admin_no_catalog" -> return getString(R.string.err_admin_no_catalog)
+        "admin_wait" -> return getString(R.string.err_admin_wait)
+    }
     if (t is ServerException) {
         val base = getString(
             when (t.kind) {

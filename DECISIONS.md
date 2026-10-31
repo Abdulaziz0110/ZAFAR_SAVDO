@@ -213,3 +213,35 @@ istamadi. XP-365B faqat USB (Bluetooth/Wi-Fi yo'q), shuning uchun telefon printe
 yengil yo'l — Windows'ning o'z "LPD Print Service" xizmati (RFC 1179). Ilova yorliqni TSPL BITMAP qilib, 'l' (xom) turida
 yuboradi — drayver o'zgartirmaydi, printer TSPL'ni o'zi tushunadi; SIZE/GAP ilova sozlamasidan. LPR klienti va TSPL
 kodlovchi shared'da (JVM testlari: soxta LPD, Python versiyasi bilan bir xil bitmap). label_printer.py — ikkinchi rejim.
+
+## D-050 — Yorliq ko'rinishi 1C shablonidan, narx = ПродажЦена1
+Do'kon 1C konfiguratsiyasida yorliqlar umumiy shablonlar "ГодехЦенник" (PLU) va "ГодехШтрих" (shtrix) orqali chiqadi,
+narx — `Товар.ПродажЦена1`. Ilova yorlig'i shu joylashuvni ulushlarda takrorlaydi (har qanday yorliq o'lchamiga mos),
+shrift Arial o'lchamli Liberation Sans Bold (OFL, ilova ichida). Narx standart bo'yicha "Цена 1"; foydalanuvchi boshqasini tanlashi mumkin.
+
+## D-051 — Chek ko'rinishi sozlamasi 1-ilovada, 2-ilovaga snapshot orqali
+Uslub kichik JSON (`ReceiptStyle.encode`), logo PNG (kulrang, ≤576 px, ≤60 KB) — snapshot'ga qo'shimcha "rs"/"rl" maydonlari.
+Eski ilovalar ularni e'tiborsiz qoldiradi; yangi ilova bo'sh/buzuq qiymatda standart ko'rinishni oladi. 1C'dagi logo (konfiguratsiya
+rasmi) ilovaga qo'shilmadi — foydalanuvchi o'z logosini galereyadan tanlaydi. Shrift: Liberation Sans (Arial o'lchamli, OFL) ikkala ilovada.
+
+## D-052 — Agent va Admin: bitta kod, flavor'lar
+Ikki xil kod bazasi yuritilmaydi: `app` modulida `agent` va `admin` flavor'lari. Agent asl applicationId va imzoni saqlaydi
+(ishchilar telefonida oddiy yangilanadi), Admin `.admin` qo'shimchasi bilan alohida o'rnatiladi. Rol paket nomidan aniqlanadi
+(`AppRole`) — BuildConfig yoki qo'shimcha sozlama shart emas. Admin'ga xos imkoniyatlar `AppRole.isAdmin` bilan ko'rsatiladi.
+Agent 2.8 dagi imkoniyatlar bilan qoladi; tuzatishlar (yorliq ko'rinishi, xatolar, tugmalar) ikkalasiga ham.
+
+## D-053 — Sozlamalarni ko'chirish faqat parolli zaxirada
+Admin yangi ilova bo'lgani uchun sozlamalar (server paroli, Firebase kaliti, mijozlar, yorliq) Agent'dan ko'chiriladi. Ular faqat
+parol bilan shifrlangan zaxiraga (AES-256-GCM, PBKDF2) yoziladi; parolsiz zaxira avvalgidek ularsiz. Tiklashda faqat ma'lum fayllar
+(`share/`, logo, 1C kodlari/narxlari) qabul qilinadi, `..` va mutlaq yo'llar rad etiladi; keyin ilova qayta ishga tushadi.
+Ikkala ilova bitta telefonda bir xil kirish qutisini (inbox) o'qimasligi uchun: ko'chirgandan keyin o'z telefoningizda Agent'da
+"Mijozlar va 2-ilova" ishlatilmaydi (Admin'da ishlaydi).
+
+## D-054 — Agentlar "Admin orqali": Firebase ko'prigi, server ishini Admin bajaradi
+Foydalanuvchi talabi: ma'lumot kompyuterdan Admin'ga, Admin'dan agent va mijozlarga; agentlarga faqat internet. Agent'da
+`Backend` interfeysi ikki yo'lga ega: `ServerApi` (to'g'ridan-to'g'ri) va `RelayClient` (Firebase g/{kalit}/...). Server bilan
+ishlashni Admin'dagi `RelayHost` mavjud `ServerApi` orqali bajaradi — protokol, jadvallar va server o'zgarmaydi; kompyuterga
+yangi dastur ham kerak emas. Savdo kaliti = sha256(agent, tur, matn): Firebase'da bitta yozuv, Admin yozishdan oldin serverda
+qidiradi (natijani joylashdan oldin o'chsa ham dublikat yo'q); agentda SENT faqat server ID'si bilan. Kirish: parol yuborilmaydi,
+PBKDF2 isbot (tasodifiy tuz) Admin serverdagi parol bilan solishtiradi. Admin fon xizmati specialUse turida (Android 15 dagi
+dataSync 6 soat cheklovi tufayli), zaxira — 15 daqiqalik WorkManager. Admin oflayn — agentlar ishlaydi, savdolar kutadi.

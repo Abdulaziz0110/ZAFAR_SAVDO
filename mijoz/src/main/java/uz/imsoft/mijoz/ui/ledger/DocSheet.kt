@@ -97,12 +97,13 @@ class DocSheet : BottomSheetDialogFragment() {
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     private fun share(doc: LedgerDoc, host: LedgerHost?, client: String) {
-        val r = LedgerUi.receipt(requireContext(), doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty())
+        val r0 = LedgerUi.receipt(requireContext(), doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty())
+        val r = (host?.receiptStyle ?: uz.imsoft.shared.receipt.ReceiptStyle.STANDARD).apply(r0)
         val items = arrayOf(getString(R.string.lg_share_image), getString(R.string.lg_share_text), getString(R.string.lg_copy_text))
         MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lg_share)
             .setItems(items) { _, i ->
                 when (i) {
-                    0 -> viewLifecycleOwner.lifecycleScope.launch { ReceiptActions.shareImage(requireContext(), r) }
+                    0 -> viewLifecycleOwner.lifecycleScope.launch { ReceiptActions.shareImage(requireContext(), r, host = host) }
                     1 -> ReceiptActions.shareText(requireContext(), ReceiptBuilder.toText(r))
                     else -> {
                         ReceiptActions.copyText(requireContext(), ReceiptBuilder.toText(r))

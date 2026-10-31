@@ -42,6 +42,8 @@ class ProductAdapter(
     /** v2.7: har tovar ostida "Kod 2555 · PLU 501" (PLU — kompyuterdan 1C'dan yoki qo'lda). */
     var showCodes: Boolean = true
     var pluOf: (String) -> String? = { id -> com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.labels.pluFor(id) }
+    /** Narx yorliqlari: 1C narx turi tanlangan bo'lsa — ro'yxatdagi narx shundan (null — odatdagi hisob). */
+    var priceOverride: ((Product) -> Double?)? = null
 
     fun setNotes(map: Map<String, String>) {
         if (map == notes) return
@@ -150,7 +152,7 @@ class ProductAdapter(
             val meta = parts.joinToString(" · ")
             b.tvMeta.text = meta
             b.tvMeta.show(meta.isNotEmpty())
-            b.tvPrice.text = ctxt.money(line?.price ?: Pricing.unitPrice(p, ctx.type, ctx.currency, ctx.rate), ctx.currency)
+            b.tvPrice.text = ctxt.money(line?.price ?: priceOverride?.invoke(p) ?: Pricing.unitPrice(p, ctx.type, ctx.currency, ctx.rate), ctx.currency)
             val inCart = line != null
             // Savatchadagi tovar yengil fon bilan ajralib turadi
             if (inCart) {

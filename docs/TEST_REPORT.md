@@ -1,4 +1,4 @@
-# Test hisoboti — v2.8 + Savdo Mijoz 1.3 (2026-10-30)
+# Test hisoboti — Agent/Admin 3.0 + Savdo Mijoz 1.4 (2026-10-31)
 
 ## Natija (shu muhitda bajarilgan)
 | Tekshiruv | Natija |
@@ -19,7 +19,15 @@
 | Python `codes.json` -> Kotlin `CodesPayload` (JVM) | o'tdi |
 | `pc/test_ornatish.py` (6) — 1C bazalar ro'yxati (ibases.v8i), ulanish qatori, onec.ini (parol maxsus belgilar bilan, [codes] saqlanadi), forwarder.ini tekshiruvi, avtozapusk vbs, LPR sinov yuborish | 6/6 |
 | `LprTest` (3) — TSPL bitmap (Python `tspl_bytes` bilan bir xil: 0 = qora, to'ldiruvchi bitlar oq, SIZE/GAP/DIRECTION), LPR protokoli soxta LPD serverda (navbat, nazorat fayli 'l', ma'lumot aynan), rad etilgan navbat | 3/3 |
-| JUnit (`app` + `shared`) | **148/148 o'tdi** (avvalgi 136 ta o'zgarmagan holda yashil) |
+| Yorliq ko'rinishi (yangi): chizish kodining Python nusxasi do'kon yorig'i rasmi bilan solishtirildi; PLU va shtrix yorliqlar 1C "ГодехЦенник"/"ГодехШтрих" joylashuvida; shtrix `2500000020476` zxing-cpp bilan o'qildi | qo'lda |
+| `pc/test_onec_export.py` (+6) — do'kon konfiguratsiyasi ("Товары" katalogi, ПЛУ/ШтрихКод rekvizitlari), narx rekvizitlari ПродажЦена1..4 (turi bo'sh, sinonim takrori, $ va kirim chiqarib tashlanadi) | 22/22 |
+| `ReceiptStyleTest` (7) — uslubni saqlash/o'qish (buzuq, eski, chegaradan tashqari), yashirish (xodim/raqam/vaqt/sana/mijoz/qarz/telefon/izoh), ikki marta qo'llash, sarlavha osti va xabar matn/HTML'da (ekranlangan), builder `infoKeys`, dither (oq/qora/kulrang), snapshot "rs"/"rl" va eski snapshot | 7/7 |
+| Chek ko'rinishi: chizish kodining Python nusxasi — Standart, 1C uslubi (logo, manzil, xabar), 58 mm | qo'lda |
+| Statik tekshiruv (skript): BOM/NBSP/ko'rinmas belgilar, apostrof, `%` (argumentsiz), lotin↔kirill format belgilari bir xil, barcha `R.string` kalitlari, `getString` argumentlari soni, `!!`, `runBlocking`, PendingIntent FLAG_IMMUTABLE, `removeFirst`/`removeLast` | xatosiz |
+| `AppRoleTest` (2) — rol paket nomidan (agent/admin, o'xshash nom admin emas); ko'chiriladigan fayl yo'llari (`..`, mutlaq yo'l, baza va secure prefs fayllari rad etiladi) | 2/2 |
+| Tugma matni o'lchash skripti: 360dp ekran, Liberation Sans (Roboto o'lchamiga yaqin), lotin va kirill, shrift ×1 va ×1,15 — sig'maydigan tugma yo'q | 0 ta |
+| `RelayTest` (11) — Agent <-> soxta Firebase (qoidalar bilan) <-> Admin <-> soxta server: ulanish kodi; kirish (parol Firebase'da yo'q); katalog va 1C kodlari; savdo bir marta yoziladi (qayta yuborish, Admin o'chib qolishi); Admin oflayn -> keyin yoziladi; server yo'q -> xato holati; rad etish va soxta kalit; OutboxEngine ko'prik orqali (5 savdo, dublikatsiz, hammasi SENT); qarz/hisobot/vaqt; yorliq va chek ko'zgusi; agent boshqalarning joyini o'qiy olmaydi | 11/11 |
+| JUnit (`app` + `shared`) | **169/169 o'tdi** (avvalgi 136 ta o'zgarmagan holda yashil) |
 | `LoginTest` (6) — PBKDF2 JDK bilan bir xil; shifrlash/ochish; noto'g'ri parol; kalit (telefon formati farqi yo'q); do'kon kodi <-> manzil; soxta Firebase'da `a/` qoidasi (qisqa kalit o'qilmaydi, yozib bo'lmaydi) | 6/6 |
 | `OrdersTest.orderCarriesSender` — `by` (kim yubordi) maydoni bulut orqali, uzunlik cheklovi | 1/1 |
 | `pc/test_onec_export.py` (9, v2.6) — sozlama va ulanish qatori; davr; jadval; xesh (xlsx vaqt belgisiz); faqat o'zgarganlar yuboriladi; davr o'zgarsa qayta; xatoda ulanish uziladi; yuklash formati (gzip+base64); kalit/nom | 9/9 |

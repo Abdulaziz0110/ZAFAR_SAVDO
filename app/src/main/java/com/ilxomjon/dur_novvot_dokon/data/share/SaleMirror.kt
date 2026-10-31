@@ -64,11 +64,11 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
     }
 
     /** Savdo yuborilganda chaqiriladi. @return mijoz (bog'langan do'kon bo'lsa), aks holda null. */
-    suspend fun record(sent: SentOrder, outboxId: Long, code: String, debtBefore: Double? = null): Pair<ShareClient, AppSale>? = mutex.withLock {
+    suspend fun record(sent: SentOrder, outboxId: Long, code: String, debtBefore: Double? = null, saleId: String? = null): Pair<ShareClient, AppSale>? = mutex.withLock {
         withContext(Dispatchers.IO) {
             val c = store.clients().firstOrNull { it.storeId.isNotEmpty() && it.storeId == sent.storeId } ?: return@withContext null
             val s = AppSale(
-                id = "o$outboxId", at = sent.sentAt, stamp = stampOf(sent.sentAt), isReturn = sent.mode == DealMode.RETURN,
+                id = saleId ?: "o$outboxId", at = sent.sentAt, stamp = stampOf(sent.sentAt), isReturn = sent.mode == DealMode.RETURN,
                 usd = sent.currency == Currency.USD, lines = sent.lines.map { AppSale.Line(it.name, it.qty, it.price) },
                 discount = sent.discount, code = code, debtBefore = debtBefore, paid = sent.paid,
             )
@@ -129,7 +129,8 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
     /** Navbat kaliti chek id siga bog'liq — qayta yuborilsa ham bitta nusxa (dublikat chek chiqmaydi). */
     private fun send(c: ShareClient, s: AppSale) {
         val r = receipt(c, s)
-        val bytes = ReceiptBitmap.toEscPos(ReceiptBitmap.render(r, 576))
+        val style = uz.imsoft.shared.receipt.ReceiptStyle.decode(store.receiptStyle)
+        val bytes = ReceiptBitmap.toEscPos(ReceiptBitmap.render(r, style, uz.imsoft.shared.android.LogoCache.get(store.receiptLogo)), style.dark)
         val key = "a" + s.at + "_" + s.id.filter { it.isLetterOrDigit() }
         val db = cloud()
         val summary = r.title + " · " + s.lines.size + " · " + r.totals.lastOrNull { it.bold }?.value.orEmpty()
@@ -166,16 +167,18 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
         }
         val (time, date) = uz.imsoft.shared.receipt.ReceiptBuilder.timeAndDate(s.stamp)
         val info = ArrayList<Pair<String, String>>()
-        if (store.receiptStaff.isNotBlank()) info += ctx.getString(R.string.lg_rc_staff) to store.receiptStaff
-        if (s.code.isNotBlank()) info += ctx.getString(R.string.lg_rc_number) to s.code
+        val keys = ArrayList<String>()
+        if (store.receiptStaff.isNotBlank()) { info += ctx.getString(R.string.lg_rc_staff) to store.receiptStaff; keys += Receipt.KEY_STAFF }
+        if (s.code.isNotBlank()) { info += ctx.getString(R.string.lg_rc_number) to s.code; keys += Receipt.KEY_NUMBER }
         info += ctx.getString(R.string.lg_rc_time) to time
+        keys += Receipt.KEY_TIME
         val title = ctx.getString(if (s.isReturn) R.string.mir_receipt_return else R.string.mir_receipt_sale)
         return Receipt(
             store.receiptHeader, title, ctx.getString(R.string.lg_client) + ": " + clientName, Stamp.formatDateTime(s.stamp),
             lines, totals, if (debt != null && !s.usd) listOf(ctx.getString(R.string.rc_note_estimate)) else emptyList(),
             clientLabel = ctx.getString(R.string.lg_client), clientName = clientName, info = info, date = date,
             before = before, banner = if (s.isReturn) ctx.getString(R.string.lg_rc_return) else "", after = after,
-            footer = store.receiptFooter.split('\n').map { it.trim() }.filter { it.isNotEmpty() },
+            footer = store.receiptFooter.split('\n').map { it.trim() }.filter { it.isNotEmpty() }, infoKeys = keys,
         )
     }
 

@@ -54,7 +54,7 @@ STRINGS = {
  'cart_title': 'Savatcha', 'cart_empty': "Savatcha bo'sh", 'cart_line': '%1$s × %2$s', 'cart_checkout': 'Rasmiylashtirish',
  'cart_deleted': "Olib tashlandi", 'cart_undo': 'Qaytarish',
  # yakunlash
- 'finish_title': 'Buyurtmani yakunlash', 'finish_total': 'Jami', 'finish_discount_percent': 'Chegirma (%)',
+ 'finish_title': 'Buyurtmani yakunlash', 'finish_total': 'Jami', 'finish_discount_percent': 'Chegirma, foiz',
  'finish_discount_amount': 'Chegirma summasi', 'finish_payment': "To'lov", 'finish_cash_som': "Naqd (so'm)",
  'finish_cash_usd': 'Naqd ($)', 'finish_card': "Plastik (so'm)", 'finish_fill_all': "To'liq to'lash",
  'finish_printer': 'Chek printeri', 'finish_printer_n': 'Printer %1$d', 'finish_payable': "To'lanishi kerak",
@@ -87,7 +87,7 @@ STRINGS = {
  'settings_language': 'Til', 'settings_lang_latin': 'Lotin', 'settings_lang_cyrillic': '{{Кирилл}}',
  'settings_theme': 'Mavzu', 'settings_theme_system': 'Tizim', 'settings_theme_light': "Yorug'", 'settings_theme_dark': "Qorong'i",
  'settings_backup': 'Zaxira nusxa',
- 'settings_backup_hint': "Yangi imzo bilan o'rnatishdan oldin ma'lumotni saqlab qo'ying. Server paroli zaxiraga kiritilmaydi.",
+ 'settings_backup_hint': "Ma'lumotni saqlab qo'ying. Parol qo'ysangiz, sozlamalar ham (server, bulut, printerlar) saqlanadi — Admin ilovaga yoki yangi telefonga ko'chirish uchun. Parolsiz zaxirada server paroli bo'lmaydi.",
  'settings_export': 'Saqlash', 'settings_import': 'Tiklash', 'settings_about': 'Ilova haqida', 'settings_version': 'Versiya %1$s',
  'backup_done': 'Zaxira nusxa saqlandi', 'backup_failed': "Zaxira nusxani saqlab bo'lmadi",
  'restore_done': "Ma'lumot tiklandi", 'restore_failed': "Tiklab bo'lmadi: fayl noto'g'ri", 'restore_title': "Ma'lumotni tiklash",
@@ -244,7 +244,7 @@ STRINGS.update({
  'csv_saved': 'Fayl saqlandi',
  'csv_failed': "Faylni saqlab bo'lmadi",
  'backup_password_title': 'Zaxira paroli (ixtiyoriy)',
- 'backup_password_hint': "Bo'sh qoldirsangiz — parolsiz. Parol hech qayerda saqlanmaydi: unutsangiz, faylni ochib bo'lmaydi.",
+ 'backup_password_hint': "Bo'sh qoldirsangiz — parolsiz (sozlamalarsiz). Parol hech qayerda saqlanmaydi: unutsangiz, faylni ochib bo'lmaydi.",
  'restore_password_title': 'Zaxira paroli',
  'restore_password_hint': 'Zaxira yaratilgandagi parol',
  'restore_preview': 'Zaxira sanasi: %1$s\nTovarlar: %2$d, do\'konlar: %3$d\nBuyurtmalar: %4$d, to\'lovlar: %5$d\nYuborilmagan: %6$d ta — tiklangandan keyin O\'ZI YUBORILMAYDI, "Tekshirish kerak" bo\'ladi.\n\nJoriy ma\'lumot almashadi (avval telefonga nusxasi olinadi).',
@@ -303,9 +303,9 @@ STRINGS.update({
  # qulayliklar
  'ex_scale': "Ekran o'lchami",
  'ex_scale_hint': "Tugmalar, ro'yxatlar va matnlar kattaligi (faqat shu ilovada).",
- 'ex_scale_small': '90%', 'ex_scale_compact': '92%', 'ex_scale_normal': '100%', 'ex_scale_large': '110%',
+ 'ex_scale_small': '×0,9', 'ex_scale_compact': '×0,92', 'ex_scale_normal': '×1', 'ex_scale_large': '×1,1',
  'ex_font': 'Shrift',
- 'ex_font_small': '90%', 'ex_font_normal': '100%', 'ex_font_large': '115%',
+ 'ex_font_small': '×0,9', 'ex_font_normal': '×1', 'ex_font_large': '×1,15',
  'ex_search': 'Aqlli qidiruv',
  'ex_fuzzy': "Imlo xatolarini kechirish (\"shakolad\" → Shokolad)",
  'ex_layout_fix': "Klaviatura tili adashsa ham topish (\"ьфнша\" → mayiz)",
@@ -488,7 +488,7 @@ STRINGS.update({
  'home_ledger_title': '1C tarixi · %1$s',
  'home_ledger_info': 'Hisobotlar %1$s gacha · qidirish, takrorlash, chek',
  'ex_sec_screen': 'Ekran',
- 'ex_scale_xlarge': '120%',
+ 'ex_scale_xlarge': '×1,2',
  'ex_cost_switch_hint': "Savdo ekranida kelgan narxni ko'rsatish tugmasi (faqat shu telefonda)",
  'ex_backup_list_short': 'Tiklash',
 
@@ -828,6 +828,84 @@ STRINGS.update({
 
 })
 
+STRINGS.update({
+ # v2.8: 1C narx turlari (yorliq uchun)
+ 'lb_price_1c': '1C narxi',
+ 'lb_codes_prices': "1C narx turlari: %1$s",
+ 'lb_codes_pc': "Kompyuter (%1$s): %2$s",
+ 'lb_price_1c_title': "Yorliqda qaysi 1C narxi chiqsin",
+ 'lb_price_1c_none': "1C narx turlari hali kelmagan. Kompyuterdan kodlar (1C) ▸ Hozir yangilash — kompyuter 1C'dagi hamma narx turlarini yuboradi, keyin shu yerda kerakligini tanlaysiz.",
+
+})
+
+STRINGS.update({
+ # v2.9: chek ko'rinishi
+ 'rs_title': "Chek ko'rinishi", 'rs_preview': 'Namuna chek', 'rs_open': "Chek ko'rinishi",
+ 'rs_open_hint': "Do'kon nomi, manzil, logo, shrift, chekda nimalar chiqishi va printer sozlamasi — namunani ko'rib turib.",
+ 'rs_sec_preset': 'Andoza', 'rs_preset_std': 'Standart', 'rs_preset_1c': '1C uslubi', 'rs_preset_compact': 'Ixcham 58 mm',
+ 'rs_preset_hint': "1C uslubi — do'kon 1C chekidagidek: hamma matn Arial qalin. Keyin istalgan bandni o'zgartirishingiz mumkin.",
+ 'rs_sec_texts': 'Matnlar', 'rs_sub': 'Sarlavha osti (manzil)', 'rs_sub_hint': "Do'kon nomi ostida, har qator alohida (4 tagacha)",
+ 'rs_thanks': 'Oxirgi xabar', 'rs_thanks_hint': 'Masalan: Xaridingiz uchun rahmat!',
+ 'rs_sec_logo': 'Logo', 'rs_logo': 'Logo', 'rs_logo_pick': 'Rasm tanlash', 'rs_logo_remove': 'Olib tashlash',
+ 'rs_logo_show': 'Logoni chiqarish', 'rs_logo_width': 'Logo eni: %1$d%%', 'rs_logo_bad': "Rasmni o'qib bo'lmadi yoki u juda katta",
+ 'rs_sec_font': "Qog'oz va shrift", 'rs_paper_80': '80 mm', 'rs_paper_58': '58 mm', 'rs_font_system': 'Tizim shrifti', 'rs_font_arial': 'Arial (1C)',
+ 'rs_bold': 'Hamma matn qalin', 'rs_header_serif': "Do'kon nomi serifli shriftda",
+ 'rs_text_size': "Matn o'lchami: %1$d%%", 'rs_header_size': "Do'kon nomi o'lchami: %1$d%%",
+ 'rs_sec_show': 'Chekda nimalar chiqsin', 'rs_show_staff': 'Xodim', 'rs_show_number': 'Chek raqami', 'rs_show_time': 'Vaqt', 'rs_show_date': 'Sana',
+ 'rs_show_client': 'Mijoz', 'rs_show_before': 'Oldingi qarz', 'rs_show_lineno': 'Qator raqami (1, 2, 3…)', 'rs_show_frame': 'Qatorlar ramkada',
+ 'rs_show_after': "To'lov va qarz qoldig'i", 'rs_show_footer': 'Chek osti (telefonlar)', 'rs_show_notes': 'Kichik izohlar',
+ 'rs_sec_printer': 'Printer', 'rs_dark': 'Qoralik: %1$d / 13', 'rs_feed': "Oxirida bo'sh joy: %1$d mm",
+ 'rs_test_print': 'Sinov cheki', 'rs_share_sample': 'Namunani ulashish',
+ 'rs_print_hint': "Sinov cheki tanlangan mijozning chek printeriga boradi. 2-ilovalar ham shu ko'rinishda chop etadi (keyingi yuborishdan keyin).",
+ 'rs_no_printer': "Chek printeri sozlanmagan: tanlangan mijozda printer navbati yo'q",
+ 'rs_reset': 'Standartga qaytarish', 'rs_reset_msg': "Ko'rinish standart holatga qaytadi (matnlar saqlanadi).",
+
+})
+
+STRINGS.update({
+ # v3.0: Agent / Admin, sozlamalarni ko'chirish
+ 'restore_has_settings': "Ichida sozlamalar ham bor (server, bulut, mijozlar, printerlar) — ular ham tiklanadi.",
+ 'restore_restart_title': 'Sozlamalar tiklandi', 'restore_restart_msg': 'Yangi sozlamalar bilan ishlash uchun ilova qayta ishga tushadi.',
+ 'restore_restart': 'Qayta ishga tushirish',
+ 'login_transfer': "Agent ilovadan ko'chirish", 'login_transfer_pick': 'Faylni tanlash',
+ 'login_transfer_msg': "Agent ilovada: Sozlamalar ▸ Zaxira nusxa ▸ Saqlash — parol qo'yib saqlang. Keyin shu faylni tanlang: ma'lumot va sozlamalar (server, bulut, mijozlar, printerlar) Admin'ga o'tadi.",
+ 'login_transfer_no_settings': "Bu zaxirada sozlamalar yo'q. Agent ilovada zaxirani parol bilan saqlang.",
+
+})
+
+STRINGS.update({
+ # v3.0: agentlar "Admin orqali"
+ 'srv_mode_title': 'Ulanish', 'srv_mode_server': "Server (Wi-Fi / Tailscale)", 'srv_mode_admin': 'Admin orqali (internet)',
+ 'srv_mode_admin_hint': "Server, Tailscale va do'kon Wi-Fi'si kerak emas — faqat internet. Savdo va to'lovlarni serverga Admin telefoni yozadi; Admin internetda bo'lmasa savdolar navbatda kutadi.",
+ 'srv_relay_code': 'Admin ulanish kodi', 'srv_relay_code_hint': "Admin ilova ▸ Mijozlar va 2-ilova ▸ Agentlar ko'prigi ▸ kodni yuborish",
+ 'srv_relay_code_bad': "Kod noto'g'ri. Admin yuborgan kodni to'liq nusxalab qo'ying (IMSAG1: bilan boshlanadi).",
+ 'srv_relay_ok': "Admin bilan aloqa bor. Admin oxirgi marta: %1$s",
+ 'err_admin_offline': "Admin javob bermadi. Admin telefonida internet va \"Agentlar ko'prigi\" yoqilganini tekshiring.",
+ 'err_admin_never': "Admin hali ulanmagan: Admin ilovada \"Agentlar ko'prigi\"ni yoqing.",
+ 'err_admin_no_catalog': "Admin hali katalogni joylamagan. Admin telefonida ko'prik yoqilganini tekshiring.",
+ 'err_admin_wait': "Admin'ga yetdi, server tasdig'i kutilmoqda (Admin internetga ulanganda yoziladi).",
+ 'lb_printer_admin': 'Printer: Admin orqali',
+ 'rl_title': "Agentlar ko'prigi", 'rl_open': "Agentlar ko'prigi", 'rl_channel': "Agentlar ko'prigi",
+ 'rl_share_hint': "Agentlar faqat internet bilan ishlaydi: katalog, qarz, hisobot va savdolarni serverga shu telefon yetkazadi.",
+ 'rl_on_short': "Yoqilgan — agentlar Admin orqali ishlaydi", 'rl_off_short': "O'chiq",
+ 'rl_sec_state': 'Holat', 'rl_switch': "Ko'prik yoqilgan",
+ 'rl_switch_hint': "Fonda ishlaydi (bildirishnoma ko'rinadi). Telefon internetda va serverga ulana oladigan bo'lsin (do'kon Wi-Fi'si yoki Tailscale).",
+ 'rl_pump': 'Hozir tekshirish', 'rl_publish': 'Katalogni joylash',
+ 'rl_sec_code': 'Agent ulanish kodi',
+ 'rl_code_hint': "Agent ilovada: Sozlamalar ▸ Server ▸ \"Admin orqali\" ▸ shu kodni qo'ying. Kodni faqat o'z agentlaringizga bering.",
+ 'rl_code_share': 'Kodni yuborish', 'rl_code_copy': 'Nusxa olish', 'rl_code_copied': 'Kod nusxalandi',
+ 'rl_sec_how': 'Qanday ishlaydi',
+ 'rl_how': "• Agent katalog, do'konlar, qarz va kursni shu telefon joylagan nusxadan oladi (20 daqiqada yoki agent so'raganda yangilanadi).\n• Savdo va to'lovlar shu telefon orqali serverga yoziladi: har birining o'z kaliti bor, takror yozilmaydi; agentda \"yuborildi\" faqat server tasdig'idan keyin.\n• Agent savdosining cheki 2-filial printeriga ham shu yerdan ketadi.\n• Yorliqlar shu telefonning yorliq printeri sozlamasi bilan chiqadi.\n• Telefon o'chsa yoki internet bo'lmasa — agentlar ishlayveradi, savdolar navbatda kutadi.",
+ 'rl_need_cloud': "Avval shu ekrandagi Firebase sozlamasini to'ldiring.",
+ 'rl_rules_failed': "Firebase qoidalarini yangilab bo'lmadi. Internet va Firebase sozlamasini tekshiring.",
+ 'rl_state_off': "O'chiq. Agentlar \"Admin orqali\" ishlay olmaydi.", 'rl_state_starting': 'Ishga tushmoqda…',
+ 'rl_state': "Oxirgi ish: %1$s\nServerga yozildi: %2$d · so'rovlar: %3$d · yorliqlar: %4$d\nKatalog joylangan: %5$s",
+ 'rl_state_error': 'Xato: %1$s',
+ 'rl_notif_starting': "Agentlar ko'prigi ishga tushmoqda", 'rl_notif_ok': 'Oxirgi: %1$s · serverga yozildi: %2$d',
+ 'rl_notif_error': "Oxirgi: %1$s · serverga ulanib bo'lmadi",
+
+})
+
 # kirillni qo'lda to'g'rilash kerak bo'lgan joylar
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from strings_ledger import LEDGER  # noqa: E402
@@ -866,13 +944,14 @@ def conv_token(tok):
     return ''.join(out)
 
 TOKEN = re.compile(r"[A-Za-z'’ʻʼ‘`]+")
-PROTECT = re.compile(r'(%\d*\$?[sdf]|%%|\{\{.*?\}\})')
+# Format belgilari to'liq himoyalanadi: %1$s, %1$02d, %4$.2f, %% (v2.9: kengligi/aniqligi bor belgilar ham)
+PROTECT = re.compile(r'(%(?:\d+\$)?[-#+0,(]*\d*(?:\.\d+)?[a-zA-Z]|%%|\{\{.*?\}\})')
 
 # Lotinda qolishi kerak bo'lgan nomlar (v2.4): avtomatik {{...}} ichiga olinadi.
 BRANDS = ['Gmail', 'Wi-Fi', 'Excel', 'HTML', 'Telegram', 'SMS', 'Firebase', 'Google', 'Tailscale', 'Play Market', 'PIN', 'KB',
           'xlsx', 'xls', 'htm', 'mxl', 'VPN', 'IMSOFT', 'Click', 'USB', 'ESC/POS', 'forwarder.ini', 'forwarder.py', 'Python',
           'OTG', 'Xiaomi', 'HyperOS', 'Redmi', 'DOKON', 'Windows', 'Xprinter', 'PLU', 'IP', 'dpi', 'MXL',
-          'start_labels.bat', 'label_printer.py', 'pip install pillow pywin32', 'onec_export.py', 'LPD Print Service', 'LPD', 'xprinter', 'Свойства принтера', 'Доступ', 'Общий доступ', 'ORNATISH.bat', 'Telegram']
+          'start_labels.bat', 'label_printer.py', 'pip install pillow pywin32', 'onec_export.py', 'LPD Print Service', 'LPD', 'xprinter', 'Свойства принтера', 'Доступ', 'Общий доступ', 'ORNATISH.bat', 'Telegram', 'Arial']
 
 def protect_brands(s):
     for b in sorted(BRANDS, key=len, reverse=True):

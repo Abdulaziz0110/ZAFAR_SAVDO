@@ -87,11 +87,10 @@ class LedgerViewModel : ViewModel() {
     }
 
     private fun compute(i: Input): LedgerUiState {
-        if (index == null || indexVersion != i.d.version) {
-            index = LedgerIndex(i.d.entries)
-            indexVersion = i.d.version
-        }
-        val idx = index!!
+        val cached = index
+        val idx = if (cached == null || indexVersion != i.d.version) {
+            LedgerIndex(i.d.entries).also { index = it; indexVersion = i.d.version }
+        } else cached
         val today = today()
         val (from, to) = range(i.p, i.c, today)
         val res = idx.search(i.q, today, LedgerFilter(i.k.kinds, from, to), i.fz)

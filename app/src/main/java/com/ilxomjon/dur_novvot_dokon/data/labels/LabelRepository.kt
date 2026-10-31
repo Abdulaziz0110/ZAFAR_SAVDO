@@ -59,6 +59,9 @@ data class LabelState(
     val gapMm: Double = 2.0,
     /** Yorliq teskari chiqsa — 180° burish. */
     val rotate: Boolean = false,
+    /** 1C narx turlari (kompyuterdan kelgan) va yorliqda ishlatiladigani ("" — Naqd/Optom). */
+    val priceTypes1c: List<String> = emptyList(),
+    val price1c: String = "",
 ) {
     val lpd: Boolean get() = mode == MODE_LPD
     val total: Int get() = items.sumOf { it.copies }
@@ -92,6 +95,11 @@ class LabelRepository(
     private val _state = MutableStateFlow(load())
     val state: StateFlow<LabelState> = _state.asStateFlow()
 
+    init {
+        // Yorliq shrifti: Arial o'lchamlaridagi Liberation Sans Bold (1C shablonlari Arial qalin)
+        runCatching { LabelBitmap.font = android.graphics.Typeface.createFromAsset(context.assets, "fonts/LiberationSans-Bold.ttf") }
+    }
+
     private var plu: MutableMap<String, String> = loadMap("plu")
     private var pluManual: MutableMap<String, String> = loadMap("plu_manual")
 
@@ -119,6 +127,7 @@ class LabelRepository(
             p.getLong("codes_asked", 0L),
             p.getString("mode", MODE_LPD).orEmpty(), p.getString("queue", "xprinter").orEmpty(),
             p.getFloat("gap", 2f).toDouble(), p.getBoolean("rotate", false),
+            p.getString("ptypes1c", "").orEmpty().split('\n').filter { it.isNotBlank() }, p.getString("price1c", "").orEmpty(),
         )
     }
 
@@ -166,8 +175,32 @@ class LabelRepository(
     }
 
     /** Yorliqdagi narx (so'mda): qo'lda yozilgani yoki katalogdan (tanlangan narx turi). */
-    fun priceOf(prod: Product, item: LabelItem? = _state.value.items.firstOrNull { it.productId == prod.id }): Double =
-        item?.price ?: Pricing.unitPrice(prod, _state.value.priceType, Currency.SOM, catalog.state.value.rate)
+    fun priceOf(prod: Product, item: LabelItem? = _state.value.items.firstOrNull { it.productId == prod.id }): Double {
+        item?.price?.let { return it }
+        val t = _state.value.price1c
+        if (t.isNotEmpty()) return prices1c[t]?.get(prod.id) ?: 0.0
+        return Pricing.unitPrice(prod, _state.value.priceType, Currency.SOM, catalog.state.value.rate)
+    }
+
+    /** 1C narx turi bo'yicha (kompyuterdan): tur -> (tovar id -> narx). */
+    @Volatile private var prices1c: Map<String, Map<String, Double>> = loadPrices1c()
+
+    private fun prices1cFile() = java.io.File(context.filesDir, "prices_1c.json")
+
+    private fun loadPrices1c(): Map<String, Map<String, Double>> = runCatching {
+        val f = prices1cFile()
+        if (!f.exists()) return@runCatching emptyMap()
+        @Suppress("UNCHECKED_CAST")
+        (Json.parse(f.readText()) as? Map<String, Any?>).orEmpty().mapValues { (_, v) ->
+            (v as? Map<String, Any?>).orEmpty().mapNotNull { (k, x) -> (x as? Number)?.toDouble()?.let { k to it } }.toMap()
+        }
+    }.getOrDefault(emptyMap())
+
+    /** Yorliq narxi: "" — Naqd/Optom (server), aks holda 1C narx turi nomi. */
+    fun setPrice1c(type: String) {
+        _state.update { it.copy(price1c = type) }
+        p.edit().putString("price1c", type).apply()
+    }
 
     // ---------------- PLU ----------------
 
@@ -229,6 +262,22 @@ class LabelRepository(
             pluN = map.size
         }
         if (d.barcodeRows.isNotEmpty()) bcN = barcodes.commitRows(d.barcodeRows, "1C (kompyuter)").linked.map.size
+        if (d.priceTypes.isNotEmpty()) {
+            val byType = withContext(Dispatchers.Default) {
+                val link = CodesPayload.linkIds(d.items.filter { it.prices.isNotEmpty() }, products, { it.id }, { it.name })
+                val m = LinkedHashMap<String, HashMap<String, Double>>()
+                for (t in d.priceTypes) m[t] = HashMap()
+                for ((item, pid) in link) for ((t, v) in item.prices) m.getOrPut(t) { HashMap() }[pid] = v
+                m
+            }
+            prices1c = byType
+            withContext(Dispatchers.IO) { prices1cFile().writeText(Json.write(byType)) }
+            val types = byType.keys.toList()
+            p.edit().putString("ptypes1c", types.joinToString("\n")).apply()
+            _state.update { st -> st.copy(priceTypes1c = types, price1c = if (st.price1c.isNotEmpty() && st.price1c !in types) "" else st.price1c) }
+            // 1C'dagi yorliqlar "Цена 1" bilan chiqadi — foydalanuvchi hali tanlamagan bo'lsa, shu tanlanadi
+            if (!p.contains("price1c")) setPrice1c(types.firstOrNull { it.startsWith("Цена 1") } ?: types.first())
+        }
         val now = System.currentTimeMillis()
         val note = listOf(d.pluSource.ifEmpty { "-" }, d.barcodeSource.ifEmpty { "-" }).joinToString(" | ")
         p.edit().putLong("codes_at", now).putInt("codes_plu", pluN).putInt("codes_bc", bcN).putString("codes_note", note)
@@ -238,6 +287,14 @@ class LabelRepository(
 
     /** Kompyuterdan hozir yangilashni so'rash (kompyuter ~2 daqiqada bir tekshiradi). */
     suspend fun requestCodes() {
+        if (relayActive()) {
+            // Admin orqali: kodlar katalog bilan birga Admin'dan keladi
+            relayRefreshCodes?.invoke()
+            val now = System.currentTimeMillis()
+            p.edit().putLong("codes_asked", now).apply()
+            _state.update { it.copy(codesAskedAt = now) }
+            return
+        }
         if (!share.isCloudReady || share.inboxKey.isEmpty()) throw LabelPrinterClient.PrintError("no_cloud")
         withContext(Dispatchers.IO) { CloudDb(share.dbUrl, share.secret).put("p/${share.inboxKey}/creq", CloudDb.SERVER_TIME, timeoutMs = 30_000) }
         val now = System.currentTimeMillis()
@@ -358,10 +415,16 @@ class LabelRepository(
         return client.send(LabelPrinterClient.Job(id, pngs, only.map { it.name }), s.host, s.port, share.labelKey, cloudDb())
     }
 
+    /** v3.0 Agent "Admin orqali": yorliq Admin telefoni orqali chop etiladi (Agent kompyuterni ko'rmaydi). */
+    @Volatile var relayActive: () -> Boolean = { false }
+    @Volatile var relayPrint: (suspend (ByteArray, Int) -> String)? = null
+    @Volatile var relayRefreshCodes: (suspend () -> Unit)? = null
+
     /** Windows'ning ulashilgan printeriga to'g'ridan-to'g'ri: har yorliq TSPL bitmap, bitta LPR ish. */
     private suspend fun printLpd(b: LabelBatch, only: List<LabelData>): LabelPrinterClient.Sent {
         val s = _state.value
-        if (s.host.isBlank()) throw LabelPrinterClient.PrintError("no_printer")
+        val viaAdmin = relayActive()
+        if (s.host.isBlank() && !viaAdmin) throw LabelPrinterClient.PrintError("no_printer")
         val data = withContext(Dispatchers.Default) {
             val o = java.io.ByteArrayOutputStream()
             for (d in only) {
@@ -375,13 +438,31 @@ class LabelRepository(
             }
             o.toByteArray()
         }
+        val copies = only.sumOf { it.copies }
+        val relay = relayPrint
+        if (viaAdmin && relay != null) {
+            val queue = relay(data, copies)
+            return LabelPrinterClient.Sent.Printed(copies, queue.ifEmpty { s.queue })
+        }
+        printRawTo(s.host, s.queue, data)
+        return LabelPrinterClient.Sent.Printed(copies, s.queue)
+    }
+
+    private suspend fun printRawTo(host: String, queue: String, data: ByteArray) {
         val job = ((System.currentTimeMillis() / 1000) % 1000).toInt()
         try {
-            withContext(Dispatchers.IO) { Lpr.print(s.host, s.queue, data, job) }
+            withContext(Dispatchers.IO) { Lpr.print(host, queue, data, job) }
         } catch (e: Lpr.LprError) {
             throw LabelPrinterClient.PrintError(if (e.reason.startsWith("refused:queue")) "lpd_queue" else "lpd:" + e.reason)
         }
-        return LabelPrinterClient.Sent.Printed(only.sumOf { it.copies }, s.queue)
+    }
+
+    /** v3.0 Admin: agentdan kelgan tayyor yorliq (TSPL) — shu telefonning printer sozlamasi bilan. @return navbat nomi */
+    suspend fun printRaw(data: ByteArray): String {
+        val s = _state.value
+        if (s.host.isBlank()) throw LabelPrinterClient.PrintError("no_printer")
+        printRawTo(s.host, s.queue, data)
+        return s.queue
     }
 
     /** Sinov yorlig'i (PLU shaklida): o'lcham va printerni tekshirish. */

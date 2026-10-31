@@ -144,9 +144,10 @@ class SettingsFragment : Fragment() {
                 when (e) {
                     SettingsEvent.BackupDone -> snack(R.string.backup_done)
                     is SettingsEvent.BackupFailed -> snackText(getString(R.string.backup_failed) + "\n" + backupError(e.cause))
-                    is SettingsEvent.RestoreDone -> snackText(
-                        getString(R.string.restore_done) + if (e.needsCheck > 0) "\n" + getString(R.string.restore_needs_check, e.needsCheck) else "",
-                    )
+                    is SettingsEvent.RestoreDone -> {
+                        snackText(getString(R.string.restore_done) + if (e.needsCheck > 0) "\n" + getString(R.string.restore_needs_check, e.needsCheck) else "")
+                        if (ServiceLocator.backup.lastRestoredSettings) BackupUi.askRestart(requireActivity())
+                    }
                     is SettingsEvent.RestoreFailed -> snackText(getString(R.string.restore_failed) + "\n" + backupError(e.cause))
                     is SettingsEvent.NeedPassword -> askPassword(R.string.restore_password_title, R.string.restore_password_hint, optional = false) { pw -> vm.preview(e.uri, pw) }
                     is SettingsEvent.Preview -> showPreview(e)
@@ -213,10 +214,7 @@ class SettingsFragment : Fragment() {
     private fun showPreview(e: SettingsEvent.Preview) {
         val p = e.preview
         if (p.tooNew) { snackText(getString(R.string.backup_err_too_new)); return }
-        val msg = getString(
-            R.string.restore_preview, if (p.createdAt > 0) com.ilxomjon.dur_novvot_dokon.ui.formatDateTime(p.createdAt) else "—",
-            p.products, p.stores, p.orders, p.payments, p.unsent,
-        )
+        val msg = BackupUi.previewText(requireContext(), p)
         MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.restore_title).setMessage(msg)
             .setPositiveButton(R.string.settings_import) { _, _ -> vm.import(e.uri, e.password) }
             .setNegativeButton(R.string.cancel, null).show()
@@ -226,7 +224,7 @@ class SettingsFragment : Fragment() {
         rendering = true
         binding.tvAgent.text = s.agentName
         binding.tvPhone.text = s.phone
-        binding.tvServer.text = s.server.ifEmpty { getString(R.string.settings_server_none) }
+        binding.tvServer.text = if (ServiceLocator.isRelay) getString(R.string.srv_mode_admin) else s.server.ifEmpty { getString(R.string.settings_server_none) }
         binding.toggleLanguage.check(if (s.language == UiLanguage.CYRILLIC) R.id.btnCyrillic else R.id.btnLatin)
         binding.toggleTheme.check(
             when (s.theme) {

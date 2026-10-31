@@ -92,7 +92,8 @@
                             android:text="@string/settings_logout"
                             android:textColor="?attr/colorError"
                             app:icon="@drawable/ic_logout"
-                            app:iconTint="?attr/colorError" />
+                            app:iconTint="?attr/colorError"
+                            android:maxLines="2" />
                     </LinearLayout>
                     <com.google.android.material.divider.MaterialDivider
                         android:layout_width="match_parent"
@@ -474,10 +475,13 @@
                             android:id="@+id/btnFavPick0"
                             style="@style/Widget.App.Button.Outlined"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:text="@string/settings_fav_empty"
-                            app:icon="@drawable/ic_store" />
+                            app:icon="@drawable/ic_store"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFavClear0"
@@ -501,10 +505,13 @@
                             android:id="@+id/btnFavPick1"
                             style="@style/Widget.App.Button.Outlined"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:text="@string/settings_fav_empty"
-                            app:icon="@drawable/ic_store" />
+                            app:icon="@drawable/ic_store"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFavClear1"
@@ -578,17 +585,21 @@
                             android:id="@+id/btnLatin"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/settings_lang_latin" />
+                            android:text="@string/settings_lang_latin"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCyrillic"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/settings_lang_cyrillic" />
+                            android:text="@string/settings_lang_cyrillic"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                     <TextView
                         android:layout_width="match_parent"
@@ -613,25 +624,31 @@
                             android:id="@+id/btnThemeSystem"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/settings_theme_system" />
+                            android:text="@string/settings_theme_system"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnThemeLight"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/settings_theme_light" />
+                            android:text="@string/settings_theme_light"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnThemeDark"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/settings_theme_dark" />
+                            android:text="@string/settings_theme_dark"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -790,21 +807,29 @@
                             android:id="@+id/btnExport"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/settings_export"
-                            app:icon="@drawable/ic_backup" />
+                            app:icon="@drawable/ic_backup"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnImport"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/settings_import"
-                            app:icon="@drawable/ic_restore" />
+                            app:icon="@drawable/ic_restore"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

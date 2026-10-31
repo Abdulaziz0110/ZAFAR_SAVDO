@@ -52,7 +52,8 @@ object UsbPrinter {
     fun requestPermission(ctx: Context) {
         val f = find(ctx) ?: return
         val intent = Intent(ACTION_PERMISSION).setPackage(ctx.packageName)
-        val flags = if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
+        // Natija qo'shimcha maydondan o'qilmaydi (keyin hasPermission tekshiriladi), shuning uchun o'zgarmas PendingIntent yetarli
+        val flags = if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
         manager(ctx)?.requestPermission(f.device, PendingIntent.getBroadcast(ctx, 0, intent, flags or PendingIntent.FLAG_UPDATE_CURRENT))
     }
 

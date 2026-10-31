@@ -37,11 +37,22 @@ b += seg_group('tgSync', [('sync0', '@string/sync_off'), ('sync30', '@string/syn
 b += switch_row('swAuto', '@string/share_auto')
 b += switch_row('swAnswer', '@string/share_answer', '@string/share_answer_hint')
 b += CARD_CLOSE
+# v3.0 (faqat Admin): agentlar ko'prigi — ShareFragment AppRole bo'yicha ko'rsatadi
+b += section('@string/rl_title').replace('<TextView', '<TextView\n                android:id="@+id/tvRelaySection"\n                android:visibility="gone"', 1)
+b += card_open().replace('style="@style/Widget.App.Card"', 'android:id="@+id/cardRelay"\n                style="@style/Widget.App.Card"\n                android:visibility="gone"', 1)
+b += text('tvRelay', top='8dp')
+b += hint('@string/rl_share_hint')
+b += buttons([('btnRelay', '@string/rl_open', TONAL, 'ic_sync')])
+b += CARD_CLOSE
 b += section('@string/share_receipt_title') + card_open()
+# Agent: sarlavha, xodim, chek osti va namuna (2.8 dagidek). Admin (v3.0): bular o'rniga "Chek ko'rinishi" ekrani
+# (logo, shrift, ...). Qaysi biri ko'rinishi ShareFragment'da AppRole bo'yicha.
 b += field('tilHeader', 'edtHeader', '@string/share_receipt_header', 'textCapWords', '@string/share_receipt_header_hint')
 b += field('tilStaff', 'edtStaff', '@string/rc_staff_field', 'textCapWords', '@string/rc_staff_hint')
 b += field('tilFooter', 'edtFooter', '@string/rc_footer_field', 'textMultiLine', '@string/rc_footer_hint')
 b += buttons([('btnReceiptPreview', '@string/rc_preview', TEXT, 'ic_print')])
+b += hint('@string/rs_open_hint').replace('<TextView', '<TextView\n                        android:id="@+id/tvReceiptStyleHint"', 1)
+b += buttons([('btnReceiptStyle', '@string/rs_open', TONAL, 'ic_print')])
 b += '                    <Space android:layout_width="match_parent" android:layout_height="12dp" />\n'
 b += CARD_CLOSE
 b += section('@string/share_setup') + card_open()
@@ -70,6 +81,24 @@ b += buttons([('btnSaveFirebase', '@string/b_save', TONAL, None), ('btnFbGuide',
 b += hint('@string/share_help')
 b += CARD_CLOSE
 open(os.path.join(ROOT, 'app/src/main/res/layout/fragment_share.xml'), 'w').write(screen_progress('@string/share_title', b))
+
+# ---- fragment_relay (v3.0 Admin: agentlar ko'prigi) ----
+r = ''
+r += section('@string/rl_sec_state') + card_open()
+r += switch_row('swRelay', '@string/rl_switch', '@string/rl_switch_hint')
+r += text('tvRelayState', top='4dp')
+r += text('tvRelayError', top='4dp', color='?attr/colorError', gone=True)
+r += buttons([('btnPumpNow', '@string/rl_pump', TONAL, 'ic_sync'), ('btnPublishCat', '@string/rl_publish', TEXT, 'ic_download')])
+r += CARD_CLOSE
+r += section('@string/rl_sec_code') + card_open()
+r += hint('@string/rl_code_hint')
+r += text('tvRelayCode', style='?attr/textAppearanceBodySmall', top='4dp', extra='\n                        android:fontFamily="monospace"\n                        android:textIsSelectable="true"')
+r += buttons([('btnCodeShare', '@string/rl_code_share', TONAL, 'ic_share'), ('btnCodeCopy', '@string/rl_code_copy', TEXT, None)])
+r += CARD_CLOSE
+r += section('@string/rl_sec_how') + card_open()
+r += hint('@string/rl_how')
+r += CARD_CLOSE
+open(os.path.join(ROOT, 'app/src/main/res/layout/fragment_relay.xml'), 'w').write(screen('@string/rl_title', r))
 
 # ---- fragment_client ----
 c = ''

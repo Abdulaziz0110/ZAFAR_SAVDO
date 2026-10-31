@@ -68,8 +68,10 @@
                 android:id="@+id/btnKeepAsIs"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:text="@string/check_keep" />
+                android:layout_height="wrap_content"
+                android:text="@string/check_keep"
+                android:minHeight="48dp"
+                android:maxLines="2" />
         </LinearLayout>
 
         <LinearLayout
@@ -199,7 +201,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/finish_fill_all" />
+            android:text="@string/finish_fill_all"
+            android:maxLines="2" />
 
         <TextView
             android:layout_width="match_parent"
@@ -297,10 +300,12 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSend"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:textSize="18sp"
             android:layout_marginTop="12dp"
             android:text="@string/finish_send"
-            app:icon="@drawable/ic_check" />
+            app:icon="@drawable/ic_check"
+            android:minHeight="64dp"
+            android:maxLines="2" />
     </LinearLayout>
 </ScrollView>

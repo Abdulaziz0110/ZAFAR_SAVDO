@@ -258,7 +258,7 @@ object LedgerQuery {
     private fun valid(d: Int, m: Int) = d in 1..31 && m in 1..12
 
     private fun dateCond(p: Triple<Int, Int, Int?>): Cond =
-        if (p.third != null) Stamp.of(p.third!!, p.second, p.first).let { DateRange(it, Stamp.dayEnd(it)) } else DayMonth(p.first, p.second)
+        p.third?.let { y -> Stamp.of(y, p.second, p.first).let { DateRange(it, Stamp.dayEnd(it)) } } ?: DayMonth(p.first, p.second)
 
     /** Son + qo'shimcha: (qiymat, valyuta usd?, faqat summa?, miqdormi?). */
     private class NumSpec(val value: Double, val usd: Boolean?, val amountOnly: Boolean, val qty: Boolean, val text: String)

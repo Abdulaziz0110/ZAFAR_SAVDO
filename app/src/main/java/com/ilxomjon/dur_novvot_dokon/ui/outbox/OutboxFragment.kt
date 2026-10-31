@@ -110,7 +110,9 @@ class OutboxFragment : Fragment() {
         val detail = StringBuilder()
         detail.append(OutboxUi.label(ctx, e.state))
         OutboxUi.reason(ctx, e.checkReason)?.let { detail.append("\n\n").append(it) }
-        e.lastError?.takeIf { it.isNotBlank() }?.let { detail.append("\n\n").append(getString(R.string.err_details, it.take(160))) }
+        e.lastError?.takeIf { it.isNotBlank() }?.let {
+            detail.append("\n\n").append(if (it == "admin_wait") getString(R.string.err_admin_wait) else getString(R.string.err_details, it.take(160)))
+        }
         e.serverRowId?.let { detail.append("\n\n").append(getString(R.string.queue_server_id, it)) }
         val b = MaterialAlertDialogBuilder(ctx).setTitle(e.receipt + " · " + e.storeName).setMessage(detail.toString())
             .setNegativeButton(R.string.close, null)

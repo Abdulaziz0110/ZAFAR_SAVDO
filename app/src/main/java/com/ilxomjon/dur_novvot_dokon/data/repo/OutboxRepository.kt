@@ -14,7 +14,7 @@ import androidx.work.WorkerParameters
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
 import com.ilxomjon.dur_novvot_dokon.data.local.HistoryDb
 import com.ilxomjon.dur_novvot_dokon.data.local.OutboxCounts
-import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
+import com.ilxomjon.dur_novvot_dokon.data.remote.Backend
 import com.ilxomjon.dur_novvot_dokon.domain.SentOrder
 import com.ilxomjon.dur_novvot_dokon.domain.SentPayment
 import com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxEngine
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 class OutboxRepository(
     private val context: Context,
     private val db: HistoryDb,
-    private val api: ServerApi,
+    private val api: Backend,
     private val scope: CoroutineScope,
 ) {
     val engine = OutboxEngine(db, api, { System.currentTimeMillis() })
@@ -60,6 +60,9 @@ class OutboxRepository(
     private val gate = Mutex()
 
     suspend fun <T> paused(block: suspend () -> T): T = gate.withLock { block() }
+
+    /** v3.0: yuborishdan oldin (Admin orqali ishlaganda navbatdagilarni Admin'ga oldindan joylash). Xatosi yuborishni to'xtatmaydi. */
+    var beforeDrain: (suspend () -> Unit)? = null
 
     /** Oxirgi muvaffaqiyatli serverga yozish vaqti (diagnostika uchun). */
     @Volatile var lastSuccessAt: Long = 0L
@@ -102,6 +105,7 @@ class OutboxRepository(
     suspend fun drainNow(): OutboxEngine.Result {
         _sending.value = true
         return try {
+            beforeDrain?.let { f -> runCatching { f() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it } }
             val r = gate.withLock { withContext(Dispatchers.IO) { engine.drain() } }
             if (r.sent > 0) lastSuccessAt = System.currentTimeMillis()
             _lastError.value = r.lastError

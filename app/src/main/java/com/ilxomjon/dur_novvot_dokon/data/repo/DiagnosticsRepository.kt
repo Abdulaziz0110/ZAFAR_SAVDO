@@ -9,7 +9,7 @@ import com.ilxomjon.dur_novvot_dokon.data.SecureStore
 import com.ilxomjon.dur_novvot_dokon.data.local.HistoryDb
 import com.ilxomjon.dur_novvot_dokon.data.local.LocalDb
 import com.ilxomjon.dur_novvot_dokon.data.local.OutboxCounts
-import com.ilxomjon.dur_novvot_dokon.data.remote.ServerApi
+import com.ilxomjon.dur_novvot_dokon.data.remote.Backend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -44,7 +44,7 @@ data class Diagnosis(
 class DiagnosticsRepository(
     private val context: Context,
     private val secure: SecureStore,
-    private val api: ServerApi,
+    private val api: Backend,
     private val network: NetworkMonitor,
     private val outbox: OutboxRepository,
     private val history: HistoryDb,
@@ -73,7 +73,7 @@ class DiagnosticsRepository(
         val serverTime = s.getOrNull()
         Diagnosis(
             net = net,
-            configured = cfg.isComplete,
+            configured = cfg.isComplete || (secure.relayMode && secure.relayConfig != null),
             localPort = local.await(),
             remoteConfigured = cfg.remoteHost.isNotBlank(),
             remotePort = remote.await(),

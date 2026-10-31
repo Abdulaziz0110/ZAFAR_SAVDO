@@ -34,9 +34,11 @@ object ReceiptActions {
 
     fun preview(f: Fragment, doc: LedgerDoc, host: LedgerHost?, client: String) {
         val ctx = f.requireContext()
-        val r = LedgerUi.receipt(ctx, doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty())
+        val style = host?.receiptStyle ?: uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
+        val r = style.apply(LedgerUi.receipt(ctx, doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty()))
         f.viewLifecycleOwner.lifecycleScope.launch {
-            val bmp = withContext(Dispatchers.Default) { ReceiptBitmap.render(r, 576) }
+            val logo = host?.receiptLogo
+            val bmp = withContext(Dispatchers.Default) { ReceiptBitmap.render(r, style, logo) }
             val vb = DialogReceiptPreviewBinding.inflate(LayoutInflater.from(ctx))
             vb.image.setImageBitmap(bmp)
             val targets = host?.printTargets(ctx).orEmpty()
@@ -45,9 +47,9 @@ object ReceiptActions {
                 .setNeutralButton(R.string.lg_share_image) { _, _ -> f.viewLifecycleOwner.lifecycleScope.launch { shareImage(ctx, r, bmp) } }
             if (targets.isNotEmpty()) {
                 d.setPositiveButton(R.string.lg_print) { _, _ ->
-                    if (targets.size == 1) send(f, targets[0], bmp)
+                    if (targets.size == 1) send(f, targets[0], bmp, style.dark)
                     else MaterialAlertDialogBuilder(ctx).setTitle(R.string.lg_print)
-                        .setItems(targets.map { it.label }.toTypedArray()) { _, i -> send(f, targets[i], bmp) }
+                        .setItems(targets.map { it.label }.toTypedArray()) { _, i -> send(f, targets[i], bmp, style.dark) }
                         .setNegativeButton(R.string.lg_cancel, null).show()
                 }
             }
@@ -55,12 +57,12 @@ object ReceiptActions {
         }
     }
 
-    private fun send(f: Fragment, t: PrintTarget, bmp: Bitmap) {
+    private fun send(f: Fragment, t: PrintTarget, bmp: Bitmap, dark: Int) {
         val act = f.requireActivity()
         val root = act.findViewById<android.view.View>(android.R.id.content)
         act.lifecycleScope.launch {
             val msg = runCatching {
-                val bytes = withContext(Dispatchers.Default) { ReceiptBitmap.toEscPos(bmp) }
+                val bytes = withContext(Dispatchers.Default) { ReceiptBitmap.toEscPos(bmp, dark) }
                 t.send(bytes)
             }.getOrElse { e -> act.getString(R.string.lg_error, e.message ?: e.javaClass.simpleName) }
             Snackbar.make(root, msg, Snackbar.LENGTH_LONG).show()
@@ -69,9 +71,9 @@ object ReceiptActions {
 
     private fun shareDir(ctx: Context) = File(ctx.cacheDir, "share").apply { mkdirs() }
 
-    suspend fun shareImage(ctx: Context, r: Receipt, ready: Bitmap? = null) {
+    suspend fun shareImage(ctx: Context, r: Receipt, ready: Bitmap? = null, host: LedgerHost? = null) {
         val file = withContext(Dispatchers.IO) {
-            val bmp = ready ?: ReceiptBitmap.render(r, 576)
+            val bmp = ready ?: ReceiptBitmap.render(r, host?.receiptStyle ?: uz.imsoft.shared.receipt.ReceiptStyle.STANDARD, host?.receiptLogo)
             shareDir(ctx).listFiles()?.forEach { if (System.currentTimeMillis() - it.lastModified() > 3_600_000L) it.delete() }
             ReceiptBitmap.savePng(bmp, File(shareDir(ctx), "chek_" + System.currentTimeMillis() + ".png"))
         }

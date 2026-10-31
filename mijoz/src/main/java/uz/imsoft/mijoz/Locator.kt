@@ -25,6 +25,7 @@ object Locator {
         if (::app.isInitialized) return
         app = a
         applyUi()
+        Thread({ uz.imsoft.shared.android.PrintFonts.init(a) }, "print-fonts").start()
         scope.launch { runCatching { data.loadLocal() } }
         // Fonda avtomatik yangilash (Sozlamalar ▸ Ma'lumot)
         uz.imsoft.mijoz.data.RefreshWorker.schedule(a, prefs.autoMinutes)

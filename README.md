@@ -1,4 +1,11 @@
-# Savdo Agent 2.6 (+ 2-ilova "Savdo Mijoz" 1.2) — IMSOFT DOKON
+# Savdo Agent / Savdo Admin 3.0 (+ "Savdo Mijoz" 1.4) — IMSOFT DOKON
+
+## 3.0: uchta APK
+* `app` moduli ikki flavor: **agent** (`assembleAgentDebug`, asl applicationId — ishchilar uchun) va **admin**
+  (`assembleAdminDebug`, `.admin` — egasi uchun, hamma imkoniyat). `mijoz` — 2-ilova.
+* Agent "Admin orqali" (faqat internet): `data/relay` — `RelayClient` (agent), `RelayHost` + `RelayService` (Admin), Firebase `g/{kalit}`.
+* Admin'ga xos joylar `AppRole.isAdmin` bilan. Agent'dan Admin'ga ko'chirish — parolli zaxira (`docs/EGA_QOLLANMA.md` s4).
+* Maket generatorlaridan (`tools/gen_*.py`) keyin `tools/fix_buttons.py` ni ishga tushiring (tugmalarda "..." bo'lmasin).
 
 ## 2.6 da nima yangi
 * **Universal**: har do'kon o'z Firebase'i bilan; 1-ilovada barcha mijoz va yuk beruvchilar (har biriga 1C tarixi, telefonlar,

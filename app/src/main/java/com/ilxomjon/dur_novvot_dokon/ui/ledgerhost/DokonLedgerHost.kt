@@ -46,6 +46,8 @@ object DokonLedgerHost : LedgerHost {
     override val receiptHeader: String get() = ServiceLocator.shareStore.receiptHeader
     override val receiptFooter: String get() = ServiceLocator.shareStore.receiptFooter
     override val receiptStaff: String get() = ServiceLocator.shareStore.receiptStaff
+    override val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle get() = ServiceLocator.share.receiptStyle
+    override val receiptLogo: android.graphics.Bitmap? get() = uz.imsoft.shared.android.LogoCache.get(ServiceLocator.shareStore.receiptLogo)
     override val fuzzySearch: Boolean get() = ServiceLocator.appPrefs.fFuzzySearch
 
     override fun repeatLabel(doc: LedgerDoc): Int = when {

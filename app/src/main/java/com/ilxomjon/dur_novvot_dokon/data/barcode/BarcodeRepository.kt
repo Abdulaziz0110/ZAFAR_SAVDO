@@ -173,7 +173,8 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
     suspend fun learn(r: BarcodeResolver.Result.Unknown, productId: String) = mutex.withLock {
         withContext(Dispatchers.IO) {
             loadLocked()
-            if (r.scaleCode != null) scaleLearned[r.scaleCode!!] = productId
+            val sc = r.scaleCode
+            if (sc != null) scaleLearned[sc] = productId
             else { val k = Ean.canonical(r.raw); learned[k] = productId; learnedRaw[k] = r.raw.trim() }
             saveLocked()
         }

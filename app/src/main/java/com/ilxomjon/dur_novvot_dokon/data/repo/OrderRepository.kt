@@ -26,6 +26,9 @@ class OrderRepository(
     /** v2.6: savdo navbatga qo'yilgach (mijozning 2-ilovasiga ko'zgu). Xatosi savdoga ta'sir qilmaydi. */
     var onOrderQueued: ((SentOrder, Long, String) -> Unit)? = null
 
+    /** v3.0: savdo matni bilan (Admin orqali ishlaganda 2-filial cheki ko'zgusi uchun). Sinxron, tez. */
+    var onOrderPayload: ((String, String, SentOrder, String) -> Unit)? = null
+
     /** Ikki marta bosish / ikki ekrandan bir vaqtda yuborishdan himoya. */
     private val sendLock = Mutex()
 
@@ -51,8 +54,10 @@ class OrderRepository(
         // Savatcha darhol (sinxron) tozalanadi: jarayon shu yerda o'lsa ham, yuborilgan savatcha qayta paydo bo'lmasin.
         draft.finishNow()
         kpi.finish(sent.lines.size)
-        outbox.kick()
         val code = OutboxEntry.receiptOf(OutboxKind.ORDER, id)
+        // v3.0 "Admin orqali": chek ko'zgusi savdo bilan birga Admin'ga borishi uchun yuborishdan OLDIN yoziladi
+        runCatching { onOrderPayload?.invoke(agent.id, payload, sent, code) }
+        outbox.kick()
         runCatching { onOrderQueued?.invoke(sent, id, code) }
         code
     }

@@ -61,7 +61,19 @@ data class Receipt(
     val after: List<Total> = emptyList(),
     /** Eng pastda katta harflar bilan: "Tel: +998 ..." */
     val footer: List<String> = emptyList(),
+    /** [info] qatorlarining turi ([KEY_STAFF], [KEY_NUMBER], [KEY_TIME]) — ko'rinish sozlamasi yashirishi uchun. */
+    val infoKeys: List<String> = emptyList(),
+    /** Sarlavha ostidagi qatorlar (manzil) — [ReceiptStyle.sub]. */
+    val subheader: List<String> = emptyList(),
+    /** Eng pastdagi xabar — [ReceiptStyle.thanks]. */
+    val thanks: String = "",
 ) {
+    companion object {
+        const val KEY_STAFF = "staff"
+        const val KEY_NUMBER = "no"
+        const val KEY_TIME = "time"
+    }
+
     data class Line(val name: String, val detail: String, val amount: String) {
         /** "40 x 117 000 = 4 680 000" (miqdor bo'lmasa — faqat summa). */
         val formula: String get() = if (detail.isNotEmpty()) "$detail = $amount" else amount
@@ -116,8 +128,10 @@ object ReceiptBuilder {
         doc.balanceAfter?.let { after += Receipt.Total(l.balance, NumFmt.bare(it)) }
         val (time, date) = timeAndDate(doc.stamp)
         val info = ArrayList<Pair<String, String>>()
-        if (staff.isNotBlank()) info += l.staff to staff
+        val keys = ArrayList<String>()
+        if (staff.isNotBlank()) { info += l.staff to staff; keys += Receipt.KEY_STAFF }
         info += l.time to time
+        keys += Receipt.KEY_TIME
         val banner = when (doc.kind) {
             EntryKind.SALE -> ""
             EntryKind.RETURN -> l.returnBanner
@@ -126,13 +140,14 @@ object ReceiptBuilder {
         return Receipt(
             header, l.titleFor(doc.kind), l.client + ": " + clientName, Stamp.formatDateTime(doc.stamp),
             lines, totals, listOf(l.note),
-            clientLabel = l.client, clientName = clientName, info = info, date = date, banner = banner, after = after, footer = footer,
+            clientLabel = l.client, clientName = clientName, info = info, date = date, banner = banner, after = after, footer = footer, infoKeys = keys,
         )
     }
 
     /** Oddiy matn (Telegram'ga yuborish, nusxa olish). */
     fun toText(r: Receipt): String = buildString {
         if (r.header.isNotBlank()) append(r.header).append('\n')
+        for (x in r.subheader) append(x).append('\n')
         for ((k, v) in r.info) append(k).append(": ").append(v).append('\n')
         if (r.date.isNotEmpty() && r.info.isNotEmpty()) append(r.date).append('\n')
         if (r.info.isEmpty()) append(r.title).append('\n').append(r.dateText).append('\n')
@@ -151,6 +166,7 @@ object ReceiptBuilder {
         }
         for (t in r.after) append(t.label).append(": ").append(t.value).append('\n')
         for (f in r.footer) append(f).append('\n')
+        if (r.thanks.isNotEmpty()) append(r.thanks).append('\n')
         for (n in r.notes) append('\n').append(n)
     }
 
@@ -167,8 +183,9 @@ object ReceiptBuilder {
         append(".bn{border-top:2px solid #000;border-bottom:2px solid #000;text-align:center;font-weight:bold;font-size:18px;letter-spacing:6px;padding:8px 0;margin:8px 0}")
         append("table{width:100%;border-collapse:collapse;margin:8px 0}td{border:1.5px solid #000;padding:4px 6px;font-size:14px}")
         append(".n{display:block}.f{display:block;text-align:right}.ft{font-weight:bold;font-size:17px;letter-spacing:1px;margin:4px 0 0 24px}")
-        append(".note{font-size:11px;color:#555;text-align:center;margin-top:12px}</style></head><body><div class='r'>")
+        append(".note{font-size:11px;color:#555;text-align:center;margin-top:12px}.sub{text-align:center;font-size:14px;margin:0 0 4px}.th{text-align:center;font-weight:bold;font-size:16px;margin-top:12px}</style></head><body><div class='r'>")
         if (r.header.isNotBlank()) append("<h1>").append(esc(r.header)).append("</h1>")
+        for (x in r.subheader) append("<div class='sub'>").append(esc(x)).append("</div>")
         if (r.info.isEmpty()) append("<div class='i'><span style='text-align:center'>").append(esc(r.title + " · " + r.dateText)).append("</span></div>")
         for ((idx, kv) in r.info.withIndex()) {
             append("<div class='i'><b>").append(esc(kv.first)).append(":</b><span>").append(esc(kv.second)).append("</span>")
@@ -189,6 +206,7 @@ object ReceiptBuilder {
         for (t in r.totals) append("<div class='t").append(if (t.bold) " b" else "").append("'><span>").append(esc(t.label)).append(":</span><span>").append(esc(t.value)).append("</span></div>")
         for (t in r.after) append("<div class='t'><span>").append(esc(t.label)).append(":</span><span>").append(esc(t.value)).append("</span></div>")
         for (f in r.footer) append("<div class='ft'>").append(esc(f)).append("</div>")
+        if (r.thanks.isNotEmpty()) append("<div class='th'>").append(esc(r.thanks)).append("</div>")
         for (n in r.notes) append("<div class='note'>").append(esc(n)).append("</div>")
         append("</div></body></html>")
     }

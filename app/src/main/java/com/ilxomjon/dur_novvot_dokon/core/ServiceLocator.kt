@@ -34,6 +34,7 @@ import com.ilxomjon.dur_novvot_dokon.data.share.ShareWorker
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
@@ -98,18 +99,43 @@ object ServiceLocator {
     private val catalogDao by lazy { CatalogDao(localDb) }
     private val cartDao by lazy { CartDao(localDb) }
     private val server by lazy { SqlServer { secure.serverConfig } }
-    val api by lazy { ServerApi(server) }
+    /** To'g'ridan-to'g'ri SQL server (Admin har doim shu; Agent "Server" rejimida). */
+    val directApi by lazy { ServerApi(server) }
+    /** v3.0 Agent "Admin orqali": faqat internet, server ishini Admin bajaradi. */
+    val relayClient: com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient({ secure.relayConfig }, saleDir = java.io.File(app.filesDir, "relay_sales")).also { r ->
+            r.onCodes = { bytes -> labels.applyCodes(bytes) }
+        }
+    }
+    /** Agent Admin orqali ishlayaptimi (Admin ilovada hech qachon). */
+    val isRelay: Boolean get() = !AppRole.isAdmin && secure.relayMode && secure.relayConfig != null
+    val api: com.ilxomjon.dur_novvot_dokon.data.remote.Backend by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.remote.SwitchingBackend(directApi, relayClient) { isRelay }
+    }
 
     val network by lazy { NetworkMonitor(app) }
     val catalog by lazy { CatalogRepository(catalogDao, api, appPrefs, historyDb) }
     val draft by lazy { DraftRepository(cartDao, catalog, app.getSharedPreferences("user", Context.MODE_PRIVATE), appScope) }
-    val outbox by lazy { OutboxRepository(app, historyDb, api, appScope) }
-    val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) }
+    val outbox by lazy {
+        OutboxRepository(app, historyDb, api, appScope).also { o ->
+            o.beforeDrain = {
+                if (isRelay) {
+                    val items = withContext(Dispatchers.IO) { historyDb.outboxList() }
+                        .filter { !it.state.isDone && it.state != com.ilxomjon.dur_novvot_dokon.domain.outbox.OutboxState.NEEDS_CHECK }
+                        .map { Triple(it.agentId, it.kind.protocolType, it.payload) }
+                    relayClient.pushAll(items)
+                }
+            }
+        }
+    }
+    val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) { isRelay } }
     val kpi by lazy { KpiTracker(historyDb, appPrefs) }
     val orders by lazy {
         OrderRepository(catalog, draft, outbox, kpi).also { r ->
             // v2.6: savdo -> mijozning 2-ilovasi (sozlanmagan bo'lsa onSale hech narsa qilmaydi)
-            r.onOrderQueued = { s, id, code -> appScope.launch(Dispatchers.IO) { runCatching { share.onSale(s, id, code) } } }
+            r.onOrderQueued = { s, id, code -> if (!isRelay) appScope.launch(Dispatchers.IO) { runCatching { share.onSale(s, id, code) } } }
+            // Admin orqali: chek ko'zgusi savdo bilan birga Admin'ga boradi (Admin 2-filialga yuboradi)
+            r.onOrderPayload = { agentId, payload, s, code -> if (isRelay) relayClient.rememberSale(agentId, payload, s, code) }
         }
     }
     val reports by lazy { ReportRepository(api, catalog) }
@@ -126,8 +152,32 @@ object ServiceLocator {
         }
     }
     val barcodes by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository(app, catalog) }
-    val labels by lazy { com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository(app, catalog, barcodes, shareStore) }
-    val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox) }
+    val labels: com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository(app, catalog, barcodes, shareStore).also { l ->
+            l.relayActive = { isRelay }
+            l.relayPrint = { data, copies -> relayClient.printLabels(data, copies) }
+            l.relayRefreshCodes = { catalog.sync() }
+        }
+    }
+    /** v3.0 Admin: agentlar ko'prigi. */
+    val relayHost by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.relay.RelayHost(
+            config = { com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(shareStore.dbUrl.let(uz.imsoft.shared.CloudDb::normalizeUrl), shareStore.agentKey).takeIf { AppRole.isAdmin && shareStore.isCloudReady && it.isValid } },
+            cloud = { url -> uz.imsoft.shared.CloudDb(url, shareStore.secret) },
+            server = com.ilxomjon.dur_novvot_dokon.data.relay.RelayServerAdapter(directApi),
+            hooks = object : com.ilxomjon.dur_novvot_dokon.data.relay.RelayHost.Hooks {
+                override fun adminAgentId(): String = catalog.state.value.agent?.id.orEmpty()
+                override fun codes(): Pair<Long, ByteArray>? {
+                    val f = java.io.File(app.filesDir, "codes_1c.json")
+                    return if (f.isFile) f.lastModified() to f.readBytes() else null
+                }
+                override suspend fun printLabels(data: ByteArray): String = labels.printRaw(data)
+                override suspend fun mirrorSale(sale: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Sale, key: String) =
+                    share.onSale(sale.order, 0L, sale.code, key)
+            },
+        )
+    }
+    val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox, shareStore) }
 
     fun applyUiPrefs() {
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(appPrefs.language.tag))

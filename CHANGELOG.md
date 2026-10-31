@@ -1,8 +1,84 @@
 # CHANGELOG
 
+## 3.0 (versionCode 12): Savdo Agent + Savdo Admin — 2026-10-31
+Bitta kod, ikki ilova (app moduli, flavor'lar `agent` va `admin`). Savdo Mijoz (1.4) o'zgarmagan.
+Server, protokol (tur 1, 3, 4, 5), baza sxemasi o'zgarmagan.
+
+### Ikki ilova
+* **Savdo Agent** — ishchilar uchun: asl applicationId va imzo, hozirgi ilova shu bo'lib yangilanadi. Imkoniyatlari 2.8 dagidek:
+  savdo, to'lov, hisobotlar, narx yorlig'i, chek, 2-filialga chek, kompyuterdan ma'lumot. Chek sozlamasi — eski maydonlar
+  (do'kon nomi, xodim, chek osti) va namuna.
+* **Savdo Admin** — egasi uchun (`.admin`, alohida ilova, to'q ko'k belgi): Agent'dagi hammasi + "Chek ko'rinishi" ekrani
+  (logo, shrift, andozalar). Keyingi qo'shimchalar (1C ma'lumotlari, 1C'ga yozish) faqat Admin'ga qo'shiladi.
+* Dizayn ikkalasida bir xil.
+
+### Agentlar "Admin orqali" — faqat internet (kompyuter -> Admin -> Agent va Mijoz)
+* Agent ▸ Server sozlamalari ▸ **Admin orqali (internet)** ▸ Admin bergan **ulanish kodi**. Shundan keyin Agent'ga SQL server,
+  Tailscale yoki do'kon Wi-Fi'si kerak emas.
+* Admin ▸ Mijozlar va 2-ilova ▸ **Agentlar ko'prigi** (yoqiladi, fonda ishlaydi, bildirishnoma bilan): katalog, do'konlar, qarz va
+  kursni serverdan olib agentlarga joylaydi (20 daqiqada yoki agent so'raganda); agentlarning savdo va to'lovlarini o'zining
+  serverga ulanishi orqali yozadi; qarz, hisobot, kirish so'rovlariga javob beradi; yorliqlarni o'z printeriga chiqaradi;
+  agent savdosining chekini 2-filial printeriga yuboradi; kompyuterdan kelgan 1C kodlarini agentlarga uzatadi.
+* Dublikat bo'lmaydi: har savdo/to'lovning o'z kaliti (agent+tur+matn), Admin yozishdan oldin serverdan qidiradi. Agentda
+  "yuborildi" — faqat server ID'si kelgandan keyin. Admin oflayn bo'lsa savdolar navbatda kutadi va Admin ulanganda yoziladi.
+* Parol Firebase'ga yozilmaydi (PBKDF2 isbot). Firebase qoidalari v4: agent faqat o'z so'rovining javobini o'qiydi,
+  boshqalarning savdosini o'qiy/o'zgartira olmaydi.
+* Protokol (savollar jadvali, turlar 1, 3, 4, 5) va server o'zgarmagan — yozishni Admin'ning mavjud kodi bajaradi.
+
+### Agent'dan Admin'ga ko'chirish
+* Zaxira **parol bilan** saqlansa, ichiga sozlamalar ham kiradi (shifrlangan): server paroli, bulut (Firebase, mijozlar,
+  kalitlar), yorliq va skaner sozlamalari, 1C kodlari va narxlari, chek logosi. Parolsiz zaxira avvalgidek (sozlamalarsiz).
+* Admin'ning kirish ekranida **"Agent ilovadan ko'chirish"** — faylni tanlab, parolni kiritasiz; ma'lumot va sozlamalar o'tadi,
+  ilova qayta ishga tushadi. Kompyuterdagi forwarder.ini o'zgarmaydi (kalitlar bir xil).
+* Sozlamalar ▸ Tiklash ham shunday zaxirani to'liq tiklaydi.
+
+### Tugmalarda "..." tuzatildi
+* Matni sig'magan tugmalar (tanlash guruhlari, yonma-yon tugmalar, kirillcha matnlar): chetki bo'sh joy kichraytirildi,
+  matn kerak bo'lsa 2 qatorga o'tadi, bir qatordagi tugmalar bir xil balandlikda. 360dp ekranda shrift ×1 va ×1,15 da
+  hisoblab tekshirildi (`tools/fix_buttons.py`, generatorlardan keyin ishga tushiriladi).
+* Bosh sahifa (Qayta yuborish / Navbat) va To'lov (Qarzni yangilash / Butun qarz) tugmalari teng bo'lindi.
+
+## 2.9 (versionCode 11) + Savdo Mijoz 1.4 (versionCode 5) — 2026-10-31
+Server, protokol (tur 1, 3, 4, 5), baza, applicationId va imzo o'zgarmagan. Snapshot'ga ikki maydon qo'shildi ("rs", "rl") —
+eski 2-ilova ularni e'tiborsiz qoldiradi, yangi 2-ilova eski ma'lumotda standart ko'rinishni oladi.
+
+### Chek ko'rinishi — o'zingiz xohlagandek
+* Mijozlar va 2-ilova ▸ **Chek ko'rinishi**: tepada jonli namuna, pastda sozlamalar; har o'zgarish darhol saqlanadi.
+* Andozalar: **Standart**, **1C uslubi** (do'kon 1C "Чек1/Чек2" shablonidagidek: hamma matn Arial qalin, nom serif),
+  **Ixcham 58 mm**. Andozadan keyin istalgan bandni o'zgartirish mumkin; "Standartga qaytarish" menyuda.
+* **Logo**: galereyadan rasm, eni 20–100%, termoprinter uchun nuqtali (dither) qora-oq.
+* Matnlar: do'kon nomi, **sarlavha osti** (manzil, 4 qatorgacha), xodim, chek osti (telefonlar), **oxirgi xabar**.
+* Qog'oz 80/58 mm, shrift (tizim yoki Arial), hammasi qalin, matn va nom o'lchami.
+* Nimalar chiqsin: xodim, chek raqami, vaqt, sana, mijoz, oldingi qarz, qator raqami, ramka, to'lov/qarz qoldig'i, telefonlar, izohlar.
+* Printer: **qoralik** (13 daraja) va oxirida bo'sh joy (qog'oz kesilganda matn qolmasin); **Sinov cheki** va namunani ulashish.
+* Ko'rinish 2-ilovalarga ham boradi — ular USB printerda shu ko'rinishda chop etadi; PDF va matn ulashishda ham sarlavha osti va xabar bor.
+* "Mijozlar va 2-ilova" ekranidagi chek maydonlari yangi ekranga ko'chdi.
+
+### Tuzatishlar (to'liq qayta tekshiruvdan)
+* Kirill tilida ikki matnda format belgisi buzilgan edi (`%1$02д`, `%4$.2ф`) — sirli menyudagi "Eng qizg'in vaqt" va
+  "Ekran" qatorlari kirillda ilovani yopib yuborishi mumkin edi. Generator endi hamma format belgilarini himoyalaydi.
+* Argumentsiz matnlardagi "%" olib tashlandi (ekran/shrift o'lchami: ×0,9 · ×1 · ×1,2; "Chegirma, foiz").
+* `!!` ishlatilgan 6 joy xavfsiz tekshiruvga almashtirildi; 2-ilova USB ruxsati PendingIntent'i FLAG_IMMUTABLE.
+
 ## 2.8 (versionCode 10) + Savdo Mijoz 1.3 (versionCode 4) — 2026-10-30
 (2.7 dagi narx yorliqlari, tovar kodlari va quyidagilar)
 Server, protokol (tur 1, 3, 4, 5), baza, applicationId va imzo o'zgarmagan.
+
+### Yorliq ko'rinishi 1C'dagidek
+* Yorliqlar do'kon 1C shablonlari asosida qayta chizildi: PLU — "ГодехЦенник" (nom / katta narx / alohida qatorda
+  "KOD: 501", hammasi markazda), Shtrixli — "ГодехШтрих" (nom / narx / shtrix kod). Avval narx bilan KOD bir qatorga
+  tushib qolardi ("KOD: 72 185 000") — tuzatildi.
+* Shrift: Arial bilan bir xil o'lchamli **Liberation Sans Bold** (ilova ichida, OFL litsenziya); qora-oq chegara qalin
+  harflarni ingichkalashtirmaydi.
+* Yorliq narxi standart bo'yicha **1C "Цена 1 (Сум)"** (Товары.ПродажЦена1 — 1C'ning o'zi yorliqqa shuni chiqaradi).
+* `onec_export.py`: narx turlari tovar rekvizitlaridan (ПродажЦена1..4) topiladi, turi bo'sh bo'lsa ham; $ narxlar
+  (ПродажВал) va kirim narxi olinmaydi; nomlar 1C sinonimidan ("Цена 1 (Сум)").
+
+### Yorliqda 1C narx turi
+* `onec_export.py` 1C'dagi **hamma narx turlarini** ham yuboradi (ЦеныНоменклатуры kabi registr yoki Цена1..Цена4 rekvizitlari;
+  qo'lda: `[codes] price = ...`). Ilovada Narx yorlig'i ▸ narx tugmalari: Naqd / Optom / **1C narxi** ▸ kerakli turni tanlaysiz
+  (masalan 1-narx) — ro'yxatda ham, yorliqda ham shu narx.
+* "Kompyuterdan kodlar (1C)" oynasida kompyuterning oxirgi xabari (xato sababi) va kelgan narx turlari ko'rinadi.
 
 ### Kompyuter: bitta `ORNATISH.bat`
 * `pc/ORNATISH.bat` + `ornatish.py`: administrator, pywin32, printer ulashish (LPD, sinov yorlig'i), forwarder.ini (Bloknot),

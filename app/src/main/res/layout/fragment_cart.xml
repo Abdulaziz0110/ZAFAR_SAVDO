@@ -55,8 +55,10 @@
             android:id="@+id/btnKeepAsIs"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="@string/check_keep" />
+            android:layout_height="wrap_content"
+            android:text="@string/check_keep"
+            android:minHeight="48dp"
+            android:maxLines="2" />
     </LinearLayout>
 
     <FrameLayout
@@ -115,8 +117,10 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCheckout"
             android:layout_width="wrap_content"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:text="@string/cart_checkout"
-            app:icon="@drawable/ic_check" />
+            app:icon="@drawable/ic_check"
+            android:minHeight="56dp"
+            android:maxLines="2" />
     </LinearLayout>
 </LinearLayout>

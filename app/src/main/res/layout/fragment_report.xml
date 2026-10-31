@@ -41,17 +41,21 @@
                     android:id="@+id/btnSourceServer"
                     style="@style/Widget.App.Segment"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="@string/report_source_server" />
+                    android:text="@string/report_source_server"
+                    android:minHeight="48dp"
+                    android:maxLines="2" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSourceLocal"
                     style="@style/Widget.App.Segment"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="@string/report_source_local" />
+                    android:text="@string/report_source_local"
+                    android:minHeight="48dp"
+                    android:maxLines="2" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <LinearLayout
@@ -89,14 +93,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/report_pick_period"
-                app:icon="@drawable/ic_calendar" />
+                app:icon="@drawable/ic_calendar"
+                android:maxLines="2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnShow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/report_show" />
+                android:text="@string/report_show"
+                android:maxLines="2" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

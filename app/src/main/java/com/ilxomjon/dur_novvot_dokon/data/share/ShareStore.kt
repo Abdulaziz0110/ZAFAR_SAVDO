@@ -79,6 +79,17 @@ class ShareStore(private val context: Context) {
     var receiptFooter: String get() = s("receipt_footer"); set(v) = put("receipt_footer", v)
     /** Chekdagi "Xodim" (masalan "Dokon"). Bo'sh — chiqmaydi. */
     var receiptStaff: String get() = s("receipt_staff"); set(v) = put("receipt_staff", v)
+    /** Chek ko'rinishi ([uz.imsoft.shared.receipt.ReceiptStyle.encode]); bo'sh — standart. v2.9 */
+    var receiptStyle: String get() = s("receipt_style"); set(v) = put("receipt_style", v)
+    /** Chek logosi (PNG, eni <= 576) — ilova fayllarida. */
+    private val logoFile get() = java.io.File(context.filesDir, "receipt_logo.png")
+    var receiptLogo: ByteArray?
+        get() = logoFile.takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() }
+        set(v) { if (v == null || v.isEmpty()) logoFile.delete() else logoFile.writeBytes(v) }
+    /** v3.0 Admin: agentlar ko'prigi kaliti (g/{kalit}) — Agent ulanish kodida boradi. */
+    var agentKey: String get() = s("agent_key"); set(v) = put("agent_key", v)
+    /** v3.0 Admin: ko'prik yoqilgan (fonda ishlaydi). */
+    var relayOn: Boolean get() = prefs.getBoolean("relay_on", false); set(v) = prefs.edit().putBoolean("relay_on", v).apply()
     /** Fon yangilanishi oralig'i, daqiqa (0 — o'chiq). */
     var syncMinutes: Int get() = prefs.getInt("sync_min", 60); set(v) = prefs.edit().putInt("sync_min", v).apply()
     /** Kompyuterdan avtomatik eksport (1C COM) uchun "kirish qutisi" kaliti. */
@@ -131,6 +142,15 @@ class ShareStore(private val context: Context) {
     fun remove(id: String) = saveClients(clients().filter { it.id != id })
 
     fun markAllDirty() = saveClients(clients().map { it.copy(dirty = true) })
+
+    /** v3.0: sozlamalarni ko'chirish (faqat parolli zaxira ichida). */
+    fun exportAll(): org.json.JSONObject = com.ilxomjon.dur_novvot_dokon.data.PrefsDump.toJson(prefs.all)
+
+    @Synchronized
+    fun importAll(json: org.json.JSONObject): Boolean {
+        cacheRaw = null
+        return com.ilxomjon.dur_novvot_dokon.data.PrefsDump.apply(prefs, json)
+    }
 
     val isConfigured: Boolean get() = dbUrl.isNotBlank() && secret.isNotBlank() && clients().isNotEmpty()
     val isCloudReady: Boolean get() = dbUrl.isNotBlank() && secret.isNotBlank()

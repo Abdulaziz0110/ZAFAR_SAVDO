@@ -15,6 +15,8 @@ class CatalogSnapshot(
     val rates: List<String>,
     val products: List<RawProduct>,
     val agent: RawAgent?,
+    /** v3.0: ma'lumot serverdan qachon olingan (Admin orqali kelganda Admin'ning vaqti). 0 — hozir. */
+    val fetchedAt: Long = 0L,
 )
 
 class RawStore(val regionId: String, val id: String, val name: String, val debtSom: String, val debtVal: String, val time: String)

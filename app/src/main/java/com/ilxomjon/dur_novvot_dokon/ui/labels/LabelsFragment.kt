@@ -87,8 +87,17 @@ class LabelsFragment : Fragment() {
             }
         }
         b.rowPrinter.setOnClickListener { LabelPrinterSheet.show(childFragmentManager) }
-        b.togglePrice.check(if (repo.state.value.priceType == PriceType.WHOLESALE) R.id.btnWholesale else R.id.btnCash)
-        b.togglePrice.addOnButtonCheckedListener { _, id, checked -> if (checked) repo.setPriceType(if (id == R.id.btnWholesale) PriceType.WHOLESALE else PriceType.CASH) }
+        syncPriceToggle()
+        b.togglePrice.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked || syncingToggle) return@addOnButtonCheckedListener
+            when (id) {
+                R.id.btnPrice1c -> pickPrice1c()
+                R.id.btnWholesale -> { repo.setPrice1c(""); repo.setPriceType(PriceType.WHOLESALE) }
+                else -> { repo.setPrice1c(""); repo.setPriceType(PriceType.CASH) }
+            }
+        }
+        // Tanlangan 1C narx turini qayta tanlash (tugma allaqachon belgilangan bo'lsa ham)
+        b.btnPrice1c.setOnLongClickListener { pickPrice1c(); true }
         b.btnScan.setOnClickListener { navigator().push(ScanFragment.labels()) }
         b.btnPlu.setOnClickListener { LabelPrintSheet.show(childFragmentManager, LabelKind.PLU) }
         b.btnBarcode.setOnClickListener { LabelPrintSheet.show(childFragmentManager, LabelKind.BARCODE) }
@@ -127,6 +136,7 @@ class LabelsFragment : Fragment() {
             onZero = { p -> repo.remove(p.id) },
         )
         adapter.haptics = ServiceLocator.appPrefs.fHaptics
+        adapter.priceOverride = { p -> if (repo.state.value.price1c.isNotEmpty()) repo.priceOf(p, null) else null }
         b.recycler.layoutManager = LinearLayoutManager(requireContext())
         b.recycler.adapter = adapter
         b.recycler.addItemDecoration(
@@ -140,6 +150,7 @@ class LabelsFragment : Fragment() {
 
     private fun render(s: LabelState, rate: Double) {
         val bb = _b ?: return
+        if ((s.price1c.isNotEmpty()) != (bb.togglePrice.checkedButtonId == R.id.btnPrice1c) || (s.price1c.isNotEmpty() && bb.btnPrice1c.text != s.price1c)) syncPriceToggle()
         val byId = ServiceLocator.catalog.state.value.productsById
         adapter.setPricing(PricingCtx(s.priceType, Currency.SOM, rate), false)
         adapter.setCart(
@@ -157,8 +168,51 @@ class LabelsFragment : Fragment() {
         if (filter == Filter.SELECTED) refreshList()
     }
 
+    private var syncingToggle = false
+
+    /** Narx tugmalari holatini repozitoriyga moslash (1C narx turi tanlangan bo'lsa — uchinchi tugma). */
+    private fun syncPriceToggle() {
+        val bb = _b ?: return
+        val s = repo.state.value
+        syncingToggle = true
+        bb.togglePrice.check(
+            when {
+                s.price1c.isNotEmpty() -> R.id.btnPrice1c
+                s.priceType == PriceType.WHOLESALE -> R.id.btnWholesale
+                else -> R.id.btnCash
+            },
+        )
+        syncingToggle = false
+        bb.btnPrice1c.text = if (s.price1c.isNotEmpty()) s.price1c else getString(R.string.lb_price_1c)
+    }
+
+    /** 1C narx turlari (kompyuterdan kelgan) — yorliqda qaysi narx chiqadi. */
+    private fun pickPrice1c() {
+        val s = repo.state.value
+        val types = s.priceTypes1c
+        if (types.isEmpty()) {
+            MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_price_1c_title).setMessage(R.string.lb_price_1c_none)
+                .setPositiveButton(R.string.lb_codes) { _, _ -> showCodes() }
+                .setNegativeButton(R.string.close, null)
+                .setOnDismissListener { syncPriceToggle() }.show()
+            return
+        }
+        val cur = types.indexOf(s.price1c)
+        var chosen = false
+        MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_price_1c_title)
+            .setSingleChoiceItems(types.toTypedArray(), cur) { d, i ->
+                chosen = true
+                repo.setPrice1c(types[i])
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setOnDismissListener { syncPriceToggle(); if (chosen) { refreshNotes(); refreshList() } }
+            .show()
+    }
+
     private fun printerLine(s: LabelState): String {
         val i = s.info
+        if (ServiceLocator.isRelay) return getString(R.string.lb_printer_admin)
         if (s.lpd) return if (s.host.isBlank()) getString(R.string.lb_printer_none) else getString(R.string.lb_printer_lpd, s.queue, s.host)
         return when {
             s.host.isNotBlank() && i != null && s.infoError.isEmpty() -> getString(R.string.lb_printer_lan, i.printer.ifBlank { "?" }, i.host.ifBlank { s.host })
@@ -295,12 +349,19 @@ class LabelsFragment : Fragment() {
         if (s.codesAt > 0) {
             append(getString(R.string.lb_codes_last, formatDateTime(s.codesAt), s.codesPlu, s.codesBarcodes))
             if (s.codesNote.isNotBlank()) append("\n").append(getString(R.string.lb_codes_src, s.codesNote))
+            if (s.priceTypes1c.isNotEmpty()) append("\n").append(getString(R.string.lb_codes_prices, s.priceTypes1c.joinToString(", ")))
         } else append(getString(R.string.lb_codes_never))
+        // Kompyuter oxirgi marta nima dedi (xato bo'lsa — sababi shu yerda ko'rinadi)
+        val st = ServiceLocator.share.state.value
+        if (st.pcAt > 0 && st.pcStatus.isNotBlank()) {
+            append("\n\n").append(getString(R.string.lb_codes_pc, formatDateTime(st.pcAt), st.pcStatus))
+        }
         append("\n\n").append(getString(R.string.lb_codes_how))
     }
 
     private fun showCodes() {
         val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch { runCatching { ServiceLocator.share.refreshPcStatus() } }
         val cloud = ServiceLocator.shareStore.isCloudReady
         val d = MaterialAlertDialogBuilder(ctx).setTitle(R.string.lb_codes).setMessage(codesText(repo.state.value))
             .setNegativeButton(R.string.close, null)
@@ -343,7 +404,13 @@ class LabelsFragment : Fragment() {
                 refreshNotes()
                 refreshList()
                 snack(getString(R.string.lb_codes_done, s.codesPlu, s.codesBarcodes))
-            } else snack(getString(R.string.lb_codes_timeout))
+            } else {
+                runCatching { ServiceLocator.share.refreshPcStatus() }
+                val st = ServiceLocator.share.state.value
+                val why = if (st.pcAt > 0 && st.pcStatus.isNotBlank()) "\n" + getString(R.string.lb_codes_pc, formatDateTime(st.pcAt), st.pcStatus) else ""
+                if (_b != null) MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.lb_codes).setMessage(getString(R.string.lb_codes_timeout) + why)
+                    .setPositiveButton(R.string.close, null).show()
+            }
         }
     }
 

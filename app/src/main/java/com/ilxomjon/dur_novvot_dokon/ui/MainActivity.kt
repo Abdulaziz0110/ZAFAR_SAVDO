@@ -62,6 +62,8 @@ class MainActivity : AppCompatActivity(), Navigator {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.countLaunch(this)
+        // v3.0 Admin: agentlar ko'prigi yoqilgan bo'lsa ishlab tursin (ilova ochilganda — fon cheklovlari tufayli)
+        if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.relay.RelayService.ensureRunning(applicationContext)
 
         binding.bottomNav.setOnItemSelectedListener { item ->
             showTab(item.itemId)

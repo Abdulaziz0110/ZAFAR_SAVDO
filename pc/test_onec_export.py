@@ -295,6 +295,91 @@ class Codes(unittest.TestCase):
         cloud.codes_request = lambda: 0
         self.assertTrue(m.codes_tick(self.cfg, cloud, One(items), last_codes=time.time() - 7 * 3600))
 
+    def test_pick_price(self):
+        s = dict(UT11)
+        s["regs"] = UT11["regs"][:1] + [{"name": "ЦеныНоменклатуры", "syn": "Цены номенклатуры", "fields": [
+            F("Номенклатура", "Справочник.Номенклатура"), F("ТипЦен", "Справочник.ТипыЦенНоменклатуры"), F("Цена", "Число"), F("Валюта", "Справочник.Валюты")]}]
+        self.assertEqual(self.m.pick_price(s), ("preg", "ЦеныНоменклатуры", "Номенклатура", "ТипЦен", "Цена", True))
+        q = self.m.price_queries(self.m.pick_price(s), "Номенклатура")
+        self.assertIn("РегистрСведений.ЦеныНоменклатуры.СрезПоследних КАК Р", q[0])
+        self.assertIn("ПРЕДСТАВЛЕНИЕ(Р.ТипЦен) КАК Тип", q[0])
+        self.assertNotIn("СрезПоследних", q[1])
+        # Цена1..Цена4 rekvizitlari (kirim narxi olinmaydi)
+        s2 = {"goods_name": "Номенклатура", "regs": [], "goods": [F("Цена1", "Число", syn="Narx 1"), F("Цена2", "Число", syn="Narx 2"),
+              F("ЦенаЗакупки", "Число"), F("ЦенаВключаетНДС", "Булево")]}
+        self.assertEqual(self.m.pick_price(s2), ("pattr", ["Цена1", "Цена2"], ["Цена 1", "Цена 2"]))
+        self.assertEqual(self.m.parse_price_src("attr: Цена1, Цена4"), ("pattr", ["Цена1", "Цена4"], ["Цена1", "Цена4"]))
+        self.assertEqual(self.m.norm_price("60 000,5"), 60000.5)
+
+    def test_goods_prices(self):
+        m = self.m
+        s = dict(UT11)
+        s["regs"] = UT11["regs"] + [{"name": "ЦеныНоменклатуры", "syn": "", "fields": [
+            F("Номенклатура", "Справочник.Номенклатура"), F("ТипЦен", "Справочник.ТипыЦен"), F("Цена", "Число")]}]
+
+        class O(m.OneC):
+            def query(self, text, fields, **p):
+                if "СрезПоследних" in text:
+                    raise RuntimeError("davriy emas")
+                if "ТипЦен" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Тип": "1-narx", "Знач": 60000.0},
+                            {"Код": "2555", "Наименование": "Orik", "Тип": "Optom", "Знач": 55000.0},
+                            {"Код": "77", "Наименование": "Faqat narx", "Тип": "1-narx", "Знач": 0}]
+                if "Код КАК Знач" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": 501}]
+                return []
+        items, src = O(self.cfg, conn=object()).goods_codes(s)
+        self.assertEqual(src["types"], ["1-narx", "Optom"])
+        by = {i["c"]: i for i in items}
+        self.assertEqual(by["2555"]["pr"], {"1-narx": 60000.0, "Optom": 55000.0})
+        self.assertNotIn("77", by)  # narxi 0 — kerak emas
+
+    def test_shop_config(self):
+        """Do'kondagi haqiqiy tuzilish (discover.txt): Справочник.Товары, Справочник.Штрих, РегистрСведений.ПлуКод (КодПлу va плу)."""
+        m = self.m
+        s = {"goods_name": "Товары", "goods_found": True,
+             "goods": [F("Цена1", "Число", syn="1-narx"), F("Цена3", "Число", syn="Naqd"), F("ЕдИзм", "Справочник.ЕдИзм")],
+             "regs": [{"name": "ПлуКод", "syn": "", "fields": [F("ТипТовар", "Перечисление.ТипТовара"), F("КодПлу"),
+                       F("Тип", "Справочник.Весы"), F("товар", "Справочник.Товары"), F("плу")]}],
+             "cats": [{"name": "Штрих", "syn": "", "owners": ["Справочник.Товары"], "fields": []}]}
+        plu = m.pick_plu(s)
+        self.assertEqual(plu[:3], ("reg", "ПлуКод", "товар"))
+        self.assertEqual(m.plu_candidates(s, plu), ["КодПлу", "плу"])
+        bc = m.pick_barcode(s)
+        self.assertEqual(bc, ("cat", "Штрих", "Владелец", "Наименование"))
+        self.assertEqual(m.cat_query(bc), "ВЫБРАТЬ Ш.Владелец.Код КАК Код, Ш.Владелец.Наименование КАК Наименование, "
+                         "Ш.Наименование КАК Знач ИЗ Справочник.Штрих КАК Ш ГДЕ НЕ Ш.ПометкаУдаления")
+        self.assertEqual(m.pick_price(s)[0], "pattr")
+
+        class O(m.OneC):
+            def query(self, text, fields, **p):
+                if "Р.КодПлу" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": None}]
+                if "Р.плу" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": 501.0}, {"Код": "241", "Наименование": "Subxon", "Знач": 151}]
+                if "Справочник.Штрих" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": "2901740"}]
+                if "Т.Цена1" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": 60000}]
+                if "Т.Цена3" in text:
+                    return [{"Код": "2555", "Наименование": "Orik", "Знач": 62000}]
+                raise AssertionError(text)
+        self.cfg.goods = "Товары"
+        items, src = O(self.cfg, conn=object()).goods_codes(s)
+        by = {i["c"]: i for i in items}
+        self.assertEqual(by["2555"], {"c": "2555", "n": "Orik", "p": "501", "b": ["2901740"], "pr": {"Цена 1": 60000.0, "Цена 3": 62000.0}})
+        self.assertEqual(by["241"]["p"], "151")
+        self.assertIn("(товар -> плу)", src["plu"])
+        self.assertEqual(src["types"], ["Цена 1", "Цена 3"])
+
+    def test_shop_prices(self):
+        """Do'kon 1C: Товары.ПродажЦена1..4 (sinonimda "Цена 3" ikki marta), ПриходЦена va $ narxlar olinmaydi."""
+        g = [F("ПриходЦена", syn="Приход цена (Сум)"), F("ПродажЦена1", syn="Цена 1 (Сум)"), F("ПродажЦена2", syn="Цена 2 (Сум)"),
+             F("ПродажЦена3", syn="Цена 3 (Сум)"), F("ПродажЦена4", syn="Цена 3 (Сум)"), F("ПродажВал1", syn="Цена 1 ($)"), F("ПЛУ", syn="ПЛУ")]
+        pr = self.m.pick_price({"goods_name": "Товары", "goods": g, "regs": []})
+        self.assertEqual(pr[1], ["ПродажЦена1", "ПродажЦена2", "ПродажЦена3", "ПродажЦена4"])
+        self.assertEqual(pr[2], ["Цена 1 (Сум)", "Цена 2 (Сум)", "Цена 3 (Сум)", "Цена 4 (Сум)"])
+
     def test_report(self):
         t = self.m.codes_report(UT11, self.cfg)
         self.assertIn("PLU manbasi: РегистрСведений.ТоварыНаПодключаемомОборудовании", t)

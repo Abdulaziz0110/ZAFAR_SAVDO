@@ -93,10 +93,14 @@
                             android:id="@+id/btnAddMember"
                             style="@style/Widget.App.Button"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:text="@string/mb_add"
-                            app:icon="@drawable/ic_person" />
+                            app:icon="@drawable/ic_person"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -151,21 +155,29 @@
                             android:id="@+id/btnHistory"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/share_open_history"
-                            app:icon="@drawable/ic_history" />
+                            app:icon="@drawable/ic_history"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnImport"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/b_excel"
-                            app:icon="@drawable/ic_download" />
+                            app:icon="@drawable/ic_download"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -180,21 +192,29 @@
                             android:id="@+id/btnImportServer"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/share_import_server_short"
-                            app:icon="@drawable/ic_server" />
+                            app:icon="@drawable/ic_server"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnClear"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/b_clear"
-                            app:icon="@drawable/ic_delete" />
+                            app:icon="@drawable/ic_delete"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -248,10 +268,14 @@
                             android:id="@+id/btnPrinter"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:text="@string/cl_printer_on"
-                            app:icon="@drawable/ic_print" />
+                            app:icon="@drawable/ic_print"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -297,17 +321,21 @@
                             android:id="@+id/kindClient"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/cl_kind_client" />
+                            android:text="@string/cl_kind_client"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/kindSupplier"
                             style="@style/Widget.App.Segment"
                             android:layout_width="0dp"
-                            android:layout_height="44dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:text="@string/cl_kind_supplier" />
+                            android:text="@string/cl_kind_supplier"
+                            android:minHeight="44dp"
+                            android:maxLines="2" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                     <TextView
                         android:id="@+id/tvStore"
@@ -331,21 +359,29 @@
                             android:id="@+id/btnLinkStore"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/b_link"
-                            app:icon="@drawable/ic_store" />
+                            app:icon="@drawable/ic_store"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnLinkCode"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/cl_link_code"
-                            app:icon="@drawable/ic_person" />
+                            app:icon="@drawable/ic_person"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -360,21 +396,29 @@
                             android:id="@+id/btnNewKeys"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1"
                             android:text="@string/b_newkey"
-                            app:icon="@drawable/ic_sync" />
+                            app:icon="@drawable/ic_sync"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelete"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
                             android:text="@string/b_delete"
-                            app:icon="@drawable/ic_delete" />
+                            app:icon="@drawable/ic_delete"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

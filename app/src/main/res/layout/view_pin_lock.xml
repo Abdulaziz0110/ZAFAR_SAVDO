@@ -53,7 +53,8 @@
             android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/pin_unlock" />
+            android:text="@string/pin_unlock"
+            android:maxLines="2" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnForgot"
@@ -61,6 +62,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/pin_forgot" />
+            android:text="@string/pin_forgot"
+            android:maxLines="2" />
     </LinearLayout>
 </FrameLayout>

@@ -35,26 +35,32 @@
             android:id="@+id/btnQueue"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/queue_title"
             app:icon="@drawable/ic_list"
-            xmlns:app="http://schemas.android.com/apk/res-auto" />
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:minHeight="52dp"
+            android:maxLines="2" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBattery"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/diag_battery_button"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:minHeight="52dp"
+            android:maxLines="2" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAgain"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/diag_again" />
+            android:text="@string/diag_again"
+            android:minHeight="56dp"
+            android:maxLines="2" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

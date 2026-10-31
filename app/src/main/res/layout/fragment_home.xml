@@ -124,7 +124,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:text="@string/home_load"
-                        app:icon="@drawable/ic_sync" />
+                        app:icon="@drawable/ic_sync"
+                        android:maxLines="2" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -167,19 +168,29 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRetry"
                             style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="48dp"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
                             android:text="@string/home_pending_retry"
-                            app:icon="@drawable/ic_sync" />
+                            app:icon="@drawable/ic_sync"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnQueue"
                             style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="48dp"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
                             android:layout_marginStart="8dp"
                             android:text="@string/queue_title"
-                            app:icon="@drawable/ic_list" />
+                            app:icon="@drawable/ic_list"
+                            android:minHeight="48dp"
+                            android:maxLines="2"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -231,9 +242,11 @@
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnContinue"
                         android:layout_width="wrap_content"
-                        android:layout_height="48dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="@string/home_resume" />
+                        android:text="@string/home_resume"
+                        android:minHeight="48dp"
+                        android:maxLines="2" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -241,25 +254,29 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cardSale"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/home_new_sale"
                 android:textSize="17sp"
                 app:icon="@drawable/ic_cart"
                 app:iconGravity="textStart"
-                app:iconSize="24dp" />
+                app:iconSize="24dp"
+                android:minHeight="60dp"
+                android:maxLines="2" />
 
             <!-- v2.6: shtrix kod bilan savdo — asosiy amal (Yangi savdo bilan bir xil) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cardScan"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="@string/home_scan_sale"
                 android:textSize="17sp"
                 app:icon="@drawable/ic_scan"
                 app:iconGravity="textStart"
-                app:iconSize="24dp" />
+                app:iconSize="24dp"
+                android:minHeight="60dp"
+                android:maxLines="2" />
 
             <!-- Boshqa amallar: bir qatorda 4 ta ixcham plitka -->
             <LinearLayout
@@ -509,10 +526,12 @@
                         android:id="@+id/btnDayEnd"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
-                        android:layout_height="48dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="@string/dayend_title"
-                        app:icon="@drawable/ic_report" />
+                        app:icon="@drawable/ic_report"
+                        android:minHeight="48dp"
+                        android:maxLines="2" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>

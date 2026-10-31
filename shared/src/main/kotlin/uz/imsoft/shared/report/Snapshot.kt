@@ -44,6 +44,10 @@ data class ClientSnapshot(
     val shopName: String = "",
     /** Chek osti (telefonlar va h.k., har qator alohida) — 1-ilova sozlamasidan. v2.6 */
     val shopFooter: String = "",
+    /** Chek ko'rinishi (ReceiptStyle.encode), bo'sh — standart. v2.9 */
+    val receiptStyle: String = "",
+    /** Chek logosi: PNG, base64; bo'sh — yo'q. v2.9 */
+    val receiptLogo: String = "",
 ) {
     /** Eng oxirgi import vaqti (telefon soati, ms). */
     val lastImportAt: Long get() = coverage.maxOfOrNull { it.importedAt } ?: 0L
@@ -70,6 +74,8 @@ object SnapshotCodec {
             "f" to s.features.sorted(),
             "shop" to s.shopName,
             "foot" to s.shopFooter,
+            "rs" to s.receiptStyle,
+            "rl" to s.receiptLogo,
         ),
     )
 
@@ -115,7 +121,7 @@ object SnapshotCodec {
         val debt = o.obj("debt")?.let { DebtInfo(it.num("s"), it.num("u"), it.long("at"), it.str("src")) }
         val rb = (o.map["rb"] as? List<Any?>)?.let { l -> (l.getOrNull(0) as? Number)?.toLong()?.let { st -> st to Money2(d(l.getOrNull(1)), d(l.getOrNull(2))) } }
         val features = o.arr("f").mapNotNull { it?.toString() }.toSet()
-        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb, features, o.str("shop"), o.str("foot"))
+        return ClientSnapshot(o.long("at"), o.str("cid"), o.str("cn"), o.num("rate"), debt, products, ledger, cov, o.long("pat"), v, rb, features, o.str("shop"), o.str("foot"), o.str("rs"), o.str("rl"))
     }
 
     /** Bulutga yoziladigan ko'rinish: gzip + base64 (Firebase satr sifatida saqlaydi). */

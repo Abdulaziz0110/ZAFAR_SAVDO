@@ -160,6 +160,8 @@ class Config:
         # Qo'lda: "attr:<Rekvizit>" yoki "<RegistrSvedeniy>:<tovar maydoni>:<qiymat maydoni>"
         self.plu_src = gc("plu")
         self.barcode_src = gc("barcode")
+        # Narxlar: "attr:Цена1,Цена2" yoki "<RegistrSvedeniy>:<tovar>:<narx turi>:<narx>"
+        self.price_src = gc("price")
         self.codes_hours = max(1, int(gc("hours", "6") or 6))
 
     def check_cloud(self):
@@ -406,6 +408,14 @@ class OneC:
         md = self.c.Метаданные
         goods = []
         cat = md.Справочники.Найти(self.cfg.goods)
+        if cat is None:
+            # Tovarlar ma'lumotnomasi boshqacha nomlangan bo'lishi mumkin (masalan "Товары")
+            for alt in GOODS_CATALOGS:
+                cat = md.Справочники.Найти(alt)
+                if cat is not None:
+                    log.info("tovarlar ma'lumotnomasi: Справочник.%s", alt)
+                    self.cfg.goods = alt
+                    break
         if cat is not None:
             for a in self.items(cat.Реквизиты):
                 goods.append({"name": a.Имя, "syn": str(a.Синоним), "types": self._type_names(a)})
@@ -419,7 +429,24 @@ class OneC:
                 except Exception:
                     pass
             regs.append({"name": r.Имя, "syn": str(r.Синоним), "fields": fields})
-        return {"goods_name": self.cfg.goods, "goods_found": cat is not None, "goods": goods, "regs": regs}
+        # Shtrix kodlar alohida ma'lumotnomada bo'lishi mumkin (masalan Справочник.Штрих, egasi — tovar)
+        cats = []
+        for c in self.items(md.Справочники):
+            if not re.search(r"(?i)штрих|barcode|shtrix", "%s %s" % (c.Имя, c.Синоним)):
+                continue
+            owners = []
+            try:
+                owners = [str(o.ПолноеИмя()) for o in self.items(c.Владельцы)]
+            except Exception:
+                pass
+            fields = []
+            try:
+                for a in self.items(c.Реквизиты):
+                    fields.append({"name": a.Имя, "syn": str(a.Синоним), "types": self._type_names(a)})
+            except Exception:
+                pass
+            cats.append({"name": c.Имя, "syn": str(c.Синоним), "owners": owners, "fields": fields})
+        return {"goods_name": self.cfg.goods, "goods_found": cat is not None, "goods": goods, "regs": regs, "cats": cats}
 
     def goods_codes(self, summary=None):
         """[{c, n, p, b}] — har tovar: 1C kodi, nomi, PLU, shtrix kodlar. Faqat o'qiydi."""
@@ -434,7 +461,7 @@ class OneC:
             k = code or ("n:" + name.lower())
             it = items.get(k)
             if it is None:
-                it = items[k] = {"c": code, "n": name, "p": "", "b": []}
+                it = items[k] = {"c": code, "n": name, "p": "", "b": [], "pr": {}}
             return it
 
         goods = self.cfg.goods
@@ -444,11 +471,31 @@ class OneC:
                 if v:
                     item(r["Код"], r["Наименование"])["p"] = v
         elif plu:
-            for r in self.query(reg_query(plu, goods, summary), ["Код", "Наименование", "Знач"]):
-                v = norm_plu(r["Знач"])
+            best = None
+            fields = [plu[3]] if self.cfg.plu_src else plu_candidates(summary, plu)
+            for f in fields:
+                src_f = plu[:3] + (f,) + plu[4:]
+                try:
+                    rows = [(r["Код"], r["Наименование"], norm_plu(r["Знач"])) for r in self.query(reg_query(src_f, goods, summary), ["Код", "Наименование", "Знач"])]
+                except Exception as e:  # noqa: BLE001
+                    log.warning("PLU so'rovi (%s) ishlamadi: %s", f, e)
+                    continue
+                rows = [x for x in rows if x[2]]
+                log.info("PLU maydoni %s: %d ta qiymat", f, len(rows))
+                if best is None or len(rows) > len(best[1]):
+                    best = (src_f, rows)
+            if best:
+                plu = best[0]
+                for code, name, v in best[1]:
+                    item(code, name)["p"] = v
+        if bc and bc[0] == "cat":
+            for r in self.query(cat_query(bc), ["Код", "Наименование", "Знач"]):
+                v = str(r["Знач"] or "").strip()
                 if v:
-                    item(r["Код"], r["Наименование"])["p"] = v
-        if bc and bc[0] == "attr":
+                    it = item(r["Код"], r["Наименование"])
+                    if v not in it["b"]:
+                        it["b"].append(v)
+        elif bc and bc[0] == "attr":
             for r in self._goods_rows("Т.%s КАК Знач" % bc[1]):
                 v = str(r["Знач"] or "").strip()
                 if v:
@@ -462,8 +509,40 @@ class OneC:
                     it = item(r["Код"], r["Наименование"])
                     if v not in it["b"]:
                         it["b"].append(v)
-        src = {"plu": src_text(plu), "bc": src_text(bc)}
-        return [it for it in items.values() if it["p"] or it["b"]], src
+        # Narxlar (barcha narx turlari) — yorliqda qaysi biri chiqishini telefonda tanlaysiz
+        pr = parse_price_src(self.cfg.price_src) or pick_price(summary)
+        types = []
+        if pr and pr[0] == "pattr":
+            for attr, title in zip(pr[1], pr[2]):
+                if title not in types:
+                    types.append(title)
+                for r in self._goods_rows("Т.%s КАК Знач" % attr):
+                    v = norm_price(r["Знач"])
+                    if v > 0:
+                        item(r["Код"], r["Наименование"])["pr"][title] = v
+        elif pr:
+            rows = None
+            for q in price_queries(pr, goods):
+                try:
+                    rows = self.query(q, ["Код", "Наименование", "Тип", "Знач"])
+                    break
+                except Exception as e:  # noqa: BLE001
+                    log.debug("narx so'rovi ishlamadi: %s", e)
+            for r in rows or []:
+                v = norm_price(r["Знач"])
+                t = str(r["Тип"] or "").strip() or "?"
+                if v > 0:
+                    if t not in types:
+                        types.append(t)
+                    item(r["Код"], r["Наименование"])["pr"][t] = v
+        src = {"plu": src_text(plu), "bc": src_text(bc), "price": price_src_text(pr), "types": types}
+        out = []
+        for it in items.values():
+            if it["p"] or it["b"] or it["pr"]:
+                if not it["pr"]:
+                    del it["pr"]
+                out.append(it)
+        return out, src
 
     def _goods_rows(self, extra):
         base = "ВЫБРАТЬ Т.Код КАК Код, Т.Наименование КАК Наименование, %s ИЗ Справочник.%s КАК Т ГДЕ НЕ Т.ПометкаУдаления" % (extra, self.cfg.goods)
@@ -471,6 +550,79 @@ class OneC:
             return self.query(base + " И НЕ Т.ЭтоГруппа", ["Код", "Наименование", "Знач"])
         except Exception:
             return self.query(base, ["Код", "Наименование", "Знач"])
+
+    # --- namuna (tashxis) ---
+    def _dump(self, kind, name, n, out):
+        """Ma'lumotnoma yoki ma'lumot registridan birinchi [n] ta yozuv (hamma maydonlar, ko'rinishi bilan)."""
+        md = self.c.Метаданные
+        coll = md.Справочники if kind == "cat" else md.РегистрыСведений
+        obj = coll.Найти(name)
+        if obj is None:
+            out.append("  (%s yo'q)" % name)
+            return
+        fields = []
+        if kind == "cat":
+            fields = ["Код", "Наименование"]
+            try:
+                if obj.Владельцы.Количество() > 0:
+                    fields.append("Владелец")
+            except Exception:
+                pass
+            cols = ("Реквизиты",)
+        else:
+            cols = ("Измерения", "Ресурсы", "Реквизиты")
+        types = {}
+        for col in cols:
+            try:
+                for f in self.items(getattr(obj, col)):
+                    fields.append(f.Имя)
+                    types[f.Имя] = "/".join(self._type_names(f)[:2])
+            except Exception:
+                pass
+        table = ("Справочник." if kind == "cat" else "РегистрСведений.") + name
+        try:
+            cnt = self.query("ВЫБРАТЬ КОЛИЧЕСТВО(*) КАК Н ИЗ %s КАК Т" % table, ["Н"])
+            out.append("  yozuvlar soni: %s" % (cnt[0]["Н"] if cnt else "?"))
+        except Exception as e:  # noqa: BLE001
+            out.append("  (sanab bo'lmadi: %s)" % str(e)[:120])
+        out.append("  maydonlar: " + ", ".join("%s[%s]" % (f, types.get(f, "")) for f in fields))
+        names = ["П%d" % i for i in range(len(fields))]
+        sel = ", ".join("ПРЕДСТАВЛЕНИЕ(Т.%s) КАК %s" % (f, nm) for f, nm in zip(fields, names))
+        try:
+            rows = self.query("ВЫБРАТЬ ПЕРВЫЕ %d %s ИЗ %s КАК Т" % (n, sel, table), names)
+        except Exception as e:  # noqa: BLE001
+            out.append("  (o'qib bo'lmadi: %s)" % str(e)[:200])
+            return
+        for r in rows:
+            out.append("  | " + " | ".join("%s=%s" % (f, str(r[nm])[:40]) for f, nm in zip(fields, names)))
+
+    def sample(self):
+        """PLU, shtrix va narx qayerdaligini aniqlash uchun namunalar (parol va kalitlar yo'q)."""
+        summary = self.meta_summary()
+        out = ["IMSOFT namuna (onec_export.py --sample)", ""]
+        out.append("== Tovarlar: Справочник.%s ==" % self.cfg.goods)
+        self._dump("cat", self.cfg.goods, 5, out)
+        for c in summary.get("cats", []):
+            out.append("")
+            out.append("== Shtrix: Справочник.%s (egasi: %s) ==" % (c["name"], ", ".join(c.get("owners", [])) or "-"))
+            self._dump("cat", c["name"], 8, out)
+        plu = pick_plu(summary)
+        if plu and plu[0] == "reg":
+            out.append("")
+            out.append("== PLU: РегистрСведений.%s ==" % plu[1])
+            self._dump("reg", plu[1], 12, out)
+        for extra in ("Весы",):
+            out.append("")
+            out.append("== Справочник.%s ==" % extra)
+            self._dump("cat", extra, 5, out)
+        out.append("")
+        out.append("== Barcha ma'lumot registrlari (РегистрыСведений) ==")
+        for r in summary.get("regs", []):
+            out.append("  %s — %s: %s" % (r["name"], r.get("syn", ""), ", ".join(
+                "%s[%s]" % (f["name"], "/".join(f.get("types", [])[:2])) for f in r["fields"])))
+        out.append("")
+        out.append(codes_report(summary, self.cfg))
+        return "\n".join(str(x) for x in out)
 
     # --- discover ---
     def discover(self):
@@ -690,6 +842,41 @@ def pick_plu(summary):
     return best[1] if best else None
 
 
+GOODS_CATALOGS = ("Номенклатура", "Товары", "Товар", "Продукция", "Mahsulotlar")
+
+
+def plu_candidates(summary, plu):
+    """PLU registrida PLU bo'lishi mumkin bo'lgan barcha maydonlar (masalan "КодПлу" va "плу") — qaysida qiymat ko'p bo'lsa, o'sha."""
+    reg = next((r for r in summary.get("regs", []) if r["name"] == plu[1]), None)
+    if reg is None:
+        return [plu[3]]
+    out = [f["name"] for f in reg["fields"] if f["name"] != plu[2] and re.search(r"(?i)plu|плу", f["name"] + " " + f.get("syn", ""))
+           and not any(t.startswith(("Справочник.", "Перечисление.")) for t in f.get("types", []))]
+    if plu[3] not in out:
+        out.insert(0, plu[3])
+    return out
+
+
+def pick_barcode_cat(summary):
+    """Shtrix kodlar ma'lumotnomasi: ("cat", nom, tovar havolasi, qiymat maydoni)."""
+    goods = summary.get("goods_name", "Номенклатура")
+    full = "Справочник." + goods
+    for c in summary.get("cats", []):
+        gf = "Владелец" if full in c.get("owners", []) else next(
+            (f["name"] for f in c.get("fields", []) if full in f.get("types", []) or GOODS_FIELD.match(f["name"])), None)
+        if gf is None:
+            continue
+        vf = next((f["name"] for f in c.get("fields", []) if BC_FIELD.match(f["name"]) or re.match(r"(?i)^штрих", f["name"])), "Наименование")
+        return ("cat", c["name"], gf, vf)
+    return None
+
+
+def cat_query(src):
+    _, cat, gf, vf = src
+    return ("ВЫБРАТЬ Ш.%s.Код КАК Код, Ш.%s.Наименование КАК Наименование, Ш.%s КАК Знач ИЗ Справочник.%s КАК Ш ГДЕ НЕ Ш.ПометкаУдаления"
+            % (gf, gf, vf, cat))
+
+
 def pick_barcode(summary):
     best = None
     for r in summary.get("regs", []):
@@ -707,7 +894,104 @@ def pick_barcode(summary):
     for a in summary.get("goods", []):
         if BC_FIELD.match(a["name"]):
             return ("attr", a["name"])
+    return pick_barcode_cat(summary)
+
+
+PRICE_TYPE_FIELD = re.compile(r"(?i)^(типцен|типцены|видцены|видцен|типценыноменклатуры|narxturi|pricetype)$")
+PRICE_FIELD = re.compile(r"(?i)^(цена|price|narx|narxi|сумма)$")
+
+
+def pick_price(summary):
+    """Narxlar qayerda: ("preg", registr, tovar maydoni, narx turi maydoni, narx maydoni, faqat_tovar)
+    yoki ("pattr", [rekvizitlar], [sarlavhalar]) — tovarning Цена1..Цена4 kabi rekvizitlari."""
+    goods = summary.get("goods_name", "Номенклатура")
+    best = None
+    for r in summary.get("regs", []):
+        title = r["name"] + " " + r.get("syn", "")
+        g = _goods_field(r["fields"], goods)
+        if g is None:
+            continue
+        tf = None
+        for f in r["fields"]:
+            if f["name"] == g[0]:
+                continue
+            if PRICE_TYPE_FIELD.match(f["name"]) or any(re.search(r"(?i)ТипыЦен|ВидыЦен|ТипЦен", t) for t in f.get("types", [])):
+                tf = f["name"]
+                break
+        pf = next((f["name"] for f in r["fields"] if PRICE_FIELD.match(f["name"]) and f["name"] != g[0]), None)
+        if tf is None or pf is None:
+            continue
+        score = (3 if re.search(r"(?i)цен|price|narx", title) else 0) + (1 if g[1] else 0) + \
+            (2 if re.search(r"(?i)номенклатур|товар", r["name"]) else 0)
+        if best is None or score > best[0]:
+            best = (score, ("preg", r["name"], g[0], tf, pf, g[1]))
+    if best:
+        return best[1]
+    attrs = [a for a in summary.get("goods", [])
+             if (not a.get("types") or any(t in ("Число", "Number") for t in a.get("types", [])))
+             and re.search(r"(?i)цен|price|narx", a["name"] + " " + a.get("syn", ""))
+             and not re.search(r"(?i)закуп|приход|кирим|kirim|себест|вход|ндс|вал|\$|usd", a["name"] + " " + a.get("syn", ""))]
+    if attrs:
+        return ("pattr", [a["name"] for a in attrs], price_titles(attrs))
     return None
+
+
+def price_titles(attrs):
+    """Narx turlarining nomlari: "ПродажЦена1" -> "Цена 1 (Сум)". Sinonim takrorlansa (Цена 3 ikki marta) — raqam nomdan olinadi."""
+    out = []
+    for a in attrs:
+        syn = (a.get("syn") or "").strip()
+        m = re.search(r"(\d+)$", a["name"])
+        if m and re.search(r"(?i)цен|narx|price", a["name"]):
+            cur = re.search(r"\(([^)]*)\)", syn)
+            t = "Цена %s" % m.group(1) + (" (%s)" % cur.group(1) if cur else "")
+        else:
+            t = syn or a["name"]
+        while t in out:
+            t += "*"
+        out.append(t)
+    return out
+
+
+def parse_price_src(s):
+    s = (s or "").strip()
+    if not s:
+        return None
+    if s.lower().startswith("attr:"):
+        names = [x.strip() for x in s[5:].split(",") if x.strip()]
+        return ("pattr", names, names)
+    parts = [x.strip() for x in s.split(":")]
+    if len(parts) == 4 and all(parts):
+        return ("preg", parts[0], parts[1], parts[2], parts[3], False)
+    raise SystemExit("forwarder.ini [codes] price: noto'g'ri yozuv '%s' (attr:Цена1,Цена2 yoki Registr:Tovar:NarxTuri:Narx)" % s)
+
+
+def price_queries(src, goods):
+    """Avval oxirgi narxlar (СрезПоследних — davriy registr), bo'lmasa oddiy jadval."""
+    _, reg, gf, tf, pf, only_goods = src
+    ref = "Р.%s" % gf if only_goods else "ВЫРАЗИТЬ(Р.%s КАК Справочник.%s)" % (gf, goods)
+    where = "" if only_goods else " ГДЕ Р.%s ССЫЛКА Справочник.%s" % (gf, goods)
+    sel = "ВЫБРАТЬ %s.Код КАК Код, %s.Наименование КАК Наименование, ПРЕДСТАВЛЕНИЕ(Р.%s) КАК Тип, Р.%s КАК Знач ИЗ РегистрСведений.%s%s КАК Р%s"
+    return [sel % (ref, ref, tf, pf, reg, ".СрезПоследних", where), sel % (ref, ref, tf, pf, reg, "", where)]
+
+
+def price_src_text(src):
+    if not src:
+        return ""
+    if src[0] == "pattr":
+        return "rekvizitlar " + ", ".join(src[1])
+    return "РегистрСведений.%s (%s, %s -> %s)" % (src[1], src[2], src[3], src[4])
+
+
+def norm_price(v):
+    try:
+        f = float(v if v is not None else 0)
+    except (TypeError, ValueError):
+        try:
+            f = float(str(v).replace("\u00a0", "").replace(" ", "").replace(",", "."))
+        except ValueError:
+            return 0.0
+    return round(f, 2)
 
 
 def parse_src(s):
@@ -736,6 +1020,8 @@ def src_text(src):
         return ""
     if src[0] == "attr":
         return "rekvizit " + src[1]
+    if src[0] == "cat":
+        return "Справочник.%s (%s -> %s)" % (src[1], src[2], src[3])
     return "РегистрСведений.%s (%s -> %s)" % (src[1], src[2], src[3])
 
 
@@ -762,10 +1048,15 @@ def codes_report(summary, cfg):
     out.append("  rekvizitlar: " + ", ".join("%s (%s)" % (a["name"], a.get("syn", "")) for a in summary.get("goods", [])))
     out.append("PLU manbasi: %s" % (src_text(plu) or "TOPILMADI"))
     out.append("Shtrix kod manbasi: %s" % (src_text(bc) or "TOPILMADI"))
+    pr = parse_price_src(cfg.price_src) or pick_price(summary)
+    out.append("Narx manbasi: %s" % (price_src_text(pr) or "TOPILMADI"))
+    for c in summary.get("cats", []):
+        out.append("Shtrix ma'lumotnomasi: Справочник.%s (egasi: %s): %s" % (c["name"], ", ".join(c.get("owners", [])) or "-",
+                   ", ".join("%s[%s]" % (f["name"], "/".join(f.get("types", [])[:2])) for f in c.get("fields", []))))
     out.append("Nomzod registrlar:")
     for r in summary.get("regs", []):
         names = " ".join(f["name"] for f in r["fields"])
-        if re.search(r"(?i)plu|плу|вес|оборуд|штрих|код|номенклат|товар", r["name"] + " " + r.get("syn", "") + " " + names):
+        if re.search(r"(?i)plu|плу|вес|оборуд|штрих|код|номенклат|товар|цен", r["name"] + " " + r.get("syn", "") + " " + names):
             out.append("  %s — %s: %s" % (r["name"], r.get("syn", ""), ", ".join(
                 "%s[%s]" % (f["name"], "/".join(f.get("types", [])[:3])) for f in r["fields"])))
     return "\n".join(out)
@@ -805,6 +1096,8 @@ def run_codes(cfg, cloud, onec, state=None, force=False):
 
 def codes_status(sent, n, src):
     t = "Tovar kodlari: %d ta" % n + (" yuborildi" if sent else " (o'zgarmagan)")
+    if src.get("types"):
+        t += "; narx turlari: " + ", ".join(src["types"][:8])
     if not src.get("plu"):
         t += "; PLU manbasi topilmadi"
     if not src.get("bc"):
@@ -910,12 +1203,25 @@ def main():
     ap.add_argument("--one", metavar="NOM", help="faqat bitta kontragent (fayl export/ papkada ham qoladi)")
     ap.add_argument("--status", action="store_true", help="bulutdagi jadval va holat")
     ap.add_argument("--codes", action="store_true", help="tovar kodlari (PLU, shtrix) ni hozir yuborish")
+    ap.add_argument("--sample", action="store_true", help="PLU/shtrix/narx namunalari -> sample.txt (dasturchiga)")
     ap.add_argument("--days", type=int, help="necha kunlik (jadvaldagini almashtiradi)")
     ap.add_argument("--config", default=CONFIG)
     ap.add_argument("-v", action="store_true")
     a = ap.parse_args()
     setup_logging(a.v)
     cfg = Config(a.config)
+    if a.sample:
+        cfg.check_onec(need_report=False)
+        o = OneC(cfg).connect()
+        try:
+            txt = o.sample()
+        finally:
+            o.close()
+        path = os.path.join(HERE, "sample.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(txt)
+        print("Tayyor:", path, "— shu faylni dasturchiga yuboring (ichida parol yo'q).")
+        return
     if a.discover:
         cfg.check_onec(need_report=False)
         o = OneC(cfg).connect()
@@ -941,6 +1247,7 @@ def main():
         safe_status(cloud, msg, n > 0)
         print(msg)
         print("PLU manbasi:", src.get("plu") or "topilmadi", "| shtrix:", src.get("bc") or "topilmadi")
+        print("Narx manbasi:", src.get("price") or "topilmadi", "| turlari:", ", ".join(src.get("types") or []) or "-")
         print("Fayl:", CODES_OUT)
         return
     if not a.once and not a.one and not cfg.report:

@@ -38,6 +38,13 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
         p.isEmpty() -> false
         p[0] in setOf("s", "q", "p") && p.size >= 2 -> p[1].length >= 24
         p[0] == "a" && p.size >= 2 -> p[1].length >= 40
+        // v4 "g": agentlar ko'prigi
+        p[0] == "g" && p.size >= 3 && p[1].length >= 24 -> when (p[2]) {
+            "cat", "codes", "hb" -> true
+            "rs", "lbr" -> p.size >= 4 && p[3].length >= 24
+            "obr" -> p.size >= 4 && p[3].length == 40
+            else -> false
+        }
         else -> false
     }
 
@@ -47,7 +54,25 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
         p.size == 4 && p[0] == "s" && p[2] == "ord" -> p[1].length >= 24 && get(p) == null && orderOk(p[3], newValue)
         p.size == 3 && p[0] == "q" -> p[1].length >= 24 && newValue == null
         p.size >= 2 && p[0] == "p" -> p[1].length >= 24
+        p.size == 3 && p[0] == "g" && p[2] in setOf("sig", "creq") -> p[1].length >= 24 && newValue is Number
+        p.size == 4 && p[0] == "g" && p[2] == "rs" -> p[1].length >= 24 && newValue == null
+        p.size == 4 && p[0] == "g" && p[2] in setOf("rq", "ob", "lb") -> p[1].length >= 24 && get(p) == null && newValue != null && relayOk(p[2], p[3], newValue)
         else -> false
+    }
+
+    /** CloudDb.RULES "g/rq", "g/ob", "g/lb" — bitta yozuv, belgilangan maydonlar. */
+    private fun relayOk(kind: String, id: String, v: Any?): Boolean {
+        val m = v as? Map<*, *> ?: return false
+        if ((m["at"] as? Number)?.toLong() != now - 1) return false
+        return when (kind) {
+            "rq" -> id.length in 24..64 && m.keys.all { it in setOf("at", "op", "p") } && m["op"] is String && (m["op"] as String).length <= 20 &&
+                m["p"] is String && (m["p"] as String).length <= 4000
+            "ob" -> id.length == 40 && m.keys.all { it in setOf("at", "u", "t", "p", "m") } && m.keys.containsAll(listOf("u", "t", "p")) &&
+                (m["u"] as? String)?.let { it.length <= 40 } == true && m["t"] in setOf("1", "4") && (m["p"] as? String)?.let { it.length <= 60000 } == true &&
+                (m["m"] == null || (m["m"] as? String)?.let { it.length <= 60000 } == true)
+            "lb" -> id.length >= 24 && m.keys.all { it in setOf("at", "n", "b") } && m["n"] is Number && m["b"] is String
+            else -> false
+        }
     }
 
     private fun orderOk(id: String, v: Any?): Boolean {
