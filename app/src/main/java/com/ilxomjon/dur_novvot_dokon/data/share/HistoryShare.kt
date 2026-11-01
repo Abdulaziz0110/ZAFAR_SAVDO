@@ -136,7 +136,9 @@ class HistoryShare(private val context: Context) {
             val local = readMap(ag.getString("h", "").orEmpty()).toMutableMap()
             var changed = false
             withContext(Dispatchers.IO) {
-                for ((k, h) in remote) {
+                // v3.9: eng yangi bo'lakdan boshlab (oxirgi kunlar darhol ko'rinadi, qolgani fonda) — har bo'lakdan keyin ekranga
+                var shownAt = 0L
+                for ((k, h) in remote.entries.sortedByDescending { it.key }) {
                     if (local[k] == h && parts.containsKey(k)) continue
                     val raw = db.getRaw(cfg.path("hist/m/$k"), timeoutMs = 120_000)
                     val blob = Json.parse(raw) as? String ?: continue
@@ -148,6 +150,8 @@ class HistoryShare(private val context: Context) {
                     parts[k] = list
                     local[k] = h
                     changed = true
+                    ag.edit().putString("h", Json.write(local)).apply()
+                    if (System.currentTimeMillis() - shownAt > 1_500L) { agPublish(statusFor(cfg, "")); shownAt = System.currentTimeMillis() }
                 }
                 for (k in parts.keys - remote.keys) {
                     parts.remove(k)

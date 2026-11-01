@@ -26,6 +26,16 @@ import uz.imsoft.shared.report.Stamp
  * Savdo, mijozlar (qarz, to'lov), tarix, hisobot. Chek — USB printerga yoki rasm qilib.
  */
 class PosFragment : MFragment() {
+    companion object {
+        private const val ARG_TAB = "tab"
+        const val TAB_CLIENTS = 1
+        const val TAB_HISTORY = 2
+        const val TAB_REPORT = 3
+
+        /** v3.9: bosh sahifa tugmalaridan kerakli bo'limni ochish. */
+        fun open(tab: Int) = PosFragment().apply { arguments = android.os.Bundle().apply { putInt(ARG_TAB, tab) } }
+    }
+
     private lateinit var body: LinearLayout
     private var tabs: com.google.android.material.button.MaterialButtonToggleGroup? = null
     private var tab = 0
@@ -38,6 +48,7 @@ class PosFragment : MFragment() {
     private val data: PosData get() = Locator.pos.state.value
 
     override fun build(inflater: LayoutInflater): View {
+        arguments?.getInt(ARG_TAB, -1)?.takeIf { it in 0..3 }?.let { tab = it; arguments?.remove(ARG_TAB) }
         val p = page(R.string.pos_title)
         tabs = Ui.toggle(ctx, listOf(getString(R.string.pos_tab_sale), getString(R.string.pos_tab_clients), getString(R.string.pos_tab_history), getString(R.string.pos_tab_report)), tab, 4) { i ->
             tab = i

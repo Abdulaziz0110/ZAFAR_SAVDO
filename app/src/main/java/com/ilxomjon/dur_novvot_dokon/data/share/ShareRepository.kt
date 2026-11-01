@@ -480,7 +480,7 @@ class ShareRepository(
 
     suspend fun previewFile(bytes: ByteArray, name: String, targetId: String? = null): ImportPreview = withContext(Dispatchers.Default) {
         val grid = TableReader.read(bytes, name)
-        val report = try { CardParser.parse(grid) } catch (e: CardParser.NotACard) { throw NotACardException(e.message.orEmpty(), grid.dump(25)) }
+        val report = try { uz.imsoft.shared.report.ServerReport.parse(grid) } catch (e: CardParser.NotACard) { throw NotACardException(e.message.orEmpty(), grid.dump(25)) }
         buildPreview(report, name, "file", targetId)
     }
 
@@ -492,7 +492,7 @@ class ShareRepository(
         val html = api.fetchReport(agentId, Protocol.report(from, to, cur.storeId))
         return withContext(Dispatchers.Default) {
             val grid = HtmlTable.read(html)
-            val report = try { CardParser.parse(grid) } catch (e: CardParser.NotACard) { throw NotACardException(e.message.orEmpty(), grid.dump(25)) }
+            val report = try { uz.imsoft.shared.report.ServerReport.parse(grid) } catch (e: CardParser.NotACard) { throw NotACardException(e.message.orEmpty(), grid.dump(25)) }
             buildPreview(report, "server", "server", cur.id)
         }
     }

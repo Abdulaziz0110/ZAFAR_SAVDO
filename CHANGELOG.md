@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 3.9 (versionCode 21) + Savdo Mijoz 1.13 (versionCode 14): Mijozda agentdagidek savdo, internetsiz ishlash — 2026-11-01
+* **Mijoz: "Savdo" bo'limi** (pastki menyuda) — agentdagi savdo ekrani bilan bir xil: mijoz tanlash (yoki naqd), 4 narx
+  (1, 2, Naqd, Optom — bizning narxlar), qidiruv, har tovarda "−  miqdor  +", pastda jami va "Savatcha". Savatcha:
+  miqdor/narxni o'zgartirish, chegirma, to'langan summa, izoh, "Saqlash va chek". Savdo faqat shu telefonda (Kassa).
+  Yig'ilgan savatcha ilova yopilsa ham saqlanib qoladi.
+* **Mijoz bosh sahifasi agentdagidek**: qarz, katta "Yangi savdo", 4 plitka (Mijozlarim, Savdolarim, Kassa hisoboti,
+  Bizga to'lov), "Bugun (o'z savdom)". Sozlamalar — yuqoridagi tishli g'ildirak (printer bo'limi yoqilgan telefonda
+  pastki menyuda "Printer" turadi).
+* **Internetsiz**: Mijoz bosh sahifasida "Internet yo'q — ... holatidagi ma'lumot" ogohlantirishi; savdo, narxlar, tarix
+  oxirgi saqlangan ma'lumot bilan ishlayveradi.
+* **Agent tarixi tezroq**: Admin yuborgan tarix eng yangi kunlardan boshlab yuklanadi va har bo'lakdan keyin ko'rinadi.
+* Hujjatlar: docs/SINOV.md — 5 daqiqalik sinov ro'yxati va "ma'lumot qayerdan qayerga" xaritasi.
+
+## 3.8 (versionCode 20) + Savdo Mijoz 1.12 (versionCode 13): server javobi o'qiladi — 2026-11-01
+* Haqiqiy server javobi tekshirildi: "Hisobot" (tur 5) — "Mijoz kartochkasi" EMAS, **"Yuk beruvchi va Mijozlar bilan
+  solishtirma dalolatnoma"** (№ | Operatsiyalar | Dt | Kt | Izohlar; kun boshiga / aylanma / kun oxiriga qoldiq). Avval shu
+  sabab "Jadval sarlavhasi topilmadi" bo'lib, 1C tarixi bo'sh qolardi. Endi o'qiladi: Dt — savdo, Kt — to'lov/qaytarish,
+  sana va turi "Operatsiyalar" matnidan, davr "umumiy aylanma" qatoridan, qarz "kun oxiriga qarzdorlik qoldig'i"dan.
+* Server savdolarida tovar qatorlari yo'q: ro'yxatda hujjat matni va izoh ko'rinadi; "Takrorlash" faqat tovari bor hujjatda.
+  Kompyuter ulangan bo'lsa savdo/qaytarish kompyuterdan (tovarlari bilan), to'lovlar serverdan.
+* Avval "o'qilmadi" deb o'tkazilgan mijozlar qayta yuklanadi. Holat oynasida "Javobni ulashish" — yozuvlari eng ko'p
+  server javobi (tekshirish uchun).
+
 ## 3.7 (versionCode 19), Savdo Mijoz 1.11 o'zgarmagan: "1C tarixi" — kompyuterdagi BARCHA savdolar (Admin va Agent) — 2026-11-01
 * **Agent ilovasida ham**: Admin o'zining "1C tarixi"ni (barcha savdolar + to'lovlar, 1 yil) "Admin orqali" kaliti bilan bulutga
   10 kunlik bo'laklarda yuboradi (faqat o'zgargani, daqiqada ko'pi bilan bir); agent har daqiqada tekshirib, faqat o'zgargan

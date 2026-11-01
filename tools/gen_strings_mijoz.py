@@ -305,6 +305,15 @@ STRINGS.update({
  # Vidjet
  'wg_desc': "Qarz, narxlar va kassa",
  'home_pending_deals': "Server qarziga keyingi %1$d ta savdo/to'lov qo'shildi: %2$s", 'wg_debt': 'Qarz: %1$s', 'wg_no_data': "Ma'lumot yo'q",
+ # v3.9: o'z savdosi (agentdagidek)
+ 'nav_sale': 'Savdo', 'ms_new_sale': 'Yangi savdo', 'ms_cart': 'Savatcha', 'ms_minus': 'Kamaytirish', 'ms_plus': "Qo'shish",
+ 'ms_clear': 'Savatchani tozalash', 'ms_clear_text': "Savatchadagi hamma tovar olib tashlanadi. Davom etasizmi?",
+ 'ms_no_products': "Tovarlar hali yo'q: bosh sahifada \"Yangilash\" bosing (bir marta internet kerak, keyin internetsiz ham ishlaydi)",
+ 'ms_nothing_found': 'Hech narsa topilmadi', 'ms_count': '%1$d xil tovar · %2$s dona/kg', 'ms_no_price': "Narx yo'q — bosing",
+ 'ms_tile_clients': 'Mijozlarim', 'ms_tile_history': 'Savdolarim', 'ms_tile_report': 'Kassa hisoboti', 'ms_tile_pay': "Bizga to'lov",
+ 'ms_today': "Bugun (o'z savdom)", 'ms_today_sales': 'Savdo: %1$d ta · %2$s', 'ms_today_cash': 'Kassaga tushdi: %1$s',
+ 'ms_today_credit': 'Qarzga berildi: %1$s',
+ 'ms_offline': "Internet yo'q — %1$s holatidagi ma'lumot bilan ishlayapsiz. Savdo, narxlar va tarix ishlaydi, internet kelganda o'zi yangilanadi.",
 })
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

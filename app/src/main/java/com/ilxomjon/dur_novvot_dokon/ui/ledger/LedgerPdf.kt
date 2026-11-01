@@ -45,7 +45,7 @@ object LedgerPdf {
                 is LedgerRow.Doc -> {
                     val d = row.hit.doc
                     val head = LedgerUi.time(d.stamp) + " " + LedgerUi.kindTitle(ctx, d.kind)
-                    if (d.isGoods) {
+                    if (d.isGoods && d.goods.isNotEmpty()) {
                         val show = if (s.query.isNotBlank() && row.hit.lines.isNotEmpty()) row.hit.lines.sorted().map { d.lines[it] } else d.goods
                         for ((i, e) in show.withIndex()) {
                             sb.append("<tr><td>").append(if (i == 0) esc(head) else "").append("</td><td>").append(esc(e.product))
@@ -53,7 +53,7 @@ object LedgerPdf {
                                 .append("</td><td class='n'>").append(esc(LedgerUi.money(ctx, LedgerDoc.amountOf(e)))).append("</td></tr>")
                         }
                     } else {
-                        sb.append("<tr><td>").append(esc(head)).append("</td><td>").append(esc(d.comment))
+                        sb.append("<tr><td>").append(esc(head)).append("</td><td>").append(esc(d.comment.ifBlank { uz.imsoft.shared.report.LedgerOwner.plain(d.kindText) }))
                             .append("</td><td></td><td></td><td class='n'>").append(esc(LedgerUi.money(ctx, d.total))).append("</td></tr>")
                     }
                 }

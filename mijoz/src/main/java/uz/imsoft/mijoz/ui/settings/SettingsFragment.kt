@@ -140,7 +140,6 @@ class SettingsFragment : Fragment() {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.ReceiptExtrasFragment())
         })
         col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
-        col.addView(uz.imsoft.shared.android.Ui.switch(ctx, getString(R.string.pos_show), Locator.prefs.posOn) { Locator.prefs.posOn = it })
         val first = top(b.tgAuto)
         column.addView(card, if (first != null) column.indexOfChild(first) else column.indexOfChild(b.tvAbout))
         val advanced = listOfNotNull(top(b.tgScale), top(b.tgFont), top(b.swFuzzy), top(b.tgSkip)).distinct()

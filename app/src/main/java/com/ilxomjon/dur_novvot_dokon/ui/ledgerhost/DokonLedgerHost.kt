@@ -86,6 +86,7 @@ object DokonLedgerHost : LedgerHost {
     override val fuzzySearch: Boolean get() = ServiceLocator.appPrefs.fFuzzySearch
 
     override fun repeatLabel(doc: LedgerDoc): Int = when {
+        doc.goods.isEmpty() -> 0
         uz.imsoft.shared.report.LedgerOwner.of(doc.kindText) != null -> when (doc.kind) {
             EntryKind.SALE -> R.string.lgh_repeat_sale
             EntryKind.RETURN -> R.string.lgh_repeat_return

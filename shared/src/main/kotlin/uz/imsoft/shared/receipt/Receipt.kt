@@ -107,7 +107,7 @@ object ReceiptBuilder {
 
     fun fromDoc(doc: LedgerDoc, header: String, clientName: String, l: Labels, footer: List<String> = emptyList(), staff: String = ""): Receipt {
         val lines = ArrayList<Receipt.Line>()
-        if (doc.isGoods) {
+        if (doc.isGoods && doc.goods.isNotEmpty()) {
             for (e in doc.goods) {
                 val p = NumFmt.price(e.v(Col.PRICE))
                 val detail = if (e.qty != 0.0 && p.isNotEmpty()) NumFmt.qty(e.qty) + " x " + p else if (e.qty != 0.0) NumFmt.qty(e.qty) else ""

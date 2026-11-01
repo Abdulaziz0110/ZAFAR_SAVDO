@@ -20,10 +20,13 @@ import uz.imsoft.mijoz.ui.printer.PrinterFragment
 import uz.imsoft.mijoz.ui.report.ReportFragment
 import uz.imsoft.mijoz.ui.settings.SettingsFragment
 
-/** 2-ilova: Bosh sahifa · Narxlar · Hisobot · Printer (ixtiyoriy) · Sozlamalar. */
+/**
+ * 2-ilova: Bosh sahifa · Savdo (v3.9) · Narxlar · Tarix · Sozlamalar. Pastki menyuda 5 tadan ko'p bo'lmaydi: chek printeri
+ * bo'limi yoqilgan telefonda "Sozlamalar" o'rnida "Printer" turadi (Sozlamalar — bosh sahifadagi tishli g'ildirakdan).
+ */
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private val tabs = listOf(R.id.nav_home, R.id.nav_prices, R.id.nav_report, R.id.nav_printer, R.id.nav_settings)
+    private val tabs = listOf(R.id.nav_home, R.id.nav_sale, R.id.nav_prices, R.id.nav_report, R.id.nav_printer, R.id.nav_settings)
 
     /**
      * Shrift/o'lcham uchun o'ralgan kontekst PrintManager'ga Activity'ni ko'rsatmaydi ("Can print only from an activity").
@@ -71,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             val start = when (intent.getStringExtra(EXTRA_TAB)) {
                 TAB_PRINTER -> if (Locator.prefs.printerSection) R.id.nav_printer else R.id.nav_home
-                else -> if (Locator.prefs.link == null) R.id.nav_settings else when (Locator.prefs.startTab) {
+                else -> if (Locator.prefs.link == null) (if (Locator.prefs.printerSection) R.id.nav_home else R.id.nav_settings) else when (Locator.prefs.startTab) {
                     "prices" -> R.id.nav_prices
                     "report" -> R.id.nav_report
                     else -> R.id.nav_home
@@ -159,7 +162,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updatePrinterTab() {
-        binding.bottomNav.menu.findItem(R.id.nav_printer).isVisible = Locator.prefs.printerSection
+        val printer = Locator.prefs.printerSection
+        binding.bottomNav.menu.findItem(R.id.nav_printer).isVisible = printer
+        binding.bottomNav.menu.findItem(R.id.nav_settings).isVisible = !printer
+    }
+
+    /** v3.9: Sozlamalar — pastki menyuda bo'lsa o'sha, bo'lmasa (printer bo'limi yoqilgan) ustidan ochiladi. */
+    fun openSettings() {
+        if (binding.bottomNav.menu.findItem(R.id.nav_settings).isVisible) openTab(R.id.nav_settings) else push(SettingsFragment())
     }
 
     fun openTab(id: Int) { binding.bottomNav.selectedItemId = id }
@@ -189,6 +199,7 @@ class MainActivity : AppCompatActivity() {
     private var lastBackAt = 0L
 
     private fun create(id: Int): Fragment = when (id) {
+        R.id.nav_sale -> uz.imsoft.mijoz.ui.sale.MSaleFragment()
         R.id.nav_prices -> PricesFragment()
         R.id.nav_report -> ReportFragment()
         R.id.nav_printer -> PrinterFragment()

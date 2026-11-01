@@ -60,7 +60,15 @@ class AdminHistory(
 
     private fun build(h: StoreHistory.State, sales: OneCSales?): Data {
         val out = ArrayList<LedgerEntry>(h.entries.size + (sales?.docs?.size ?: 0) * 4)
-        out += h.entries
+        // v3.8: server (akt sverki) savdo/qaytarishni tovarlarsiz beradi — kompyuter shu vaqtni qamragan bo'lsa, savdo va
+        // qaytarish kompyuterdan (tovarlari bilan), to'lovlar serverdan. Kompyuter qamramagan vaqt — hammasi serverdan.
+        val pcFrom = sales?.from?.takeIf { it > 0 } ?: Long.MAX_VALUE
+        val pcTo = sales?.let { minOf(if (it.to % 1_000_000 == 0L) it.to + 235959 else it.to, Pos.stampOf(it.at - 5 * 60_000L)) } ?: Long.MIN_VALUE
+        for (e in h.entries) {
+            val goods = e.kind == uz.imsoft.shared.report.EntryKind.SALE || e.kind == uz.imsoft.shared.report.EntryKind.RETURN
+            if (goods && e.stamp in pcFrom..pcTo) continue
+            out += e
+        }
         if (sales != null) {
             val byName = HashMap<String, String>()
             for (s in catalog.state.value.stores) byName.putIfAbsent(LedgerMerge.nameKey(s.name), s.id)
@@ -68,7 +76,6 @@ class AdminHistory(
             for (d in sales.docs) {
                 if (!OneCLedger.isClientDoc(d.kind)) continue
                 val sid = byName[LedgerMerge.nameKey(d.party)].orEmpty()
-                if (sid.isNotEmpty() && covered(h.cov[sid], d.stamp)) continue
                 val owner = d.party.ifBlank { retail }
                 for (e in OneCLedger.entries(d)) out += e.copy(kindText = LedgerOwner.tag(e.kindText, sid, owner))
             }
@@ -77,10 +84,6 @@ class AdminHistory(
         ver++
         return Data(out, ver, h.loaded)
     }
-
-    /** Server kartochkasi shu vaqtni qamraganmi (yuklangan paytdan 5 daqiqa oldingacha — 1C kechikishi). */
-    private fun covered(cov: List<uz.imsoft.shared.report.Coverage>?, stamp: Long): Boolean =
-        cov.orEmpty().any { c -> stamp >= c.from && stamp <= minOf(c.to, Pos.stampOf(c.importedAt - 5 * 60_000L)) }
 
     private fun hm(ms: Long) = SimpleDateFormat("dd.MM HH:mm", Locale.US).format(Date(ms))
 

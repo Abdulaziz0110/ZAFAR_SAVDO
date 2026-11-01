@@ -65,7 +65,8 @@ class LedgerAdapter(private val onClick: (LedgerDoc) -> Unit) : RecyclerView.Ada
             b.tvTitle.text = LedgerUi.docTitle(ctx, d)
             b.tvAmount.text = LedgerUi.money(ctx, d.total)
             b.tvAmount.setTextColor(LedgerUi.amountColor(ctx, d.kind))
-            val names = if (d.isGoods) d.goods.joinToString(", ") { it.product } else d.comment
+            val names = if (d.isGoods && d.goods.isNotEmpty()) d.goods.joinToString(", ") { it.product }
+                else d.comment.ifBlank { uz.imsoft.shared.report.LedgerOwner.plain(d.kindText) }
             val owner = uz.imsoft.shared.report.LedgerOwner.of(d.kindText)?.second.orEmpty()
             b.tvSub.text = listOf(LedgerUi.time(d.stamp), owner, names).filter { it.isNotBlank() }.joinToString(" · ")
             // Qidiruvda mos kelgan qatorlar

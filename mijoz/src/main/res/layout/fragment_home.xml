@@ -66,6 +66,18 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- v3.9: internet yo'q — oxirgi saqlangan ma'lumot bilan ishlanadi -->
+            <TextView
+                android:id="@+id/tvOffline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="?attr/colorErrorContainer"
+                android:padding="10dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnErrorContainer"
+                android:visibility="gone" />
+
             <!-- Qarz -->
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.App.Card"
@@ -102,6 +114,200 @@
                         android:layout_marginTop="2dp"
                         android:textAppearance="?attr/textAppearanceBodySmall"
                         android:textColor="?attr/colorOnPrimaryContainer" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+
+            <!-- v3.9: o'z savdosi — agentdagidek: katta "Yangi savdo", 4 plitka, bugungi savdo -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNewSale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:maxLines="2"
+                android:minHeight="60dp"
+                android:text="@string/ms_new_sale"
+                android:textSize="17sp"
+                app:icon="@drawable/ic_cart"
+                app:iconGravity="textStart"
+                app:iconSize="24dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tileClients"
+                    style="@style/Widget.App.Card.Action"
+                    android:layout_width="0dp"
+                    android:layout_height="84dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_person"
+                            app:tint="?attr/colorOnSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:text="@string/ms_tile_clients"
+                            android:textAppearance="?attr/textAppearanceLabelLarge"
+                            android:textColor="?attr/colorOnSecondaryContainer" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tileHistory"
+                    style="@style/Widget.App.Card.Action"
+                    android:layout_width="0dp"
+                    android:layout_height="84dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_history"
+                            app:tint="?attr/colorOnSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:text="@string/ms_tile_history"
+                            android:textAppearance="?attr/textAppearanceLabelLarge"
+                            android:textColor="?attr/colorOnSecondaryContainer" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tileReport"
+                    style="@style/Widget.App.Card.Action"
+                    android:layout_width="0dp"
+                    android:layout_height="84dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_report"
+                            app:tint="?attr/colorOnSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:text="@string/ms_tile_report"
+                            android:textAppearance="?attr/textAppearanceLabelLarge"
+                            android:textColor="?attr/colorOnSecondaryContainer" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tilePay"
+                    style="@style/Widget.App.Card.Action"
+                    android:layout_width="0dp"
+                    android:layout_height="84dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <ImageView
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_payment"
+                            app:tint="?attr/colorOnSecondaryContainer" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:text="@string/ms_tile_pay"
+                            android:textAppearance="?attr/textAppearanceLabelLarge"
+                            android:textColor="?attr/colorOnSecondaryContainer" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardToday"
+                style="@style/Widget.App.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ms_today"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorPrimary" />
+
+                    <TextView
+                        android:id="@+id/tvToday"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:lineSpacingExtra="2dp"
+                        android:textAppearance="?attr/textAppearanceBodyLarge" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -237,37 +443,6 @@
                     android:layout_weight="1"
                     android:text="@string/nav_report"
                     app:icon="@drawable/ic_history" />
-            </LinearLayout>
-
-            <!-- v3.2: o'z kassasi va to'lov kiritish (Admin tasdiqlaydi) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnPos"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:maxLines="2"
-                    android:minHeight="52dp"
-                    android:text="@string/pos_title"
-                    app:icon="@drawable/ic_store" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnPay"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:maxLines="2"
-                    android:minHeight="52dp"
-                    android:text="@string/rq_home"
-                    app:icon="@drawable/ic_payment" />
             </LinearLayout>
 
             <!-- v2.6: buyurtma berish (1-ilova qabul qilsa) -->

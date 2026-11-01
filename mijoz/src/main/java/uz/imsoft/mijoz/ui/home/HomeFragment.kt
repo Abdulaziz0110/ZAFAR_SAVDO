@@ -45,10 +45,21 @@ class HomeFragment : Fragment() {
         }
         b.btnReport.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_report) }
         // v3.2: o'z kassasi va to'lov kiritish
-        b.btnPos.setOnClickListener { (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.PosFragment()) }
-        b.btnPay.setOnClickListener { (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) }
-        b.btnPos.show(Locator.prefs.posOn)
+        // v3.9: o'z savdosi (agentdagidek) — savdo ekrani, mijozlar, kassa tarixi/hisoboti; bizga to'lov kiritish
+        val main = { activity as? MainActivity }
+        b.btnNewSale.setOnClickListener { main()?.openTab(R.id.nav_sale) }
+        b.tileClients.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_CLIENTS)) }
+        b.tileHistory.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_HISTORY)) }
+        b.tileReport.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_REPORT)) }
+        b.tilePay.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) }
+        b.toolbar.inflateMenu(R.menu.home_menu)
+        b.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.action_settings) { main()?.openSettings(); true } else false }
         launchOnStarted { Locator.data.state.collect { render(it) } }
+        launchOnStarted { Locator.pos.state.collect { renderToday() } }
+        launchOnStarted {
+            // Internet holati: yo'q bo'lsa — oxirgi saqlangan ma'lumot vaqti bilan ogohlantirish (ilova ishlayveradi)
+            while (true) { renderOffline(); kotlinx.coroutines.delay(10_000L) }
+        }
     }
 
     private var pollJob: kotlinx.coroutines.Job? = null
@@ -87,7 +98,8 @@ class HomeFragment : Fragment() {
         bb.btnRefresh.isEnabled = !s.loading && s.linked
         bb.cardLink.show(s.loaded && !s.linked)
         bb.btnOrder.show(s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true)
-        bb.btnPay.show(s.linked)
+        bb.tilePay.show(s.linked)
+        renderOffline()
         val snap = s.snapshot
         bb.toolbar.title = snap?.clientName?.ifEmpty { null } ?: Locator.prefs.link?.clientName?.ifEmpty { null } ?: getString(R.string.app_name)
         // Qarz: faqat server (1-ilova) ma'lumoti; vaqti bilan.
@@ -167,6 +179,37 @@ class HomeFragment : Fragment() {
             R.string.home_coverage2, snap.coverage.joinToString(", ") { Stamp.formatDate(it.from) + "–" + Stamp.formatDate(it.to) },
             if (snap.lastImportAt > 0) Fmt.dateTime(snap.lastImportAt) else "—",
         )
+    }
+
+    /** v3.9: bugungi o'z savdosi (Kassa bazasidan, internetsiz). */
+    private fun renderToday() {
+        val bb = _b ?: return
+        val ctx = requireContext()
+        val d = Locator.pos.state.value
+        val now = uz.imsoft.shared.pos.Pos.stampOf(System.currentTimeMillis())
+        val (from, to) = uz.imsoft.shared.pos.Pos.range(now, 1)
+        val r = uz.imsoft.shared.pos.Pos.report(from, to, d.sales, d.payments)
+        bb.tvToday.text = listOf(
+            getString(R.string.ms_today_sales, r.sales, ctx.money(r.total, false)),
+            getString(R.string.ms_today_cash, ctx.money(r.cashIn, false)),
+            getString(R.string.ms_today_credit, ctx.money(r.onCredit, false)),
+        ).joinToString("\n")
+    }
+
+    private fun online(): Boolean {
+        val cm = requireContext().getSystemService(android.net.ConnectivityManager::class.java) ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun renderOffline() {
+        val bb = _b ?: return
+        val off = runCatching { !online() }.getOrDefault(false)
+        bb.tvOffline.show(off)
+        if (off) {
+            val at = Locator.prefs.fetchedAt
+            bb.tvOffline.text = getString(R.string.ms_offline, if (at > 0) Fmt.dateTime(at) else "—")
+        }
     }
 
     override fun onHiddenChanged(hidden: Boolean) {

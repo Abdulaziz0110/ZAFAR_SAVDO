@@ -50,7 +50,7 @@ class DocSheet : BottomSheetDialogFragment() {
         val hit = ledger()?.currentState()?.rows?.asSequence()?.filterIsInstance<LedgerRow.Doc>()?.firstOrNull { it.hit.doc.key == key }?.hit
         b.lines.removeAllViews()
         val inf = LayoutInflater.from(ctx)
-        val show = if (doc.isGoods) doc.goods else doc.lines
+        val show = if (doc.isGoods && doc.goods.isNotEmpty()) doc.goods else doc.lines
         for (e in show) {
             val i = doc.lines.indexOf(e)
             val lb = ItemLedgerLineBinding.inflate(inf, b.lines, false)
@@ -59,11 +59,11 @@ class DocSheet : BottomSheetDialogFragment() {
             lb.tvDetail.show(lb.tvDetail.text.isNotEmpty())
             lb.tvAmount.text = LedgerUi.money(ctx, LedgerDoc.amountOf(e))
             if (hit != null && i in hit.lines) lb.root.setBackgroundResource(R.drawable.bg_line_match)
-            if (doc.isGoods) lb.root.setOnClickListener { productHistory(e.product) } else lb.root.isClickable = false
+            if (doc.isGoods && e.product.isNotBlank()) lb.root.setOnClickListener { productHistory(e.product) } else lb.root.isClickable = false
             b.lines.addView(lb.root)
         }
         b.totals.removeAllViews()
-        if (doc.isGoods) addTotal(getString(R.string.lg_items_qty), getString(R.string.lg_items_n, doc.goods.size) + " · " + NumFmt.qty(doc.qty), false)
+        if (doc.isGoods && doc.goods.isNotEmpty()) addTotal(getString(R.string.lg_items_qty), getString(R.string.lg_items_n, doc.goods.size) + " · " + NumFmt.qty(doc.qty), false)
         if (!doc.discount.isZero) {
             addTotal(getString(R.string.lg_total), LedgerUi.money(ctx, doc.total), false)
             addTotal(getString(R.string.lg_discount), "−" + LedgerUi.money(ctx, doc.discount), false)

@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 3.7 (versionCode 19) + Savdo Mijoz 1.11 (versionCode 12), 2026-11-01
+# Holat — Savdo Agent / Savdo Admin 3.9 (versionCode 21) + Savdo Mijoz 1.13 (versionCode 14), 2026-11-01
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,23 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## v3.9 / Mijoz 1.13 — Mijozda savdo, internetsiz
+| Narsa | Holat |
+|---|---|
+| Mijoz "Savdo" ekrani (4 narx, qidiruv, −/+, savatcha, saqlash, chek) | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓) |
+| Savatcha telefonda saqlanadi | IMPLEMENTED-UNVERIFIED |
+| Bosh sahifa: Yangi savdo, 4 plitka, bugungi savdo, Sozlamalar tugmasi | IMPLEMENTED-UNVERIFIED |
+| Pastki menyu 5 tadan oshmaydi (printer yoqilganda Sozlamalar o'rnida) | IMPLEMENTED-UNVERIFIED |
+| "Internet yo'q" ogohlantirishi | IMPLEMENTED-UNVERIFIED |
+| Agent tarixi — eng yangidan, bosqichma-bosqich | IMPLEMENTED-UNVERIFIED |
+
+## v3.8 / Mijoz 1.12 — server javobi (solishtirma dalolatnoma)
+| Narsa | Holat |
+|---|---|
+| Haqiqiy server javobi (bo'sh davr): mijoz nomi, davr, boshlang'ich va oxirgi qoldiq | VERIFIED (`AktParserTest.realServerAnswerWithoutOperations` — foydalanuvchi yuborgan fayl) |
+| Hujjat qatorlari (savdo/to'lov/qaytarish) | VERIFIED sun'iy qatorlar bilan (`AktParserTest.operationsBecomeDocuments`) / haqiqiy hujjatli javobda IMPLEMENTED-UNVERIFIED |
+| Tovarsiz hujjatlar ekrani, chek, PDF | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓) |
 
 ## v3.7 — "1C tarixi": kompyuterdagi barcha savdolar (Admin va Agent)
 | Narsa | Holat |

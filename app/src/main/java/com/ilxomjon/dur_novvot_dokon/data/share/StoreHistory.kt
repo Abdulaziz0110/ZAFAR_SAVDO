@@ -99,6 +99,10 @@ class StoreHistory(
     /** Server javobi jadval sifatida o'qilmasa — tashxis uchun shu yerga saqlanadi (ulashish mumkin). */
     fun failFile(): File = File(dir(), "server_xato.html")
 
+    /** v3.8: muvaffaqiyatli o'qilgan, yozuvlari eng ko'p javob (tekshirish uchun ulashish mumkin). */
+    fun sampleFile(): File = File(dir(), "server_namuna.html")
+    @Volatile private var sampleSize = 1
+
     // ---------------- saqlash ----------------
 
     suspend fun load() = mutex.withLock {
@@ -262,7 +266,13 @@ class StoreHistory(
         val html = withTimeout(120_000L) { api.fetchReport(agentId, Protocol.report(from, to, storeId)) }
         withContext(Dispatchers.Default) {
             try {
-                CardParser.parse(HtmlTable.read(html))
+                // v3.8: server "solishtirma dalolatnoma" (akt sverki) beradi; Excel kartochka ham o'qiladi
+                uz.imsoft.shared.report.ServerReport.parse(HtmlTable.read(html)).also { r ->
+                    // Tashxis uchun namuna: yozuvlari eng ko'p bo'lgan oxirgi javob
+                    if (r.entries.size >= sampleSize) withContext(Dispatchers.IO) {
+                        runCatching { sampleFile().writeText(html); sampleSize = r.entries.size }
+                    }
+                }
             } catch (e: CardParser.NotACard) {
                 parseFails++
                 withContext(Dispatchers.IO) { runCatching { failFile().writeText(html) } }
@@ -407,7 +417,8 @@ class StoreHistory(
 
     companion object {
         /** Yuklash versiyasi: o'qish qoidasi o'zgarsa oshiriladi — hammasi qayta yuklanadi. */
-        const val VER = 1
+        /** v3.8: 2 — server javobi (akt sverki) endi o'qiladi, avval "o'qilmadi" deb o'tkazilganlar qayta yuklanadi. */
+        const val VER = 2
         const val DAYS = 365
         const val CHUNK = 92
         const val GAP_MS = 20_000L

@@ -54,7 +54,7 @@ object LedgerUi {
     fun docTitle(ctx: Context, d: LedgerDoc): String = when {
         // 1-ilovada qilingan, 1C hisobotida hali yo'q savdo — tasdiqlangan deb ko'rsatilmaydi
         uz.imsoft.shared.report.AppSale.isApp(d.kindText) -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_from_app)
-        d.isGoods -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_items_n, d.goods.size)
+        d.isGoods && d.goods.isNotEmpty() -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_items_n, d.goods.size)
         d.comment.contains("click", ignoreCase = true) -> kindTitle(ctx, d.kind) + " · Click"
         else -> kindTitle(ctx, d.kind)
     }

@@ -19,7 +19,8 @@ object HistoryStatusDialog {
     fun show(f: Fragment) {
         val ctx = f.requireContext()
         val h = ServiceLocator.share.history
-        val fail = h.failFile()
+        // v3.8: oxirgisi — o'qilmagan javob bo'lsa o'sha, bo'lmasa yozuvlari eng ko'p namuna
+        val fail = listOf(h.failFile(), h.sampleFile()).filter { it.isFile }.maxByOrNull { it.lastModified() } ?: h.failFile()
         val b = MaterialAlertDialogBuilder(ctx).setTitle(R.string.sh_title).setMessage(ServiceLocator.adminHistory.status.value + "\n\n" + h.details())
             .setPositiveButton(R.string.sh_refresh) { _, _ ->
                 f.viewLifecycleOwner.lifecycleScope.launch {

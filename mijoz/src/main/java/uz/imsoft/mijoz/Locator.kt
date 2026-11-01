@@ -24,6 +24,8 @@ object Locator {
     val pos: uz.imsoft.mijoz.data.PosDb by lazy { uz.imsoft.mijoz.data.PosDb(app) }
     /** v3.2: Admin'ga to'lov va chek tuzatish so'rovlari. */
     val requests: uz.imsoft.mijoz.data.ClientRequests by lazy { uz.imsoft.mijoz.data.ClientRequests(prefs) }
+    /** v3.9: o'z savdosi savatchasi (telefonda saqlanadi). */
+    val sale: uz.imsoft.mijoz.data.MCart by lazy { uz.imsoft.mijoz.data.MCart(app) }
 
     fun init(a: Application) {
         if (::app.isInitialized) return
