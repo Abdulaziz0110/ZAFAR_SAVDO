@@ -82,7 +82,10 @@ data class Supplier(
     val oweUsd: Double get() = -balanceUsd
 }
 
-data class Suppliers(val from: Long, val to: Long, val at: Long, val list: List<Supplier>, val errors: List<String> = emptyList())
+/** v3.12: kassa moddasi (Справочник.Операции). */
+data class CashOp(val code: String, val name: String)
+
+data class Suppliers(val from: Long, val to: Long, val at: Long, val list: List<Supplier>, val errors: List<String> = emptyList(), val ops: List<CashOp> = emptyList())
 
 object OneCCodec {
     private fun d(x: Any?): Double = (x as? Number)?.toDouble() ?: x?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
@@ -134,7 +137,12 @@ object OneCCodec {
                 m.arr("docs").mapNotNull { doc(it) }.sortedByDescending { it.stamp },
             )
         }.sortedWith(compareByDescending<Supplier> { kotlin.math.abs(it.balanceSom) + kotlin.math.abs(it.balanceUsd) * 12_000 }.thenBy { it.name.lowercase() })
-        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) })
+        val ops = o.arr("ops").mapNotNull { x ->
+            val l = x as? List<Any?> ?: return@mapNotNull null
+            val name = s(l.getOrNull(1)).trim()
+            if (name.isEmpty()) null else CashOp(s(l.getOrNull(0)).trim(), name)
+        }
+        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops)
     }
 
     fun lineToList(l: OneCLine): List<Any?> = listOf(l.name, l.code, l.qty, l.priceSom, l.sumSom, l.priceUsd, l.sumUsd)
@@ -152,7 +160,7 @@ object OneCCodec {
         linkedMapOf(
             "v" to 1, "f" to s.from.toString(), "t" to s.to.toString(), "at" to s.at,
             "list" to s.list.map { linkedMapOf("id" to it.id, "code" to it.code, "name" to it.name, "tel" to it.phone, "bs" to it.balanceSom, "bu" to it.balanceUsd, "docs" to it.docs.map { d -> docToMap(d) }) },
-            "err" to s.errors,
+            "err" to s.errors, "ops" to s.ops.map { listOf(it.code, it.name) },
         ),
     )
 }

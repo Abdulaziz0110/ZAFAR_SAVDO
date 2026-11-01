@@ -69,6 +69,10 @@ class RelayClient(
     suspend fun sendBarcode(productId: String, name: String, code: String): Boolean =
         rpc("bc", mapOf("i" to productId, "n" to name.take(120), "c" to code.take(40)), 30_000) == true
 
+    /** v3.12: ro'yxat (tovar id, kod) birdaniga Admin orqali 1C'ga. @return Admin navbatga qo'ygan soni. */
+    suspend fun sendBarcodes(items: List<Pair<String, String>>): Int =
+        (rpc("bcs", mapOf("l" to items.take(300).map { listOf(it.first, it.second.take(40)) }), 60_000) as? Number)?.toInt() ?: 0
+
     /** Admin'ga so'rov va javobni kutish. Admin javob bermasa [ServerError.TIMEOUT] ("admin_offline"). */
     private suspend fun rpc(op: String, params: Map<String, Any?>, timeoutMs: Long): Any? {
         val (db, c) = ctx()

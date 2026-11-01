@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 3.12 (versionCode 24), Savdo Mijoz 1.14 (versionCode 15) — 2026-11-01
+* **Shtrix kod → 1C** (Admin ▸ Boshqaruv, bosh sahifa tepasidagi belgi, Sozlamalar ▸ Shtrix kodlar): istalgan kodni skanerlash
+  (kamera yoki skaner qurilmasi), tovarini tanlash, ro'yxat; bitta tugma bilan hammasi 1C'dagi tovar shtrix kodlariga.
+  Agent — Admin orqali (bitta so'rovda). Yuborilgach kod shu telefonda darhol ishlaydi.
+* **Tez yozish**: kompyuter Firebase oqimi orqali so'rov kelishi bilan uyg'onadi (30 soniya kutmaydi), navbat bitta 1C
+  ulanishida, hisobot tuzilayotgan payt ham orada bajariladi; Admin natijani 2.5 soniyada ko'radi.
+* **Boshqaruv ▸ 1C'ga yozish**: mijozdan to'lov, kassa kirim, kassa chiqim (xarajat), narx/PLU/nom, yangi tovar,
+  ta'minotchiga to'lov va qaytarish — hammasi bir joyda; bekor qilish (tovar o'zgarishida eski qiymat qaytadi).
+* **Ikonkalar** barcha kod bilan yig'ilgan menyu, ro'yxat va tugmalarda (Admin, Agent, Mijoz).
+* 3.11: VIBRATE ruxsati; iPhone agent Cloudflare Pages'da.
+
 ## 3.10 (versionCode 22) + iPhone agent 1.0 (veb), Savdo Mijoz 1.13 o'zgarmagan — 2026-11-01
 * **iPhone uchun agent** (web/agent, PWA — Safari ▸ "Bosh ekranga qo'shish"): Android agentning "Admin orqali" rejimi bilan
   bir xil — ulanish kodi, telefon+parol (parol yozilmaydi, PBKDF2 isbot), katalog, 4 narx (1/2-narx Admin'dan), so'm/$,

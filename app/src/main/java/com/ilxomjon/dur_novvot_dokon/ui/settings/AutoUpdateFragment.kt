@@ -41,12 +41,12 @@ class AutoUpdateFragment : CodeFragment() {
         c.addView(Ui.section(ctx, getString(R.string.pc_work)))
         c.addView(Ui.switch(ctx, getString(R.string.au_work_on), prefs.workHours.on) { prefs.workHours = prefs.workHours.copy(on = it); changed() })
         tvWork = Ui.text(ctx, "", top = 6).also { c.addView(it) }
-        val bStart = Ui.button(ctx, getString(R.string.au_start), outlined = true) { pickTime(true) }
-        val bEnd = Ui.button(ctx, getString(R.string.au_end), outlined = true) { pickTime(false) }
+        val bStart = Ui.button(ctx, getString(R.string.au_start), outlined = true, icon = R.drawable.ic_calendar) { pickTime(true) }
+        val bEnd = Ui.button(ctx, getString(R.string.au_end), outlined = true, icon = R.drawable.ic_calendar) { pickTime(false) }
         c.addView(Ui.buttonRow(ctx, bStart, bEnd, top = 4))
         c.addView(Ui.hint(ctx, getString(R.string.au_final_hint)))
         if (Build.VERSION.SDK_INT >= 31) {
-            c.addView(Ui.button(ctx, getString(R.string.au_exact), outlined = true) {
+            c.addView(Ui.button(ctx, getString(R.string.au_exact), outlined = true, icon = R.drawable.ic_warning) {
                 runCatching { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
             })
         }
@@ -54,7 +54,7 @@ class AutoUpdateFragment : CodeFragment() {
         c.addView(Ui.section(ctx, getString(R.string.au_backup)))
         c.addView(Ui.switch(ctx, getString(R.string.au_backup_on), prefs.dailyBackup) { prefs.dailyBackup = it; changed() })
         tvBackup = Ui.hint(ctx, "", 4).also { c.addView(it) }
-        val bNow = Ui.button(ctx, getString(R.string.au_backup_now), outlined = true) {
+        val bNow = Ui.button(ctx, getString(R.string.au_backup_now), outlined = true, icon = R.drawable.ic_backup) {
             launchUi {
                 prefs.lastDailyBackupAt = 0L
                 AutoUpdate.dailyBackupIfDue()
@@ -62,7 +62,7 @@ class AutoUpdateFragment : CodeFragment() {
                 snack(if (prefs.lastDailyBackupError.isEmpty()) getString(R.string.au_backup_done) else prefs.lastDailyBackupError)
             }
         }
-        val bRestore = Ui.button(ctx, getString(R.string.au_restore), outlined = true) { restore() }
+        val bRestore = Ui.button(ctx, getString(R.string.au_restore), outlined = true, icon = R.drawable.ic_restore) { restore() }
         c.addView(Ui.buttonRow(ctx, bNow, bRestore, top = 4))
         return p.root
     }

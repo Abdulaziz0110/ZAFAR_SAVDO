@@ -1169,6 +1169,55 @@ STRINGS.update({
  'sc_timeout': "Kompyuter 3 daqiqada javob bermadi. Boshqaruv ▸ Kompyuter (1C) holatini tekshiring.",
 })
 
+STRINGS.update({
+ # v3.12: Shtrix kod -> 1C
+ 'bb_title': "Shtrix kod → 1C", 'bb_sub': "Ko'p kodni skanerlab, bitta tugma bilan 1C'ga",
+ 'bb_hint_admin': "1) \"Skanerlash\" — kodni o'qiting, pastdagi ro'yxatdan tovarini bosing. Istagancha kod va tovar.\n2) \"1C'ga yozish\" — hammasi kompyuter orqali 1C'dagi o'sha tovarning shtrix kodlari ro'yxatiga yoziladi (bir necha soniyada).",
+ 'bb_hint_agent': "1) \"Skanerlash\" — kodni o'qiting, pastdagi ro'yxatdan tovarini bosing. Istagancha kod va tovar.\n2) \"1C'ga yozish\" — ro'yxat Admin'ga ketadi, Admin telefoni kompyuter orqali 1C'ga yozadi.",
+ 'bb_scan': 'Skanerlash (kamera)', 'bb_manual': "Kodni yozing yoki skaner qurilmasi bilan o'qiting",
+ 'bb_manual_hint': "Enter (yoki +) bosilsa — tovar tanlash oynasi ochiladi",
+ 'bb_list': "Ro'yxat: %1$d ta kod", 'bb_empty': "Ro'yxat bo'sh. \"Skanerlash\"ni bosing.",
+ 'bb_item_sub': 'Shtrix kod: %1$s', 'bb_send': "1C'ga yozish (%1$d ta)", 'bb_clear': "Ro'yxatni tozalash",
+ 'bb_clear_q': "Ro'yxatdagi hamma kod o'chiriladi (1C'ga yozilmaydi). Davom etasizmi?",
+ 'bb_change_product': 'Tovarni almashtirish', 'bb_pick_other': 'Boshqa tovar',
+ 'bb_bad_code': "Shtrix kod noto'g'ri (4-40 ta harf yoki raqam)",
+ 'bb_added': "Ro'yxatga qo'shildi: %1$s", 'bb_already': "Ro'yxatda bor: %1$s",
+ 'bb_live': "● Shtrix kod → 1C", 'bb_scan_hint': "Kodni o'qiting, keyin pastdagi ro'yxatdan shu tovarni bosing",
+ 'bb_to_list': "Ro'yxat", 'bb_count': "Ro'yxatda: %1$d ta", 'bb_bar_hint': "Tugatgach — \"Ro'yxat\" ▸ \"1C'ga yozish\"",
+ 'bb_confirm_title': "1C'ga yozish", 'bb_confirm': "%1$d ta shtrix kod 1C'dagi tovarlarga yoziladi. Davom etasizmi?", 'bb_confirm_yes': 'Yozish',
+ 'bb_no_route': "Bu rejimda 1C'ga yozib bo'lmaydi: agent \"Admin orqali\" ulangan bo'lishi (yoki Admin'da bulut sozlangan bo'lishi) kerak",
+ 'bb_sent_admin': "%1$d ta kod kompyuterga yuborildi — natija shu yerda ko'rinadi",
+ 'bb_sent_agent': "%1$d ta kod Admin'ga yuborildi — Admin kompyuter orqali 1C'ga yozadi",
+ 'bb_admin_offline': "Admin javob bermadi: Admin telefoni yoqiq va internetda bo'lishi kerak. Ro'yxat saqlanib qoldi.",
+ 'bb_admin_old': "Admin ilovasi eski: Admin'ni yangilang. Ro'yxat saqlanib qoldi.",
+ 'bb_results_sub': "Har kodning natijasi (yozildi / xato) va bekor qilish",
+ # v3.12: Boshqaruv - 1C'ga yozish
+ 'ad_sec_write': "1C'ga yozish",
+ 'of_client_pay': "Mijozdan to'lov", 'of_client_pay_sub': "1C'ga to'lov hujjati (naqd, plastik, Click, chegirma)",
+ 'of_client_pay_hint': "Mijoz to'lagan pul 1C'dagi \"Оплата клиента\" hujjati bo'lib kiradi va uning qarzidan ayriladi.",
+ 'of_cash_in': 'Kassa kirim', 'of_cash_in_sub': "Kassaga boshqa kirim (1C: Касса приход)",
+ 'of_cash_in_hint': "Kassaga tushgan boshqa pul (savdo va mijoz to'lovidan tashqari). Kassa moddasini tanlang.",
+ 'of_cash_out': 'Kassa chiqim (xarajat)', 'of_cash_out_sub': "Xarajat: ijara, svet, ish haqi… (1C: Касса расход)",
+ 'of_cash_out_hint': "Kassadan chiqqan pul (xarajat). 1C'dagi xarajatlar va foyda hisobotiga ham tushadi.",
+ 'of_goods_edit': 'Narx, PLU, nom', 'of_goods_edit_sub': "Tovar kartochkasi: 1-4 narx, kirim narxi, PLU, nomi",
+ 'of_goods_edit_hint': "Tovarni tanlang — hozirgi narxlari yoziladi. Faqat o'zgartirganingiz 1C'ga yoziladi; xato bo'lsa \"Bekor qilish\" eski qiymatni qaytaradi.",
+ 'of_new_goods': 'Yangi tovar', 'of_new_goods_sub': "Namuna tovardan nusxa: nomi, narxi, shtrix kodi",
+ 'of_new_goods_hint': "Avval o'xshash (namuna) tovarni tanlang — guruhi, o'lchov birligi va valyutasi shundan olinadi. Keyin yangi nom, narx va (bo'lsa) shtrix kodni yozing.",
+ 'of_supp_pay_sub': "Ta'minotchiga to'langan pul", 'of_supp_return_sub': "Ta'minotchiga qaytarilgan tovar",
+ 'of_op': 'Kassa moddasi', 'of_op_name': 'Modda nomi (1C\'dagidek aniq)',
+ 'of_ops_none': "Kassa moddalari ro'yxati kompyuterdan hali kelmagan (kompyuterdagi dastur yangilanishi kerak). Nomini 1C'dagidek aniq yozing.",
+ 'of_sample': 'Namuna tovar', 'of_product': 'Tovar',
+ 'of_product_info': 'Kodi: %1$s · narxlar %2$sda', 'of_cur_som': "so'm", 'of_cur_usd': 'dollar',
+ 'of_new_name_sec': 'Yangi tovar', 'of_new_name': 'Yangi tovar nomi', 'of_barcode': 'Shtrix kod (ixtiyoriy)',
+ 'of_prices_sec': 'Narxlar (%1$sda)',
+ 'of_p1': '1-narx', 'of_p2': '2-narx', 'of_p3': '3-narx (Naqd)', 'of_p4': '4-narx (Optom)', 'of_cost': 'Kirim narxi',
+ 'of_other_sec': 'Boshqa', 'of_plu': 'PLU (tarozi kodi)', 'of_name': 'Tovar nomi',
+ 'of_only_changed': "Faqat o'zgartirilgan maydonlar yuboriladi.",
+ 'of_click_som': "Click (so'm)", 'of_click_usd': 'Click ($)', 'of_discount_som': "Chegirma (so'm)",
+ 'of_err_product': 'Tovarni tanlang', 'of_err_op': 'Kassa moddasini tanlang', 'of_err_empty': "Hech narsa o'zgartirilmadi",
+ 'of_err_price': "Narx noto'g'ri", 'of_err_plu': "PLU noto'g'ri (0-99999)", 'of_err_name': "Tovar nomi kamida 2 harf bo'lsin",
+})
+
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)
 
 def esc(s):

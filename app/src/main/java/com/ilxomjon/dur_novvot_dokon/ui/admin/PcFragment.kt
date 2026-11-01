@@ -31,7 +31,7 @@ class PcFragment : CodeFragment() {
         val share = ServiceLocator.share
         val st = ServiceLocator.shareStore
         tvStatus = Ui.text(ctx, "", top = 4).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.pc_refresh_status), outlined = true) { launchUi { share.refreshPcStatus() } })
+        c.addView(Ui.button(ctx, getString(R.string.pc_refresh_status), outlined = true, icon = R.drawable.ic_sync) { launchUi { share.refreshPcStatus() } })
 
         c.addView(Ui.section(ctx, getString(R.string.pc_live)))
         c.addView(Ui.hint(ctx, getString(R.string.pc_live_hint)))
@@ -46,12 +46,12 @@ class PcFragment : CodeFragment() {
 
         c.addView(Ui.section(ctx, getString(R.string.pc_work)))
         tvWork = Ui.text(ctx, "", top = 4).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.pc_work_change), outlined = true) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.AutoUpdateFragment()) })
+        c.addView(Ui.button(ctx, getString(R.string.pc_work_change), outlined = true, icon = R.drawable.ic_calendar) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.AutoUpdateFragment()) })
 
         c.addView(Ui.section(ctx, getString(R.string.pc_setup)))
         c.addView(Ui.hint(ctx, getString(R.string.pc_setup_hint)))
-        c.addView(Ui.button(ctx, getString(R.string.share_pc_config)) { pcConfig() })
-        c.addView(Ui.button(ctx, getString(R.string.pc_codes_now), outlined = true) {
+        c.addView(Ui.button(ctx, getString(R.string.share_pc_config), icon = R.drawable.ic_computer) { pcConfig() })
+        c.addView(Ui.button(ctx, getString(R.string.pc_codes_now), outlined = true, icon = R.drawable.ic_download) {
             launchUi { ServiceLocator.labels.requestCodes(); snack(getString(R.string.oc_request_sent)) }
         })
         c.addView(Ui.hint(ctx, getString(R.string.pc_write_hint), 12))

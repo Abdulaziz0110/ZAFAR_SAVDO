@@ -44,6 +44,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -251,6 +252,66 @@ class Cloud:
             "b": base64.b64encode(gzip.compress(raw, 9)).decode("ascii"),
         }
         self.call("PUT", "in/%s/%s" % (self.cfg.inbox, key), body, timeout=120, print="silent")
+
+
+class Waker:
+    """v3.12: Firebase oqimi (SSE). Admin 1C'ga yozish / tarozi / ma'lumot so'rovini qo'yishi bilan kompyuter DARHOL
+    uyg'onadi (oldin 30 soniyagacha kutardi). Oqim uzilsa — o'zi qayta ulanadi; ishlamasa ham eski 30 soniyalik tekshiruv qoladi."""
+
+    def __init__(self, cfg, paths, opener=None):
+        self.cfg = cfg
+        self.paths = list(paths)
+        self.event = threading.Event()
+        self.opener = opener or urllib.request.urlopen
+        self.connected = {}
+
+    def start(self):
+        for p in self.paths:
+            threading.Thread(target=self._loop, args=(p,), daemon=True, name="wake-" + p.split("/")[0]).start()
+        return self
+
+    def url(self, path):
+        return "%s/%s.json?%s" % (self.cfg.url, path.strip("/"), urllib.parse.urlencode({"auth": self.cfg.secret}))
+
+    def feed(self, lines):
+        """SSE qatorlari: yangi so'rov (null bo'lmagan put/patch) kelsa — uyg'otadi. @return False — oqim yopilsin."""
+        ev = None
+        for raw in lines:
+            line = (raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw).strip()
+            if line.startswith("event:"):
+                ev = line[6:].strip()
+            elif line.startswith("data:"):
+                if ev in ("cancel", "auth_revoked"):
+                    return False
+                if ev in ("put", "patch"):
+                    try:
+                        d = json.loads(line[5:].strip())
+                    except ValueError:
+                        d = None
+                    if isinstance(d, dict) and d.get("data") is not None:
+                        self.event.set()
+        return True
+
+    def _loop(self, path):
+        delay = 5
+        while True:
+            try:
+                req = urllib.request.Request(self.url(path), headers={"Accept": "text/event-stream"})
+                with self.opener(req, timeout=90) as r:
+                    self.connected[path] = True
+                    delay = 5
+                    self.feed(r)
+            except Exception as e:  # noqa: BLE001 — internet uzilishi: kutib qayta ulanadi
+                log.debug("oqim (%s): %s", path, e)
+            self.connected[path] = False
+            time.sleep(delay)
+            delay = min(delay * 2, 300)
+
+    def wait(self, sec):
+        """[sec] soniya yoki so'rov kelguncha kutadi. @return so'rov kelib uyg'otdimi."""
+        hit = self.event.wait(sec)
+        self.event.clear()
+        return hit
 
 
 # ---------------------------------------------------------------- 1C (COM)
@@ -769,8 +830,9 @@ def content_hash(raw):
         return hashlib.sha256(raw).hexdigest()
 
 
-def run_once(cfg, cloud, onec, days, state=None, now=None, only=None):
-    """Bir aylanish. @return (yuborildi, tekshirildi, xatolar)."""
+def run_once(cfg, cloud, onec, days, state=None, now=None, only=None, between=None):
+    """Bir aylanish. @return (yuborildi, tekshirildi, xatolar).
+    [between] — har mijozdan keyin chaqiriladi (v3.12: shu orada kelgan 1C'ga yozish so'rovlari kutib qolmasin)."""
     state = load_state() if state is None else state
     d_from, d_to = period(days, now)
     sent = checked = 0
@@ -803,6 +865,11 @@ def run_once(cfg, cloud, onec, days, state=None, now=None, only=None):
             save_state(state)
             sent += 1
             log.info("yuborildi: %s (%d KB)", name, len(raw) // 1024)
+            if between is not None:
+                try:
+                    between()
+                except Exception as e:  # noqa: BLE001
+                    log.warning("navbatdagi yozuvlar: %s", e)
     finally:
         onec.close()
     return sent, checked, errors
@@ -1232,11 +1299,37 @@ def loop(cfg):
     cloud = Cloud(cfg)
     onec = OneC(cfg)
     writer = onec_write.Writer(cfg, cloud, onec, HERE)
+    inbox = cfg.inbox
+    waker = Waker(cfg, ["w/%s" % inbox, "p/%s/scale" % inbox, "p/%s/dreq" % inbox, "p/%s/creq" % inbox]).start()
+
+    def do_writes():
+        """1C'ga yozish navbati (Admin tasdiqlagan). Tovar o'zgargan bo'lsa — kodlar/narxlar darhol telefonlarga."""
+        try:
+            done, errs = writer.run()
+            if done or errs:
+                safe_status(cloud, "1C'ga yozildi: %d ta%s" % (done, ", xato: %d" % errs if errs else ""), errs == 0)
+        except Exception as e:  # noqa: BLE001
+            log.warning("1C'ga yozish navbati: %s", e)
+        # (hisobot tuzilayotgan payt — ulanish band: kodlar keyingi aylanishda)
+        if writer.goods_changed and cfg.codes_on and getattr(onec, "c", None) is None:
+            writer.goods_changed = False
+            try:
+                run_codes(cfg, cloud, onec, load_state())
+            except Exception as e:  # noqa: BLE001
+                log.warning("kodlarni yangilash: %s", e)
+
+    def urgent():
+        if waker.event.is_set():
+            waker.event.clear()
+            do_writes()
+
     last_run = 0.0
     last_codes = 0.0
     last_live = 0.0
     last_final_day = ""
     while True:
+        # v3.12: avval yozish navbati — Admin kutib qolmasin
+        do_writes()
         try:
             sch = cloud.schedule()
         except Exception as e:
@@ -1253,7 +1346,7 @@ def loop(cfg):
         if full_due or (final_now and cfg.report):
             last_run = time.time()
             try:
-                sent, checked, errors = run_once(cfg, cloud, onec, days)
+                sent, checked, errors = run_once(cfg, cloud, onec, days, between=urgent)
                 msg = status_text(sent, checked, errors)
                 log.info(msg)
                 safe_status(cloud, msg, not errors or sent > 0)
@@ -1277,7 +1370,7 @@ def loop(cfg):
                     if names and cfg.only:
                         names = names & set(cfg.only)
                     if names:
-                        sent, checked, errors = run_once(cfg, cloud, onec, days, only=sorted(names))
+                        sent, checked, errors = run_once(cfg, cloud, onec, days, only=sorted(names), between=urgent)
                         if sent:
                             log.info("tezkor: %s", status_text(sent, checked, errors))
                 if cfg.data_on:
@@ -1321,18 +1414,14 @@ def loop(cfg):
                 safe_status(cloud, msg, msg.startswith("Taroziga"))
         except Exception as e:  # noqa: BLE001
             log.warning("tarozi so'rovi: %s", e)
-        # 1C'ga yozish navbati (Admin tasdiqlagan)
-        try:
-            done, errs = writer.run()
-            if done or errs:
-                safe_status(cloud, "1C'ga yozildi: %d ta%s" % (done, ", xato: %d" % errs if errs else ""), errs == 0)
-        except Exception as e:  # noqa: BLE001
-            log.warning("1C'ga yozish navbati: %s", e)
+        # (1C'ga yozish navbati — aylanish boshida va hisobot orasida; so'rov kelsa darhol uyg'onadi)
         if cfg.codes_on:
             codes_tick(cfg, cloud, onec, last_codes)
             st = load_state()
             last_codes = st.get("__codes_at__", last_codes)
-        time.sleep(TICK_SEC)
+        # So'rov kelsa darhol uyg'onadi (Firebase oqimi), aks holda TICK_SEC
+        if waker.wait(TICK_SEC):
+            log.info("so'rov keldi — darhol bajarilmoqda")
 
 
 def codes_tick(cfg, cloud, onec, last_codes, now=None):

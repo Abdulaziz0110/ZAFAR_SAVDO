@@ -50,7 +50,7 @@ class MCartFragment : MFragment() {
         val c = d.customer(s.customerId)
         body.addView(Ui.section(ctx, getString(R.string.pos_client)))
         body.addView(Ui.item(ctx, c?.name ?: getString(R.string.pos_cash_client),
-            if (c != null) getString(R.string.pos_balance, som(d.balance(c.id))) else getString(R.string.pos_cash_hint)) { pickCustomer() })
+            if (c != null) getString(R.string.pos_balance, som(d.balance(c.id))) else getString(R.string.pos_cash_hint), icon = R.drawable.ic_person, tone = 1) { pickCustomer() })
         body.addView(Ui.section(ctx, getString(R.string.pos_goods)))
         if (s.lines.isEmpty()) body.addView(Ui.hint(ctx, getString(R.string.pos_no_goods)))
         s.lines.forEachIndexed { i, l ->
@@ -71,8 +71,8 @@ class MCartFragment : MFragment() {
         watch(eDisc) { discountText = it }
         watch(ePaid) { paidText = it }
         watch(eNote) { noteText = it }
-        val bSave = Ui.button(ctx, getString(R.string.pos_save_print)) { save(print = true) }
-        val bOnly = Ui.button(ctx, getString(R.string.pos_save), outlined = true) { save(print = false) }
+        val bSave = Ui.button(ctx, getString(R.string.pos_save_print), icon = R.drawable.ic_print) { save(print = true) }
+        val bOnly = Ui.button(ctx, getString(R.string.pos_save), outlined = true, icon = R.drawable.ic_check) { save(print = false) }
         body.addView(Ui.buttonRow(ctx, bSave, bOnly))
         body.addView(Ui.hint(ctx, getString(R.string.pos_local_hint), 8))
     }

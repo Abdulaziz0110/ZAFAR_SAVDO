@@ -85,10 +85,11 @@ object Ui {
         return card to col
     }
 
-    fun button(ctx: Context, s: CharSequence, outlined: Boolean = false, top: Int = 8, onClick: (View) -> Unit): MaterialButton {
+    fun button(ctx: Context, s: CharSequence, outlined: Boolean = false, top: Int = 8, icon: Int = 0, onClick: (View) -> Unit): MaterialButton {
         val b = if (outlined) MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle) else MaterialButton(ctx)
         b.text = s
         b.maxLines = 2
+        if (icon != 0) b.setIconResource(icon)
         b.setOnClickListener { onClick(it) }
         b.layoutParams = lp(top = dp(ctx, top))
         return b
@@ -126,8 +127,34 @@ object Ui {
             layoutParams = lp(top = dp(ctx, top))
         }
 
-    /** Ro'yxat qatori: sarlavha, izoh va o'ngda qiymat (ixtiyoriy). Bosiladi. */
-    fun item(ctx: Context, title: CharSequence, sub: CharSequence = "", value: CharSequence = "", onClick: ((View) -> Unit)? = null): LinearLayout {
+    /**
+     * v3.12: ro'yxat qatori boshidagi ikonka — rangli doira ichida (bir qarashda tushunarli bo'lsin).
+     * [tone]: 0 — asosiy (secondary), 1 — primary, 2 — tertiary, 3 — xato (qizil).
+     */
+    fun badge(ctx: Context, icon: Int, tone: Int = 0, size: Int = 40): FrameLayout {
+        val (bgAttr, fgAttr) = when (tone) {
+            1 -> com.google.android.material.R.attr.colorPrimaryContainer to com.google.android.material.R.attr.colorOnPrimaryContainer
+            2 -> com.google.android.material.R.attr.colorTertiaryContainer to com.google.android.material.R.attr.colorOnTertiaryContainer
+            3 -> com.google.android.material.R.attr.colorErrorContainer to com.google.android.material.R.attr.colorOnErrorContainer
+            else -> com.google.android.material.R.attr.colorSecondaryContainer to com.google.android.material.R.attr.colorOnSecondaryContainer
+        }
+        val box = FrameLayout(ctx)
+        box.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(MaterialColors.getColor(box, bgAttr))
+        }
+        val iv = android.widget.ImageView(ctx).apply {
+            setImageResource(icon)
+            imageTintList = android.content.res.ColorStateList.valueOf(MaterialColors.getColor(box, fgAttr))
+        }
+        val s = dp(ctx, size * 11 / 20)
+        box.addView(iv, FrameLayout.LayoutParams(s, s, Gravity.CENTER))
+        box.layoutParams = LinearLayout.LayoutParams(dp(ctx, size), dp(ctx, size)).apply { marginEnd = dp(ctx, 14) }
+        return box
+    }
+
+    /** Ro'yxat qatori: (ikonka), sarlavha, izoh va o'ngda qiymat (ixtiyoriy). Bosiladi. */
+    fun item(ctx: Context, title: CharSequence, sub: CharSequence = "", value: CharSequence = "", icon: Int = 0, tone: Int = 0, onClick: ((View) -> Unit)? = null): LinearLayout {
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -144,6 +171,7 @@ object Ui {
                 setOnClickListener { onClick(it) }
             }
         }
+        if (icon != 0) row.addView(badge(ctx, icon, tone))
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(text(ctx, title, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge))
         if (sub.isNotEmpty()) col.addView(hint(ctx, sub, 2))
@@ -210,7 +238,7 @@ object Ui {
         return ListPage(root, tb, header, rv, adapter, empty)
     }
 
-    data class Row(val title: CharSequence, val sub: CharSequence = "", val value: CharSequence = "", val value2: CharSequence = "")
+    data class Row(val title: CharSequence, val sub: CharSequence = "", val value: CharSequence = "", val value2: CharSequence = "", val icon: Int = 0, val tone: Int = 0)
 
     class RowAdapter(private val onRow: (Int) -> Unit) : androidx.recyclerview.widget.RecyclerView.Adapter<RowAdapter.VH>() {
         private var rows: List<Row> = emptyList()
@@ -221,7 +249,10 @@ object Ui {
         override fun getItemCount(): Int = rows.size
 
         class VH(val root: LinearLayout, val title: TextView, val sub: TextView, val value: TextView, val value2: TextView) :
-            androidx.recyclerview.widget.RecyclerView.ViewHolder(root)
+            androidx.recyclerview.widget.RecyclerView.ViewHolder(root) {
+            var badge: FrameLayout? = null
+            var badgeKey = 0L
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val ctx = parent.context
@@ -268,6 +299,16 @@ object Ui {
             holder.value.text = r.value
             holder.value2.text = r.value2
             holder.value2.visibility = if (r.value2.isEmpty()) View.GONE else View.VISIBLE
+            // v3.12: ikonka (doira) — faqat o'zgarganda qayta chiziladi
+            val key = (r.icon.toLong() shl 8) or r.tone.toLong()
+            if (r.icon == 0) holder.badge?.visibility = View.GONE
+            else if (holder.badge == null || holder.badgeKey != key) {
+                holder.badge?.let { holder.root.removeView(it) }
+                val b = badge(holder.root.context, r.icon, r.tone)
+                holder.root.addView(b, 0)
+                holder.badge = b
+                holder.badgeKey = key
+            } else holder.badge?.visibility = View.VISIBLE
         }
     }
 

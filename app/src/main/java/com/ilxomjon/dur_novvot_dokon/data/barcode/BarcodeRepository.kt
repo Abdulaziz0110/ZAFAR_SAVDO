@@ -187,6 +187,26 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
     }
 
     /**
+     * v3.12: "Shtrix kod → 1C" ro'yxati yuborilgach — kod shu telefonda darhol ishlasin (1C'dan kodlar kelguncha).
+     * [onLearned] chaqirilmaydi (1C'ga allaqachon yuborilgan).
+     */
+    suspend fun learnSilently(pairs: List<Pair<String, String>>) {
+        if (pairs.isEmpty()) return
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                loadLocked()
+                for ((raw, productId) in pairs) {
+                    val k = Ean.canonical(raw)
+                    if (k.isEmpty() || imported.containsKey(k)) continue
+                    learned[k] = productId
+                    learnedRaw[k] = raw.trim()
+                }
+                saveLocked()
+            }
+        }
+    }
+
+    /**
      * Telefonda yozilgan (o'rganilgan) kodlar — CSV (Excel ochadi): tovar kodi, nomi, shtrix kod. 1C'ga qo'lda kiritish uchun.
      * Tarozi kodlari alohida belgi bilan ("tarozi: 00025").
      */

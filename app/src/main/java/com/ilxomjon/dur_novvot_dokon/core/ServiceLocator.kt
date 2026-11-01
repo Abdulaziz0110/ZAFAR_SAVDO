@@ -214,7 +214,29 @@ object ServiceLocator {
     val historyShare: com.ilxomjon.dur_novvot_dokon.data.share.HistoryShare by lazy { com.ilxomjon.dur_novvot_dokon.data.share.HistoryShare(app) }
 
     /** v3.2 Admin: 1C ma'lumotlari va "Tasdiqlab kiritish" navbati. */
-    val onec: com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository by lazy { com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore) }
+    val onec: com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore).also { it.scope = appScope }
+    }
+    /** v3.12: "Shtrix kod → 1C" ro'yxati. */
+    val barcodeBatch by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch(app) }
+
+    /**
+     * v3.12: ro'yxatdagi kodlarni 1C'ga: Admin — kompyuter navbatiga (bitta ulanishda yoziladi), Agent ("Admin orqali") —
+     * Admin'ga. @return qabul qilingan soni; -1 — bu rejimda mumkin emas (agent serverga to'g'ridan ulangan yoki bulut sozlanmagan).
+     */
+    suspend fun queueBarcodes(items: List<com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch.Item>): Int {
+        if (items.isEmpty()) return 0
+        if (isRelay) return relayClient.sendBarcodes(items.map { it.productId to it.code })
+        if (!AppRole.isAdmin || !onec.ready) return -1
+        val byId = catalog.state.value.productsById
+        val reqs = items.map { i ->
+            uz.imsoft.shared.onec.WriteRequest(
+                uz.imsoft.shared.onec.WriteCodec.newId(), uz.imsoft.shared.onec.WriteKind.BARCODE, System.currentTimeMillis(),
+                party = byId[i.productId]?.name ?: i.name, partyCode = i.productId, barcode = i.code,
+            )
+        }
+        return reqs.size - onec.submitAll(reqs, "Admin")
+    }
     /** v3.2 Admin: 2-ilovadan to'lov va chek tuzatish so'rovlari. */
     val clientRequests: com.ilxomjon.dur_novvot_dokon.data.share.ClientRequestsRepository by lazy {
         com.ilxomjon.dur_novvot_dokon.data.share.ClientRequestsRepository(app, shareStore, historyDb) { storeId, storeName, cash, transfer, click, note ->
@@ -265,6 +287,18 @@ object ServiceLocator {
                     appScope.launch(Dispatchers.IO) { afterDealSent(sale.order.storeId, 0L) }
                 }
                 override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
+                override suspend fun barcodes(items: List<Pair<String, String>>): Int {
+                    if (!onec.ready) return 0
+                    val byId = catalog.state.value.productsById
+                    val reqs = items.mapNotNull { (id, code) ->
+                        val c = com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch.clean(code)
+                        uz.imsoft.shared.onec.WriteRequest(
+                            uz.imsoft.shared.onec.WriteCodec.newId(), uz.imsoft.shared.onec.WriteKind.BARCODE, System.currentTimeMillis(),
+                            party = byId[id]?.name.orEmpty(), partyCode = id, note = "agent", barcode = c,
+                        ).takeIf { it.problem() == null }
+                    }
+                    return reqs.size - onec.submitAll(reqs, "Admin")
+                }
                 override fun level12(productIds: List<String>): Map<String, List<Double>> {
                     val out = LinkedHashMap<String, List<Double>>()
                     for (id in productIds) {

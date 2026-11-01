@@ -28,7 +28,7 @@ object Pickers {
             val k = Translit.key(q.trim())
             shown = (if (k.isEmpty()) all else all.filter { it.searchKey.contains(k) || it.idLower == k }).take(150)
             adapter.submit(shown.map { p ->
-                Ui.Row(p.name, ctx.getString(R.string.ad_product_code, p.id), if (p.baseIsSom) ctx.money(p.wholesaleSom, Currency.SOM) else ctx.money(p.wholesaleUsd, Currency.USD))
+                Ui.Row(p.name, ctx.getString(R.string.ad_product_code, p.id), if (p.baseIsSom) ctx.money(p.wholesaleSom, Currency.SOM) else ctx.money(p.wholesaleUsd, Currency.USD), icon = R.drawable.ic_shopping_bag)
             })
         }
         col.addView(Ui.search(ctx, ctx.getString(R.string.ad_product_search)) { filter(it) }.first)

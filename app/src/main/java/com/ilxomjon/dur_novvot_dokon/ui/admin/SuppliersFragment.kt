@@ -29,8 +29,8 @@ class SuppliersFragment : CodeFragment() {
     override fun build(inflater: LayoutInflater): View {
         lp = listPage(R.string.sp_title) { i -> shown.getOrNull(i)?.let { navigator().push(SupplierFragment.of(it.name)) } }
         lp.header.addView(Ui.search(ctx, getString(R.string.sp_search)) { query = it.trim().lowercase(); render() }.first)
-        val bNew = Ui.button(ctx, getString(R.string.sp_new_receipt), top = 6) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, "", "")) }
-        val bRefresh = Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, top = 6) { refresh() }
+        val bNew = Ui.button(ctx, getString(R.string.sp_new_receipt), top = 6, icon = R.drawable.ic_inventory) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, "", "")) }
+        val bRefresh = Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, top = 6, icon = R.drawable.ic_sync) { refresh() }
         lp.header.addView(Ui.buttonRow(ctx, bNew, bRefresh, top = 0))
         tvInfo = Ui.hint(ctx, "", 4).also { lp.header.addView(it) }
         lp.empty.text = getString(R.string.sp_empty)
@@ -58,6 +58,7 @@ class SuppliersFragment : CodeFragment() {
                     p.oweSom < 0 || p.oweUsd < 0 -> getString(R.string.sp_they_owe)
                     else -> ""
                 },
+                icon = R.drawable.ic_truck,
             )
         })
         tvInfo.text = if (s == null) getString(if (st.requestedKind == "supp") R.string.oc_requested else R.string.oc_none)
@@ -113,15 +114,15 @@ class SupplierFragment : CodeFragment() {
             else -> getString(R.string.sp_settled)
         }, 4))
         if (p != null && p.phone.isNotEmpty()) h.addView(Ui.hint(ctx, p.phone))
-        val b1 = Ui.button(ctx, getString(R.string.sp_receipt), top = 6) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, name, code)) }
-        val b2 = Ui.button(ctx, getString(R.string.sp_pay), top = 6) { navigator().push(WriteFormFragment.of(WriteKind.SUPPLIER_PAY, name, code)) }
-        val b3 = Ui.button(ctx, getString(R.string.sp_return), outlined = true, top = 6) { navigator().push(WriteFormFragment.of(WriteKind.SUPPLIER_RETURN, name, code)) }
+        val b1 = Ui.button(ctx, getString(R.string.sp_receipt), top = 6, icon = R.drawable.ic_inventory) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, name, code)) }
+        val b2 = Ui.button(ctx, getString(R.string.sp_pay), top = 6, icon = R.drawable.ic_payments) { navigator().push(WriteFormFragment.of(WriteKind.SUPPLIER_PAY, name, code)) }
+        val b3 = Ui.button(ctx, getString(R.string.sp_return), outlined = true, top = 6, icon = R.drawable.ic_undo) { navigator().push(WriteFormFragment.of(WriteKind.SUPPLIER_RETURN, name, code)) }
         h.addView(Ui.buttonRow(ctx, b1, b2, top = 0))
         h.addView(b3)
         docs = p?.docs.orEmpty()
         lp.empty.visibility = if (docs.isEmpty()) View.VISIBLE else View.GONE
         lp.adapter.submit(docs.map { d ->
-            Ui.Row(kindName(d.kind), getString(R.string.sp_doc_sub, d.number, Stamp.formatDateTime(d.stamp), d.lines.size), money2(d.som, d.usd), d.note.take(40))
+            Ui.Row(kindName(d.kind), getString(R.string.sp_doc_sub, d.number, Stamp.formatDateTime(d.stamp), d.lines.size), money2(d.som, d.usd), d.note.take(40), icon = docIcon(d.kind))
         })
     }
 

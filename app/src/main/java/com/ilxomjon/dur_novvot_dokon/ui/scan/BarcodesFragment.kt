@@ -52,7 +52,8 @@ class BarcodesFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.bc_how_title).setMessage(R.string.bc_how_text).setPositiveButton(R.string.close, null).show()
         }
         b.btnLearned.setOnClickListener { showLearned() }
-        b.btnLinkMode.setOnClickListener { navigator().push(ScanFragment.link()) }
+        // v3.12: kodlar ro'yxatga yig'iladi va bitta tugma bilan 1C'ga (Shtrix kod → 1C)
+        b.btnLinkMode.setOnClickListener { navigator().push(BarcodeBatchFragment()) }
         b.btnExport.setOnClickListener {
             val ctx = requireContext()
             if (repo.state.value.learned + repo.state.value.scaleLearned == 0) { snack(getString(R.string.bc_learned_none)); return@setOnClickListener }

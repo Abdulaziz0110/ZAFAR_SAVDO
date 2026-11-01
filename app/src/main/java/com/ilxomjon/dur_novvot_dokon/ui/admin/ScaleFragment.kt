@@ -21,9 +21,9 @@ class ScaleFragment : CodeFragment() {
         val p = page(R.string.sc_title)
         val c = p.content
         c.addView(Ui.hint(ctx, getString(R.string.sc_hint), 4))
-        c.addView(Ui.button(ctx, getString(R.string.sc_stock)) { send(false) })
+        c.addView(Ui.button(ctx, getString(R.string.sc_stock), icon = R.drawable.ic_scale) { send(false) })
         c.addView(Ui.hint(ctx, getString(R.string.sc_stock_hint)))
-        c.addView(Ui.button(ctx, getString(R.string.sc_clear), outlined = true, top = 16) {
+        c.addView(Ui.button(ctx, getString(R.string.sc_clear), outlined = true, top = 16, icon = R.drawable.ic_delete) {
             MaterialAlertDialogBuilder(ctx).setTitle(R.string.sc_clear).setMessage(R.string.sc_clear_confirm)
                 .setPositiveButton(R.string.sc_clear) { _, _ -> send(true) }.setNegativeButton(R.string.cancel, null).show()
         })

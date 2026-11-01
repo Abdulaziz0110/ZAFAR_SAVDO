@@ -37,20 +37,20 @@ class AutoFragment : MFragment() {
         c.addView(Ui.section(ctx, getString(R.string.au_work)))
         c.addView(Ui.switch(ctx, getString(R.string.au_work_on), p.workHours.on) { p.workHours = p.workHours.copy(on = it); changed() })
         tvWork = Ui.text(ctx, "", top = 6).also { c.addView(it) }
-        val bStart = Ui.button(ctx, getString(R.string.au_start), outlined = true) { pick(true) }
-        val bEnd = Ui.button(ctx, getString(R.string.au_end), outlined = true) { pick(false) }
+        val bStart = Ui.button(ctx, getString(R.string.au_start), outlined = true, icon = R.drawable.ic_calendar) { pick(true) }
+        val bEnd = Ui.button(ctx, getString(R.string.au_end), outlined = true, icon = R.drawable.ic_calendar) { pick(false) }
         c.addView(Ui.buttonRow(ctx, bStart, bEnd, top = 4))
         c.addView(Ui.hint(ctx, getString(R.string.au_final_hint)))
-        if (Build.VERSION.SDK_INT >= 31) c.addView(Ui.button(ctx, getString(R.string.au_exact), outlined = true) {
+        if (Build.VERSION.SDK_INT >= 31) c.addView(Ui.button(ctx, getString(R.string.au_exact), outlined = true, icon = R.drawable.ic_warning) {
             runCatching { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))) }
         })
         c.addView(Ui.section(ctx, getString(R.string.au_backup)))
         c.addView(Ui.switch(ctx, getString(R.string.au_backup_on), p.dailyBackup) { p.dailyBackup = it })
         tvBackup = Ui.hint(ctx, "", 4).also { c.addView(it) }
-        val bNow = Ui.button(ctx, getString(R.string.au_backup_now), outlined = true) {
+        val bNow = Ui.button(ctx, getString(R.string.au_backup_now), outlined = true, icon = R.drawable.ic_backup) {
             launchUi { MijozAuto.backupIfDue(ctx.applicationContext, force = true); renderBackup(); snack(p.lastBackupError.ifEmpty { getString(R.string.au_backup_done) }) }
         }
-        val bRestore = Ui.button(ctx, getString(R.string.au_restore), outlined = true) {
+        val bRestore = Ui.button(ctx, getString(R.string.au_restore), outlined = true, icon = R.drawable.ic_restore) {
             val f = MijozAuto.dailyFile(ctx)
             if (!f.isFile) { snack(getString(R.string.au_backup_never)); return@button }
             MaterialAlertDialogBuilder(ctx).setTitle(R.string.au_restore).setMessage(getString(R.string.au_restore_text, fmt(f.lastModified())))
@@ -110,13 +110,13 @@ class ReceiptExtrasFragment : MFragment() {
         c.addView(t1); c.addView(Ui.hint(ctx, getString(R.string.rx_sub_hint)))
         c.addView(t2); c.addView(Ui.hint(ctx, getString(R.string.rx_footer_hint)))
         c.addView(t3)
-        c.addView(Ui.button(ctx, getString(R.string.rx_save), top = 12) {
+        c.addView(Ui.button(ctx, getString(R.string.rx_save), top = 12, icon = R.drawable.ic_check) {
             p.receiptSub = e1.text?.toString()?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.take(3)?.joinToString("\n").orEmpty()
             p.receiptFooter = e2.text?.toString()?.trim().orEmpty().take(200)
             p.receiptThanks = e3.text?.toString()?.trim().orEmpty().take(120)
             snack(getString(R.string.rx_saved))
         })
-        c.addView(Ui.button(ctx, getString(R.string.rx_test), outlined = true) {
+        c.addView(Ui.button(ctx, getString(R.string.rx_test), outlined = true, icon = R.drawable.ic_print) {
             launchUi {
                 val labels = posLabels()
                 val sale = uz.imsoft.shared.pos.PosSale(0, uz.imsoft.shared.pos.Pos.stampOf(System.currentTimeMillis()), 0,

@@ -22,7 +22,7 @@ class ClientRequestsFragment : CodeFragment() {
     override fun build(inflater: LayoutInflater): View {
         val p = page(R.string.ad_requests)
         p.content.addView(Ui.hint(ctx, getString(R.string.cr_hint), 4))
-        p.content.addView(Ui.button(ctx, getString(R.string.sp_refresh), outlined = true) { launchUi { ServiceLocator.clientRequests.refresh() } })
+        p.content.addView(Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, icon = R.drawable.ic_sync) { launchUi { ServiceLocator.clientRequests.refresh() } })
         box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         p.content.addView(box)
         return p.root
@@ -46,14 +46,14 @@ class ClientRequestsFragment : CodeFragment() {
         if (r.pays.isEmpty()) box.addView(Ui.hint(ctx, getString(R.string.cr_none)))
         for (p in r.pays) {
             box.addView(Ui.item(ctx, p.clientName + " — " + som(p.req.som),
-                listOf(formatDateTime(p.req.at), methodName(p.req.method), p.req.by, p.req.note, st(p.req.status)).filter { it.isNotBlank() }.joinToString(" · ")) { pay(p) })
+                listOf(formatDateTime(p.req.at), methodName(p.req.method), p.req.by, p.req.note, st(p.req.status)).filter { it.isNotBlank() }.joinToString(" · "), icon = R.drawable.ic_payments) { pay(p) })
             box.addView(Ui.divider(ctx))
         }
         box.addView(Ui.section(ctx, getString(R.string.cr_edits)))
         if (r.edits.isEmpty()) box.addView(Ui.hint(ctx, getString(R.string.cr_none)))
         for (e in r.edits) {
             box.addView(Ui.item(ctx, e.clientName + " — " + getString(R.string.cr_edit_lines, e.req.lines.size),
-                listOf(formatDateTime(e.req.at), e.req.by, e.req.note, st(e.req.status)).filter { it.isNotBlank() }.joinToString(" · ")) { edit(e) })
+                listOf(formatDateTime(e.req.at), e.req.by, e.req.note, st(e.req.status)).filter { it.isNotBlank() }.joinToString(" · "), icon = R.drawable.ic_edit_note) { edit(e) })
             box.addView(Ui.divider(ctx))
         }
     }

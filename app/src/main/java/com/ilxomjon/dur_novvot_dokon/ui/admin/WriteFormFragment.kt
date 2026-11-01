@@ -57,12 +57,12 @@ class WriteFormFragment : CodeFragment() {
         c.addView(Ui.hint(ctx, getString(R.string.wf_hint), 4))
         c.addView(Ui.section(ctx, getString(if (kind == WriteKind.CLIENT_RETURN) R.string.wf_client else R.string.wf_supplier)))
         tvParty = Ui.title(ctx, "", 4).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true) { pickParty() })
+        c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() })
         if (isGoods) {
             c.addView(Ui.section(ctx, getString(R.string.wf_goods)))
             linesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             c.addView(linesBox)
-            c.addView(Ui.button(ctx, getString(R.string.wf_add)) { addLine() })
+            c.addView(Ui.button(ctx, getString(R.string.wf_add), icon = R.drawable.ic_add) { addLine() })
         } else {
             c.addView(Ui.section(ctx, getString(R.string.wf_amounts)))
             eCashSom = Ui.field(ctx, getString(R.string.wf_cash_som), Ui.NUMBER).also { c.addView(it.first) }.second
@@ -72,7 +72,7 @@ class WriteFormFragment : CodeFragment() {
         }
         eNote = Ui.field(ctx, getString(R.string.wf_note), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE).also { c.addView(it.first) }.second
         tvTotal = Ui.title(ctx, "", 12).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.wf_confirm), top = 12) { confirm() })
+        c.addView(Ui.button(ctx, getString(R.string.wf_confirm), top = 12, icon = R.drawable.ic_check) { confirm() })
         c.addView(Ui.hint(ctx, getString(R.string.wf_safety), 8))
         return p.root
     }

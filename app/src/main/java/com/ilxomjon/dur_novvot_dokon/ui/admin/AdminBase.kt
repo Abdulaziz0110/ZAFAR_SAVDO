@@ -74,6 +74,15 @@ abstract class CodeFragment : Fragment() {
         },
     )
 
+    /** v3.12: hujjat turi ikonkasi. */
+    protected fun docIcon(k: String): Int = when (k) {
+        OneCDoc.SALE, OneCDoc.SALE_MOBILE, OneCDoc.RETAIL -> R.drawable.ic_receipt
+        OneCDoc.CLIENT_RETURN, OneCDoc.SUPPLIER_RETURN -> R.drawable.ic_assignment_return
+        OneCDoc.RECEIPT -> R.drawable.ic_truck
+        OneCDoc.SUPPLIER_PAY -> R.drawable.ic_payments
+        else -> R.drawable.ic_list
+    }
+
     /** Hujjat tafsiloti (qatorlar) oynasi. */
     protected fun showDoc(d: OneCDoc) {
         val sb = StringBuilder()

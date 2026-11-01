@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 22
-        versionName = "3.10"
+        versionCode = 24
+        versionName = "3.12"
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {

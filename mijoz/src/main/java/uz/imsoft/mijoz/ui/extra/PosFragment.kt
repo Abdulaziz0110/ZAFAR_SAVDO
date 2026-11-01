@@ -85,14 +85,14 @@ class PosFragment : MFragment() {
         val c = data.customer(customerId)
         body.addView(Ui.section(ctx, getString(R.string.pos_client)))
         body.addView(Ui.item(ctx, c?.name ?: getString(R.string.pos_cash_client),
-            if (c != null) getString(R.string.pos_balance, som(data.balance(c.id))) else getString(R.string.pos_cash_hint)) { pickCustomer() })
+            if (c != null) getString(R.string.pos_balance, som(data.balance(c.id))) else getString(R.string.pos_cash_hint), icon = R.drawable.ic_person, tone = 1) { pickCustomer() })
         body.addView(Ui.section(ctx, getString(R.string.pos_goods)))
         if (lines.isEmpty()) body.addView(Ui.hint(ctx, getString(R.string.pos_no_goods)))
         lines.forEachIndexed { i, l ->
             body.addView(Ui.item(ctx, "${i + 1}) ${l.name}", "${fmtQty(l.qty)} × ${som(l.price)}", som(l.sum)) { editLine(i) })
         }
-        val bAdd = Ui.button(ctx, getString(R.string.pos_add)) { pickProduct() }
-        val bFree = Ui.button(ctx, getString(R.string.pos_add_free), outlined = true) { freeLine() }
+        val bAdd = Ui.button(ctx, getString(R.string.pos_add), icon = R.drawable.ic_add) { pickProduct() }
+        val bFree = Ui.button(ctx, getString(R.string.pos_add_free), outlined = true, icon = R.drawable.ic_edit) { freeLine() }
         body.addView(Ui.buttonRow(ctx, bAdd, bFree))
         val (tDisc, eDisc) = Ui.field(ctx, getString(R.string.pos_discount), Ui.NUMBER, if (discount > 0) plain(discount) else "")
         val (tPaid, ePaid) = Ui.field(ctx, getString(R.string.pos_paid_field), Ui.NUMBER, paidText)
@@ -114,8 +114,8 @@ class PosFragment : MFragment() {
                 override fun afterTextChanged(s: android.text.Editable?) { watcher(s?.toString().orEmpty()) }
             })
         }
-        val bSave = Ui.button(ctx, getString(R.string.pos_save_print)) { save(eNote, print = true) }
-        val bOnly = Ui.button(ctx, getString(R.string.pos_save), outlined = true) { save(eNote, print = false) }
+        val bSave = Ui.button(ctx, getString(R.string.pos_save_print), icon = R.drawable.ic_print) { save(eNote, print = true) }
+        val bOnly = Ui.button(ctx, getString(R.string.pos_save), outlined = true, icon = R.drawable.ic_check) { save(eNote, print = false) }
         body.addView(Ui.buttonRow(ctx, bSave, bOnly))
         body.addView(Ui.hint(ctx, getString(R.string.pos_local_hint), 8))
     }
@@ -241,14 +241,14 @@ class PosFragment : MFragment() {
     // ---------------- mijozlar ----------------
 
     private fun renderClients() {
-        body.addView(Ui.button(ctx, getString(R.string.pos_new_client)) { editCustomer(null) })
+        body.addView(Ui.button(ctx, getString(R.string.pos_new_client), icon = R.drawable.ic_add) { editCustomer(null) })
         val list = data.customers.sortedByDescending { data.balance(it.id) }
         if (list.isEmpty()) body.addView(Ui.hint(ctx, getString(R.string.pos_no_clients)))
         val owed = list.sumOf { data.balance(it.id).coerceAtLeast(0.0) }
         if (list.isNotEmpty()) body.addView(Ui.hint(ctx, getString(R.string.pos_clients_info, list.size, som(owed))))
         for (c in list) {
             val bal = data.balance(c.id)
-            body.addView(Ui.item(ctx, c.name, c.phone, if (bal != 0.0) som(bal) else "") { clientMenu(c) })
+            body.addView(Ui.item(ctx, c.name, c.phone, if (bal != 0.0) som(bal) else "", icon = R.drawable.ic_person) { clientMenu(c) })
             body.addView(Ui.divider(ctx))
         }
     }
@@ -304,10 +304,10 @@ class PosFragment : MFragment() {
             if (kind == 0) {
                 val s = d.sales.firstOrNull { it.id == id } ?: continue
                 val who = d.customer(s.customerId)?.name ?: getString(R.string.pos_cash_client)
-                body.addView(Ui.item(ctx, getString(R.string.pos_h_sale_row, s.number, who), Stamp.formatDateTime(st) + if (s.debt > 0) " · " + getString(R.string.pos_debt) + " " + som(s.debt) else "", som(s.total)) { saleMenu(s) })
+                body.addView(Ui.item(ctx, getString(R.string.pos_h_sale_row, s.number, who), Stamp.formatDateTime(st) + if (s.debt > 0) " · " + getString(R.string.pos_debt) + " " + som(s.debt) else "", som(s.total), icon = R.drawable.ic_receipt) { saleMenu(s) })
             } else {
                 val p = d.payments.firstOrNull { it.id == id } ?: continue
-                body.addView(Ui.item(ctx, getString(R.string.pos_h_pay_row, d.customer(p.customerId)?.name.orEmpty()), Stamp.formatDateTime(st), som(p.amount)) {
+                body.addView(Ui.item(ctx, getString(R.string.pos_h_pay_row, d.customer(p.customerId)?.name.orEmpty()), Stamp.formatDateTime(st), som(p.amount), icon = R.drawable.ic_payments) {
                     MaterialAlertDialogBuilder(ctx).setTitle(R.string.pos_pay_title).setMessage(som(p.amount) + "\n" + p.note)
                         .setPositiveButton(R.string.pos_delete) { _, _ -> confirmDelete { launchUi { Locator.pos.deletePayment(p.id) } } }
                         .setNegativeButton(R.string.close, null).show()
@@ -343,21 +343,21 @@ class PosFragment : MFragment() {
         val (from, to) = Pos.range(now(), reportDays)
         val r = Pos.report(from, to, data.sales, data.payments)
         val (card, col) = Ui.card(ctx)
-        col.addView(Ui.item(ctx, getString(R.string.pos_r_sales), getString(R.string.pos_r_count, r.sales), som(r.total)))
-        col.addView(Ui.item(ctx, getString(R.string.pos_r_paid), "", som(r.paidAtSale)))
-        col.addView(Ui.item(ctx, getString(R.string.pos_r_credit), "", som(r.onCredit)))
-        col.addView(Ui.item(ctx, getString(R.string.pos_r_payments), "", som(r.payments)))
+        col.addView(Ui.item(ctx, getString(R.string.pos_r_sales), getString(R.string.pos_r_count, r.sales), som(r.total), icon = R.drawable.ic_receipt))
+        col.addView(Ui.item(ctx, getString(R.string.pos_r_paid), "", som(r.paidAtSale), icon = R.drawable.ic_cash_in))
+        col.addView(Ui.item(ctx, getString(R.string.pos_r_credit), "", som(r.onCredit), icon = R.drawable.ic_request_quote, tone = 3))
+        col.addView(Ui.item(ctx, getString(R.string.pos_r_payments), "", som(r.payments), icon = R.drawable.ic_payments))
         col.addView(Ui.divider(ctx))
-        col.addView(Ui.item(ctx, getString(R.string.pos_r_cash), "", som(r.cashIn)))
+        col.addView(Ui.item(ctx, getString(R.string.pos_r_cash), "", som(r.cashIn), icon = R.drawable.ic_wallet, tone = 1))
         body.addView(card)
         if (r.top.isNotEmpty()) {
             body.addView(Ui.section(ctx, getString(R.string.pos_r_top)))
-            r.top.forEach { (n, v) -> body.addView(Ui.item(ctx, n, "", som(v))) }
+            r.top.forEach { (n, v) -> body.addView(Ui.item(ctx, n, "", som(v), icon = R.drawable.ic_trending)) }
         }
         val debtors = data.customers.map { it to data.balance(it.id) }.filter { it.second > 0 }.sortedByDescending { it.second }
         if (debtors.isNotEmpty()) {
             body.addView(Ui.section(ctx, getString(R.string.pos_r_debtors)))
-            debtors.take(30).forEach { (c, b) -> body.addView(Ui.item(ctx, c.name, c.phone, som(b)) { clientMenu(c) }) }
+            debtors.take(30).forEach { (c, b) -> body.addView(Ui.item(ctx, c.name, c.phone, som(b), icon = R.drawable.ic_person, tone = 3) { clientMenu(c) }) }
         }
     }
 }

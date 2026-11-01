@@ -38,8 +38,8 @@ class OneCSalesFragment : CodeFragment() {
         val h = lp.header
         h.addView(Ui.search(ctx, getString(R.string.oc_search)) { query = it.trim(); render() }.first)
         h.addView(Ui.toggle(ctx, listOf(getString(R.string.oc_f_all), getString(R.string.oc_f_sales), getString(R.string.oc_f_retail), getString(R.string.oc_f_returns)), 0, 6) { kindIdx = it; render() })
-        val b30 = Ui.button(ctx, getString(R.string.oc_last30), outlined = true, top = 6) { request(30) }
-        val bRange = Ui.button(ctx, getString(R.string.oc_range), outlined = true, top = 6) { pickRange() }
+        val b30 = Ui.button(ctx, getString(R.string.oc_last30), outlined = true, top = 6, icon = R.drawable.ic_calendar) { request(30) }
+        val bRange = Ui.button(ctx, getString(R.string.oc_range), outlined = true, top = 6, icon = R.drawable.ic_calendar) { pickRange() }
         h.addView(Ui.buttonRow(ctx, b30, bRange, top = 0))
         tvInfo = Ui.hint(ctx, "", 4).also { h.addView(it) }
         tvTotal = Ui.text(ctx, "", com.google.android.material.R.style.TextAppearance_Material3_TitleSmall, 2).also { h.addView(it) }
@@ -71,6 +71,7 @@ class OneCSalesFragment : CodeFragment() {
                 d.party.ifEmpty { kindName(d.kind) },
                 getString(R.string.oc_row_sub, kindName(d.kind), d.number, Stamp.formatDateTime(d.stamp), d.lines.size),
                 money2(if (d.kind == OneCDoc.CLIENT_RETURN) -d.som else d.som, if (d.kind == OneCDoc.CLIENT_RETURN) -d.usd else d.usd),
+                icon = docIcon(d.kind), tone = if (d.kind == OneCDoc.CLIENT_RETURN) 2 else 0,
             )
         })
         tvInfo.text = buildString {

@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 3.10 (versionCode 22) + Savdo Mijoz 1.13 (versionCode 14), 2026-11-01
+# Holat — Savdo Agent / Savdo Admin 3.12 (versionCode 24) + Savdo Mijoz 1.14 (versionCode 15), 2026-11-01
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,29 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## v3.12 — Shtrix kod → 1C, tez yozish, Boshqaruv'da hamma 1C yozuvlari, ikonkalar
+| Narsa | Holat |
+|---|---|
+| "Shtrix kod → 1C": ko'p kod skanerlash/yozish, tovar tanlash, bitta tugma (Admin va Agent) | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓; telefonda sinash kerak) |
+| Agent → Admin ro'yxat birdaniga (relay "bcs") | IMPLEMENTED-UNVERIFIED |
+| Kompyuter: Firebase oqimi (SSE) — so'rov kelishi bilan darhol uyg'onadi | VERIFIED (oqim tahlili testi) / haqiqiy Firebase'da IMPLEMENTED-UNVERIFIED |
+| Kompyuter: navbat bitta 1C ulanishida, hisobot tuzilayotganda ham orada bajariladi | VERIFIED (test_onec_write2: 1 ulanish, mavjud ulanish yopilmaydi) |
+| Admin: natija 2.5 soniyada tekshiriladi (bitta so'rov bilan) | IMPLEMENTED-UNVERIFIED |
+| Mijozdan to'lov (Оплата_Клента), kassa kirim/chiqim (КассаПриход/КассаРасход) | VERIFIED (soxta 1C testi, 1C proveden kodi bo'yicha) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Tovar kartochkasi: 1-4 narx, kirim narxi, PLU (band PLU tekshiriladi), nomi; bekor qilish eski qiymatni qaytaradi | VERIFIED (soxta 1C) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Yangi tovar (namuna tovardan nusxa, nom/shtrix dublikati tekshiriladi) | VERIFIED (soxta 1C) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Kassa moddalari ro'yxati kompyuterdan (Справочник.Операции) | VERIFIED (test) |
+| Tovar o'zgargach kodlar/narxlar telefonlarga darhol | IMPLEMENTED-UNVERIFIED |
+| Ikonkalar: Boshqaruv, ro'yxatlar, tugmalar (Admin, Agent, Mijoz) — Material Icons (Apache 2.0) | VERIFIED (kompilyatsiya) / ko'rinishi telefonda tekshiriladi |
+| Tovarni hisobdan chiqarish (СписанияТоваров) | NOT-IMPLEMENTED — 1C'dagi o'tkazish kodida xato bor (Стр.ОстКол yo'q rekvizit), dollarli tovarda 1C o'zi xato beradi |
+
+## v3.11
+| Narsa | Holat |
+|---|---|
+| VIBRATE ruxsati qo'shildi (skanerda tebranish oldin jim ishlamas edi; lint xatosi) | VERIFIED (manifest, lint xatosi sababi) / tebranish telefonda IMPLEMENTED-UNVERIFIED |
+| iPhone agent Cloudflare Pages'ga (zafar-savdo-agent.pages.dev) | VERIFIED (build #46 web bosqichi yashil) |
+| Workflow: Node 24 versiyalari (checkout v5, setup-java v5, setup-android v4, upload v6, download v7) | IMPLEMENTED-UNVERIFIED (keyingi build) |
 
 ## v3.10 — iPhone agent (veb) va tarozi
 | Narsa | Holat |

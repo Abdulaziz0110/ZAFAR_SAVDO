@@ -56,7 +56,9 @@ class ScanFragment : Fragment() {
     private val b get() = _b!!
     private val testMode get() = arguments?.getBoolean(ARG_TEST) == true
     /** Kod yozish rejimi: skanerlangan kod ro'yxatdan tanlangan tovarga bog'lanadi (savatchaga qo'shilmaydi). */
-    private val linkMode get() = arguments?.getBoolean(ARG_LINK) == true
+    private val linkMode get() = arguments?.getBoolean(ARG_LINK) == true || batchMode
+    /** v3.12 "Shtrix kod → 1C": kod + tanlangan tovar ro'yxatga (1C'ga bitta tugma bilan, BarcodeBatchFragment). */
+    private val batchMode get() = arguments?.getBoolean(ARG_BATCH) == true
     /** Narx yorlig'i rejimi: skanerlangan tovar yorliqlar ro'yxatiga qo'shiladi (savatchaga emas). */
     private val labelMode get() = arguments?.getBoolean(ARG_LABEL) == true
     private var lastLabel: String? = null
@@ -96,6 +98,7 @@ class ScanFragment : Fragment() {
         b.btnPause.setOnClickListener { setPaused(!paused) }
         b.btnResult.setOnClickListener { onResultButton() }
         b.btnCart.setOnClickListener {
+            if (batchMode) { navigator().pop(); return@setOnClickListener }
             if (linkMode) { exportCsv(); return@setOnClickListener }
             if (labelMode) { navigator().pop(); return@setOnClickListener }
             val nav = navigator()
@@ -121,6 +124,14 @@ class ScanFragment : Fragment() {
             b.btnCart.setText(R.string.link_export)
             b.btnCart.setIconResource(R.drawable.ic_share)
             launchOnStarted { ServiceLocator.barcodes.state.collect { renderLinkBar() } }
+        }
+        if (batchMode) {
+            b.tvLive.setText(R.string.bb_live)
+            b.tvResult.setText(R.string.bb_scan_hint)
+            b.btnCart.setText(R.string.bb_to_list)
+            b.btnCart.setIconResource(R.drawable.ic_list)
+            launchOnStarted { ServiceLocator.barcodeBatch.items.collect { renderLinkBar() } }
+            viewLifecycleOwner.lifecycleScope.launch { ServiceLocator.barcodeBatch.load() }
         }
         if (labelMode) {
             b.tvLive.setText(R.string.lb_scan_live)
@@ -330,7 +341,10 @@ class ScanFragment : Fragment() {
             when (val s = ServiceLocator.barcodes.resolve(text)) {
                 is BarcodeRepository.Scan.Found -> {
                     ScanUi.feedback(requireContext(), true)
-                    if (linkMode) {
+                    if (batchMode) {
+                        rebind = null
+                        showResult(Mode.INFO, getString(R.string.link_known, s.product.name), s.raw, null)
+                    } else if (linkMode) {
                         // Allaqachon bog'langan: ko'rsatamiz; oddiy kod bo'lsa — "O'zgartirish" bilan boshqa tovarga bog'lash mumkin
                         rebind = if (ServiceLocator.barcodes.scale.parse(text) == null) s.raw else null
                         showResult(Mode.INFO, getString(R.string.link_known, s.product.name), s.raw, if (rebind != null) getString(R.string.link_change) else null)
@@ -342,8 +356,14 @@ class ScanFragment : Fragment() {
                     enqueue(BarcodeRepository.Scan.Unknown(BarcodeResolver.Result.Unknown(s.raw, null, null), null))
                 }
                 is BarcodeRepository.Scan.Unknown -> {
-                    ScanUi.feedback(requireContext(), false)
-                    enqueue(s)
+                    val inList = if (batchMode) ServiceLocator.barcodeBatch.items.value.firstOrNull { it.code == com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch.clean(s.result.raw) } else null
+                    if (inList != null) {
+                        ScanUi.feedback(requireContext(), true)
+                        showResult(Mode.INFO, getString(R.string.bb_already, inList.name), s.result.raw, null)
+                    } else {
+                        ScanUi.feedback(requireContext(), false)
+                        enqueue(s)
+                    }
                 }
             }
         }
@@ -391,6 +411,16 @@ class ScanFragment : Fragment() {
     /** Ro'yxatdan bosilgan tovar topilmagan kodga bog'lanadi. @return true — bog'landi (oddiy qo'shish bajarilmaydi). */
     private fun assignPending(p: Product): Boolean {
         val u = pending.removeFirstOrNull() ?: return false
+        if (batchMode) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                ServiceLocator.barcodeBatch.put(u.result.raw, p.id, p.name)
+                ScanUi.feedback(requireContext(), true)
+                showResult(Mode.OK, getString(R.string.bb_added, p.name), u.result.raw, null)
+                _b?.edtSearch?.setText("")
+                if (pending.isNotEmpty()) mainHandlerPostShowPending()
+            }
+            return true
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             ServiceLocator.barcodes.learn(u.result, p.id)
             ScanUi.feedback(requireContext(), true)
@@ -437,6 +467,13 @@ class ScanFragment : Fragment() {
 
     private fun renderLinkBar() {
         val bb = _b ?: return
+        if (batchMode) {
+            val n = ServiceLocator.barcodeBatch.items.value.size
+            bb.tvCartCount.text = getString(R.string.bb_count, n)
+            bb.tvTotal.text = getString(R.string.bb_bar_hint)
+            bb.btnCart.isEnabled = true
+            return
+        }
         val st = ServiceLocator.barcodes.state.value
         bb.tvCartCount.text = getString(R.string.link_session, linkedNow)
         bb.tvTotal.text = getString(R.string.link_total, st.learned + st.scaleLearned)
@@ -526,5 +563,7 @@ class ScanFragment : Fragment() {
         fun test() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_TEST, true) } }
         /** Do'kon bo'ylab yurib, bazada yo'q shtrix kodlarni tovarlarga bog'lash. */
         fun link() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_LINK, true) } }
+        private const val ARG_BATCH = "batch"
+        fun batch() = ScanFragment().apply { arguments = Bundle().apply { putBoolean(ARG_BATCH, true) } }
     }
 }

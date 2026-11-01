@@ -186,7 +186,7 @@ class SettingsFragment : Fragment() {
         if (column.findViewWithTag<View>("au_card") == null) {
             val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
             card.tag = "au_card"
-            col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub)) { navigator().push(AutoUpdateFragment()) })
+            col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub), icon = R.drawable.ic_download) { navigator().push(AutoUpdateFragment()) })
             column.addView(card, column.indexOfChild(first), ViewGroup.MarginLayoutParams(first.layoutParams).apply {
                 (first.layoutParams as? ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
             })
@@ -197,7 +197,7 @@ class SettingsFragment : Fragment() {
         if (advanced.isEmpty()) return
         var open = false
         advanced.forEach { it.show(false) }
-        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12) { b ->
+        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12, icon = R.drawable.ic_expand_more) { b ->
             open = !open
             advanced.forEach { it.show(open) }
             (b as? com.google.android.material.button.MaterialButton)?.text = getString(if (open) R.string.st_less else R.string.st_more)

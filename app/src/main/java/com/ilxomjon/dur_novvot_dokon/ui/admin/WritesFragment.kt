@@ -26,8 +26,8 @@ class WritesFragment : CodeFragment() {
     override fun build(inflater: LayoutInflater): View {
         lp = listPage(R.string.wr_title) { i -> shown.getOrNull(i)?.let { details(it) } }
         tvInfo = Ui.hint(ctx, getString(R.string.wr_hint), 4).also { lp.header.addView(it) }
-        val bNew = Ui.button(ctx, getString(R.string.ad_new_receipt), top = 6) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, "", "")) }
-        val bRefresh = Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, top = 6) { launchUi { ServiceLocator.onec.refreshResults() } }
+        val bNew = Ui.button(ctx, getString(R.string.ad_new_receipt), top = 6, icon = R.drawable.ic_inventory) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, "", "")) }
+        val bRefresh = Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, top = 6, icon = R.drawable.ic_sync) { launchUi { ServiceLocator.onec.refreshResults() } }
         lp.header.addView(Ui.buttonRow(ctx, bNew, bRefresh, top = 0))
         lp.empty.text = getString(R.string.wr_empty)
         return lp.root
@@ -52,9 +52,35 @@ class WritesFragment : CodeFragment() {
             WriteKind.SUPPLIER_RETURN -> R.string.wf_sreturn
             WriteKind.CLIENT_RETURN -> R.string.wf_creturn
             WriteKind.BARCODE -> R.string.wr_barcode
+            WriteKind.CLIENT_PAY -> R.string.of_client_pay
+            WriteKind.CASH_IN -> R.string.of_cash_in
+            WriteKind.CASH_OUT -> R.string.of_cash_out
+            WriteKind.GOODS_EDIT -> R.string.of_goods_edit
+            WriteKind.NEW_GOODS -> R.string.of_new_goods
             else -> R.string.wr_undo
         },
     )
+
+    private fun icon(w: WriteItem): Int = when (w.req.kind) {
+        WriteKind.RECEIPT -> R.drawable.ic_truck
+        WriteKind.SUPPLIER_PAY -> R.drawable.ic_payments
+        WriteKind.SUPPLIER_RETURN, WriteKind.CLIENT_RETURN -> R.drawable.ic_assignment_return
+        WriteKind.BARCODE -> R.drawable.ic_barcode
+        WriteKind.CLIENT_PAY -> R.drawable.ic_wallet
+        WriteKind.CASH_IN -> R.drawable.ic_cash_in
+        WriteKind.CASH_OUT -> R.drawable.ic_cash_out
+        WriteKind.GOODS_EDIT -> R.drawable.ic_price
+        WriteKind.NEW_GOODS -> R.drawable.ic_add_box
+        else -> R.drawable.ic_undo
+    }
+
+    /** Holat rangi: 0 — kutilmoqda, 1 — kiritildi, 3 — xato. */
+    private fun tone(w: WriteItem): Int = when {
+        w.result == null -> 0
+        w.result.ok && w.result.state != WriteResult.UNDONE -> 1
+        w.result.ok -> 2
+        else -> 3
+    }
 
     private fun status(w: WriteItem): String {
         val r = w.result
@@ -76,10 +102,12 @@ class WritesFragment : CodeFragment() {
             val what = when (w.req.kind) {
                 WriteKind.BARCODE -> w.req.party + " · " + w.req.barcode
                 WriteKind.UNDO -> w.req.target
+                WriteKind.CASH_IN, WriteKind.CASH_OUT -> w.req.op
+                WriteKind.NEW_GOODS -> w.req.fields[uz.imsoft.shared.onec.GoodsField.NAME].orEmpty()
                 else -> w.req.party
             }
-            Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w),
-                if (w.req.kind == WriteKind.BARCODE || w.req.kind == WriteKind.UNDO) "" else money2(w.req.totalSom, w.req.totalUsd))
+            val noMoney = w.req.kind == WriteKind.BARCODE || w.req.kind == WriteKind.UNDO || w.req.kind in WriteKind.GOODS
+            Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w), if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
         })
     }
 
@@ -91,7 +119,13 @@ class WritesFragment : CodeFragment() {
             val price = if (l.priceSom > 0) som(l.priceSom) else usd(l.priceUsd)
             sb.append("${i + 1}) ${l.name} — ${fmtQty(l.qty)} × $price\n")
         }
-        if (w.req.kind == WriteKind.SUPPLIER_PAY) sb.append(money2(w.req.totalSom, w.req.totalUsd)).append('\n')
+        if (w.req.kind in WriteKind.MONEY) sb.append(money2(w.req.totalSom, w.req.totalUsd)).append('\n')
+        if (w.req.op.isNotEmpty()) sb.append(w.req.op).append('\n')
+        val names = mapOf(
+            "p1" to R.string.of_p1, "p2" to R.string.of_p2, "p3" to R.string.of_p3, "p4" to R.string.of_p4, "pin" to R.string.of_cost,
+            "plu" to R.string.of_plu, "nm" to R.string.of_name, "bc" to R.string.of_barcode,
+        )
+        for ((k, v) in w.req.fields) names[k]?.let { sb.append(getString(it)).append(": ").append(v).append('\n') }
         if (w.req.barcode.isNotEmpty()) sb.append(w.req.barcode).append('\n')
         if (w.req.note.isNotEmpty()) sb.append(w.req.note).append('\n')
         val b = MaterialAlertDialogBuilder(ctx).setTitle(title(w)).setMessage(sb.toString().trim()).setNegativeButton(R.string.close, null)

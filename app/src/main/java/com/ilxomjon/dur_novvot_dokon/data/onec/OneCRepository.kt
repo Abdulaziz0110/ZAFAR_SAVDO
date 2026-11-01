@@ -3,6 +3,7 @@ package com.ilxomjon.dur_novvot_dokon.data.onec
 import android.content.Context
 import com.ilxomjon.dur_novvot_dokon.data.share.ShareStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,9 @@ class OneCRepository(private val context: Context, private val store: ShareStore
     val state: StateFlow<OneCState> = _state.asStateFlow()
     private val mutex = Mutex()
     @Volatile private var loaded = false
+    /** v3.12: yuborilgandan keyin natijani tez kuzatish uchun (ServiceLocator.appScope). */
+    var scope: kotlinx.coroutines.CoroutineScope? = null
+    private var watchJob: kotlinx.coroutines.Job? = null
 
     private fun dir() = File(context.filesDir, "onec").apply { mkdirs() }
     private fun cloud() = CloudDb(store.dbUrl, store.secret)
@@ -182,7 +186,36 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         val sent = item.copy(sendError = err?.message.orEmpty().take(200).ifEmpty { if (err != null) err.javaClass.simpleName else "" })
         update { l -> l.map { if (it.req.id == item.req.id) sent else it } }
         if (err != null && err is kotlinx.coroutines.CancellationException) throw err
+        if (err == null) watch()
         return sent
+    }
+
+    /**
+     * v3.12: kompyuter so'rovni darhol oladi (Firebase oqimi) — natija ham tez ko'rinsin: 3 daqiqagacha har 2.5 soniyada
+     * tekshiriladi (javob kelmaganlar qolguncha). Ilova yopilsa — odatdagi 1 daqiqalik tekshiruv qoladi.
+     */
+    fun watch() {
+        val sc = scope ?: return
+        if (watchJob?.isActive == true) return
+        watchJob = sc.launch(Dispatchers.IO) {
+            val until = System.currentTimeMillis() + 180_000L
+            while (System.currentTimeMillis() < until) {
+                kotlinx.coroutines.delay(2_500L)
+                runCatching { refreshResults() }
+                if (_state.value.writes.none { it.result == null && it.sendError.isEmpty() }) break
+            }
+        }
+    }
+
+    /** v3.12: bir nechta so'rov birdaniga (shtrix kodlar ro'yxati). @return yuborilmay qolganlar soni. */
+    suspend fun submitAll(reqs: List<WriteRequest>, by: String): Int {
+        load()
+        var failed = 0
+        for (r in reqs) {
+            if (r.problem() != null) { failed++; continue }
+            if (submit(r, by).sendError.isNotEmpty()) failed++
+        }
+        return failed
     }
 
     /** Yuborilmay qolganlarni qayta yuboradi. */
@@ -213,9 +246,19 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         var changed = 0
         val results = HashMap<String, WriteResult>()
         withContext(Dispatchers.IO) {
-            for (w in want) {
-                val v = runCatching { db.get("wr/$inbox/${w.req.id}") }.getOrNull() ?: continue
-                WriteCodec.resultFromCloud(w.req.id, v)?.let { results[w.req.id] = it }
+            // v3.12: bitta so'rov bilan (kalit bo'yicha oraliq) — 50 ta shtrix kod bo'lsa ham 50 marta emas
+            val ids = want.map { it.req.id }.toSet()
+            val range = if (want.size > 2) runCatching {
+                @Suppress("UNCHECKED_CAST")
+                db.get("wr/$inbox", mapOf("orderBy" to "\"\$key\"", "startAt" to "\"" + ids.min() + "\""), timeoutMs = 30_000) as? Map<String, Any?>
+            }.getOrNull() else null
+            if (range != null) {
+                for ((k, v) in range) if (k in ids) WriteCodec.resultFromCloud(k, v)?.let { results[k] = it }
+            } else {
+                for (w in want) {
+                    val v = runCatching { db.get("wr/$inbox/${w.req.id}") }.getOrNull() ?: continue
+                    WriteCodec.resultFromCloud(w.req.id, v)?.let { results[w.req.id] = it }
+                }
             }
         }
         update { l ->

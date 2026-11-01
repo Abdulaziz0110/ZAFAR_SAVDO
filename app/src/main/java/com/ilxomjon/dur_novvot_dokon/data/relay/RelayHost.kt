@@ -47,6 +47,8 @@ class RelayHost(
         suspend fun mirrorPayment(storeId: String, cash: Double, transfer: Double, click: Double, note: String, key: String) = Unit
         /** v3.2: agent tovarga yangi shtrix kod bog'ladi — Admin 1C'ga yozish navbatiga qo'yadi. */
         suspend fun barcode(productId: String, name: String, code: String): Boolean = false
+        /** v3.12: "Shtrix kod → 1C" ro'yxati birdaniga: (tovar id, kod). @return navbatga qo'yilganlar soni. */
+        suspend fun barcodes(items: List<Pair<String, String>>): Int = 0
         /** v3.10: 1- va 2-narx (so'm, 1C'dan) — iPhone (veb) agentlar uchun: tovar id -> [1-narx, 2-narx]. */
         fun level12(productIds: List<String>): Map<String, List<Double>> = emptyMap()
     }
@@ -197,6 +199,12 @@ class RelayHost(
             "report" -> server.fetchReport(o.str("a"), o.str("p"))
             "time" -> server.serverTimeMillis()
             "bc" -> hooks.barcode(o.str("i"), o.str("n"), o.str("c"))
+            "bcs" -> hooks.barcodes(o.arr("l").mapNotNull { x ->
+                val l = x as? List<Any?> ?: return@mapNotNull null
+                val id = l.getOrNull(0)?.toString().orEmpty()
+                val code = l.getOrNull(1)?.toString().orEmpty()
+                if (id.isEmpty() || code.isEmpty()) null else id to code
+            }.take(300))
             else -> throw IllegalArgumentException("unknown_op")
         }
     }

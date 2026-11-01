@@ -3,13 +3,9 @@
 Android agentning "Admin orqali" rejimi bilan bir xil: kirish, katalog (4 narx), savdo, qaytarish, to'lov, qarz, hisobot,
 1C tarixi. Mac va Apple to'lovi kerak emas.
 
-## Joylash (bir marta)
-**GitHub Pages** (repo ochiq — public bo'lsa): GitHub ▸ repo ▸ Settings ▸ Pages ▸ Source: **GitHub Actions**.
-Keyingi build'dan keyin manzil Actions ▸ "pages" bosqichida chiqadi (masalan `https://<login>.github.io/<repo>/`).
-
-**Repo yopiq (private) bo'lsa** — bepul Cloudflare Pages: dash.cloudflare.com ▸ Workers & Pages ▸ Create ▸ Pages ▸
-Connect to Git ▸ shu repo ▸ Build command: bo'sh, Build output directory: `web/agent` ▸ Save and Deploy.
-Har ZIP yuklanganda o'zi yangilanadi.
+## Joylash
+Workflow har build'da `web/agent` ni **Cloudflare Pages**'ga chiqaradi: https://zafar-savdo-agent.pages.dev
+(GitHub secret'lari: CLOUDFLARE_API_TOKEN — Account ▸ Cloudflare Pages ▸ Edit, CLOUDFLARE_ACCOUNT_ID).
 
 ## iPhone'ga o'rnatish
 1. Manzilni **Safari**'da oching.

@@ -38,7 +38,7 @@ class RequestsFragment : MFragment() {
         })
         val (tNote, eNote) = Ui.field(ctx, getString(R.string.rq_note))
         c.addView(tNote)
-        c.addView(Ui.button(ctx, getString(R.string.rq_send)) {
+        c.addView(Ui.button(ctx, getString(R.string.rq_send), icon = R.drawable.ic_check) {
             val v = eSum.text?.toString().orEmpty().replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
             if (v <= 0.0) { snack(getString(R.string.rq_err_sum)); return@button }
             MaterialAlertDialogBuilder(ctx).setTitle(R.string.rq_confirm_title).setMessage(getString(R.string.rq_confirm, som(v)))
@@ -54,7 +54,7 @@ class RequestsFragment : MFragment() {
                 .setNegativeButton(R.string.cancel, null).show()
         })
         c.addView(Ui.section(ctx, getString(R.string.rq_mine)))
-        c.addView(Ui.button(ctx, getString(R.string.rq_refresh), outlined = true) { reload() })
+        c.addView(Ui.button(ctx, getString(R.string.rq_refresh), outlined = true, icon = R.drawable.ic_sync) { reload() })
         box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         c.addView(box)
         return p.root
@@ -79,12 +79,12 @@ class RequestsFragment : MFragment() {
             box.removeAllViews()
             if (pays.isEmpty() && edits.isEmpty()) box.addView(Ui.hint(ctx, getString(R.string.rq_none)))
             for (p in pays) {
-                box.addView(Ui.item(ctx, getString(R.string.rq_pay_row, som(p.som)), listOf(fmt(p.at), p.note, st(p.status)).filter { it.isNotBlank() }.joinToString(" · ")) { payDetails(p) })
+                box.addView(Ui.item(ctx, getString(R.string.rq_pay_row, som(p.som)), listOf(fmt(p.at), p.note, st(p.status)).filter { it.isNotBlank() }.joinToString(" · "), icon = R.drawable.ic_payments) { payDetails(p) })
                 box.addView(Ui.divider(ctx))
             }
             for (e in edits) {
                 val docAt = e.doc.substringBefore('|').toLongOrNull()?.let { Stamp.formatDateTime(it) }.orEmpty()
-                box.addView(Ui.item(ctx, getString(R.string.rq_edit_row, docAt), listOf(fmt(e.at), e.note, st(e.status)).filter { it.isNotBlank() }.joinToString(" · ")))
+                box.addView(Ui.item(ctx, getString(R.string.rq_edit_row, docAt), listOf(fmt(e.at), e.note, st(e.status)).filter { it.isNotBlank() }.joinToString(" · "), icon = R.drawable.ic_edit_note))
                 box.addView(Ui.divider(ctx))
             }
         }

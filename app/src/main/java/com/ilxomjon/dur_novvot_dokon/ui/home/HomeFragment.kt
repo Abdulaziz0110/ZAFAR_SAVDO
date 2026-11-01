@@ -41,6 +41,7 @@ class HomeFragment : Fragment() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_sync -> { vm.sync(); true }
+                R.id.action_barcodes -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); true }
                 R.id.action_settings -> { navigator().push(SettingsFragment()); true }
                 else -> false
             }
@@ -104,7 +105,7 @@ class HomeFragment : Fragment() {
         val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
         card.tag = "admin_card"
         val badge = uz.imsoft.shared.android.Ui.hint(ctx, "", 0)
-        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.ad_title), getString(R.string.ad_card_sub)) {
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.ad_title), getString(R.string.ad_card_sub), icon = R.drawable.ic_tune, tone = 1) {
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment())
         })
         col.addView(badge)

@@ -5,7 +5,10 @@ Admin -> 1C yozish ("Tasdiqlab kiritish", v3.2). Faqat Admin ilovasida egasi TAS
 
   w/{inbox}/{id} = {at, k, by, p}   k: in — kirim (Поступления), sp — ta'minotchiga to'lov (ЮкБерувчигаТулов),
                                        rs — ta'minotchiga qaytarish, rc — mijoz qaytargan tovar, bc — shtrix kod,
-                                       undo — oldingi yozuvni bekor qilish (o'chirish belgisi)
+                                       v3.12: cp — mijozdan to'lov (Оплата_Клента), ci / ce — kassa kirim / chiqim
+                                       (КассаПриход / КассаРасход), ge — tovar kartochkasi (narx 1-4, kirim narxi, PLU, nomi),
+                                       ng — yangi tovar (namuna tovardan nusxa, Товары),
+                                       undo — oldingi yozuvni bekor qilish (o'chirish belgisi; ge — eski qiymatlar tiklanadi)
   natija -> wr/{inbox}/{id} = {at, ok, st, no, ref, e}
 
 Xavfsizlik:
@@ -25,8 +28,12 @@ import shutil
 
 log = logging.getLogger("onec_export")
 
-KINDS = {"in", "sp", "rs", "rc", "bc", "undo"}
-DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента"}
+KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "undo"}
+DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
+          "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
+# ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
+GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc"}
+PRICE_KEYS = ("p1", "p2", "p3", "p4", "pin")
 KEEP_BACKUPS = 7
 
 
@@ -65,11 +72,23 @@ def parse_request(rid, item):
             return float(p.get(key) or 0)
         except (TypeError, ValueError):
             return 0.0
+    f = p.get("f") if isinstance(p.get("f"), dict) else {}
     return {
         "id": rid, "k": k, "by": str(item.get("by") or ""), "party": str(p.get("c") or "").strip(), "party_code": str(p.get("cc") or "").strip(),
         "note": str(p.get("n") or "")[:300], "lines": lines, "ns": g("ns"), "nu": g("nu"), "ps": g("ps"), "pu": g("pu"),
+        "ks": g("ks"), "ku": g("ku"), "ds": g("ds"), "du": g("du"),
         "bc": str(p.get("bc") or "").strip(), "target": str(p.get("t") or "").strip(),
+        "op": str(p.get("op") or "").strip(), "op_code": str(p.get("opc") or "").strip(),
+        "f": {str(a): b for a, b in f.items() if str(a) in GOODS_FIELDS},
     }
+
+
+def _fnum(v):
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return x if x == x else None  # NaN emas
 
 
 def problem(req):
@@ -95,6 +114,35 @@ def problem(req):
             return "shtrix kod noto'g'ri"
         if not req["party"] and not req["party_code"]:
             return "tovar ko'rsatilmagan"
+    elif k == "cp":
+        if not req["party"] and not req["party_code"]:
+            return "mijoz ko'rsatilmagan"
+        vals = [req[x] for x in ("ns", "nu", "ps", "pu", "ks", "ku", "ds", "du")]
+        if min(vals) < 0 or sum(vals) <= 0:
+            return "summa noto'g'ri"
+    elif k in ("ci", "ce"):
+        if not req["op"] and not req["op_code"]:
+            return "kassa moddasi ko'rsatilmagan"
+        vals = [req[x] for x in ("ns", "nu", "ps", "pu", "ks")]
+        if min(vals) < 0 or sum(vals) <= 0:
+            return "summa noto'g'ri"
+    elif k in ("ge", "ng"):
+        f = req["f"]
+        if not req["party"] and not req["party_code"]:
+            return "tovar ko'rsatilmagan" if k == "ge" else "namuna tovar ko'rsatilmagan"
+        if k == "ge" and not any(x in f for x in ("p1", "p2", "p3", "p4", "pin", "plu", "nm")):
+            return "o'zgarish yo'q"
+        for x in PRICE_KEYS:
+            if x in f and (_fnum(f[x]) is None or _fnum(f[x]) < 0):
+                return "narx noto'g'ri"
+        if "plu" in f and (_fnum(f["plu"]) is None or not 0 <= _fnum(f["plu"]) <= 99999 or _fnum(f["plu"]) != int(_fnum(f["plu"]))):
+            return "PLU noto'g'ri (0-99999)"
+        if "nm" in f and not 2 <= len(str(f["nm"]).strip()) <= 150:
+            return "tovar nomi noto'g'ri"
+        if k == "ng" and not str(f.get("nm") or "").strip():
+            return "yangi tovar nomi yo'q"
+        if str(f.get("bc") or "").strip() and not re.fullmatch(r"[0-9A-Za-z]{4,40}", str(f["bc"]).strip()):
+            return "shtrix kod noto'g'ri"
     elif k == "undo":
         if not req["target"]:
             return "bekor qilinadigan yozuv ko'rsatilmagan"
@@ -162,6 +210,8 @@ class Writer:
         self.now = now or dt.datetime.now
         self.journal = Journal(os.path.join(here, "write_journal.jsonl"))
         self.backup_dir = os.path.join(here, "backup")
+        # v3.12: tovar (shtrix, narx, PLU, yangi tovar) o'zgardi — telefonlarga kodlar/narxlar qayta yuborilsin
+        self.goods_changed = False
 
     # --- bulut ---
     def pending(self):
@@ -204,10 +254,27 @@ class Writer:
 
     # --- asosiy ---
     def run(self):
-        """Navbatdagi hammasini bajaradi. @return (bajarildi, xatolar)."""
+        """Navbatdagi hammasini bajaradi. @return (bajarildi, xatolar).
+        v3.12: hammasi BITTA 1C ulanishida (har so'rovga qayta ulanish 2-5 soniya edi). 1C allaqachon ulangan bo'lsa
+        (hisobot tuzilayotgan payt) — o'sha ulanish ishlatiladi va yopilmaydi."""
         items = self.pending()
         if not items:
             return 0, 0
+        self._opened = False
+        try:
+            return self._run(items)
+        finally:
+            if self._opened:
+                self.onec.close()
+            self._opened = False
+
+    def conn(self):
+        if getattr(self.onec, "c", None) is None:
+            self.onec.connect()
+            self._opened = True
+        return self.onec.c
+
+    def _run(self, items):
         done = errs = 0
         for rid in sorted(items):
             prev = self.journal.get(rid)
@@ -242,21 +309,29 @@ class Writer:
             ok, msg = self.daily_backup()
             if not ok and getattr(self.cfg, "require_backup", True):
                 return {"id": rid, "ok": False, "st": "err", "e": msg}
-        self.onec.connect()
         try:
-            c = self.onec.c
-            if req["k"] == "undo":
+            c = self.conn()
+            k = req["k"]
+            if k == "undo":
                 return self.undo(c, req)
-            if req["k"] == "bc":
+            if k == "bc":
                 return self.barcode(c, req)
+            if k == "cp":
+                return self.client_pay(c, req)
+            if k in ("ci", "ce"):
+                return self.cash(c, req)
+            if k == "ge":
+                return self.goods_edit(c, req)
+            if k == "ng":
+                return self.new_goods(c, req)
             return self.document(c, req)
         except WriteError as e:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)}
+        except SystemExit as e:  # 1C'ga ulanib bo'lmadi
+            return {"id": rid, "ok": False, "st": "err", "e": str(e)[:250]}
         except Exception as e:  # noqa: BLE001 — 1C xatosi matni telefonga
             log.exception("1C'ga yozishda xato")
             return {"id": rid, "ok": False, "st": "err", "e": "1C: %s" % str(e)[:250]}
-        finally:
-            self.onec.close()
 
     # --- yordamchilar ---
     @staticmethod
@@ -407,6 +482,7 @@ class Writer:
         el.Товар = g
         el.ДатаПоступ = self.now()
         el.Записать()
+        self.goods_changed = True
         # Tovarning o'z ro'yxati (ТабШтрихкодов) va asosiy kod bo'sh bo'lsa
         go = g.ПолучитьОбъект()
         try:
@@ -424,6 +500,187 @@ class Writer:
         go.Записать()
         return {"id": req["id"], "ok": True, "st": "done", "no": code, "ref": self.uuid_of(c, el.Ссылка), "doc": "Штрих", "goods": str(g.Код)}
 
+    # --- v3.12: mijozdan to'lov, kassa ---
+    def client_pay(self, c, req):
+        party = self.find_party(c, req["party"], req["party_code"])
+        obj = c.Документы.Оплата_Клента.СоздатьДокумент()
+        obj.Дата = self.now()
+        obj.Контрагент = party
+        obj.Курс = c.Константы.Курс.Получить()
+        try:
+            obj.Сотрудник = c.Справочники.Сотрудники.Дукон
+        except Exception:  # noqa: BLE001
+            pass
+        obj.НакдСум = req["ns"]
+        obj.НакдВал = req["nu"]
+        obj.ПластикСум = req["ps"]
+        obj.ПластикВал = req["pu"]
+        obj.КликСум = req["ks"]
+        obj.КликВал = req["ku"]
+        obj.ЧегирмаСум = req["ds"]
+        obj.ЧегирмаВал = req["du"]
+        obj.Изох = ("Telefondan (Admin): " + req["note"]).strip()[:250]
+        obj.Записать(c.РежимЗаписиДокумента.Проведение)
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, obj.Ссылка), "doc": "Оплата_Клента"}
+
+    @staticmethod
+    def find_op(c, name, code):
+        cat = c.Справочники.Операции
+        ref = None
+        if code:
+            try:
+                ref = cat.НайтиПоКоду(int(float(code)))
+            except (TypeError, ValueError):
+                ref = cat.НайтиПоКоду(code)
+            if ref is not None and ref.Пустая():
+                ref = None
+        if ref is None and name:
+            ref = cat.НайтиПоНаименованию(name, True)
+            if ref is not None and ref.Пустая():
+                ref = None
+        if ref is None:
+            raise WriteError("1C'da kassa moddasi topilmadi: %s" % (name or code))
+        return ref
+
+    def cash(self, c, req):
+        doc = DOC_OF[req["k"]]
+        obj = getattr(c.Документы, doc).СоздатьДокумент()
+        obj.Дата = self.now()
+        obj.Операция = self.find_op(c, req["op"], req["op_code"])
+        obj.НаличСум = req["ns"]
+        obj.ПеречСум = req["ps"]
+        obj.КликСум = req["ks"]
+        obj.НаличВал = req["nu"]
+        obj.ПеречВал = req["pu"]
+        obj.Коментария = ("Telefondan (Admin): " + req["note"]).strip()[:250]
+        obj.Записать(c.РежимЗаписиДокумента.Проведение)
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, obj.Ссылка), "doc": doc}
+
+    # --- v3.12: tovar kartochkasi va yangi tovar ---
+    @staticmethod
+    def _price_value(f, key, usd, rate):
+        """Telefondagi narx (f[cur]: "s" so'm / "u" $) -> tovar valyutasidagi narx."""
+        v = _fnum(f.get(key))
+        if v is None:
+            return None
+        cur = str(f.get("cur") or "").lower()
+        try:
+            rate = float(rate or 0)
+        except (TypeError, ValueError):
+            rate = 0.0
+        if usd and cur == "s":
+            return round(v / rate, 4) if rate > 0 else None
+        if not usd and cur == "u":
+            return round(v * rate, 2) if rate > 0 else None
+        return round(v, 4 if usd else 2)
+
+    @staticmethod
+    def price_attr(key, usd):
+        if key == "pin":
+            return "ПриходВал" if usd else "ПриходЦена"
+        return ("ПродажВал%s" if usd else "ПродажЦена%s") % key[1]
+
+    def _check_plu(self, c, plu, own_code):
+        if plu <= 0:
+            return
+        try:
+            other = c.Справочники.Товары.НайтиПоРеквизиту("ПЛУ", plu)
+        except Exception:  # noqa: BLE001
+            return
+        if other is not None and not other.Пустая() and str(other.Код) != str(own_code):
+            raise WriteError("PLU %d band: %s" % (plu, other.Наименование))
+
+    def _check_barcode_free(self, c, code):
+        old = c.Справочники.Штрих.НайтиПоНаименованию(code, True)
+        if old is not None and not old.Пустая():
+            raise WriteError("bu shtrix kod 1C'da boshqa tovarda: %s" % old.Товар.Наименование)
+
+    def _apply_fields(self, c, go, f, usd, own_code):
+        """Tovar obyektiga narx/PLU/nom yozadi. @return eski qiymatlar (bekor qilish uchun)."""
+        rate = c.Константы.Курс.Получить()
+        old = {}
+        for key in PRICE_KEYS:
+            if key not in f:
+                continue
+            v = self._price_value(f, key, usd, rate)
+            if v is None:
+                raise WriteError("narxni aylantirib bo'lmadi (1C'da kurs yo'q)")
+            attr = self.price_attr(key, usd)
+            old[attr] = getattr(go, attr)
+            setattr(go, attr, v)
+        if "plu" in f:
+            plu = int(_fnum(f["plu"]))
+            self._check_plu(c, plu, own_code)
+            old["ПЛУ"] = go.ПЛУ
+            go.ПЛУ = plu
+            if plu > 0:
+                try:
+                    if go.Весы is None or go.Весы.Пустая():
+                        old["Весы"] = go.Весы
+                        go.Весы = c.Справочники.Весы.ОбщиеВесы
+                except Exception:  # noqa: BLE001 — bazada Весы yo'q yoki bo'sh qiymat solishtirilmaydi
+                    pass
+        if "nm" in f:
+            nm = " ".join(str(f["nm"]).split())[:150]
+            old["Наименование"] = go.Наименование
+            go.Наименование = nm
+        return old
+
+    @staticmethod
+    def _plain(v):
+        """Jurnalga yoziladigan qiymat (COM obyekt emas)."""
+        if isinstance(v, (int, float, str)) or v is None:
+            return v
+        return None
+
+    def goods_edit(self, c, req):
+        g = self.find_goods(c, req["party"], req["party_code"])
+        info = self.goods_info(c, g)
+        go = g.ПолучитьОбъект()
+        old = self._apply_fields(c, go, req["f"], info["cur"] == "Вал", g.Код)
+        go.Записать()
+        self.goods_changed = True
+        keep = {k: self._plain(v) for k, v in old.items() if k != "Весы"}
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(g.Код), "ref": self.uuid_of(c, g), "doc": "Товары", "old": keep}
+
+    def new_goods(self, c, req):
+        tpl = self.find_goods(c, req["party"], req["party_code"])
+        f = req["f"]
+        nm = " ".join(str(f.get("nm") or "").split())[:150]
+        dup = c.Справочники.Товары.НайтиПоНаименованию(nm, True)
+        if dup is not None and not dup.Пустая():
+            raise WriteError("bu nomli tovar 1C'da bor (kodi %s)" % dup.Код)
+        bc = str(f.get("bc") or "").strip()
+        if bc:
+            self._check_barcode_free(c, bc)
+        info = self.goods_info(c, tpl)
+        obj = tpl.ПолучитьОбъект().Скопировать()
+        try:
+            obj.УстановитьНовыйКод()
+        except Exception:  # noqa: BLE001 — avtomatik raqamlashda kerak emas
+            pass
+        for tab in ("ТабШтрихкодов", "ТабКалкуляция", "ТабКалкуляция2", "ТабСтоимостьРабот"):
+            try:
+                getattr(obj, tab).Очистить()
+            except Exception:  # noqa: BLE001
+                pass
+        obj.ШтрихКод = ""
+        obj.ПЛУ = 0
+        try:
+            obj.Ост = 0
+        except Exception:  # noqa: BLE001
+            pass
+        fields = dict(f)
+        fields["nm"] = nm
+        fields.pop("bc", None)
+        self._apply_fields(c, obj, fields, info["cur"] == "Вал", None)
+        if bc:
+            # Товары.ПриЗаписи o'zi Справочник.Штрих'ga yozadi (1C'da qo'lda kiritgandagidek)
+            obj.ШтрихКод = bc
+        obj.Записать()
+        self.goods_changed = True
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Код), "ref": self.uuid_of(c, obj.Ссылка), "doc": "Товары", "new": True, "bc": bc}
+
     def undo(self, c, req):
         t = self.journal.get(req["target"])
         if t is None or not t.get("ok") or not t.get("ref"):
@@ -432,7 +689,23 @@ class Writer:
             return {"id": req["id"], "ok": True, "st": "done", "no": t.get("no", ""), "ref": t["ref"], "e": "o'zgartirilmagan edi"}
         uid = c.NewObject("УникальныйИдентификатор", t["ref"])
         doc = t.get("doc", "")
-        if doc == "Штрих":
+        if doc == "Товары":
+            obj = c.Справочники.Товары.ПолучитьСсылку(uid).ПолучитьОбъект()
+            if obj is None:
+                raise WriteError("1C'da tovar topilmadi")
+            if t.get("new"):
+                obj.УстановитьПометкуУдаления(True)
+                if t.get("bc"):
+                    sh = c.Справочники.Штрих.НайтиПоНаименованию(t["bc"], True)
+                    if sh is not None and not sh.Пустая():
+                        sh.ПолучитьОбъект().УстановитьПометкуУдаления(True)
+            else:
+                for attr, v in (t.get("old") or {}).items():
+                    if v is not None:
+                        setattr(obj, attr, v)
+                obj.Записать()
+            self.goods_changed = True
+        elif doc == "Штрих":
             ref = c.Справочники.Штрих.ПолучитьСсылку(uid)
             obj = ref.ПолучитьОбъект()
             if obj is None:

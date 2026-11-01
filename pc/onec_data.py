@@ -183,6 +183,8 @@ SUPPLIER_LIST_Q = (
     "ВЫБРАТЬ РАЗЛИЧНЫЕ Д.Контрагент.Наименование КАК Имя, Д.Контрагент.Код КАК Код, Д.Контрагент.Тел КАК Тел "
     "ИЗ Документ.Поступления КАК Д ГДЕ Д.Проведен И НЕ Д.Контрагент.ПометкаУдаления"
 )
+# v3.12: kassa moddalari (Admin: kassa kirim / chiqim shakli uchun)
+OPS_Q = "ВЫБРАТЬ О.Код КАК Код, О.Наименование КАК Имя ИЗ Справочник.Операции КАК О ГДЕ НЕ О.ПометкаУдаления УПОРЯДОЧИТЬ ПО О.Наименование"
 BALANCE_Q = (
     "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, О.СуммаОстаток КАК С, О.СуммаВалОстаток КАК В "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О"
@@ -230,7 +232,28 @@ def suppliers_payload(onec, d_from, d_to, now_ms):
     names = set(text(p.get("Имя")) for p in people)
     docs, errs = fetch_docs(onec, SUPPLIER_KINDS, d_from, d_to, names)
     errors.extend(errs)
-    return {"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "list": build_suppliers(people, balances, docs), "err": errors}
+    out = {"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "list": build_suppliers(people, balances, docs), "err": errors}
+    out["ops"] = cash_ops(onec)
+    return out
+
+
+def cash_ops(onec):
+    """[[kod, nomi], ...] — Справочник.Операции (kassa moddalari). Xato bo'lsa bo'sh."""
+    try:
+        rows = onec.query(OPS_Q, ["Код", "Имя"])
+    except Exception as e:  # noqa: BLE001
+        log.warning("kassa moddalari o'qilmadi: %s", e)
+        return []
+    out = []
+    for r in rows:
+        name = text(r.get("Имя"))
+        if not name:
+            continue
+        code = r.get("Код")
+        if isinstance(code, float) and code == int(code):
+            code = int(code)
+        out.append([str(code if code is not None else "").strip(), name])
+    return out
 
 
 TODAY_Q = (

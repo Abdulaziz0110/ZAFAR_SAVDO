@@ -27,7 +27,7 @@ class DebtorsFragment : CodeFragment() {
         lp = listPage(R.string.ad_debtors) { i -> shown.getOrNull(i)?.let { pick(it) } }
         lp.header.addView(Ui.search(ctx, getString(R.string.dbt_search)) { query = it.trim().lowercase(); render() }.first)
         tvInfo = Ui.hint(ctx, "", 4).also { lp.header.addView(it) }
-        lp.header.addView(Ui.button(ctx, getString(R.string.dbt_sync), outlined = true, top = 4) {
+        lp.header.addView(Ui.button(ctx, getString(R.string.dbt_sync), outlined = true, top = 4, icon = R.drawable.ic_sync) {
             launchUi { ServiceLocator.catalog.sync(); snack(getString(R.string.sync_ok)) }
         })
         lp.empty.text = getString(R.string.dbt_empty)
@@ -44,7 +44,7 @@ class DebtorsFragment : CodeFragment() {
         val all = cat.stores.filter { it.debtSom > 0.0 || it.debtUsd > 0.0 }.sortedByDescending { it.debtSom + it.debtUsd * rate }
         shown = all.filter { query.isEmpty() || it.name.lowercase().contains(query) || it.regionName.lowercase().contains(query) }
         lp.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
-        lp.adapter.submit(shown.mapIndexed { i, s -> Ui.Row("${i + 1}. ${s.name}", s.regionName, money2(s.debtSom, s.debtUsd)) })
+        lp.adapter.submit(shown.mapIndexed { i, s -> Ui.Row("${i + 1}. ${s.name}", s.regionName, money2(s.debtSom, s.debtUsd), icon = R.drawable.ic_person) })
         tvInfo.text = getString(R.string.dbt_info, all.size, money2(all.sumOf { it.debtSom }, all.sumOf { it.debtUsd }),
             if (cat.lastSyncAt > 0) formatDateTime(cat.lastSyncAt) else "—")
     }

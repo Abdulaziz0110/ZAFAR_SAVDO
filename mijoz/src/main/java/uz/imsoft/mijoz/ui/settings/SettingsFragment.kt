@@ -132,11 +132,11 @@ class SettingsFragment : Fragment() {
         }
         val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 12)
         card.tag = "v32"
-        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub)) {
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub), icon = R.drawable.ic_download) {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.AutoFragment())
         })
         col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
-        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.rx_title), getString(R.string.rx_sub_title)) {
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.rx_title), getString(R.string.rx_sub_title), icon = R.drawable.ic_receipt) {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.ReceiptExtrasFragment())
         })
         col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
@@ -147,7 +147,7 @@ class SettingsFragment : Fragment() {
         if (advanced.isEmpty()) return
         var open = false
         advanced.forEach { it.show(false) }
-        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12) { v ->
+        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12, icon = R.drawable.ic_expand_more) { v ->
             open = !open
             advanced.forEach { it.show(open) }
             (v as? com.google.android.material.button.MaterialButton)?.text = getString(if (open) R.string.st_less else R.string.st_more)
