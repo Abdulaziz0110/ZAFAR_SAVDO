@@ -151,6 +151,7 @@ jobs:
           python3 pc/test_forwarder.py
           python3 pc/test_onec_export.py
           python3 pc/test_ornatish.py
+          python3 pc/test_onec_data.py
           if python3 -c "import PIL" 2>/dev/null; then python3 pc/test_label_printer.py; else pip install -q pillow && python3 pc/test_label_printer.py; fi
 
       - name: Remove signing files
