@@ -114,5 +114,8 @@ class CatalogRepository(
         }
     }
 
+    /** v3.4: faqat serverdan alohida so'ralgan qarz (katalogdagi umumiy ro'yxat qiymati — eski bo'lishi mumkin — emas). */
+    suspend fun explicitDebt(storeId: String): DebtCache? = withContext(Dispatchers.IO) { history.debt(storeId) }
+
     fun storeById(id: String): Store? = _state.value.stores.firstOrNull { it.id == id }
 }

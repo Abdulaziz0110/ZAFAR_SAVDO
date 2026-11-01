@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import com.ilxomjon.dur_novvot_dokon.data.share.ClientOrder
 import com.ilxomjon.dur_novvot_dokon.data.share.ShareClient
 import uz.imsoft.shared.OrderLine
@@ -35,12 +36,46 @@ import uz.imsoft.shared.report.Stamp
  * v2.6: ko'p mijozli — hammasi ekranda tanlangan mijoz (yoki buyurtma bergan mijoz) uchun.
  */
 object DokonLedgerHost : LedgerHost {
-    /** Takrorlash manbai. */
-    class Tag(val deal: DealMode, val usd: Boolean, val orderId: String?, val clientId: String)
+    /** Takrorlash manbai. [storeId] — v3.6 Admin "barcha mijozlar" tarixidan (bo'sh — [clientId] dagi do'kon). */
+    class Tag(val deal: DealMode, val usd: Boolean, val orderId: String?, val clientId: String, val storeId: String = "")
+
+    /** v3.6: Admin — barcha mijozlarning 1C tarixi (serverdan, 1 yil); Agent — 2-ilova uchun tanlangan mijoz. */
+    private val admin: Boolean get() = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
 
     override val ledgerData: StateFlow<LedgerData> by lazy {
-        ServiceLocator.share.ledger.map { LedgerData(it.entries, it.clientName, it.version, it.loaded) }
-            .stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
+        if (admin) {
+            ServiceLocator.adminHistory.data.map { LedgerData(it.entries, "", it.version, it.loaded) }
+                .stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
+        } else {
+            // v3.7 Agent: Admin yuborgan "1C tarixi" (barcha savdolar, 1 yil); bo'lmasa — avvalgidek tanlangan mijoz
+            startAgentSync()
+            kotlinx.coroutines.flow.combine(ServiceLocator.share.ledger, ServiceLocator.historyShare.agent) { l, a ->
+                if (a.entries.isNotEmpty()) LedgerData(a.entries, "", a.version * 2 + 1, true)
+                else LedgerData(l.entries, l.clientName, l.version * 2, l.loaded)
+            }.stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
+        }
+    }
+
+    private fun startAgentSync() {
+        ServiceLocator.appScope.launch {
+            while (true) {
+                runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, false) }
+                kotlinx.coroutines.delay(60_000L)
+            }
+        }
+    }
+
+    override val syncStatus: StateFlow<String>? by lazy {
+        if (!admin) ServiceLocator.historyShare.agent.map { it.status }.stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, "")
+        else ServiceLocator.adminHistory.status
+    }
+
+    override fun emptyText(ctx: Context): String? = ctx.getString(if (admin) R.string.ah_empty else R.string.ah_agent_empty)
+
+    override fun onSyncStatus(f: androidx.fragment.app.Fragment) {
+        if (admin) { HistoryStatusDialog.show(f); return }
+        f.view?.let { com.google.android.material.snackbar.Snackbar.make(it, R.string.ah_agent_syncing, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show() }
+        ServiceLocator.appScope.launch { runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, true) } }
     }
 
     override val receiptHeader: String get() = ServiceLocator.shareStore.receiptHeader
@@ -51,6 +86,11 @@ object DokonLedgerHost : LedgerHost {
     override val fuzzySearch: Boolean get() = ServiceLocator.appPrefs.fFuzzySearch
 
     override fun repeatLabel(doc: LedgerDoc): Int = when {
+        uz.imsoft.shared.report.LedgerOwner.of(doc.kindText) != null -> when (doc.kind) {
+            EntryKind.SALE -> R.string.lgh_repeat_sale
+            EntryKind.RETURN -> R.string.lgh_repeat_return
+            else -> 0
+        }
         ServiceLocator.share.currentClient().let { it == null || it.kind == "s" } -> 0
         doc.kind == EntryKind.SALE -> R.string.lgh_repeat_sale
         doc.kind == EntryKind.RETURN -> R.string.lgh_repeat_return
@@ -102,14 +142,16 @@ object DokonLedgerHost : LedgerHost {
 
     override suspend fun prepareRepeat(ctx: Context, doc: LedgerDoc): RepeatPlan {
         val src = doc.goods.map { OrderLine(it.product, it.qty) }
-        val c = ServiceLocator.share.currentClient()
-        val (ot, opts) = options(ctx, c?.storeId.orEmpty())
+        val owner = uz.imsoft.shared.report.LedgerOwner.of(doc.kindText)
+        val c = if (owner != null) null else ServiceLocator.share.currentClient()
+        val ownerStore = owner?.first.orEmpty()
+        val (ot, opts) = options(ctx, ownerStore.ifEmpty { c?.storeId.orEmpty() })
         val deal = if (doc.kind == EntryKind.RETURN) DealMode.RETURN else DealMode.SALE
         return RepeatPlan(
             title = ctx.getString(if (deal == DealMode.RETURN) R.string.lgh_repeat_return else R.string.lgh_repeat_sale) + " · " + Stamp.formatDate(doc.stamp),
             lines = lines(src), showPriceType = true, defaultWholesale = ServiceLocator.draft.state.value.priceType == PriceType.WHOLESALE,
-            showNote = false, confirmLabel = R.string.lgh_to_cart, hint = ctx.getString(R.string.lgh_repeat_hint, c?.name.orEmpty()),
-            tag = Tag(deal, doc.hasUsd && !doc.hasSom, null, c?.id.orEmpty()), options = opts, optionsTitle = ot,
+            showNote = false, confirmLabel = R.string.lgh_to_cart, hint = ctx.getString(R.string.lgh_repeat_hint, owner?.second ?: c?.name.orEmpty()),
+            tag = Tag(deal, doc.hasUsd && !doc.hasSom, null, c?.id.orEmpty(), ownerStore), options = opts, optionsTitle = ot,
         )
     }
 
@@ -131,15 +173,16 @@ object DokonLedgerHost : LedgerHost {
 
     override suspend fun submitRepeat(ctx: Context, plan: RepeatPlan, lines: List<RepeatLine>, wholesale: Boolean, note: String, option: Int): String {
         val tag = plan.tag as? Tag ?: Tag(DealMode.SALE, false, null, ServiceLocator.share.currentClient()?.id.orEmpty())
-        val c: ShareClient = ServiceLocator.shareStore.client(tag.clientId) ?: throw IllegalStateException(ctx.getString(R.string.cl_need_store, ""))
-        val st = c.storeId.takeIf { it.isNotEmpty() }?.let { ServiceLocator.catalog.storeById(it) }
-            ?: throw IllegalStateException(ctx.getString(R.string.cl_need_store, c.name))
+        val c: ShareClient? = ServiceLocator.shareStore.client(tag.clientId)
+        val sid = tag.storeId.ifEmpty { c?.storeId.orEmpty() }
+        val st = sid.takeIf { it.isNotEmpty() }?.let { ServiceLocator.catalog.storeById(it) }
+            ?: throw IllegalStateException(ctx.getString(R.string.cl_need_store, c?.name.orEmpty()))
         val r = ServiceLocator.repeatSale.repeatItems(
             st.id, st.name, tag.deal, if (wholesale) PriceType.WHOLESALE else PriceType.CASH,
             if (tag.usd) Currency.USD else Currency.SOM, lines.map { RepeatSale.Item(it.productId, it.qty) }, modeFor(ctx, st.id, option),
         )
         if (r.added == 0) throw IllegalStateException(ctx.getString(R.string.repeat_nothing))
-        tag.orderId?.let { id -> runCatching { ServiceLocator.share.setOrderStatus(c.id, id, OrderRequest.Status.TAKEN) } }
+        if (c != null) tag.orderId?.let { id -> runCatching { ServiceLocator.share.setOrderStatus(c.id, id, OrderRequest.Status.TAKEN) } }
         val parts = ArrayList<String>()
         parts += ctx.getString(R.string.repeat_done, r.added)
         if (r.missing > 0) parts += ctx.getString(R.string.sale_repeat_missing, r.missing)

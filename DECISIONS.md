@@ -285,3 +285,19 @@ dataSync 6 soat cheklovi tufayli), zaxira — 15 daqiqalik WorkManager. Admin of
 ## D-061 — Mijoz Kassa (v3.2)
 - 2-filialning o'z mijozlariga savdosi faqat telefondagi `kassa.db` da (serverga, Admin'ga bormaydi). Summalar so'mda.
   Chekda do'kon nomi (brend) — 1-ilovadan; manzil/telefon/rahmat — 2-filial sozlamasi.
+
+## D-062 — 2-ilovaga yagona manba — Admin; to'lov ko'zgusi (v3.3)
+- Agent ilova `ShareRepository.tick` da faqat 2-filial printeriga kutayotgan cheklarni yuboradi: kompyuter qutisini (`in/`)
+  o'qimaydi, 2-ilovaga snapshot yubormaydi, so'rovlarga javob bermaydi. Sabab: bir telefonda eski 1-ilova (Agent) va Admin
+  birga turganda ikkalasi bir mijozga yozib, eski ma'lumot yangisini bosib ketishi va kompyuter fayllarini Agent "yeb
+  qo'yishi" mumkin edi.
+- To'lov (Admin yoki agent Admin orqali) `AppSale(payment = true)` bo'lib 2-ilova tarixiga qo'shiladi (1C qamragunicha).
+  Katta qarz raqami — faqat server qiymati; to'lov alohida qatorda "1-ilovada kiritilgan" deb ko'rsatiladi (taxmin qilinmaydi).
+
+## D-063 — Qarz manbai va 1C tarixi serverdan (v3.4)
+- Katalog sinxronidagi do'konlar ro'yxati qarzi 2-ilovaga ishlatilmaydi (eski bo'lishi aniqlandi: 173 mln vs 200 mln).
+  Faqat TYPE_DEBT so'rovi (vaqti bilan); 1 daqiqadan eski bo'lsa har yuborishda qayta so'raladi.
+- 1C tarixi kompyutersiz ham: TYPE_REPORT (mijoz kartochkasi) oxirgi 31 kun — har 10 daqiqada, 2-ilova so'raganda,
+  savdo/to'lovdan keyin 2,5 va 6 daqiqada. Kompyuter yuborgani ham avvalgidek qabul qilinadi (birlashtiriladi).
+- 2-ilova qarzi: kartochka qoldig'i (kartochka qarz bilan 15 daqiqa ichida olingan bo'lsa) + kartochkada hali yo'q 1-ilova
+  yozuvlari; aks holda server qarzi + undan keyingi 1-ilova yozuvlari. Qo'shilgan qism alohida yoziladi.

@@ -43,7 +43,7 @@ class DocSheet : BottomSheetDialogFragment() {
         if (doc == null) { dismissAllowingStateLoss(); return }
         val host = ledgerHost()
         val ctx = requireContext()
-        val client = ledger()?.currentState()?.clientName.orEmpty()
+        val client = uz.imsoft.shared.report.LedgerOwner.of(doc.kindText)?.second?.ifBlank { null } ?: ledger()?.currentState()?.clientName.orEmpty()
         b.tvTitle.text = LedgerUi.kindTitle(ctx, doc.kind) + " · " + LedgerUi.time(doc.stamp)
         b.tvSub.text = listOf(Stamp.formatDate(doc.stamp) + ", " + LedgerUi.weekday(ctx, doc.stamp), client).filter { it.isNotBlank() }.joinToString(" · ")
         // Mos kelgan qatorlar (qidiruvdan ochilsa) qalin
@@ -54,7 +54,7 @@ class DocSheet : BottomSheetDialogFragment() {
         for (e in show) {
             val i = doc.lines.indexOf(e)
             val lb = ItemLedgerLineBinding.inflate(inf, b.lines, false)
-            lb.tvName.text = LedgerUi.highlight(ctx, e.product.ifBlank { e.kindText }, hit?.ranges?.get(i))
+            lb.tvName.text = LedgerUi.highlight(ctx, e.product.ifBlank { uz.imsoft.shared.report.LedgerOwner.plain(e.kindText) }, hit?.ranges?.get(i))
             lb.tvDetail.text = LedgerUi.lineDetail(e)
             lb.tvDetail.show(lb.tvDetail.text.isNotEmpty())
             lb.tvAmount.text = LedgerUi.money(ctx, LedgerDoc.amountOf(e))

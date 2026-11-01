@@ -25,7 +25,7 @@ STRINGS = {
  'home_no_data_short': "Ma'lumot yo'q",
  'home_debt_unknown': "Qarz ma'lumoti yuborilmagan",
  'home_debt_at': "Server ma'lumoti: %1$s holatiga",
- 'home_debt_report_at': "1C hisoboti bo'yicha: %1$s oxiriga",
+ 'home_debt_report_at': "1C kartochkasi bo'yicha: %1$s holatiga",
  'home_report_balance': "1C hisoboti bo'yicha (%1$s oxiriga): %2$s",
  'home_not_linked': 'Ulanmagan',
  'home_sync': "1-ilova yuborgan: %1$s · telefonga olingan: %2$s",
@@ -303,7 +303,8 @@ STRINGS.update({
  'rx_footer': 'Chek osti (telefon)', 'rx_footer_hint': "Bo'sh bo'lsa — do'kon egasiniki",
  'rx_thanks': 'Rahmat matni', 'rx_save': 'Saqlash', 'rx_saved': 'Saqlandi', 'rx_test': 'Sinov cheki', 'rx_test_item': 'Sinov',
  # Vidjet
- 'wg_desc': "Qarz, narxlar va kassa", 'wg_debt': 'Qarz: %1$s', 'wg_no_data': "Ma'lumot yo'q",
+ 'wg_desc': "Qarz, narxlar va kassa",
+ 'home_pending_deals': "Server qarziga keyingi %1$d ta savdo/to'lov qo'shildi: %2$s", 'wg_debt': 'Qarz: %1$s', 'wg_no_data': "Ma'lumot yo'q",
 })
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

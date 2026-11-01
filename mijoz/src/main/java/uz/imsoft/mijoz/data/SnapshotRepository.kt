@@ -53,6 +53,12 @@ class SnapshotRepository(
     private val _state = MutableStateFlow(DataState())
     val state: StateFlow<DataState> = _state.asStateFlow()
     private val mutex = Mutex()
+    /**
+     * v3.6: bir vaqtda faqat BITTA yangilash. Avval ochilish, "Yangilash", 15 soniyalik tekshiruv, fon ishchisi parallel
+     * ishlab, sekin yuklangan ESKI ma'lumot yangisining ustidan ekranga yozilib qolardi (masalan qarz 173 mln) — faylda esa
+     * yangisi turardi, shuning uchun ilova qayta ochilganda to'g'ri chiqardi.
+     */
+    private val net = Mutex()
 
     private fun file() = File(context.filesDir, "snapshot.blob")
 
@@ -89,6 +95,13 @@ class SnapshotRepository(
      * [askFresh] — qo'shimcha ravishda 1-ilovadan narx/qarzni serverdan yangilashni so'raydi (server ko'ringanda bajaradi).
      */
     suspend fun refresh(askFresh: Boolean): RefreshResult {
+        // v3.3: kalit almashganmi — Admin mijozni qayta qo'shgan/kalitni yangilagan bo'lsa, eski joyda eski ma'lumot qolib
+        // ketadi (uni hech kim yangilamaydi). "Yangilash"/ochilishda kirish yozuvi tekshiriladi (10 daqiqada ko'pi bilan bir).
+        if (askFresh) {
+            val r = runCatching { relogin(false) }.getOrNull()
+            if (r == LoginRepository.Relogin.REVOKED) { onRevoked(); throw AccessRevokedException() }
+            if (r == LoginRepository.Relogin.CHANGED) prefs.metaAt = 0L
+        }
         val first: RefreshResult
         try {
             first = refreshOnce(askFresh)
@@ -118,7 +131,9 @@ class SnapshotRepository(
         _state.value = DataState(loaded = true, revoked = true)
     }
 
-    private suspend fun refreshOnce(askFresh: Boolean): RefreshResult {
+    private suspend fun refreshOnce(askFresh: Boolean): RefreshResult = net.withLock { refreshLocked(askFresh) }
+
+    private suspend fun refreshLocked(askFresh: Boolean): RefreshResult {
         val link = prefs.link ?: return RefreshResult.NOT_LINKED
         _state.update { it.copy(loading = true, error = null) }
         try {
@@ -139,15 +154,24 @@ class SnapshotRepository(
                 }
                 val at = meta.long("at")
                 if (meta.long("v", 1) > ClientSnapshot.VERSION) throw SnapshotCodec.TooNew()
-                val changed = at != prefs.metaAt || !file().exists()
-                var snap = _state.value.snapshot
+                // v3.6: ekrandagi ma'lumot aynan shu sarlavhaniki bo'lmasa ham qayta o'qiladi (eskisi ekranda qolib ketmasin)
+                val cur = _state.value
+                val changed = at != prefs.metaAt || !file().exists() || cur.snapshot == null || cur.publishedAt != at
+                var snap = cur.snapshot
                 if (changed) {
                     val raw = db.getRaw("s/$rk/blob", timeoutMs = 60_000)
                     val blob = Json.parse(raw) as? String ?: throw IllegalStateException("blob")
-                    snap = SnapshotCodec.unpack(blob)
+                    val prev = snap
+                    var fresh = SnapshotCodec.unpack(blob)
+                    // v3.5: yangi ma'lumotda tovarlar ro'yxati bo'sh kelsa (1-ilovada tarix hali yuklanmagan) — oldingi
+                    // ro'yxat saqlanadi (narxlar oxirgi ma'lum qiymati bilan), Narxlar bo'limi bo'shab qolmaydi.
+                    if (fresh.products.isEmpty() && prev != null && prev.products.isNotEmpty()) {
+                        fresh = fresh.copy(products = prev.products)
+                    }
+                    snap = fresh
                     val f = file()
                     val tmp = File(f.parentFile, f.name + ".tmp")
-                    tmp.writeText(blob)
+                    tmp.writeText(if (fresh.products === prev?.products) SnapshotCodec.pack(fresh) else blob)
                     if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
                     prefs.metaAt = at
                 }

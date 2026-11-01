@@ -51,7 +51,18 @@ class HomeFragment : Fragment() {
         launchOnStarted { Locator.data.state.collect { render(it) } }
     }
 
+    private var pollJob: kotlinx.coroutines.Job? = null
+
     private fun refresh() {
+        // v3.4: "Yangilash" — 1-ilova (Admin) javob berguncha (odatda 1 daqiqa) har 15 soniyada o'zi tekshiradi, 3 daqiqagacha
+        pollJob?.cancel()
+        pollJob = Locator.scope.launch {
+            repeat(12) {
+                kotlinx.coroutines.delay(15_000L)
+                if (!Locator.data.state.value.requestPending) return@launch
+                runCatching { Locator.data.refresh(askFresh = false) }
+            }
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             val msg = try {
                 when (Locator.data.refresh(askFresh = true)) {
@@ -90,17 +101,30 @@ class HomeFragment : Fragment() {
             return parts.joinToString("\n")
         }
         // v3.1: qaysi biri YANGIROQ bo'lsa katta raqamda o'sha: serverdan olingan qarz yoki 1C hisoboti (import vaqti bo'yicha)
-        val reportNewer = rb != null && (snap?.lastImportAt ?: 0L) > (debt?.at ?: 0L)
+        // v3.4: 1C kartochkasi (server yoki kompyuterdan) qarz bilan deyarli bir vaqtda olingan bo'lsa — asos shu kartochka
+        // qoldig'i: undagi hujjatlar va 1-ilova yozuvlari bir paytdagi holat (ikki marta hisoblanmaydi).
+        val reportNewer = rb != null && (snap?.lastImportAt ?: 0L) >= (debt?.at ?: 0L) - 15 * 60_000L
+        // v3.4: asosiy qarz + undan KEYIN 1-ilovada qilingan savdo/to'lovlar (server hali hisoblamagan) — darhol to'g'ri qarz
+        fun withPending(baseStamp: Long, som: Double, usd: Double, lines: ArrayList<String>): Pair<Double, Double> {
+            val (eff, n) = uz.imsoft.shared.report.AppSale.pendingAfter(snap?.ledger.orEmpty(), baseStamp)
+            if (n == 0) return som to usd
+            lines.add(0, getString(R.string.home_pending_deals, n, (if (eff.som >= 0) "+" else "") + ctx.money2(eff)))
+            return (som + eff.som) to (usd + eff.usd)
+        }
         when {
             debt != null && !reportNewer -> {
-                bb.tvDebt.text = amount(debt.som, debt.usd)
-                val lines = arrayListOf(getString(R.string.home_debt_at, if (debt.at > 0) Fmt.dateTime(debt.at) else "—"))
+                val lines = arrayListOf(getString(R.string.home_debt_at, if (debt.at > 0) Fmt.dateTime(debt.at) else "—") +
+                    ": " + amount(debt.som, debt.usd).replace("\n", " + "))
+                val (s0, u0) = withPending(uz.imsoft.shared.pos.Pos.stampOf(debt.at), debt.som, debt.usd, lines)
+                bb.tvDebt.text = amount(s0, u0)
                 if (rb != null) lines += getString(R.string.home_report_balance, Stamp.formatDate(rb.first), ctx.money2(rb.second))
                 bb.tvDebtAt.text = lines.joinToString("\n")
             }
             rb != null -> {
-                bb.tvDebt.text = amount(rb.second.som, rb.second.usd)
-                val lines = arrayListOf(getString(R.string.home_debt_report_at, Stamp.formatDate(rb.first)))
+                val lines = arrayListOf(getString(R.string.home_debt_report_at, Fmt.dateTime(snap?.lastImportAt ?: 0L)))
+                // Kartochkada yo'q 1-ilova yozuvlari (1-ilova solishtirib qo'ygan) — hammasi qo'shiladi
+                val (s0, u0) = withPending(0L, rb.second.som, rb.second.usd, lines)
+                bb.tvDebt.text = amount(s0, u0)
                 if (debt != null) lines += getString(R.string.home_debt_at, if (debt.at > 0) Fmt.dateTime(debt.at) else "—") + ": " + amount(debt.som, debt.usd).replace("\n", " + ")
                 bb.tvDebtAt.text = lines.joinToString("\n")
             }

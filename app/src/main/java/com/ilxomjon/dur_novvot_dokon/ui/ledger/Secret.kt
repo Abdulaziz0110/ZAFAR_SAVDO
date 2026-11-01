@@ -345,7 +345,7 @@ abstract class SecretFragment : Fragment() {
                     w.write("\uFEFF")
                     w.write("Sana;Turi;Tovar;Miqdor;Narx;Summa;To'lov;Qaytarish;Qoldiq\n")
                     for (e in d.entries.sortedBy { it.stamp }) {
-                        w.write(listOf(Stamp.formatDateTime(e.stamp), q(e.kindText), q(e.product), NumFmt.qty(e.qty), m(Col.PRICE, e), m(Col.SUM, e), m(Col.PAYMENT, e), m(Col.RETURN, e), m(Col.BALANCE, e)).joinToString(";"))
+                        w.write(listOf(Stamp.formatDateTime(e.stamp), q(uz.imsoft.shared.report.LedgerOwner.plain(e.kindText)), q(e.product), NumFmt.qty(e.qty), m(Col.PRICE, e), m(Col.SUM, e), m(Col.PAYMENT, e), m(Col.RETURN, e), m(Col.BALANCE, e)).joinToString(";"))
                         w.write("\n")
                     }
                 }

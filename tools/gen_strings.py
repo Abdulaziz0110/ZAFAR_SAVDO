@@ -1120,6 +1120,46 @@ STRINGS.update({
  'wg_fav_empty': "Sozlamalarda tez do'kon tanlang", 'wg_scan': 'Skaner', 'wg_pay': "To'lov",
 })
 
+# v3.6 Admin: 1C tarixi — barcha mijozlar (serverdan, 1 yil)
+STRINGS.update({
+ 'sh_title': '1C tarixi: qayerdan va qachon',
+ 'sh_status': 'Server: %1$s · %2$d/%3$d mijoz yuklandi · 1 yillik: %4$d',
+ 'sh_status_none': "Server: hali yuklanmadi (%1$d mijoz). Admin ochiq va Tailscale yoqiq bo'lsin",
+ 'sh_status_running': 'Yuklanmoqda: %1$s',
+ 'sh_status_err': 'Xato (%1$s): %2$s',
+ 'sh_details_how': "Qanday ishlaydi:\n"
+                   "• Kompyuter 1C'dagi BARCHA savdolarni (savdo, mobil, chakana, vozvrat) yuboradi: har necha daqiqada oxirgi 30 kun, keyin 1 yilgacha orqaga 30 kunlik bo'laklar bilan.\\n"
+                   "• Barcha mijozlarning 1C kartochkasi (savdo, vozvrat, to'lov) serverdan olinadi — Admin telefoni Tailscale orqali serverni ko'rsa.\n"
+                   "• Avval har mijozning oxirgi 31 kuni, keyin 1 yilgacha orqaga.\n"
+                   "• Savdo yoki to'lov qilinsa — o'sha mijoz 2.5 va 6 daqiqadan keyin qayta olinadi (1C qabul qilgach).\n"
+                   "• Faol mijozlar har soatda, qolganlari kuniga bir yangilanadi.\n"
+                   "• Kompyuter 1C'dan \"Mijoz kartochkasi\" yuborsa — u ham shu yerga qo'shiladi.\n"
+                   "• 2-ilova (Mijoz) o'z kartochkasini shu ma'lumotdan oladi.\n"
+                   "Mijoz nomi bilan qidirish mumkin: masalan \"dadaxon\".",
+ 'sh_details_parse': "Server javobi %1$d marta jadval sifatida o'qilmadi. \"Javobni ulashish\" bilan faylni yuboring.",
+ 'sh_details_errors': 'Oxirgi xatolar:',
+ 'sh_err_agent': 'Agent topilmadi (katalogni yangilang)',
+ 'sh_err_parse': "Server javobi o'qilmadi: %1$s",
+ 'sh_refresh': 'Hozir yangilash',
+ 'sh_refresh_started': "Yangilash boshlandi — bir necha daqiqada to'ladi",
+ 'sh_share_fail': 'Javobni ulashish',
+ # v3.7: kompyuterdagi barcha savdolar
+ 'ah_loading': 'Yuklanmoqda…',
+ 'ah_server_wait': 'Server: kutilmoqda',
+ 'ah_retail': 'Chakana',
+ 'ah_pc': 'Kompyuter (1C): %1$s – %2$s · %3$d ta savdo/vozvrat · %4$s olingan',
+ 'ah_pc_filling': "1 yilga to'ldirilmoqda",
+ 'ah_pc_none': "Kompyuter (1C): savdolar hali kelmagan. Do'kon kompyuterida dastur ishlab turishi kerak",
+ 'ah_pc_last': 'Kompyuter oxirgi xabari (%1$s): %2$s',
+ 'ah_pc_never': "Kompyuterdan hech qanday xabar kelmagan (Boshqaruv ▸ Kompyuter (1C) sozlamasini tekshiring)",
+ 'ah_empty': "1C tarixi hali bo'sh. Yuqoridagi holat qatorini bosing: qayerdan, qachon keladi va nima yetishmayapti",
+ 'ah_agent_status': "Admin'dan: %1$s yangilangan · %2$d yozuv (do'kondagi barcha 1C savdolari, 1 yil). Bosing — hozir yangilash",
+ 'ah_agent_no_link': "Agent Admin'ga ulanmagan: Sozlamalar ▸ \"Admin orqali\" — Admin bergan kodni kiriting",
+ 'ah_agent_wait': "Admin hali yubormagan: Admin ilovasi yangi versiyada, ochiq va Tailscale yoqiq bo'lishi kerak",
+ 'ah_agent_empty': "1C tarixi hali kelmagan. Yuqoridagi holat qatorida sababi yozilgan",
+ 'ah_agent_syncing': 'Yangilanmoqda…',
+})
+
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)
 
 def esc(s):

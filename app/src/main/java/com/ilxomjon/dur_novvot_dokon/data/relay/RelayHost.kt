@@ -43,6 +43,8 @@ class RelayHost(
         fun codes(): Pair<Long, ByteArray>?
         suspend fun printLabels(data: ByteArray): String
         suspend fun mirrorSale(sale: RelayCodec.Sale, key: String)
+        /** v3.2: agent to'lovi serverga yozildi — 2-ilova tarixiga va qarzni yangilash. */
+        suspend fun mirrorPayment(storeId: String, cash: Double, transfer: Double, click: Double, note: String, key: String) = Unit
         /** v3.2: agent tovarga yangi shtrix kod bog'ladi — Admin 1C'ga yozish navbatiga qo'yadi. */
         suspend fun barcode(productId: String, name: String, code: String): Boolean = false
     }
@@ -167,6 +169,13 @@ class RelayHost(
         // 2-filial cheki ko'zgusi (savdo bo'lsa)
         o["m"]?.toString()?.let { RelayCodec.saleFromJson(it) }?.let { sale ->
             runCatching { hooks.mirrorSale(sale, "r" + oid.take(16)) }
+        }
+        // v3.2: to'lov — 2-ilova tarixida va qarz yangilanishi (protokol: agent^do'kon^naqd^0^vaqt^kurs^izoh^naqd^o'tkazma^click^printer~)
+        if (t == "4") runCatching {
+            val f = p.substringBefore('~').split('^')
+            fun d(i: Int) = f.getOrNull(i)?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
+            val store = f.getOrNull(1).orEmpty()
+            if (store.isNotEmpty()) hooks.mirrorPayment(store, d(7).takeIf { f.size > 7 } ?: d(2), d(8), d(9), f.getOrNull(6).orEmpty(), "r" + oid.take(16))
         }
         return true
     }

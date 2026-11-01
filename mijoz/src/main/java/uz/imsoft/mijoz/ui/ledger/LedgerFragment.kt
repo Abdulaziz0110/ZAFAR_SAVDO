@@ -80,6 +80,13 @@ class LedgerFragment : Fragment() {
             vm.period.value = PeriodFilter.ALL
         }
         if (host != null) launchOnStarted { host.ledgerData.collect { vm.setData(it) } }
+        // v3.6: holat qatori (Admin — serverdan yuklash)
+        val status = host?.syncStatus
+        b.tvSyncStatus.show(status != null)
+        if (host != null && status != null) {
+            b.tvSyncStatus.setOnClickListener { host.onSyncStatus(this) }
+            launchOnStarted { status.collect { t -> _b?.let { bb -> bb.tvSyncStatus.text = t; bb.tvSyncStatus.show(t.isNotEmpty()) } } }
+        }
         launchOnStarted { vm.state.collect { last = it; render(it) } }
     }
 
@@ -112,7 +119,7 @@ class LedgerFragment : Fragment() {
         }
         val empty = s.loaded && s.rows.isEmpty()
         bb.emptyState.show(empty)
-        bb.tvEmpty.setText(if (!s.hasData) R.string.lg_no_data else R.string.lg_nothing_found)
+        bb.tvEmpty.text = if (!s.hasData) ledgerHost()?.emptyText(ctx) ?: getString(R.string.lg_no_data) else getString(R.string.lg_nothing_found)
         bb.btnClearFilters.show(s.hasData && empty)
         bb.tilSearch.helperText = if (!searching && s.hasData) getString(R.string.lg_search_helper) else null
     }

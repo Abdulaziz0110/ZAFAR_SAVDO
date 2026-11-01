@@ -57,10 +57,11 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
     fun entriesFor(clientId: String, ledger: List<LedgerEntry>, coverage: List<Coverage>): List<LedgerEntry> {
         val list = sales(clientId)
         if (list.isEmpty()) return emptyList()
-        // Hisobot "bugun"gacha bo'lsa ham import qilingan paytdan keyingi savdolar unda yo'q
-        val covered = coverage.maxOfOrNull { minOf(it.to, stampOf(it.importedAt)) } ?: 0L
-        val lastEntry = ledger.maxOfOrNull { it.stamp } ?: 0L
-        return AppSale.entriesAfter(list, maxOf(covered, lastEntry))
+        // Hisobot "bugun"gacha bo'lsa ham import qilingan paytdan keyingi savdolar unda yo'q. v3.4: 1C savdoni bir necha
+        // daqiqada qabul qiladi — import vaqtidan 5 daqiqa oldingisigacha "qamralgan" hisoblanadi; qolganini hisobotdagi
+        // aynan o'sha hujjat (tur, vaqt, summa) bo'yicha solishtiramiz — ikki marta ko'rinmaydi, yo'qolib ham qolmaydi.
+        val covered = coverage.maxOfOrNull { minOf(it.to, stampOf(it.importedAt - 5 * 60_000L)) } ?: 0L
+        return AppSale.entriesNotIn(list, covered, ledger)
     }
 
     /** Savdo yuborilganda chaqiriladi. @return mijoz (bog'langan do'kon bo'lsa), aks holda null. */
@@ -75,6 +76,21 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
             val list = (sales(c.id).filter { it.id != s.id } + s).takeLast(AppSale.KEEP)
             writeAtomic(salesFile(c.id), Json.write(list.map { AppSale.toJson(it) }))
             c to s
+        }
+    }
+
+    /** v3.2: 1-ilovada (Admin/Agent) kiritilgan to'lov — 2-ilova tarixida darhol (1C hisoboti qamragunicha). */
+    suspend fun recordPayment(p: com.ilxomjon.dur_novvot_dokon.domain.SentPayment, id: String, code: String): ShareClient? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            val c = store.clients().firstOrNull { it.storeId.isNotEmpty() && it.storeId == p.storeId } ?: return@withContext null
+            if (p.total <= 0.0) return@withContext null
+            val s = AppSale(
+                id = id, at = p.sentAt, stamp = stampOf(p.sentAt), isReturn = false, usd = false, lines = emptyList(), discount = 0.0,
+                code = code, paid = p.total, payment = true, note = listOf(code, p.note).filter { it.isNotBlank() }.joinToString(" · "),
+            )
+            val list = (sales(c.id).filter { it.id != s.id } + s).takeLast(AppSale.KEEP)
+            writeAtomic(salesFile(c.id), Json.write(list.map { AppSale.toJson(it) }))
+            c
         }
     }
 

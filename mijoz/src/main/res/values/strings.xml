@@ -27,7 +27,7 @@
     <string name="home_no_data_short">Ma\'lumot yo\'q</string>
     <string name="home_debt_unknown">Qarz ma\'lumoti yuborilmagan</string>
     <string name="home_debt_at">Server ma\'lumoti: %1$s holatiga</string>
-    <string name="home_debt_report_at">1C hisoboti bo\'yicha: %1$s oxiriga</string>
+    <string name="home_debt_report_at">1C kartochkasi bo\'yicha: %1$s holatiga</string>
     <string name="home_report_balance">1C hisoboti bo\'yicha (%1$s oxiriga): %2$s</string>
     <string name="home_not_linked">Ulanmagan</string>
     <string name="home_sync">1-ilova yuborgan: %1$s · telefonga olingan: %2$s</string>
@@ -421,6 +421,7 @@
     <string name="rx_test">Sinov cheki</string>
     <string name="rx_test_item">Sinov</string>
     <string name="wg_desc">Qarz, narxlar va kassa</string>
+    <string name="home_pending_deals">Server qarziga keyingi %1$d ta savdo/to\'lov qo\'shildi: %2$s</string>
     <string name="wg_debt">Qarz: %1$s</string>
     <string name="wg_no_data">Ma\'lumot yo\'q</string>
     <string name="lg_unit_som">so\'m</string>

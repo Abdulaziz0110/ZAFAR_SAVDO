@@ -114,7 +114,7 @@ object ReceiptBuilder {
                 lines += Receipt.Line(e.product, detail, NumFmt.bare(LedgerDoc.amountOf(e)))
             }
         } else {
-            for (e in doc.lines) lines += Receipt.Line(e.product.ifBlank { e.kindText }, "", NumFmt.bare(LedgerDoc.amountOf(e)))
+            for (e in doc.lines) lines += Receipt.Line(e.product.ifBlank { uz.imsoft.shared.report.LedgerOwner.plain(e.kindText) }, "", NumFmt.bare(LedgerDoc.amountOf(e)))
         }
         val totals = ArrayList<Receipt.Total>()
         if (doc.kind == EntryKind.SALE && !doc.discount.isZero) {

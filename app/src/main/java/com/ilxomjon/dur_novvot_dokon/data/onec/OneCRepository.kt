@@ -67,9 +67,13 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         return withContext(Dispatchers.IO) {
             when (kind) {
                 "sales" -> {
-                    val s = OneCCodec.parseSales(bytes)
-                    File(dir(), "sales.json").writeBytes(bytes)
-                    _state.value = _state.value.copy(sales = s)
+                    // v3.7: har kelgan davr yig'iladi (oxirgi 1 yil) — Admin "1C tarixi" barcha savdolarni ko'rsatadi
+                    val merged = uz.imsoft.shared.onec.OneCSalesArchive.merge(_state.value.sales, OneCCodec.parseSales(bytes), yearAgoStamp())
+                    val f = File(dir(), "sales.json")
+                    val tmp = File(dir(), "sales.json.tmp")
+                    tmp.writeText(OneCCodec.salesJson(merged))
+                    if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                    _state.value = _state.value.copy(sales = merged)
                     true
                 }
                 "supp" -> {
@@ -81,6 +85,47 @@ class OneCRepository(private val context: Context, private val store: ShareStore
                 else -> false
             }
         }
+    }
+
+    private fun yearAgoStamp(): Long {
+        val c = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_MONTH, -364) }
+        return uz.imsoft.shared.report.Stamp.of(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH))
+    }
+
+    private val bf by lazy { context.getSharedPreferences("onec_backfill", Context.MODE_PRIVATE) }
+
+    /**
+     * v3.7 (Admin fon ishchisi): kompyuterdan 1 yillik savdolarni 30 kunlik bo'laklar bilan orqaga so'raydi — bir vaqtda
+     * bitta so'rov; javob kelmasa 10 daqiqadan keyin qayta. Hali hech narsa kelmagan bo'lsa — oxirgi 30 kun.
+     */
+    suspend fun backfillStep() {
+        if (!ready) return
+        load()
+        val now = System.currentTimeMillis()
+        val s = _state.value.sales
+        val yearAgo = yearAgoStamp()
+        val reqFrom = bf.getLong("from", 0L)
+        val reqAt = bf.getLong("at", 0L)
+        val answered = s != null && reqFrom > 0 && s.from <= reqFrom
+        if (!answered && now - reqAt < 10 * 60_000L) return
+        val fmt = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
+        fun ms(st: Long): Long = java.util.Calendar.getInstance().apply {
+            clear(); set(uz.imsoft.shared.report.Stamp.year(st), uz.imsoft.shared.report.Stamp.month(st) - 1, uz.imsoft.shared.report.Stamp.dayOfMonth(st))
+        }.timeInMillis
+        val day = 86_400_000L
+        val (from, to) = if (s == null || s.from <= 0) {
+            (now - 29 * day) to now
+        } else {
+            if (s.from <= yearAgo) return
+            val toMs = ms(s.from) - day
+            maxOf(ms(yearAgo), toMs - 29 * day) to toMs
+        }
+        withContext(Dispatchers.IO) {
+            cloud().put("p/$inbox/dreq", linkedMapOf("k" to "sales", "f" to fmt.format(java.util.Date(from)), "t" to fmt.format(java.util.Date(to)), "at" to CloudDb.SERVER_TIME))
+        }
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = from }
+        bf.edit().putLong("from", uz.imsoft.shared.report.Stamp.of(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)))
+            .putLong("at", now).apply()
     }
 
     /** "Shu davrni yuboring" (kompyuter keyingi aylanishda — 30 soniyagacha — bajaradi). [from]/[to] — yyyyMMdd. */

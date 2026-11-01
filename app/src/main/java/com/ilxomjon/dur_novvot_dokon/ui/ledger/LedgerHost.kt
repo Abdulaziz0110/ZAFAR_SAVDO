@@ -71,6 +71,15 @@ interface LedgerHost {
 
     /** v3.2: tuzatish so'rovi oynasi. */
     fun requestEdit(f: Fragment, doc: LedgerDoc) = Unit
+
+    /** v3.6: ro'yxat ustidagi holat qatori (Admin: serverdan yuklash holati). null — qator ko'rinmaydi. */
+    val syncStatus: StateFlow<String>? get() = null
+
+    /** v3.6: holat qatori bosilganda (batafsil, hozir yangilash). */
+    fun onSyncStatus(f: Fragment) = Unit
+
+    /** v3.7: ma'lumot umuman yo'q bo'lganda matn (null — odatiy "Mijoz kartochkasi faylini yuklang"). */
+    fun emptyText(ctx: android.content.Context): String? = null
 }
 
 /** Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. */

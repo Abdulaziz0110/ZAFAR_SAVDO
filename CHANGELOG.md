@@ -1,5 +1,66 @@
 # CHANGELOG
 
+## 3.7 (versionCode 19), Savdo Mijoz 1.11 o'zgarmagan: "1C tarixi" — kompyuterdagi BARCHA savdolar (Admin va Agent) — 2026-11-01
+* **Agent ilovasida ham**: Admin o'zining "1C tarixi"ni (barcha savdolar + to'lovlar, 1 yil) "Admin orqali" kaliti bilan bulutga
+  10 kunlik bo'laklarda yuboradi (faqat o'zgargani, daqiqada ko'pi bilan bir); agent har daqiqada tekshirib, faqat o'zgargan
+  bo'lakni yuklaydi (internetsiz ham oxirgisi ko'rinadi). Holat qatori: qachon yangilangan, nechta yozuv; bosilsa — hozir.
+  Firebase qoidalari v6 (g/{kalit}/hist o'qish) — Admin o'zi o'rnatadi.
+* Admin "Tarix ▸ 1C tarixi" endi kompyuter yuborgan 1C hujjatlarini ham ko'rsatadi: savdo, mobil savdo, **chakana** va mijoz
+  qaytargan — do'kondagi hamma savdo (agentga biriktirilmagan mijozlar ham). Har hujjatda mijoz nomi (chakana — "Chakana").
+* Kompyuter har safar yuborgan davr telefonda **yig'iladi** (avval har safar ustidan yozilardi): oxirgi 1 yil. Admin kompyuterdan
+  1 yilgacha orqaga 30 kunlik bo'laklar bilan o'zi so'raydi (bir vaqtda bitta so'rov; javob kelmasa 10 daqiqadan keyin qayta).
+* Server kartochkalari (to'lovlar bilan) ham shu ro'yxatda; mijoz kartochkasi qamragan vaqtdagi kompyuter hujjati takror
+  chiqmaydi.
+* Holat qatori: kompyuter (davr, hujjatlar soni, qachon olingan, oxirgi xabari) va server holati. Ma'lumot yo'q bo'lsa — nima
+  yetishmayotgani yoziladi. "Hozir yangilash" kompyuterdan oxirgi 30 kunni ham so'raydi.
+
+## 3.6 (versionCode 18) + Savdo Mijoz 1.11 (versionCode 12): 1C tarixi — barcha mijozlar, 1 yil; qarz ekranda eskirmaydi — 2026-11-01
+* **Admin "1C tarixi" — barcha mijozlar**: har mijozning 1C kartochkasi (savdo, vozvrat, to'lov) serverdan. Avval oxirgi
+  31 kun (2-ilova mijozlari birinchi, keyin qarzi kattalar), keyin 92 kunlik bo'laklar bilan 1 yilgacha. Savdo/to'lovdan keyin
+  o'sha mijoz 2.5 va 6 daqiqada qayta olinadi; faollari har soatda, qolganlari kuniga bir. Server bir vaqtda bitta so'rov oladi;
+  server ko'rinmasa 3 daqiqa tanaffus. Har hujjatda mijoz nomi; nom bo'yicha qidirish ("dadaxon"). Kompyuterdan kelgan
+  "Mijoz kartochkasi" ham qo'shiladi. "Takrorlash" — hujjat egasi do'koni uchun.
+* Ro'yxat ustida **holat qatori**: oxirgi yuklash, nechta mijoz, 1 yillik nechta, xato. Bosilsa: qanday ishlashi, "Hozir
+  yangilash", server javobi o'qilmasa — "Javobni ulashish" (tashxis uchun HTML fayl).
+* **2-ilova (Mijoz) o'z tarixini 1 yilgacha** oladi — Admin'ning shu ma'lumotidan. 2-ilova mijozi do'konga bog'lanmagan bo'lsa,
+  nomi katalogdagi do'konga to'liq mos kelsa avtomatik bog'lanadi. Eski "1 yil bir marta" (muvaffaqiyatsiz bo'lsa ham "bajarildi"
+  deb belgilardi va har 25 soniyada 365 kunlik so'rov yuborardi) olib tashlandi.
+* **2-ilova bosh sahifasidagi qarz eskirib qolmaydi**: bir nechta yangilash (ochilish, "Yangilash", 15 soniyalik tekshiruv,
+  fon) parallel ishlab, sekin yuklangan eski ma'lumot (masalan 173 mln) yangisining ustidan ekranga yozilib qolardi; faylda
+  yangisi turgani uchun ilova qayta ochilganda to'g'ri chiqardi. Endi yangilashlar navbat bilan; ekrandagi ma'lumot oxirgi
+  sarlavhaga mos kelmasa qayta o'qiladi.
+
+## 3.5 (versionCode 17) + Savdo Mijoz 1.10 (versionCode 11): Narxlar ro'yxati bo'sh qolmaydi — 2026-11-01
+* Sabab: 2-ilovadagi Narxlar — mijoz olgan tovarlar, ular 1C tarixidan olinadi; yangi Admin telefonida tarix bo'sh edi.
+* Admin har mijoz uchun **bir marta 1 yillik kartochkani serverdan** oladi; olgan tovarlar ro'yxati **eslab qolinadi**
+  (tarix qisqarsa ham yo'qolmaydi) va 1-ilova savdolaridagi tovarlar ham qo'shiladi.
+* 2-ilova: yangi ma'lumotda tovarlar ro'yxati bo'sh kelsa, oldingi ro'yxat saqlanadi.
+
+## 3.4 (versionCode 16) + Savdo Mijoz 1.9 (versionCode 10): qarz har doim to'g'ri, savdo/to'lov darhol — 2026-11-01
+* **Qarz eski ko'rinishi tuzatildi** (200 mln o'rniga 173 mln): 2-ilovaga katalog sinxronidagi umumiy ro'yxat qarzi
+  (eski bo'lishi mumkin) emas, faqat serverdan alohida so'ralgan qarz boradi; har yuborishda 1 daqiqadan eski bo'lsa qayta so'raladi.
+* **1C tarixi serverdan** (kompyutersiz): Admin har 10 daqiqada, 2-ilova "Yangilash" bosganda va har savdo/to'lovdan keyin
+  (2,5 va 6 daqiqada) har mijozning oxirgi 31 kunlik kartochkasini serverdan oladi. Admin'dagi "1C tarixi" ham shu bilan to'ladi.
+* **Savdo va to'lov 2-ilovada darhol**: "1-ilovadan" yozuv sifatida; 1C kartochkasida o'sha hujjat paydo bo'lgach (tur, vaqt
+  ±20 daq, summa bo'yicha) o'zi yo'qoladi — ikki marta ko'rinmaydi.
+* **2-ilovada qarz** = 1C kartochkasi qoldig'i (yoki server qarzi) + keyin qilingan savdo/to'lovlar; nima qo'shilgani
+  alohida qatorda yoziladi.
+* 2-ilova "Yangilash": Admin javobini 3 daqiqagacha o'zi kutadi (har 15 soniyada). Admin so'rovlarga har 25 soniyada javob
+  beradi; agentlar ko'prigi o'chiq bo'lsa ham.
+
+## Savdo Mijoz 1.8 (versionCode 9) — 2026-11-01
+* "Yangilash" va ilova ochilganda kirish yozuvi tekshiriladi (10 daqiqada ko'pi bilan bir): Admin mijozni qayta qo'shgan yoki
+  kalitni yangilagan bo'lsa, 2-ilova yangi kalitga o'tadi. Avval eski kalitda ma'lumot bor ekan, eski joydan o'qib qolardi.
+
+## 3.3 (versionCode 15) + Savdo Mijoz 1.7 (versionCode 8): to'lovlar va qarz 2-ilovada — 2026-11-01
+* Admin'da (yoki agent "Admin orqali") qabul qilingan **to'lov 2-ilova tarixida darhol** ko'rinadi ("1-ilovadan", 1C hisoboti
+  qamragunicha) va "Bu oy ▸ To'landi" ga qo'shiladi. Savdoda to'langan qism ham to'lov bo'lib ko'rinadi.
+* To'lovdan keyin Admin **qarzni serverdan qayta o'qiydi** (to'lov serverga yozilgach: darhol, 1, 3, 10 daqiqada) va
+  2-ilovaga yuboradi — server 1C'dan kechikib olsa ham qarz o'zi yangilanadi.
+* 2-ilova bosh sahifasida: "1-ilovada kiritilgan to'lov: ..." (server qarzga qo'shgunicha).
+* **2-ilovaga ma'lumotni faqat Admin yuboradi.** Agent ilova (bir telefonda Admin bilan turgan eski 1-ilova ham) endi
+  kompyuter fayllarini olmaydi va 2-ilovaga eski ma'lumotni yubormaydi — faqat 2-filial printeriga chek.
+
 ## 3.2 (versionCode 14) + Savdo Mijoz 1.6 (versionCode 7): 2–4-bosqichlar — 2026-11-01
 Server (SQL) va protokol (tur 1, 3, 4, 5) o'zgarmagan. 1C'ga yozish — faqat Admin'da tasdiqlangan so'rovlar, kompyuter orqali.
 

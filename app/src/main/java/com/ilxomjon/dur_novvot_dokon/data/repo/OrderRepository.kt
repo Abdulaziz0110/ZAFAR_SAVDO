@@ -28,6 +28,8 @@ class OrderRepository(
 
     /** v3.0: savdo matni bilan (Admin orqali ishlaganda 2-filial cheki ko'zgusi uchun). Sinxron, tez. */
     var onOrderPayload: ((String, String, SentOrder, String) -> Unit)? = null
+    /** v3.2: to'lov navbatga qo'yildi (to'lov, navbat id, kvitansiya kodi) — 2-ilovada darhol ko'rinishi uchun. */
+    var onPaymentQueued: ((SentPayment, Long, String) -> Unit)? = null
 
     /** Ikki marta bosish / ikki ekrandan bir vaqtda yuborishdan himoya. */
     private val sendLock = Mutex()
@@ -75,6 +77,7 @@ class OrderRepository(
             val sent = SentPayment(0, now.time, storeId, storeName, cash, transfer, click, Protocol.cleanText(note), pending = true)
             val id = outbox.enqueuePayment(agent.id, payload, sent)
             outbox.kick()
+            runCatching { onPaymentQueued?.invoke(sent, id, OutboxEntry.receiptOf(OutboxKind.PAYMENT, id)) }
             id
         }
 }

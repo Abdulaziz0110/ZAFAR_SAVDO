@@ -19,8 +19,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_mijoz"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 12
+        versionName = "1.11"
         vectorDrawables {
             generatedDensities?.clear()
         }

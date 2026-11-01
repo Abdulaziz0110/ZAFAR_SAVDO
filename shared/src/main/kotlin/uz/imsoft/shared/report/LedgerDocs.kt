@@ -78,3 +78,25 @@ object LedgerDocs {
             .sortedWith(compareByDescending<LedgerDoc> { it.stamp }.thenBy { it.kind.ordinal })
     }
 }
+
+/**
+ * v3.6 Admin "1C tarixi — barcha mijozlar": yozuv qaysi mijozniki ekanini [LedgerEntry.kindText] oxiriga yashirin qo'shadi
+ * (ajratgich U+001F). Shunda bir soniyada ikki mijozning hujjati aralashmaydi va mijoz nomi bo'yicha qidiruv ishlaydi.
+ * 2-ilovaga bunday yozuv bormaydi (faqat Admin ekrani uchun).
+ */
+object LedgerOwner {
+    const val SEP = '\u001F'
+
+    fun tag(kindText: String, storeId: String, name: String): String = kindText + SEP + storeId + SEP + name
+
+    /** Asl matn (ajratgichsiz). */
+    fun plain(kindText: String): String = kindText.substringBefore(SEP)
+
+    /** (do'kon id, mijoz nomi) yoki null. */
+    fun of(kindText: String): Pair<String, String>? {
+        val i = kindText.indexOf(SEP)
+        if (i < 0) return null
+        val rest = kindText.substring(i + 1)
+        return rest.substringBefore(SEP) to rest.substringAfter(SEP, "")
+    }
+}

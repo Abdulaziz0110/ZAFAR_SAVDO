@@ -27,7 +27,7 @@
     <string name="home_no_data_short">Маълумот йўқ</string>
     <string name="home_debt_unknown">Қарз маълумоти юборилмаган</string>
     <string name="home_debt_at">Сервер маълумоти: %1$s ҳолатига</string>
-    <string name="home_debt_report_at">1К ҳисоботи бўйича: %1$s охирига</string>
+    <string name="home_debt_report_at">1К карточкаси бўйича: %1$s ҳолатига</string>
     <string name="home_report_balance">1К ҳисоботи бўйича (%1$s охирига): %2$s</string>
     <string name="home_not_linked">Уланмаган</string>
     <string name="home_sync">1-илова юборган: %1$s · телефонга олинган: %2$s</string>
@@ -421,6 +421,7 @@
     <string name="rx_test">Синов чеки</string>
     <string name="rx_test_item">Синов</string>
     <string name="wg_desc">Қарз, нархлар ва касса</string>
+    <string name="home_pending_deals">Сервер қарзига кейинги %1$d та савдо/тўлов қўшилди: %2$s</string>
     <string name="wg_debt">Қарз: %1$s</string>
     <string name="wg_no_data">Маълумот йўқ</string>
     <string name="lg_unit_som">сўм</string>

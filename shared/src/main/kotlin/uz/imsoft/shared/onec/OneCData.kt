@@ -156,3 +156,45 @@ object OneCCodec {
         ),
     )
 }
+
+/**
+ * v3.7 Admin: kompyuter yuborgan savdolar (har safar bir davr) telefonda YIG'ILADI — oxirgi 1 yil. Yangi davr ichidagi eski
+ * hujjatlar yangisi bilan almashadi (1C'da o'chirilgan/o'zgargan hujjat ham to'g'ri bo'ladi), davrdan tashqaridagilar qoladi.
+ */
+object OneCSalesArchive {
+    private fun dayEnd(st: Long) = if (st % 1_000_000 == 0L) st + 235959 else st
+
+    fun merge(old: OneCSales?, new: OneCSales, keepFrom: Long): OneCSales {
+        val nf = new.from.takeIf { it > 0 } ?: new.docs.minOfOrNull { it.stamp }
+        val nt = new.to.takeIf { it > 0 }?.let { dayEnd(it) } ?: new.docs.maxOfOrNull { it.stamp }
+        if (nf == null || nt == null) return old?.copy(at = maxOf(old.at, new.at), errors = new.errors) ?: new
+        val kept = old?.docs.orEmpty().filter { it.stamp < nf || it.stamp > nt }
+        val docs = (kept + new.docs).filter { it.stamp >= keepFrom }.distinctBy { it.id.ifEmpty { it.kind + it.number + it.stamp } }
+            .sortedByDescending { it.stamp }
+        val from = listOfNotNull(old?.from?.takeIf { it > 0 }, nf).min().coerceAtLeast(keepFrom)
+        val to = listOfNotNull(old?.to?.takeIf { it > 0 }?.let { dayEnd(it) }, nt).max()
+        return OneCSales(from, to, maxOf(old?.at ?: 0L, new.at), docs, new.errors)
+    }
+}
+
+/** v3.7: 1C hujjati (kompyuterdan) -> "1C tarixi" yozuvlari: savdo (r, m, z) va mijoz qaytargan (q). Boshqalari — yo'q. */
+object OneCLedger {
+    fun isClientDoc(kind: String) = kind == OneCDoc.SALE || kind == OneCDoc.SALE_MOBILE || kind == OneCDoc.RETAIL || kind == OneCDoc.CLIENT_RETURN
+
+    fun entries(d: OneCDoc): List<uz.imsoft.shared.report.LedgerEntry> {
+        if (!isClientDoc(d.kind)) return emptyList()
+        val ret = d.kind == OneCDoc.CLIENT_RETURN
+        val kind = if (ret) uz.imsoft.shared.report.EntryKind.RETURN else uz.imsoft.shared.report.EntryKind.SALE
+        val sumCol = if (ret) uz.imsoft.shared.report.Col.RETURN else uz.imsoft.shared.report.Col.SUM
+        val text = "1C №" + d.number
+        if (d.lines.isEmpty()) {
+            return listOf(uz.imsoft.shared.report.LedgerEntry(d.stamp, kind, text, "", 0.0, mapOf(sumCol to uz.imsoft.shared.report.Money2(d.som, d.usd))))
+        }
+        return d.lines.map { l ->
+            val v = LinkedHashMap<uz.imsoft.shared.report.Col, uz.imsoft.shared.report.Money2>()
+            if (l.priceSom != 0.0 || l.priceUsd != 0.0) v[uz.imsoft.shared.report.Col.PRICE] = uz.imsoft.shared.report.Money2(l.priceSom, l.priceUsd)
+            v[sumCol] = uz.imsoft.shared.report.Money2(l.sumSom, l.sumUsd)
+            uz.imsoft.shared.report.LedgerEntry(d.stamp, kind, text, l.name, l.qty, v)
+        }
+    }
+}

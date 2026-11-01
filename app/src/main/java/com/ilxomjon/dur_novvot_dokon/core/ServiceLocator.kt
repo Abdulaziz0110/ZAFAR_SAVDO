@@ -79,6 +79,7 @@ object ServiceLocator {
             // v2.4: 2-ilova bilan ulashish (sozlangan bo'lsa)
             runCatching {
                 share.load()
+                if (AppRole.isAdmin) share.history.load()
                 catalog.onChanged = { barcodes.invalidate(); share.markDirty(); if (shareStore.isConfigured && shareStore.autoPublish) ShareWorker.kick(app) }
                 if (shareStore.isConfigured) ShareWorker.schedule(app)
             }
@@ -135,9 +136,22 @@ object ServiceLocator {
     val orders: OrderRepository by lazy {
         OrderRepository(catalog, draft, outbox, kpi).also { r ->
             // v2.6: savdo -> mijozning 2-ilovasi (sozlanmagan bo'lsa onSale hech narsa qilmaydi)
-            r.onOrderQueued = { s, id, code -> if (!isRelay) appScope.launch(Dispatchers.IO) { runCatching { share.onSale(s, id, code) } } }
+            r.onOrderQueued = { s, id, code ->
+                if (!isRelay) appScope.launch(Dispatchers.IO) {
+                    runCatching { share.onSale(s, id, code) }
+                    // v3.4: Admin — server qabul qilgach qarz va 1C tarixi 2-ilovaga o'zi
+                    afterDealSent(s.storeId, id)
+                }
+            }
             // Admin orqali: chek ko'zgusi savdo bilan birga Admin'ga boradi (Admin 2-filialga yuboradi)
             r.onOrderPayload = { agentId, payload, s, code -> if (isRelay) relayClient.rememberSale(agentId, payload, s, code) }
+            // v3.2: Admin'da qabul qilingan to'lov — 2-ilovada darhol, qarz esa server qabul qilgach yangilanadi
+            r.onPaymentQueued = { p, id, code ->
+                if (AppRole.isAdmin) appScope.launch(Dispatchers.IO) {
+                    runCatching { share.onPayment(p, "t$id", code) }
+                    afterDealSent(p.storeId, id)
+                }
+            }
         }
     }
     val reports by lazy { ReportRepository(api, catalog) }
@@ -163,10 +177,42 @@ object ServiceLocator {
                     }
                     runCatching { clientRequests.refresh(notify = true) }
                     runCatching { onec.refreshResults() }
+                    // v3.7: kompyuterdan 1 yillik savdolar (30 kunlik bo'laklar)
+                    runCatching { onec.backfillStep() }
+                    // v3.7: "1C tarixi" agentlarga (faqat o'zgargan 10 kunlik bo'laklar, daqiqada ko'pi bilan bir)
+                    runCatching {
+                        val d = adminHistory.data.value
+                        val cfg = com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(uz.imsoft.shared.CloudDb.normalizeUrl(shareStore.dbUrl), shareStore.agentKey)
+                        historyShare.publish(cfg.takeIf { it.isValid }, shareStore.secret, d.entries, d.version, d.loaded)
+                    }
                 }
             }
         }
     }
+    /**
+     * v3.2: to'lov serverga yozilishini kutib (navbat SENT), keyin qarzni serverdan bir necha marta o'qiydi — server 1C'dan
+     * qarzni kechikib olishi mumkin (0, 1, 3, 10 daqiqa). Har safar 2-ilovaga yuboriladi.
+     */
+    suspend fun afterDealSent(storeId: String, outboxId: Long) {
+        // v3.6: Admin "1C tarixi" barcha mijozlar uchun — 2-ilovada bo'lmagan mijoz ham yangilanadi
+        if (!AppRole.isAdmin || storeId.isEmpty()) return
+        val deadline = System.currentTimeMillis() + 15 * 60_000L
+        while (outboxId > 0 && System.currentTimeMillis() < deadline) {
+            val st = runCatching { outbox.statesFor(listOf(outboxId))[outboxId] }.getOrNull()
+            if (st == null || st.isDone) break
+            kotlinx.coroutines.delay(10_000L)
+        }
+        runCatching { share.afterDeal(storeId) }
+    }
+
+    /** v3.7 Admin: "1C tarixi" — kompyuterdagi barcha savdolar + server kartochkalari (to'lovlar bilan), 1 yil. */
+    val adminHistory: com.ilxomjon.dur_novvot_dokon.data.share.AdminHistory by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.share.AdminHistory(app, share.history, onec, share, catalog, appScope)
+    }
+
+    /** v3.7: Admin "1C tarixi" -> agentlar (bulut orqali). */
+    val historyShare: com.ilxomjon.dur_novvot_dokon.data.share.HistoryShare by lazy { com.ilxomjon.dur_novvot_dokon.data.share.HistoryShare(app) }
+
     /** v3.2 Admin: 1C ma'lumotlari va "Tasdiqlab kiritish" navbati. */
     val onec: com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository by lazy { com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore) }
     /** v3.2 Admin: 2-ilovadan to'lov va chek tuzatish so'rovlari. */
@@ -214,9 +260,17 @@ object ServiceLocator {
                     return if (f.isFile) f.lastModified() to f.readBytes() else null
                 }
                 override suspend fun printLabels(data: ByteArray): String = labels.printRaw(data)
-                override suspend fun mirrorSale(sale: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Sale, key: String) =
+                override suspend fun mirrorSale(sale: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Sale, key: String) {
                     share.onSale(sale.order, 0L, sale.code, key)
+                    appScope.launch(Dispatchers.IO) { afterDealSent(sale.order.storeId, 0L) }
+                }
                 override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
+                override suspend fun mirrorPayment(storeId: String, cash: Double, transfer: Double, click: Double, note: String, key: String) {
+                    val st = catalog.storeById(storeId)
+                    val p = com.ilxomjon.dur_novvot_dokon.domain.SentPayment(0, System.currentTimeMillis(), storeId, st?.name.orEmpty(), cash, transfer, click, note)
+                    runCatching { share.onPayment(p, key, "") }
+                    appScope.launch(Dispatchers.IO) { afterDealSent(storeId, 0L) }
+                }
             },
         ).also { h -> h.catalogPeriodMs = { com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.intervalMs().coerceIn(2 * 60_000L, 20 * 60_000L) } }
     }

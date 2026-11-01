@@ -105,9 +105,10 @@ class CloudDb(
 
         /**
          * Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish,
-         * v4: agentlar "Admin orqali" — g/{kalit}/..., v5: 2-ilovadan to'lov va chek tuzatish so'rovlari — s/{kalit}/pay, ed).
+         * v4: agentlar "Admin orqali" — g/{kalit}/..., v5: 2-ilovadan to'lov va chek tuzatish so'rovlari — s/{kalit}/pay, ed,
+         * v6: agentlar Admin'ning "1C tarixi"ni o'qiydi — g/{kalit}/hist).
          */
-        const val RULES_VERSION = 5
+        const val RULES_VERSION = 6
 
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
@@ -174,6 +175,7 @@ class CloudDb(
       "${'$'}gk": {
         "cat": { ".read": "${'$'}gk.length >= 24" },
         "codes": { ".read": "${'$'}gk.length >= 24" },
+        "hist": { ".read": "${'$'}gk.length >= 24" },
         "hb": { ".read": "${'$'}gk.length >= 24" },
         "sig": { ".write": "${'$'}gk.length >= 24", ".validate": "newData.isNumber()" },
         "creq": { ".write": "${'$'}gk.length >= 24", ".validate": "newData.isNumber()" },

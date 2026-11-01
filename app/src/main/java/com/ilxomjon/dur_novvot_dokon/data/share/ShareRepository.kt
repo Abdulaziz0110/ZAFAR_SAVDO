@@ -141,6 +141,13 @@ class ShareRepository(
     var pluOf: (String) -> String? = { null }
     /** v2.6: 1-ilova savdolari -> 2-ilova (tarix va chek). */
     val mirror = SaleMirror(context, store)
+    /** v3.6 Admin: barcha mijozlarning 1C tarixi (serverdan, 1 yil). 2-ilova mijozlari kitobi shu orqali to'ladi. */
+    val history = StoreHistory(context, catalog, api).also { h ->
+        h.priorityStores = { store.clients().map { it.storeId }.filter { it.isNotEmpty() }.toSet() }
+        h.onReport = { storeId, _, report, source -> fromHistory(storeId, report, source) }
+    }
+    /** Oxirgi server hisobotidan 2-ilova mijozining kitobi o'zgardimi (do'kon id bo'yicha). */
+    private val historyChanged = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
     private val _state = MutableStateFlow(ShareState())
     val state: StateFlow<ShareState> = _state.asStateFlow()
 
@@ -532,17 +539,24 @@ class ShareRepository(
         }
     }
 
-    private fun commitLocked(id: String, report: CardReport, name: String, source: String) {
+    private fun commitLocked(id: String, report: CardReport, name: String, source: String): Boolean {
         val b = book(id)
         // Ko'rib chiqish paytidan beri boshqa import bo'lgan bo'lsa ham to'g'ri bo'lishi uchun qaytadan birlashtiriladi.
         val m = LedgerMerge.merge(b.entries, b.coverage, report, System.currentTimeMillis(), source)
+        val oldBalance = b.balance
         b.entries = m.entries
         b.coverage = m.coverage
         report.closing?.let { c -> val cur = b.balance; if (cur == null || c.first >= cur.first) b.balance = c }
-        b.log = listOf(ImportLog(System.currentTimeMillis(), name, source, m.added, m.removed, m.same, report.periodFrom ?: 0, report.periodTo ?: 0)) + b.log
+        val changed = m.added > 0 || m.removed > 0 || b.balance != oldBalance
+        // Avtomatik (server) importda o'zgarishsizlari jurnalga yozilmaydi — jurnal to'lib ketmasin
+        if (changed || source != "server") {
+            b.log = (listOf(ImportLog(System.currentTimeMillis(), name, source, m.added, m.removed, m.same, report.periodFrom ?: 0, report.periodTo ?: 0)) + b.log).take(200)
+        }
         saveBook(id, b)
+        // Qamrov (import vaqti) o'zgardi — 2-ilovada "1-ilovadan" yozuvlari to'g'ri yashirilishi uchun baribir yuboriladi
         store.update(id) { it.copy(dirty = true) }
         ledgerVersion++
+        return changed
     }
 
     /** Barcha import qilingan yozuvlarni o'chirish (joriy mijoz). */
@@ -631,8 +645,9 @@ class ShareRepository(
                             ?: storeFor(fileName)?.let { st -> store.client(st.id) }
                             ?: createClient(fileName, storeFor(fileName)?.id.orEmpty(), o.str("k").ifEmpty { "c" })
                         commitLocked(c.id, report, name, "pc")
+                        c.storeId
                     }
-                }
+                }.let { sid -> if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) history.commit(sid.ifEmpty { storeFor(report.clientName.orEmpty())?.id.orEmpty() }, report.clientName.orEmpty(), report, "pc", notify = false) }
             }.isSuccess
             // Buzilgan fayl qayta-qayta urinilmasin: baribir o'chiriladi (kompyuter jurnalida qoladi).
             withContext(Dispatchers.IO) { runCatching { db.delete("in/${store.inboxKey}/$k") } }
@@ -660,12 +675,20 @@ class ShareRepository(
         val groupName = cat.groups.associate { it.id to it.name }
         val seen = HashSet<String>()
         val items = ArrayList<PriceItem>()
-        for (e in b.entries) {
+        // v3.5: mijoz olgan tovarlar — 1C tarixi + 1-ilova savdolari + oldin ko'rilganlar (eslab qolinadi). Tarix qisqa yoki
+        // bo'sh bo'lsa ham (masalan yangi Admin telefonida) Narxlar ro'yxati yo'qolmaydi.
+        val mirrorEntries = mirror.entriesFor(c.id, b.entries, b.coverage)
+        val names = LinkedHashSet<String>()
+        for (e in b.entries + mirrorEntries) {
             if (e.product.isBlank() || (e.kind != EntryKind.SALE && e.kind != EntryKind.RETURN)) continue
-            val k = LedgerMerge.nameKey(e.product)
+            names += e.product
+        }
+        val known = withContext(Dispatchers.IO) { rememberProducts(c.id, names) }
+        for (name in known) {
+            val k = LedgerMerge.nameKey(name)
             if (!seen.add(k)) continue
             val p = byKey[k]
-            items += if (p == null) PriceItem("", e.product, "", 0.0, 0.0, 0.0, 0.0)
+            items += if (p == null) PriceItem("", name, "", 0.0, 0.0, 0.0, 0.0)
             else PriceItem(
                 p.id, p.name, groupName[p.groupId].orEmpty(),
                 Pricing.unitPrice(p, PriceType.CASH, Currency.SOM, cat.rate), Pricing.unitPrice(p, PriceType.CASH, Currency.USD, cat.rate),
@@ -674,7 +697,7 @@ class ShareRepository(
                 l12 = listOf(1, 2).flatMap { lv -> listOf(Pricing.unitPrice(p, lv, Currency.SOM, cat.rate), Pricing.unitPrice(p, lv, Currency.USD, cat.rate)) },
             )
         }
-        val debt = if (c.storeId.isEmpty()) null else runCatching { catalog.knownDebt(c.storeId) }.getOrNull()?.let { DebtInfo(it.som, it.usd, it.fetchedAt, "server") }
+        val debt = if (c.storeId.isEmpty()) null else freshDebt(c.storeId)
         val features = if (store.acceptOrders && store.rulesVersion >= 2 && c.kind == "c") setOf(ClientSnapshot.FEATURE_ORDERS) else emptySet()
         return ClientSnapshot(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
@@ -738,6 +761,12 @@ class ShareRepository(
      */
     suspend fun tick(): Boolean {
         if (!store.isConfigured && !store.isCloudReady) return false
+        // v3.2: 2-ilovaga ma'lumotni FAQAT Admin yuboradi (yagona manba). Agent eski/yarim ma'lumot bilan ustidan yozmasin —
+        // agentda faqat 2-filial printeriga kutayotgan cheklar.
+        if (!com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            runCatching { mirror.retryPending() }
+            return false
+        }
         load()
         runCatching { ensureRules() }
         val imported = runCatching { processInbox() }.getOrDefault(0)
@@ -757,12 +786,115 @@ class ShareRepository(
                 served += c.id to req
             }
         }
+        // v3.4: 1C tarixi serverdan (oxirgi oy) — 2-ilova so'raganda (2 daqiqadan eski bo'lsa) va har 10 daqiqada.
+        // v3.6: 1 yilgacha orqaga va barcha mijozlar — StoreHistory.step (bir vaqtda bitta so'rov).
+        val now = System.currentTimeMillis()
+        for (c0 in store.clients()) {
+            val c = autoLink(c0)
+            if (c.storeId.isEmpty()) continue
+            val last = serverImportAt[c.id] ?: 0L
+            val asked = served.any { it.first == c.id }
+            if (now - last >= 10 * 60_000L || (asked && now - last >= 2 * 60_000L)) {
+                runCatching { serverImport(c.id) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; serverImportAt[c.id] = now - 7 * 60_000L }
+            }
+        }
+        runCatching { history.step() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
         val sent = if (served.isNotEmpty() || imported > 0 || (store.autoPublish && store.clients().any { it.dirty })) publish() else false
         if (sent) for ((id, req) in served) store.update(id) { it.copy(lastRequestServed = req) }
         if (store.acceptOrders && store.rulesVersion >= 2) runCatching { refreshOrders(notify = true) }
         runCatching { mirror.retryPending() }
         extraTick?.let { f -> runCatching { f() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it } }
         return sent
+    }
+
+    /** v3.5: mijoz olgan tovarlar nomlari (fayl) — yangilari qo'shiladi, hech qachon o'chirilmaydi. @return hammasi. */
+    private fun rememberProducts(clientId: String, names: Collection<String>): List<String> {
+        val f = File(dir(), "known_" + clientId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.ifEmpty { "x" } + ".json")
+        val old = runCatching { (Json.parse(f.readText()) as? List<*>).orEmpty().mapNotNull { it?.toString() } }.getOrDefault(emptyList())
+        val keys = old.map { LedgerMerge.nameKey(it) }.toHashSet()
+        val add = names.filter { keys.add(LedgerMerge.nameKey(it)) }
+        if (add.isEmpty()) return old
+        val all = old + add
+        runCatching {
+            val tmp = File(f.parentFile, f.name + ".tmp")
+            tmp.writeText(Json.write(all))
+            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+        }
+        return all
+    }
+
+    // ---------------- v3.4: qarz va 1C tarixi serverdan (har doim eng yangisi) ----------------
+
+    /**
+     * 2-ilovaga boradigan qarz: serverdan alohida so'ralgan qiymat (1 daqiqadan eski bo'lsa — qayta so'raladi). Katalog
+     * sinxronidagi umumiy ro'yxat qarzi ISHLATILMAYDI (u eski bo'lishi mumkin: 173 mln vs 200 mln holati), faqat hech narsa
+     * bo'lmasa. Server ko'rinmasa — oxirgi so'ralgan qiymat (vaqti bilan).
+     */
+    private suspend fun freshDebt(storeId: String): DebtInfo? {
+        val now = System.currentTimeMillis()
+        val cached = runCatching { catalog.explicitDebt(storeId) }.getOrNull()
+        if (cached == null || now - cached.fetchedAt > 60_000L) {
+            val fresh = runCatching { kotlinx.coroutines.withTimeout(20_000L) { catalog.refreshDebt(storeId) } }.getOrNull()
+            if (fresh != null) return DebtInfo(fresh.som, fresh.usd, fresh.fetchedAt, "server")
+        }
+        val c = runCatching { catalog.explicitDebt(storeId) }.getOrNull() ?: runCatching { catalog.knownDebt(storeId) }.getOrNull()
+        return c?.let { DebtInfo(it.som, it.usd, it.fetchedAt, "server") }
+    }
+
+    private val serverImportAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * Mijozning 1C kartochkasini serverdan (oxirgi [days] kun) olib 1C tarixiga qo'shadi — kompyuter va Excel'siz.
+     * Savdo va to'lovlar 1C qabul qilgach shu yo'l bilan keladi. @return o'zgarish bo'ldimi.
+     */
+    suspend fun serverImport(clientId: String, days: Int = 31): Boolean {
+        val c = autoLink(store.client(clientId) ?: return false)
+        if (c.storeId.isEmpty()) return false
+        historyChanged.remove(c.storeId)
+        // Hisobot StoreHistory orqali olinadi va [fromHistory] bilan shu mijoz kitobiga tushadi
+        history.refreshNow(c.storeId, days)
+        serverImportAt[clientId] = System.currentTimeMillis()
+        if (store.currentId.isEmpty()) store.currentId = clientId
+        return historyChanged.remove(c.storeId) == true
+    }
+
+    /** v3.6: StoreHistory'ga kelgan hisobot — shu do'konga bog'langan 2-ilova mijozlari kitobiga ham. */
+    private suspend fun fromHistory(storeId: String, report: CardReport, source: String) {
+        val targets = store.clients().filter { it.storeId == storeId }
+        if (targets.isEmpty()) return
+        val changed = mutex.withLock {
+            withContext(Dispatchers.IO) { targets.map { commitLocked(it.id, report, source, source) }.any { it } }.also { publishState() }
+        }
+        if (changed) historyChanged[storeId] = true
+    }
+
+    /** v3.6: do'konga bog'lanmagan 2-ilova mijozi — nomi katalogdagi do'kon nomiga to'liq mos bo'lsa avtomatik bog'lanadi. */
+    private suspend fun autoLink(c: ShareClient): ShareClient {
+        if (c.storeId.isNotEmpty()) return c
+        val st = storeFor(c.name) ?: return c
+        mutex.withLock { store.update(c.id) { it.copy(storeId = st.id, dirty = true) }; publishState() }
+        return store.client(c.id) ?: c
+    }
+
+    /** Savdo/to'lovdan keyin: qarz darhol va bir necha marta, 1C tarixi 1C qabul qilgach (4 va 10 daqiqada). */
+    suspend fun afterDeal(storeId: String) {
+        val c = store.clients().firstOrNull { it.storeId == storeId }
+        if (c == null) {
+            // v3.6: 2-ilovada bo'lmagan mijoz — faqat Admin "1C tarixi" uchun (1C qabul qilgach)
+            history.bump(storeId, System.currentTimeMillis() + 150_000L)
+            kotlinx.coroutines.delay(360_000L)
+            history.bump(storeId)
+            return
+        }
+        for (wait in listOf(0L, 30_000L, 60_000L)) {
+            if (wait > 0) kotlinx.coroutines.delay(wait)
+            refreshDebtFor(storeId)
+        }
+        for (wait in listOf(150_000L, 360_000L)) {
+            kotlinx.coroutines.delay(wait)
+            if (runCatching { serverImport(c.id) }.getOrDefault(false)) runCatching { publishOne(c.id) }
+            refreshDebtFor(storeId)
+        }
     }
 
     /** v3.2: keyingi savdo cheki 2-filial printeriga (true), faqat do'konda (false) yoki odatdagidek (null). */
@@ -786,14 +918,37 @@ class ShareRepository(
         // Chek uchun "oldingi qarz" — serverdan oxirgi yuklangan qiymat (so'm savdosida)
         val debt = if (sent.currency == com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM) catalog.storeById(sent.storeId)?.debtSom else null
         val (c, s) = mirror.record(sent, outboxId, code, debt, saleId) ?: return
-        store.update(c.id) { it.copy(dirty = true) }
+        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        if (admin) store.update(c.id) { it.copy(dirty = true) }
         mutex.withLock { publishState() }
         val fresh = store.client(c.id) ?: c
         val force = nextBranchPrint?.takeIf { it.first == sent.storeId }?.second
         if (force != null) nextBranchPrint = null
         runCatching { mirror.pushReceipt(fresh, s, force) }
+        if (!admin) return
         if (store.autoPublish) runCatching { publishOne(c.id) }.onFailure { ShareWorker.kick(context) }
         else ShareWorker.kick(context)
+    }
+
+    /**
+     * v3.2: to'lov navbatga qo'yilganda (Admin yoki agent orqali): mijozning 2-ilovasida darhol ko'rinadi ("1-ilovadan",
+     * 1C hisoboti qamragunicha). Qarz serverdan keyin yangilanadi ([refreshDebtLater]).
+     */
+    suspend fun onPayment(p: com.ilxomjon.dur_novvot_dokon.domain.SentPayment, id: String, code: String) {
+        if (!store.isConfigured || !com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) return
+        val c = mirror.recordPayment(p, id, code) ?: return
+        store.update(c.id) { it.copy(dirty = true) }
+        mutex.withLock { publishState() }
+        runCatching { publishOne(c.id) }.onFailure { ShareWorker.kick(context) }
+    }
+
+    /** Server qarzini qayta o'qib 2-ilovaga yuboradi (to'lovdan keyin: server 1C'dan olgunicha bir necha marta). */
+    suspend fun refreshDebtFor(storeId: String) {
+        val c = store.clients().firstOrNull { it.storeId == storeId } ?: return
+        runCatching { kotlinx.coroutines.withTimeout(20_000L) { catalog.refreshDebt(storeId) } }.onSuccess {
+            store.update(c.id) { it.copy(dirty = true) }
+            runCatching { publishOne(c.id) }
+        }
     }
 
     // ---------------- 2-ilovadan buyurtmalar ----------------
