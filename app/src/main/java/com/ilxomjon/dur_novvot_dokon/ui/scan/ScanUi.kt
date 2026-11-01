@@ -39,7 +39,7 @@ object ScanUi {
     fun add(p: Product, weight: Double?): Added {
         val draft = ServiceLocator.draft
         val d = draft.state.value
-        val price = d.lineFor(p.id)?.price ?: Pricing.unitPrice(p, d.priceType, d.currency, ServiceLocator.catalog.state.value.rate)
+        val price = d.lineFor(p.id)?.price ?: Pricing.unitPrice(p, d.level, d.currency, ServiceLocator.catalog.state.value.rate)
         val delta = weight ?: 1.0
         draft.adjust(p, delta, price)
         ServiceLocator.kpi.tap()

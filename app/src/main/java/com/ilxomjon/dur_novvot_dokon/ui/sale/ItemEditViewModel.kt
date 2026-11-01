@@ -22,7 +22,7 @@ class ItemEditViewModel(
     val exists: Boolean = existing != null
     val initialQty: Double = existing?.qty ?: 1.0
     val initialPrice: Double = existing?.price
-        ?: product?.let { Pricing.unitPrice(it, d.priceType, d.currency, rate) }
+        ?: product?.let { Pricing.unitPrice(it, d.level, d.currency, rate) }
         ?: 0.0
     val costPrice: Double = product?.let { Pricing.costPrice(it, d.currency, rate) } ?: 0.0
 

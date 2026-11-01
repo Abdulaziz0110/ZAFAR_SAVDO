@@ -108,4 +108,19 @@ class AppPrefs(context: Context) {
     var pinSalt: String get() = str("pin_salt", ""); set(v) = setStr("pin_salt", v)
     /** Ilova fonda shuncha daqiqa tursa PIN so'raladi (0 — har safar). */
     var lockAfterMin: Int get() = prefs.getInt("lock_after", 1); set(v) = prefs.edit().putInt("lock_after", v).apply()
+
+    // ---- v3.2 ----
+    /** Ish vaqti: avtomatik yangilash shu oraliqda tez; tugashidan 1 daqiqa oldin oxirgi to'liq yuklab olish. */
+    var workHours: uz.imsoft.shared.sched.WorkHours
+        get() = uz.imsoft.shared.sched.WorkHours.decode(prefs.getString("work_hours", null))
+        set(v) = prefs.edit().putString("work_hours", v.normalized().encode()).apply()
+    /** Avtomatik yangilash (umuman). */
+    var autoUpdate: Boolean get() = flag("auto_update", true); set(v) = setFlag("auto_update", v)
+    /** Ish vaqtida yangilash oralig'i (daqiqa). */
+    var updateMinutes: Int get() = prefs.getInt("update_min", 5); set(v) = prefs.edit().putInt("update_min", v.coerceIn(1, 60)).apply()
+    var lastFinalSyncAt: Long get() = prefs.getLong("final_sync_at", 0L); set(v) = prefs.edit().putLong("final_sync_at", v).apply()
+    /** Kunlik zaxira (avtomatik, eskisini almashtiradi). */
+    var dailyBackup: Boolean get() = flag("daily_backup", true); set(v) = setFlag("daily_backup", v)
+    var lastDailyBackupAt: Long get() = prefs.getLong("daily_backup_at", 0L); set(v) = prefs.edit().putLong("daily_backup_at", v).apply()
+    var lastDailyBackupError: String get() = str("daily_backup_err", ""); set(v) = setStr("daily_backup_err", v)
 }

@@ -59,6 +59,8 @@ object ServiceLocator {
         if (::app.isInitialized) return
         app = application
         applyUiPrefs()
+        // v3.1: 1- va 2-narx 1C'dan (kompyuter yuborgan kodlar fayli)
+        com.ilxomjon.dur_novvot_dokon.domain.Pricing.level12 = { id, level -> labels.priceForLevel(id, level) }
         // Keystore va baza obyektlari asosiy oqimni to'sib qo'ymasligi uchun IO'da oldindan yaratiladi.
         appScope.launch(Dispatchers.IO) {
             // Navbat bazasi yangi versiyaga o'tishidan OLDIN fayl nusxasi olinadi (rollback uchun).
@@ -130,7 +132,7 @@ object ServiceLocator {
     }
     val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) { isRelay } }
     val kpi by lazy { KpiTracker(historyDb, appPrefs) }
-    val orders by lazy {
+    val orders: OrderRepository by lazy {
         OrderRepository(catalog, draft, outbox, kpi).also { r ->
             // v2.6: savdo -> mijozning 2-ilovasi (sozlanmagan bo'lsa onSale hech narsa qilmaydi)
             r.onOrderQueued = { s, id, code -> if (!isRelay) appScope.launch(Dispatchers.IO) { runCatching { share.onSale(s, id, code) } } }
@@ -145,13 +147,53 @@ object ServiceLocator {
     val diagnostics by lazy { DiagnosticsRepository(app, secure, api, network, outbox, historyDb, localDb) }
     val repeatSale by lazy { com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale(catalog, draft, parked) }
     val shareStore by lazy { ShareStore(app) }
-    val share by lazy {
+    val share: ShareRepository by lazy {
         ShareRepository(app, shareStore, catalog, api).also { s ->
             s.codesHook = { bytes -> labels.applyCodes(bytes) }
             s.pluOf = { id -> labels.pluFor(id) }
+            // v3.2: 1C savdolar/ta'minotchilar, ish vaqti, mijoz so'rovlari (faqat Admin)
+            s.workHours = { appPrefs.workHours }
+            s.dataHook = { kind, bytes -> onec.onData(kind, bytes) }
+            if (AppRole.isAdmin) {
+                s.editHook = { id, entries -> clientRequests.apply(id, entries) }
+                s.extraTick = {
+                    // v3.2: daqiqalik jadval va ish vaqti kompyuterga birinchi marta o'zi yuboriladi
+                    if (shareStore.isCloudReady && !shareStore.pcLiveSent) {
+                        runCatching { s.setPcSchedule(shareStore.pcHours, shareStore.pcDays, shareStore.pcMinutes) }.onSuccess { shareStore.pcLiveSent = true }
+                    }
+                    runCatching { clientRequests.refresh(notify = true) }
+                    runCatching { onec.refreshResults() }
+                }
+            }
         }
     }
-    val barcodes by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository(app, catalog) }
+    /** v3.2 Admin: 1C ma'lumotlari va "Tasdiqlab kiritish" navbati. */
+    val onec: com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository by lazy { com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore) }
+    /** v3.2 Admin: 2-ilovadan to'lov va chek tuzatish so'rovlari. */
+    val clientRequests: com.ilxomjon.dur_novvot_dokon.data.share.ClientRequestsRepository by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.share.ClientRequestsRepository(app, shareStore, historyDb) { storeId, storeName, cash, transfer, click, note ->
+            orders.sendPaymentId(storeId, storeName, cash, transfer, click, note, "")
+        }
+    }
+    val barcodes: com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeRepository(app, catalog).also { b ->
+            // v3.2: yangi shtrix kod 1C'ga (tovarning shtrix ro'yxati va Штрих ma'lumotnomasi)
+            b.onLearned = { productId, code -> queueBarcode(productId, code, fromAgent = false) }
+        }
+    }
+
+    /** Admin: 1C'ga yozish navbatiga; Agent "Admin orqali": Admin'ga yuboradi; Agent to'g'ridan — faqat telefonda qoladi. */
+    suspend fun queueBarcode(productId: String, code: String, fromAgent: Boolean): Boolean {
+        val name = catalog.state.value.productsById[productId]?.name.orEmpty()
+        if (isRelay) return runCatching { relayClient.sendBarcode(productId, name, code) }.getOrDefault(false)
+        if (!AppRole.isAdmin || !onec.ready) return false
+        val req = uz.imsoft.shared.onec.WriteRequest(
+            uz.imsoft.shared.onec.WriteCodec.newId(), uz.imsoft.shared.onec.WriteKind.BARCODE, System.currentTimeMillis(),
+            party = name, partyCode = productId, note = if (fromAgent) "agent" else "", barcode = code.filter { it.isLetterOrDigit() },
+        )
+        if (req.problem() != null) return false
+        return runCatching { onec.submit(req, "Admin") }.isSuccess
+    }
     val labels: com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository by lazy {
         com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository(app, catalog, barcodes, shareStore).also { l ->
             l.relayActive = { isRelay }
@@ -174,8 +216,9 @@ object ServiceLocator {
                 override suspend fun printLabels(data: ByteArray): String = labels.printRaw(data)
                 override suspend fun mirrorSale(sale: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Sale, key: String) =
                     share.onSale(sale.order, 0L, sale.code, key)
+                override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
             },
-        )
+        ).also { h -> h.catalogPeriodMs = { com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.intervalMs().coerceIn(2 * 60_000L, 20 * 60_000L) } }
     }
     val backup by lazy { BackupRepository(app, localDb, historyDb, secure, appPrefs, catalog, draft, outbox, shareStore) }
 

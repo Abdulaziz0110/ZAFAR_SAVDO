@@ -49,7 +49,7 @@ class RepeatSale(
         var changed = 0
         for ((id, q) in qtyById) {
             val p = c.productsById.getValue(id)
-            val price = Pricing.unitPrice(p, type, currency, c.rate)
+            val price = if (keepCurrent) Pricing.unitPrice(p, d.level, currency, c.rate) else Pricing.unitPrice(p, type, currency, c.rate)
             if (type == o.priceType && currency == o.currency && Math.abs(price - (oldPrice[id] ?: price)) > 0.004) changed++
             val existing = if (mode == Mode.ADD) draft.state.value.lineFor(id) else null
             items += Triple(p, (existing?.qty ?: 0.0) + q, existing?.price ?: price)
@@ -88,7 +88,7 @@ class RepeatSale(
         for ((id, q) in qtyById) {
             val p = c.productsById.getValue(id)
             val existing = if (keepCurrent) draft.state.value.lineFor(id) else null
-            items += Triple(p, (existing?.qty ?: 0.0) + q, existing?.price ?: Pricing.unitPrice(p, t, cur, c.rate))
+            items += Triple(p, (existing?.qty ?: 0.0) + q, existing?.price ?: (if (keepCurrent) Pricing.unitPrice(p, d.level, cur, c.rate) else Pricing.unitPrice(p, t, cur, c.rate)))
         }
         if (items.isEmpty()) return Result(0, missing, 0)
         if (!keepCurrent) {

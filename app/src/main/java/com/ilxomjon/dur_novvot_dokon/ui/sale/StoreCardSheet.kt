@@ -49,7 +49,8 @@ class StoreCardSheet : BottomSheetDialogFragment() {
         if (store == null) { dismissAllowingStateLoss(); return }
         val ctx = requireContext()
         binding.tvName.text = store.name
-        binding.btnStart.setOnClickListener { dismissAllowingStateLoss() }
+        // v3.1: "Boshlash" kerak emas — savdo do'kon tanlanishi bilan boshlanadi
+        binding.btnStart.show(false)
         viewLifecycleOwner.lifecycleScope.launch {
             val debt = ServiceLocator.catalog.knownDebt(id)
             val orders = ServiceLocator.history.storeOrders(id)

@@ -75,10 +75,11 @@ class StorePickerSheet : BottomSheetDialogFragment() {
         adapter.highlights = hits?.associate { it.item.id to it.ranges }.orEmpty()
         var list = hits?.map { it.item } ?: all
         if (binding.chipDebtors.isChecked) list = list.filter { it.debtSom > 0.0 || it.debtUsd > 0.0 }
-        if (blank && recentIds.isNotEmpty()) {
-            // Qidiruv yo'q bo'lsa: so'nggi ishlangan do'konlar yuqorida.
+        if (blank) {
+            // Qidiruv yo'q bo'lsa: tanlangan (sevimli) do'konlar, keyin so'nggi ishlanganlar yuqorida.
             val rank = HashMap<String, Int>()
-            recentIds.forEachIndexed { i, id -> rank[id] = i }
+            recentIds.forEachIndexed { i, id -> rank[id] = 100 + i }
+            prefs.favoriteStoreIds.forEachIndexed { i, id -> rank[id] = i }
             list = list.sortedBy { rank[it.id] ?: Int.MAX_VALUE }
         }
         // Ajratib ko'rsatish o'zgargan bo'lishi mumkin (ro'yxat bir xil bo'lsa ham) — ko'rinadigan qatorlar qayta chiziladi.

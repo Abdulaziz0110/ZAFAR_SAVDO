@@ -20,6 +20,7 @@ import com.google.zxing.ResultPoint
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.Money
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
@@ -106,6 +107,8 @@ class ScanFragment : Fragment() {
         b.scanner.getBarcodeView().setDecoderFactory(
             DefaultDecoderFactory(listOf(BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.ITF)),
         )
+        tuneCamera()
+        setupLevel()
         setupList()
         if (testMode) {
             b.searchRow.show(false); b.recycler.show(false); b.bottomBar.show(false)
@@ -193,8 +196,9 @@ class ScanFragment : Fragment() {
         launchOnStarted {
             combine(ServiceLocator.draft.state, ServiceLocator.catalog.state) { d, c -> d to c }.collect { (d, c) ->
                 val bb = _b ?: return@collect
-                adapter.setPricing(PricingCtx(d.priceType, d.currency, c.rate), false)
+                adapter.setPricing(PricingCtx(d.priceType, d.currency, c.rate, d.level), false)
                 if (linkMode) return@collect
+                renderLevel(d)
                 adapter.setCart(d.lines.associateBy { it.productId })
                 bb.tvCartCount.text = getString(R.string.sale_items_count, d.itemCount)
                 bb.tvTotal.text = requireContext().money(d.total, d.currency)
@@ -203,6 +207,41 @@ class ScanFragment : Fragment() {
                 if (inCartOnly || indexOf !== c.products) refreshList()
             }
         }
+    }
+
+    // ---------------- narx (1..4) — oddiy savdodagidek ----------------
+
+    private var levelRendering = false
+
+    private fun setupLevel() {
+        val show = !testMode && !linkMode && !labelMode
+        b.tgLevel.show(show)
+        if (!show) return
+        b.tgLevel.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked || levelRendering) return@addOnButtonCheckedListener
+            val level = when (id) { R.id.lvl1 -> 1; R.id.lvl2 -> 2; R.id.lvl3 -> 3; else -> 4 }
+            val d = ServiceLocator.draft.state.value
+            if (level == d.level) return@addOnButtonCheckedListener
+            if (d.lines.isEmpty()) ServiceLocator.draft.setPriceLevel(level)
+            else MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.reprice_title).setMessage(R.string.reprice_message)
+                .setPositiveButton(R.string.ok) { _, _ -> ServiceLocator.draft.setPriceLevel(level) }
+                .setNegativeButton(R.string.cancel) { _, _ -> renderLevel(ServiceLocator.draft.state.value) }
+                .setOnCancelListener { renderLevel(ServiceLocator.draft.state.value) }
+                .show()
+        }
+    }
+
+    private fun renderLevel(d: com.ilxomjon.dur_novvot_dokon.domain.DraftState) {
+        val bb = _b ?: return
+        if (testMode || linkMode || labelMode) return
+        levelRendering = true
+        bb.tgLevel.check(when (d.level) { 1 -> R.id.lvl1; 2 -> R.id.lvl2; 3 -> R.id.lvl3; else -> R.id.lvl4 })
+        // 2-filial mijozlariga narx doim 4
+        val st = d.store
+        val fixed4 = st != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == st.id }
+        for (i in 0 until bb.tgLevel.childCount) bb.tgLevel.getChildAt(i).isEnabled = !fixed4
+        levelRendering = false
+        if (fixed4 && d.level != 4) bb.root.post { ServiceLocator.draft.setPriceLevel(4) }
     }
 
     private fun refreshList() {
@@ -241,6 +280,20 @@ class ScanFragment : Fragment() {
         }
 
         override fun possibleResultPoints(resultPoints: MutableList<ResultPoint>) = Unit
+    }
+
+    /**
+     * Fokus: kutubxonaning standart rejimi (AUTO) har 2 soniyada qayta fokuslaydi — rasm ko'p vaqt xira turadi.
+     * Uzluksiz fokus (CONTINUOUS) + markazga o'lchash: tovar yaqinlashganda kamera o'zi va silliq tiniqlashadi.
+     */
+    private fun tuneCamera() {
+        val bv = b.scanner.getBarcodeView()
+        val st = bv.getCameraSettings()
+        st.setAutoFocusEnabled(true)
+        st.setContinuousFocusEnabled(true)
+        st.setFocusMode(com.journeyapps.barcodescanner.camera.CameraSettings.FocusMode.CONTINUOUS)
+        st.setMeteringEnabled(true)
+        bv.setCameraSettings(st)
     }
 
     private fun startCamera() {

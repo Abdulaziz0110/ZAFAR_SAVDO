@@ -16,6 +16,7 @@ import uz.imsoft.mijoz.printer.PrintService
 import uz.imsoft.mijoz.ui.MainActivity
 import uz.imsoft.mijoz.ui.launchOnStarted
 import uz.imsoft.mijoz.ui.describe
+import uz.imsoft.mijoz.ui.show
 
 class SettingsFragment : Fragment() {
     private var _b: FragmentSettingsBinding? = null
@@ -54,7 +55,7 @@ class SettingsFragment : Fragment() {
         }
         onToggle(b.tgAuto) { id ->
             p.autoMinutes = when (id) { R.id.auto60 -> 60; R.id.auto120 -> 120; else -> 0 }
-            uz.imsoft.mijoz.data.RefreshWorker.schedule(requireContext().applicationContext, p.autoMinutes)
+            uz.imsoft.mijoz.data.MijozAuto.apply(requireContext().applicationContext)
         }
         b.swNotify.setOnCheckedChangeListener { _, on -> if (!rendering) { p.notifyNew = on; if (on) askNotify() } }
         onToggle(b.tgFont) { id ->
@@ -91,6 +92,7 @@ class SettingsFragment : Fragment() {
         onToggle(b.tgSkip) { id -> p.skipOlderDays = when (id) { R.id.skip1 -> 1; R.id.skip3 -> 3; R.id.skip7 -> 7; else -> 0 } }
         val version = runCatching { requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName }.getOrNull().orEmpty()
         b.tvAbout.text = getString(R.string.st_about_text, version)
+        addV32()
         // Sirli menyu: versiya yozuvini uzoq bosish
         b.tvAbout.setOnLongClickListener {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
@@ -110,6 +112,48 @@ class SettingsFragment : Fragment() {
 
     private fun onToggle(g: MaterialButtonToggleGroup, block: (Int) -> Unit) {
         g.addOnButtonCheckedListener { _, id, checked -> if (checked && !rendering) block(id) }
+    }
+
+    /**
+     * v3.2: "Avto-yangilash va zaxira", "Chek qo'shimchalari", "Kassa" bandlari; kam ishlatiladiganlar (o'lcham, shrift,
+     * aqlli qidiruv, eski yozuvlar) "Ko'proq sozlamalar" ostida.
+     */
+    private fun addV32() {
+        val column = b.tvAbout.parent as? ViewGroup ?: return
+        if (column.findViewWithTag<View>("v32") != null) return
+        val ctx = requireContext()
+        fun top(v: View): View? {
+            var cur: View = v
+            while (true) {
+                val p = cur.parent as? View ?: return null
+                if (p === column) return cur
+                cur = p
+            }
+        }
+        val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 12)
+        card.tag = "v32"
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub)) {
+            (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.AutoFragment())
+        })
+        col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.rx_title), getString(R.string.rx_sub_title)) {
+            (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.ReceiptExtrasFragment())
+        })
+        col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
+        col.addView(uz.imsoft.shared.android.Ui.switch(ctx, getString(R.string.pos_show), Locator.prefs.posOn) { Locator.prefs.posOn = it })
+        val first = top(b.tgAuto)
+        column.addView(card, if (first != null) column.indexOfChild(first) else column.indexOfChild(b.tvAbout))
+        val advanced = listOfNotNull(top(b.tgScale), top(b.tgFont), top(b.swFuzzy), top(b.tgSkip)).distinct()
+            .filter { it !== top(b.tgAuto) && it !== top(b.swPrinter) && it !== top(b.tgLang) }
+        if (advanced.isEmpty()) return
+        var open = false
+        advanced.forEach { it.show(false) }
+        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12) { v ->
+            open = !open
+            advanced.forEach { it.show(open) }
+            (v as? com.google.android.material.button.MaterialButton)?.text = getString(if (open) R.string.st_less else R.string.st_more)
+        }
+        column.addView(more, column.indexOfChild(b.tvAbout))
     }
 
     private fun render() {

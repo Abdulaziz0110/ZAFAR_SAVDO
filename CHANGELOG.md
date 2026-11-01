@@ -1,5 +1,63 @@
 # CHANGELOG
 
+## 3.2 (versionCode 14) + Savdo Mijoz 1.6 (versionCode 7): 2–4-bosqichlar — 2026-11-01
+Server (SQL) va protokol (tur 1, 3, 4, 5) o'zgarmagan. 1C'ga yozish — faqat Admin'da tasdiqlangan so'rovlar, kompyuter orqali.
+
+### Admin: "Boshqaruv" (Bosh sahifadagi karta)
+* Bo'limlar: 1C (savdolar, ta'minotchilar, 1C'ga kiritish navbati, kirim, mijoz qaytargan tovar, kompyuter), Mijozlar
+  (so'rovlar, qarzdorlar, 2-ilova, chek ko'rinishi), Agentlar, Tovarlar (yorliqlar, shtrix kodlar), Ilova.
+* **1C savdolar ro'yxati**: standart oxirgi 30 kun, "Davr tanlash" (kompyuterga so'rov), qidiruv (mijoz, tovar, raqam),
+  filtr (savdo, chakana, qaytish), jami, hujjat qatorlari.
+* **Ta'minotchilar**: qarzimiz (1C registridan), kirimlar, to'lovlar, qaytarishlar (90 kun), qidiruv.
+* **1C'ga kiritish** ("Tasdiqlab kiritish"): tovar kirimi (Поступления), ta'minotchiga to'lov (ЮкБерувчигаТулов),
+  ta'minotchiga qaytarish, mijoz qaytargan tovar, shtrix kod (tovarning shtrix ro'yxati + Штрих ma'lumotnomasi).
+  Xulosa -> tasdiq -> navbat; kompyuter zaxira oladi, 1C'ga kiritadi, hujjat raqamini qaytaradi. "Bekor qilish" —
+  o'chirish belgisi. Bir so'rov ikki marta kiritilmaydi (jurnal).
+* **Shtrix kod**: skanerda noma'lum kodni tovarga bog'lash — Admin'da 1C navbatiga o'zi tushadi; agent "Admin orqali"
+  bo'lsa — Admin'ga yuboriladi.
+* **Kompyuter (1C)**: holat, tezkor yangilash (1/5/15/30/60 daqiqa), to'liq hisobot oralig'i, ish vaqti, kompyuter sozlamasi.
+* **Mijoz so'rovlari**: 2-ilovadan to'lov (tasdiqlansa serverga to'lov yoziladi) va chek tuzatish (tasdiqlansa 2-ilovadagi
+  chek o'zgaradi). Bildirishnoma.
+* **Qarzdorlar** (tavsiya): qarzi kattalari birinchi, bosilsa to'lov oynasi.
+* 2-ilova mijozi savdosida **chek qayerda**: do'konda yoki 2-filial printerida (tanlov eslab qolinadi).
+
+### Uchala ilova
+* **Avtomatik yangilash**: ish vaqti (boshlanishi/tugashi), ish vaqtida har 1–30 daqiqada (ilova ochiq), yopiq bo'lsa
+  15 daqiqada; **ish tugashidan 1 daqiqa oldin** hammasi to'liq yuklab olinadi. Kompyuter ham shu ish vaqti bo'yicha.
+* **Kunlik zaxira** (eskisini almashtiradi) va "Zaxiradan tiklash".
+* **Vidjetlar**: Agent/Admin — "Tez savdo" (2 ta sevimli do'kon, skaner, to'lov); Mijoz — qarz, Narxlar, Kassa.
+* **Excel import olib tashlandi**: 1C tarixi, PLU, shtrix kodlar kompyuterdan internet orqali o'zi keladi.
+* Agent va Mijoz soddalashtirildi: kam ishlatiladigan sozlamalar "Ko'proq sozlamalar" ostida.
+
+### Savdo Mijoz 1.6
+* **Kassa**: o'z mijozlariga savdo (faqat telefonda), mijozlar va qarzi, to'lov qabul qilish, tarix, hisobot, chek.
+* **To'lov kiritish** -> Admin tasdiqlaydi -> server ID kelgach "Tasdiqlandi" va chek.
+* **Chekni tuzatish so'rash** (1C tarixidagi savdo chekidan) -> Admin tasdiqlasa chek o'zgaradi.
+* **Chek qo'shimchalari**: manzil, telefon, rahmat matni (do'kon nomi — brend o'zgarmaydi).
+
+### Kompyuter
+* `onec_data.py` (yangi): 1C savdolar ro'yxati va ta'minotchilar (faqat o'qish).
+* `onec_write.py` (yangi): Admin tasdiqlagan yozuvlarni 1C'ga kiritish — kunlik baza nusxasi (7 kun), jurnal, bekor qilish.
+* `onec_export.py`: 30 soniyalik aylanish, daqiqalik jadval va ish vaqti, bugun harakati borlarning tezkor kartochkasi.
+* Firebase qoidalari v5 (2-ilova: to'lov va tuzatish so'rovlari — faqat yangi yozuv).
+
+## 3.1 (versionCode 13) + Savdo Mijoz 1.5 (versionCode 6): 1-bosqich shoshilinch tuzatishlar — 2026-11-01
+Server, protokol (tur 1, 3, 4, 5), 1C va baza sxemasi o'zgarmagan.
+
+* **4 ta narx** (uchchala ilovada): Savdo, Shtrix-savdo va Mijoz ▸ Narxlar'da 1-2-3-4 tugmalari. 3 = Naqd, 4 = Optom,
+  1 va 2 — 1C narxlari (ПродажЦена1/2, kompyuterdan keladi; yo'q bo'lsa 4-narx). Serverga 1/2-narx Optom kodi bilan,
+  narxi aniq yoziladi. Savatcha to'la bo'lsa narx almashtirishdan oldin so'raladi.
+* **2-ilova ro'yxatidagi mijozlar (Dadaxon aka)** — doim 4-narx, tugmalar qulflanadi.
+* **Narx turi har doim almashadi** — oddiy va shtrix savdoda.
+* **Kamera xiralashishi**: doimiy avtofokus (CONTINUOUS) va o'lchov yoqildi.
+* **Xprinter yorliqlari**: 3x supersampling (silliq), qalin harflar; "Qog'ozga moslash" — chap/o'ng va yuqori/past siljitish
+  (mm), qoralik (density), o'lcham kalibrovka yorlig'i, ixtiyoriy o'lcham.
+* **Yangi savdo**: do'kon tanlanmaguncha ortiqcha narsalar ko'rinmaydi; "Boshlash" olib tashlandi — do'kon tanlansa qarzi
+  fonda yangilanadi va savdo darhol boshlanadi (karta — do'kon nomini uzoq bosib).
+* **Qidiruv**: klaviatura ochilganda pastki panel va narx/rejim qatorlari yashiriladi — ro'yxat yopilmaydi.
+* **Agentlar ko'prigi** Admin'da standart yoqiq, telefon qayta yoqilganda ham o'zi ishga tushadi, har ~1 daqiqada yangilaydi.
+* **Mijoz**: ilova ochilganda qarz yangilanadi; katta raqam — eng yangi ma'lumot (server yoki 1C hisoboti).
+
 ## 3.0 (versionCode 12): Savdo Agent + Savdo Admin — 2026-10-31
 Bitta kod, ikki ilova (app moduli, flavor'lar `agent` va `admin`). Savdo Mijoz (1.4) o'zgarmagan.
 Server, protokol (tur 1, 3, 4, 5), baza sxemasi o'zgarmagan.

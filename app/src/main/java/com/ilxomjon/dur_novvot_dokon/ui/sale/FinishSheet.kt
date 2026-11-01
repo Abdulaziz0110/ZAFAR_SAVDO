@@ -48,6 +48,29 @@ class FinishSheet : BottomSheetDialogFragment() {
         return binding.root
     }
 
+    /**
+     * v3.2: 2-ilova mijozi (Dadaxon aka) uchun chek qayerda chiqsin: do'kon printerida (yuqoridagi 1/2) yoki 2-filial
+     * printerida (Mijoz ilova orqali). Tanlov eslab qolinadi. Agent "Admin orqali" ishlasa — Admin sozlamasi bo'yicha.
+     */
+    private fun addBranchChoice() {
+        val storeId = ServiceLocator.draft.state.value.store?.id.orEmpty()
+        if (ServiceLocator.isRelay || !ServiceLocator.share.branchPrinterFor(storeId)) { ServiceLocator.share.nextBranchPrint = null; return }
+        val parent = binding.chipPrinter.parent as? ViewGroup ?: return
+        val ctx = requireContext()
+        val prefs = ctx.getSharedPreferences("user", android.content.Context.MODE_PRIVATE)
+        val branch = prefs.getBoolean("branch_print", true)
+        ServiceLocator.share.nextBranchPrint = storeId to branch
+        val idx = parent.indexOfChild(binding.chipPrinter) + 1
+        parent.addView(uz.imsoft.shared.android.Ui.hint(ctx, getString(R.string.fs_where), 8), idx)
+        parent.addView(uz.imsoft.shared.android.Ui.toggle(ctx, listOf(getString(R.string.fs_here), getString(R.string.fs_branch)), if (branch) 1 else 0, 4) { i ->
+            val b = i == 1
+            prefs.edit().putBoolean("branch_print", b).apply()
+            ServiceLocator.share.nextBranchPrint = storeId to b
+            if (b) binding.chipPrinter.check(R.id.chipPrinter3)
+        }, idx + 1)
+        if (branch) binding.chipPrinter.check(R.id.chipPrinter3)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vm = viewModel { FinishViewModel(ServiceLocator.draft, ServiceLocator.orders, ServiceLocator.appPrefs) }
         val s0 = vm.state.value
@@ -67,6 +90,7 @@ class FinishSheet : BottomSheetDialogFragment() {
         binding.chipPrinter.setOnCheckedStateChangeListener { _, ids ->
             vm.setPrinter(when (ids.firstOrNull()) { R.id.chipPrinter2 -> "2"; R.id.chipPrinter3 -> "3"; else -> "1" })
         }
+        addBranchChoice()
 
         binding.edtDiscountPercent.onTextChanged {
             if (updating) return@onTextChanged

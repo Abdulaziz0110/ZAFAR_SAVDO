@@ -69,6 +69,7 @@ class BackupException(val kind: Kind, message: String? = null, cause: Throwable?
 private const val BARCODES = "barcodes.json"
 /** v3.0: sozlamalar (faqat parolli zaxirada) — Agent -> Admin yoki yangi telefonga ko'chirish. */
 private const val TRANSFER = "transfer.json"
+private const val DAILY = "kunlik_zaxira.zip"
 private const val FILES = "files/"
 /** Ko'chiriladigan fayllar (filesDir ichida): mijozlar/1C tarixi, logo, 1C kodlari va narxlari. */
 private val TRANSFER_FILES = listOf("share/", "receipt_logo.png", "prices_1c.json", "codes_1c.json")
@@ -106,6 +107,31 @@ class BackupRepository(
                     out.use { it.write(bytes); it.flush() }
                 } catch (e: BackupException) {
                     throw e
+                } catch (e: IOException) {
+                    throw BackupException(if (isDiskFull(e)) BackupException.Kind.DISK_FULL else BackupException.Kind.IO, e.message, e)
+                }
+            }
+        }
+    }
+
+    /** v3.2: kunlik avtomatik zaxira fayli (har kuni eskisi almashadi). Sozlamalar/parollar kirmaydi. */
+    fun dailyFile(): File = File(context.getExternalFilesDir("zaxira") ?: File(context.filesDir, "zaxira").apply { mkdirs() }, DAILY)
+
+    /** Kunlik zaxira: ma'lumot bazalari (savdo tarixi, navbat, katalog) va shtrix kodlar. @return fayl. */
+    suspend fun exportDaily(): File {
+        draft.flush()
+        return outbox.paused {
+            withContext(Dispatchers.IO) {
+                try {
+                    localDb.writableDatabase.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { it.moveToFirst() }
+                    historyDb.checkpoint()
+                    val zip = buildZip(withSettings = false)
+                    val f = dailyFile()
+                    f.parentFile?.mkdirs()
+                    val tmp = File(f.parentFile, f.name + ".tmp")
+                    tmp.writeBytes(zip)
+                    if (!tmp.renameTo(f)) { f.delete(); if (!tmp.renameTo(f)) throw IOException("rename") }
+                    f
                 } catch (e: IOException) {
                     throw BackupException(if (isDiskFull(e)) BackupException.Kind.DISK_FULL else BackupException.Kind.IO, e.message, e)
                 }

@@ -77,6 +77,19 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
         b.btnCheck.setOnClickListener { saveHost(); check() }
         b.btnTest.setOnClickListener { saveHost(); test() }
         b.btnIni.setOnClickListener { showIni() }
+        // Qog'ozga moslash
+        b.sShiftX.value = (Math.round(s.shiftXmm * 2) / 2.0).toFloat().coerceIn(-15f, 15f)
+        b.sShiftY.value = (Math.round(s.shiftYmm * 2) / 2.0).toFloat().coerceIn(-10f, 10f)
+        b.sDensity.value = s.density.toFloat().coerceIn(4f, 15f)
+        renderFit()
+        val fitListener = com.google.android.material.slider.Slider.OnChangeListener { _, _, fromUser ->
+            if (fromUser) { repo.setFit(b.sShiftX.value.toDouble(), b.sShiftY.value.toDouble(), b.sDensity.value.toInt()); renderFit() }
+        }
+        b.sShiftX.addOnChangeListener(fitListener)
+        b.sShiftY.addOnChangeListener(fitListener)
+        b.sDensity.addOnChangeListener(fitListener)
+        b.btnCalib.setOnClickListener { saveHost(); calibrate() }
+        b.btnCustomSize.setOnClickListener { customSize() }
         applyMode()
         renderStatus()
         if (s.host.isNotBlank() || cloudReady) check()
@@ -97,6 +110,53 @@ class LabelPrinterSheet : BottomSheetDialogFragment() {
         bb.tvSetupHint.setText(if (lpd) R.string.lb_setup_hint_lpd else R.string.lb_setup_hint)
         bb.tilHost.helperText = getString(if (lpd) R.string.lb_host_hint_lpd else R.string.lb_host_hint)
         if (!lpd) bb.swCloud.isEnabled = cloudReady
+    }
+
+    private fun renderFit() {
+        val bb = _b ?: return
+        val s = repo.state.value
+        bb.tvShiftX.text = getString(R.string.lb_shift_x, "%+.1f".format(java.util.Locale.US, s.shiftXmm))
+        bb.tvShiftY.text = getString(R.string.lb_shift_y, "%+.1f".format(java.util.Locale.US, s.shiftYmm))
+        bb.tvDensity.text = getString(R.string.lb_density, s.density)
+    }
+
+    private fun calibrate() {
+        val act = requireActivity()
+        val root = b.root
+        act.lifecycleScope.launch {
+            val msg = runCatching { repo.printCalibration(); act.getString(R.string.lb_calib_sent) }
+                .getOrElse { e -> if (e is Exception) act.labelErrorText(e) else (e.message ?: "") }
+            com.google.android.material.snackbar.Snackbar.make(root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+        }
+    }
+
+    /** Ro'yxatda yo'q o'lcham (mm): eni va bo'yi. */
+    private fun customSize() {
+        val ctx = requireContext()
+        val s = repo.state.value
+        val box = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.HORIZONTAL; setPadding(48, 16, 48, 0) }
+        fun field(hint: Int, v: Double): com.google.android.material.textfield.TextInputEditText {
+            val til = com.google.android.material.textfield.TextInputLayout(ctx).apply { this.hint = getString(hint) }
+            val e = com.google.android.material.textfield.TextInputEditText(til.context).apply {
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setText("%.0f".format(java.util.Locale.US, v))
+            }
+            til.addView(e)
+            box.addView(til, android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            return e
+        }
+        val ew = field(R.string.lb_size_w, s.wMm)
+        val eh = field(R.string.lb_size_h, s.hMm)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx).setTitle(R.string.lb_custom_size).setView(box)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val w = ew.text?.toString()?.replace(',', '.')?.toDoubleOrNull()?.takeIf { it in 15.0..110.0 }
+                val h = eh.text?.toString()?.replace(',', '.')?.toDoubleOrNull()?.takeIf { it in 10.0..200.0 }
+                if (w == null || h == null) return@setPositiveButton
+                repo.setSize(w, h, repo.state.value.dpi)
+                _b?.let { bb -> bb.tgSize.clearChecked(); sizeId(w, h).takeIf { it != View.NO_ID }?.let { bb.tgSize.check(it) } }
+                renderStatus()
+            }
+            .setNegativeButton(R.string.cancel, null).show()
     }
 
     private fun sizeId(w: Double, h: Double): Int = when {

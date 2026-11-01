@@ -16,7 +16,16 @@ data class PriceItem(
     val wholesaleUsd: Double,
     /** Tarozi PLU raqami (v2.7, bo'sh bo'lishi mumkin). Eski 2-ilova bu maydonni o'qimaydi. */
     val plu: String = "",
-)
+    /** v3.1: 1- va 2-narx [l1So'm, l1$, l2So'm, l2$] (1C narxlari). Bo'sh bo'lsa — 4-narx (Optom) ishlatiladi. */
+    val l12: List<Double> = emptyList(),
+) {
+    /** 1..4-narx: 3 — Naqd, 4 — Optom, 1/2 — 1C narxi (yo'q bo'lsa Optom). */
+    fun price(level: Int, usd: Boolean): Double = when (level) {
+        3 -> if (usd) cashUsd else cashSom
+        1, 2 -> l12.getOrNull((level - 1) * 2 + (if (usd) 1 else 0))?.takeIf { it > 0 } ?: if (usd) wholesaleUsd else wholesaleSom
+        else -> if (usd) wholesaleUsd else wholesaleSom
+    }
+}
 
 data class DebtInfo(val som: Double, val usd: Double, val at: Long, val source: String)
 
@@ -67,7 +76,7 @@ object SnapshotCodec {
         linkedMapOf(
             "v" to s.version, "at" to s.createdAt, "cid" to s.clientId, "cn" to s.clientName, "rate" to s.rate, "pat" to s.pricesAt,
             "debt" to s.debt?.let { linkedMapOf("s" to it.som, "u" to it.usd, "at" to it.at, "src" to it.source) },
-            "p" to s.products.map { listOf(it.id, it.name, it.group, it.cashSom, it.cashUsd, it.wholesaleSom, it.wholesaleUsd, it.plu) },
+            "p" to s.products.map { listOf(it.id, it.name, it.group, it.cashSom, it.cashUsd, it.wholesaleSom, it.wholesaleUsd, it.plu).let { l -> if (it.l12.isEmpty()) l else l + listOf(it.l12) } },
             "l" to s.ledger.map { entryToList(it) },
             "cov" to s.coverage.map { listOf(it.from, it.to, it.importedAt, it.source) },
             "rb" to s.reportBalance?.let { listOf(it.first, it.second.som, it.second.usd) },
@@ -111,6 +120,7 @@ object SnapshotCodec {
             PriceItem(
                 l[0].toString(), l[1].toString(), l.getOrNull(2)?.toString().orEmpty(), d(l.getOrNull(3)), d(l.getOrNull(4)), d(l.getOrNull(5)), d(l.getOrNull(6)),
                 l.getOrNull(7)?.toString().orEmpty(),
+                (l.getOrNull(8) as? List<*>)?.map { d(it) }.orEmpty(),
             )
         }
         val ledger = o.arr("l").mapNotNull { x -> (x as? List<Any?>)?.let { runCatching { entryFromList(it) }.getOrNull() } }

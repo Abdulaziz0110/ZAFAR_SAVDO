@@ -60,6 +60,7 @@ class ClientFragment : Fragment() {
         b.btnAddMember.setOnClickListener { addMember() }
         b.tvShop.setOnClickListener { Guide.members(requireContext()) }
         b.btnImport.setOnClickListener { openFile.launch(arrayOf("*/*")) }
+        b.btnImport.visibility = View.GONE // v3.2: Excel import yo'q — kompyuter va server orqali
         b.btnImportServer.setOnClickListener { pickServerPeriod() }
         b.btnHistory.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {

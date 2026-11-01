@@ -79,6 +79,22 @@ class DocSheet : BottomSheetDialogFragment() {
             dismiss()
             RepeatSheet.show(parent, doc.key)
         }
+        val editLabel = host?.editLabel(doc) ?: 0
+        if (editLabel != 0 && b.root.findViewWithTag<View>("edit_req") == null) {
+            val parentView = b.btnRepeat.parent as? ViewGroup
+            if (parentView != null) {
+                val eb = com.google.android.material.button.MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle)
+                eb.tag = "edit_req"
+                eb.setText(editLabel)
+                eb.maxLines = 2
+                eb.setOnClickListener {
+                    val pf = parentFragment ?: return@setOnClickListener
+                    dismiss()
+                    host?.requestEdit(pf, doc)
+                }
+                parentView.addView(eb, parentView.indexOfChild(b.btnRepeat) + 1, ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            }
+        }
         b.btnReceipt.setOnClickListener { ReceiptActions.preview(this, doc, host, client) }
         b.btnShare.setOnClickListener { share(doc, host, client) }
     }

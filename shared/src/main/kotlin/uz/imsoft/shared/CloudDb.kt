@@ -105,9 +105,9 @@ class CloudDb(
 
         /**
          * Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish,
-         * v4: agentlar "Admin orqali" — g/{kalit}/...).
+         * v4: agentlar "Admin orqali" — g/{kalit}/..., v5: 2-ilovadan to'lov va chek tuzatish so'rovlari — s/{kalit}/pay, ed).
          */
-        const val RULES_VERSION = 4
+        const val RULES_VERSION = 5
 
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
@@ -127,6 +127,31 @@ class CloudDb(
             "src": { ".validate": "newData.isString() && newData.val().length <= 200" },
             "n": { ".validate": "newData.isString() && newData.val().length <= 300" },
             "by": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "l": { ".validate": "newData.isString() && newData.val().length <= 30000" },
+            "${'$'}other": { ".validate": false }
+          }
+        },
+        "pay": {
+          "${'$'}pid": {
+            ".write": "${'$'}rk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}pid.length >= 10 && ${'$'}pid.length <= 40 && newData.hasChildren(['at', 's', 'u'])",
+            "at": { ".validate": "newData.val() == now" },
+            "by": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "s": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "u": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "m": { ".validate": "newData.isString() && newData.val().length <= 2" },
+            "n": { ".validate": "newData.isString() && newData.val().length <= 300" },
+            "${'$'}other": { ".validate": false }
+          }
+        },
+        "ed": {
+          "${'$'}eid": {
+            ".write": "${'$'}rk.length >= 24 && !data.exists() && newData.exists()",
+            ".validate": "${'$'}eid.length >= 10 && ${'$'}eid.length <= 40 && newData.hasChildren(['at', 'd', 'l'])",
+            "at": { ".validate": "newData.val() == now" },
+            "by": { ".validate": "newData.isString() && newData.val().length <= 80" },
+            "d": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "n": { ".validate": "newData.isString() && newData.val().length <= 300" },
             "l": { ".validate": "newData.isString() && newData.val().length <= 30000" },
             "${'$'}other": { ".validate": false }
           }

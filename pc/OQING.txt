@@ -1,0 +1,24 @@
+IMSOFT - kompyuter uchun (5 ta fayl)
+
+1. Shu 5 ta faylni D:\imsoft\ papkasiga qo'ying (eskilarini almashtiring):
+   ORNATISH.bat, ornatish.py, onec_export.py, onec_data.py, onec_write.py
+2. ORNATISH.bat ni ikki marta bosing. Administrator so'raydi - "Da" ni bosing.
+3. Oynadagi savollarga javob bering:
+   - printer o'zi topiladi va telefon uchun ulashiladi, sinov yorlig'i chiqadi;
+   - Bloknot ochiladi: Admin ilovadagi "Kompyuter sozlamasi" matnini joylab, Ctrl+S, Bloknotni yoping
+     (Admin: Boshqaruv > Kompyuter (1C) > Kompyuter sozlamasi > Yuborish);
+   - 1C bazasini ro'yxatdan tanlang, 1C foydalanuvchi nomi va parolini yozing.
+4. Oxirida "NATIJA" chiqadi. Biror narsa XATO bo'lsa - oynaning rasmini yuboring.
+
+Yangi (v3.2):
+ - Yangilash tezligi va ish vaqti Admin ilovada tanlanadi (1 daqiqagacha). Ish tugashidan 1 daqiqa oldin hammasi
+   to'liq yuboriladi.
+ - 1C savdolar ro'yxati va ta'minotchilar (qarz, kirim, to'lov) Admin'ga o'zi boradi.
+ - Admin'da tasdiqlangan kirim, ta'minotchiga to'lov, qaytarish va shtrix kodlar 1C'ga kiritiladi.
+   Har kuni birinchi yozuvdan oldin baza nusxasi olinadi: D:\imsoft\backup\ (oxirgi 7 kun).
+   Hamma yozuvlar jurnali: D:\imsoft\write_journal.jsonl. Admin'da "Bekor qilish" - hujjatga o'chirish belgisi.
+ - 1C'ga yozishni o'chirish: onec.ini ga qo'shing:
+     [write]
+     enabled = 0
+
+Hammasi shu. Kompyuter yoqilganda kerakli narsa o'zi ishga tushadi. Qayta sozlash: ORNATISH.bat ni yana oching.

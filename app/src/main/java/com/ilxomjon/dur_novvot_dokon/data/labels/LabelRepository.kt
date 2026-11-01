@@ -62,6 +62,10 @@ data class LabelState(
     /** 1C narx turlari (kompyuterdan kelgan) va yorliqda ishlatiladigani ("" — Naqd/Optom). */
     val priceTypes1c: List<String> = emptyList(),
     val price1c: String = "",
+    /** v3.1 qog'ozga moslash: siljitish (mm, chap/tepa manfiy) va qoralik (TSPL DENSITY 4..15). */
+    val shiftXmm: Double = 0.0,
+    val shiftYmm: Double = 0.0,
+    val density: Int = 10,
 ) {
     val lpd: Boolean get() = mode == MODE_LPD
     val total: Int get() = items.sumOf { it.copies }
@@ -128,6 +132,7 @@ class LabelRepository(
             p.getString("mode", MODE_LPD).orEmpty(), p.getString("queue", "xprinter").orEmpty(),
             p.getFloat("gap", 2f).toDouble(), p.getBoolean("rotate", false),
             p.getString("ptypes1c", "").orEmpty().split('\n').filter { it.isNotBlank() }, p.getString("price1c", "").orEmpty(),
+            p.getFloat("shift_x", 0f).toDouble(), p.getFloat("shift_y", 0f).toDouble(), p.getInt("density", 10),
         )
     }
 
@@ -184,6 +189,16 @@ class LabelRepository(
 
     /** 1C narx turi bo'yicha (kompyuterdan): tur -> (tovar id -> narx). */
     @Volatile private var prices1c: Map<String, Map<String, Double>> = loadPrices1c()
+
+    /** v3.1: 1C narxi darajasi bo'yicha (1..4): "Цена 1 (Сум)" -> 1. So'mda; yo'q bo'lsa null. */
+    fun priceForLevel(productId: String, level: Int): Double? {
+        val m = prices1c
+        val key = m.keys.firstOrNull { levelOfType(it) == level } ?: return null
+        return m[key]?.get(productId)?.takeIf { it > 0 }
+    }
+
+    private fun levelOfType(name: String): Int? =
+        Regex("""(?:Цена|Narx|Price|ПродажЦена)\s*(\d)""", RegexOption.IGNORE_CASE).find(name)?.groupValues?.get(1)?.toIntOrNull()
 
     private fun prices1cFile() = java.io.File(context.filesDir, "prices_1c.json")
 
@@ -320,6 +335,44 @@ class LabelRepository(
         p.edit().putString("queue", v).apply()
     }
 
+    /** Qog'ozga moslash (kalibrlash yorlig'i bo'yicha). */
+    fun setFit(shiftXmm: Double, shiftYmm: Double, density: Int) {
+        val x = shiftXmm.coerceIn(-15.0, 15.0); val y = shiftYmm.coerceIn(-10.0, 10.0); val d = density.coerceIn(4, 15)
+        _state.update { it.copy(shiftXmm = x, shiftYmm = y, density = d) }
+        p.edit().putFloat("shift_x", x.toFloat()).putFloat("shift_y", y.toFloat()).putInt("density", d).apply()
+    }
+
+    /** Kalibrlash yorlig'i: qog'oz chegarasi (ramka), markaz va o'lcham yozuvi — siljitish va o'lchamni to'g'rilash uchun. */
+    suspend fun printCalibration(): LabelPrinterClient.Sent {
+        val (w, h) = sizePx()
+        val s = _state.value
+        val data = withContext(Dispatchers.Default) {
+            val bmp = LabelBitmap.calibration(w, h, Lpr.clean("%.0fx%.0f".format(java.util.Locale.US, s.wMm, s.hMm)))
+            tsplOf(bmp, 1, s)
+        }
+        return sendTspl(data, 1)
+    }
+
+    private fun tsplOf(bmp: android.graphics.Bitmap, copies: Int, s: LabelState): ByteArray {
+        val w = bmp.width; val h = bmp.height
+        val px = IntArray(w * h)
+        bmp.getPixels(px, 0, w, 0, 0, w, h)
+        bmp.recycle()
+        val black = BooleanArray(px.size) { (px[it] and 0xFF) < 128 }
+        val k = s.dpi / 25.4
+        return Tspl.build(black, w, h, copies, s.wMm, s.hMm, s.gapMm, s.rotate, density = s.density,
+            xDots = Math.round(s.shiftXmm * k).toInt(), yDots = Math.round(s.shiftYmm * k).toInt())
+    }
+
+    private suspend fun sendTspl(data: ByteArray, copies: Int): LabelPrinterClient.Sent {
+        val s = _state.value
+        val relay = relayPrint
+        if (relayActive() && relay != null) return LabelPrinterClient.Sent.Printed(copies, relay(data, copies).ifEmpty { s.queue })
+        if (s.host.isBlank()) throw LabelPrinterClient.PrintError("no_printer")
+        printRawTo(s.host, s.queue, data)
+        return LabelPrinterClient.Sent.Printed(copies, s.queue)
+    }
+
     fun setRotate(on: Boolean) { _state.update { it.copy(rotate = on) }; p.edit().putBoolean("rotate", on).apply() }
 
     fun setCloud(on: Boolean) { _state.update { it.copy(cloud = on) }; p.edit().putBoolean("cloud", on).apply() }
@@ -427,15 +480,7 @@ class LabelRepository(
         if (s.host.isBlank() && !viaAdmin) throw LabelPrinterClient.PrintError("no_printer")
         val data = withContext(Dispatchers.Default) {
             val o = java.io.ByteArrayOutputStream()
-            for (d in only) {
-                val bmp = render(b, d)
-                val w = bmp.width; val h = bmp.height
-                val px = IntArray(w * h)
-                bmp.getPixels(px, 0, w, 0, 0, w, h)
-                bmp.recycle()
-                val black = BooleanArray(px.size) { (px[it] and 0xFF) < 128 }
-                o.write(Tspl.build(black, w, h, d.copies, s.wMm, s.hMm, s.gapMm, s.rotate))
-            }
+            for (d in only) o.write(tsplOf(render(b, d), d.copies, s))
             o.toByteArray()
         }
         val copies = only.sumOf { it.copies }

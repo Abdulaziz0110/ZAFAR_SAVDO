@@ -10,6 +10,13 @@ enum class PriceType(val code: String) {
 
     companion object {
         fun fromCode(code: String?): PriceType = entries.firstOrNull { it.code == code } ?: WHOLESALE
+
+        /**
+         * v3.1: 1C'dagi 4 narx (1..4). Serverga (savollar matni) faqat ikki kod boradi: 3-narx — Naqd ("0"), qolganlari "1";
+         * qator narxi har doim aniq yuboriladi.
+         */
+        fun forLevel(level: Int): PriceType = if (level == 3) CASH else WHOLESALE
+        fun levelOf(t: PriceType): Int = if (t == CASH) 3 else 4
     }
 }
 
@@ -84,7 +91,10 @@ data class DraftState(
     val currency: Currency = Currency.SOM,
     val mode: DealMode = DealMode.SALE,
     val lines: List<CartLine> = emptyList(),
+    /** v3.1: narx (1..4); 0 — [priceType] dan (3 yoki 4). */
+    val priceLevel: Int = 0,
 ) {
+    val level: Int get() = if (priceLevel in 1..4) priceLevel else PriceType.levelOf(priceType)
     val total: Double get() = lines.sumOf { it.total }
     val itemCount: Int get() = lines.size
     fun lineFor(productId: String): CartLine? = lines.firstOrNull { it.productId == productId }

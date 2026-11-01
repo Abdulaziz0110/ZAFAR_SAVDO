@@ -229,6 +229,83 @@ STRINGS.update({
  'cart_hint': "Miqdorni tekshiring. Bu savdo emas: do'kon egasi tasdiqlasa, uning savatchasiga tushadi va rasmiylashtiriladi. Narxlar taxminiy.",
 })
 
+STRINGS.update({
+ # v3.1 — 1..4-narx
+ 'price_n1': '1-narx', 'price_n2': '2-narx', 'price_n3': '3-narx', 'price_n4': '4-narx', 'price_usd': 'USD',
+})
+
+STRINGS.update({
+ # v3.2 — umumiy
+ 'x_error': 'Xato: %1$s',
+ 'st_more': "Ko'proq sozlamalar", 'st_less': 'Kamroq',
+ # Avtomatik yangilash va zaxira
+ 'au_title': 'Avtomatik yangilash va zaxira', 'au_sub': 'Ish vaqti, tezlik, kunlik zaxira',
+ 'au_hint': "Ish vaqtida ma'lumot (qarz, narxlar, 1C tarixi) o'zi yangilanadi. Ish tugashidan 1 daqiqa oldin hammasi to'liq yuklab olinadi — keyin internetsiz ham ko'rinadi.",
+ 'au_auto': 'Avtomatik yangilash', 'au_every': 'Ilova ochiq turganda har', 'au_min': '%1$d daq',
+ 'au_work': 'Ish vaqti', 'au_work_on': 'Ish vaqtida tez (tashqarida — 15 daqiqada)',
+ 'au_work_text': "%1$s – %2$s · oxirgi to'liq yuklash %3$s", 'au_work_off': "Ish vaqti o'chiq — doim bir xil tezlikda",
+ 'au_start': 'Boshlanishi', 'au_end': 'Tugashi',
+ 'au_final_hint': "Ilova yopiq bo'lsa ham telefon o'zi yangilaydi. Oxirgi yuklash aynan vaqtida bo'lishi uchun \"Aniq vaqt ruxsati\"ni bering.",
+ 'au_exact': 'Aniq vaqt ruxsati',
+ 'au_backup': 'Kunlik zaxira', 'au_backup_on': 'Har kuni avtomatik (eskisi almashadi)',
+ 'au_backup_now': 'Hozir zaxiralash', 'au_restore': 'Zaxiradan tiklash', 'au_backup_done': 'Zaxira saqlandi',
+ 'au_backup_last': 'Oxirgi zaxira: %1$s', 'au_backup_never': 'Hali zaxira olinmagan', 'au_backup_where': 'Fayl: %1$s',
+ 'au_restore_text': "%1$s dagi zaxira tiklanadi (1C tarixi va Kassa). Davom etasizmi?",
+ 'au_restored': 'Tiklandi: %1$d ta fayl',
+ # Chek tuzatish
+ 'ed_request': "Chekni tuzatishni so'rash",
+ 'ed_title': 'Chekni tuzatish',
+ 'ed_hint': "To'g'ri miqdor va narxni yozing. Do'kon egasi tasdiqlasa, chek o'zgaradi.",
+ 'ed_qty': 'Miqdori', 'ed_price': "Narxi (so'm)", 'ed_price_usd': 'Narxi ($)', 'ed_note': 'Izoh (nima noto\'g\'ri)',
+ 'ed_sent': "So'rov yuborildi", 'ed_failed': "Yuborilmadi — internetni tekshiring",
+ # To'lov va so'rovlar
+ 'rq_home': "To'lov kiritish", 'rq_title': "To'lov va so'rovlar",
+ 'rq_hint': "To'lovni kiriting — do'kon egasi tasdiqlab serverga yozadi. Chek \"Tasdiqlandi\" bo'lgandan keyin chiqadi.",
+ 'rq_new_pay': "Yangi to'lov", 'rq_sum': "Summa (so'm)", 'rq_note': 'Izoh',
+ 'rq_m_cash': 'Naqd', 'rq_m_card': 'Plastik', 'rq_m_click': '{{Click}}',
+ 'rq_send': 'Yuborish', 'rq_err_sum': 'Summani yozing',
+ 'rq_confirm_title': "To'lov yuborilsinmi?", 'rq_confirm': "%1$s to'lov do'kon egasiga tasdiqlash uchun yuboriladi.",
+ 'rq_sent': "Yuborildi — tasdiqlanishini kuting",
+ 'rq_mine': "Mening so'rovlarim", 'rq_refresh': 'Yangilash', 'rq_none': "So'rov yo'q",
+ 'rq_pay_row': "To'lov: %1$s", 'rq_edit_row': 'Chek tuzatish: %1$s', 'rq_pay_title': "To'lov cheki", 'rq_receipt': 'Chek',
+ 'rq_st_sent': 'Yuborildi', 'rq_st_seen': "Do'kon egasi oldi", 'rq_st_acc': 'Qabul qilindi — serverga yozilmoqda',
+ 'rq_st_ok': 'Tasdiqlandi', 'rq_st_no': 'Rad etildi: %1$s',
+ # Kassa
+ 'pos_title': 'Kassa', 'pos_show': "Bosh sahifada \"Kassa\"",
+ 'pos_tab_sale': 'Savdo', 'pos_tab_clients': 'Mijozlar', 'pos_tab_history': 'Tarix', 'pos_tab_report': 'Hisobot',
+ 'pos_client': 'Mijoz', 'pos_cash_client': 'Naqd (mijozsiz)', 'pos_cash_hint': "Bosing — mijoz tanlash yoki qo'shish",
+ 'pos_balance': 'Qarzi: %1$s', 'pos_goods': 'Tovarlar', 'pos_no_goods': "Tovar qo'shilmagan",
+ 'pos_add': "Tovar qo'shish", 'pos_add_free': "Ro'yxatda yo'q tovar", 'pos_free_name': 'Tovar nomi',
+ 'pos_search': 'Tovar nomi, kodi yoki PLU',
+ 'pos_discount': "Chegirma (so'm)", 'pos_paid_field': "To'landi (so'm) — bo'sh bo'lsa naqdda to'liq",
+ 'pos_note': 'Izoh', 'pos_total_line': 'Jami: %1$s',
+ 'pos_save_print': 'Saqlash va chek', 'pos_save': 'Saqlash',
+ 'pos_local_hint': "Kassa faqat shu telefonda: do'kon egasiga va serverga bormaydi. Kunlik zaxiraga kiradi.",
+ 'pos_err_discount': 'Chegirma summadan katta', 'pos_err_cash': "Naqd savdoda to'liq to'lanishi kerak — mijozni tanlang (qarzga)",
+ 'pos_saved': 'Saqlandi',
+ 'pos_new_client': "Yangi mijoz", 'pos_edit_client': "Mijozni o'zgartirish", 'pos_client_name': 'Ismi', 'pos_client_phone': 'Telefon',
+ 'pos_change': "O'zgartirish", 'pos_remove': 'Olib tashlash',
+ 'pos_no_clients': "Mijoz yo'q", 'pos_clients_info': '%1$d ta mijoz · qarzlar jami %2$s',
+ 'pos_take_payment': "To'lov qabul qilish", 'pos_new_sale_for': 'Shu mijozga savdo', 'pos_client_history': 'Tarixi',
+ 'pos_h_sale': "Savdo %1$s (to'landi %2$s)", 'pos_h_pay': "To'lov %1$s",
+ 'pos_h_sale_row': '№%1$d · %2$s', 'pos_h_pay_row': "To'lov: %1$s",
+ 'pos_empty': "Hali yozuv yo'q", 'pos_pay_title': "To'lov",
+ 'pos_print': 'Chek', 'pos_delete': "O'chirish", 'pos_delete_text': "Yozuv butunlay o'chiriladi. Davom etasizmi?",
+ 'pos_today': 'Bugun', 'pos_days': '%1$d kun',
+ 'pos_r_sales': 'Savdo', 'pos_r_count': '%1$d ta', 'pos_r_paid': "Savdoda to'landi", 'pos_r_credit': 'Qarzga',
+ 'pos_r_payments': "Qarz to'lovlari", 'pos_r_cash': 'Kassaga tushdi', 'pos_r_top': "Ko'p sotilgan", 'pos_r_debtors': 'Qarzdorlar',
+ 'pos_receipt_title': 'Savdo cheki', 'pos_sum': 'Summa', 'pos_total': "To'lanadi", 'pos_paid': "To'landi", 'pos_debt': 'Qarz',
+ 'pos_number': 'Chek №', 'pos_time': 'Vaqt',
+ # Chek qo'shimchalari
+ 'rx_title': "Chek qo'shimchalari", 'rx_sub_title': "Telefon, manzil, rahmat matni",
+ 'rx_hint': "Chekka o'z ma'lumotingizni qo'shing. Do'kon nomi (brend) o'zgarmaydi.",
+ 'rx_brand': "Do'kon nomi", 'rx_sub': 'Sarlavha ostida (manzil, mo\'ljal)', 'rx_sub_hint': 'Har qator alohida, 3 tagacha',
+ 'rx_footer': 'Chek osti (telefon)', 'rx_footer_hint': "Bo'sh bo'lsa — do'kon egasiniki",
+ 'rx_thanks': 'Rahmat matni', 'rx_save': 'Saqlash', 'rx_saved': 'Saqlandi', 'rx_test': 'Sinov cheki', 'rx_test_item': 'Sinov',
+ # Vidjet
+ 'wg_desc': "Qarz, narxlar va kassa", 'wg_debt': 'Qarz: %1$s', 'wg_no_data': "Ma'lumot yo'q",
+})
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from strings_ledger import LEDGER  # noqa: E402
 for _k in LEDGER:

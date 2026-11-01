@@ -118,6 +118,7 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/rowPrice"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
@@ -127,9 +128,40 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
-                        android:layout_weight="1"
+                        android:layout_weight="1.2"
                         app:selectionRequired="true"
                         app:singleSelection="true">
+
+                        <!-- v3.1: 1C'dagi 4 narx (3 — Naqd, 4 — Optom) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnP1"
+                            style="@style/Widget.App.Segment"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:contentDescription="@string/price_l1_desc"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text="@string/price_l1"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnP2"
+                            style="@style/Widget.App.Segment"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:contentDescription="@string/price_l2_desc"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text="@string/price_l2"
+                            android:minHeight="40dp"
+                            android:maxLines="2" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCash"
@@ -137,9 +169,12 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
+                            android:contentDescription="@string/price_l3_desc"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/type_cash"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text="@string/price_l3"
                             android:minHeight="40dp"
                             android:maxLines="2" />
 
@@ -149,11 +184,15 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
+                            android:contentDescription="@string/price_l4_desc"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:text="@string/type_wholesale"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:text="@string/price_l4"
                             android:minHeight="40dp"
                             android:maxLines="2" />
+
                     </com.google.android.material.button.MaterialButtonToggleGroup>
 
                     <com.google.android.material.button.MaterialButtonToggleGroup
@@ -192,6 +231,7 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/rowMode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
@@ -264,6 +304,7 @@
 
             <!-- v2.6: qidiruv + shtrix kod skaneri -->
             <LinearLayout
+                android:id="@+id/searchBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -309,6 +350,7 @@
             </LinearLayout>
 
             <HorizontalScrollView
+                android:id="@+id/chipScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:scrollbars="none">

@@ -35,9 +35,20 @@ object MijozLedgerHost : LedgerHost {
     }
 
     override val receiptHeader: String get() = Locator.data.state.value.snapshot?.shopName.orEmpty()
-    override val receiptFooter: String get() = Locator.data.state.value.snapshot?.shopFooter.orEmpty()
+    /** v3.2: chek osti (telefon) — 2-filial o'zinikini yozsa shu, aks holda do'kon egasiniki. Do'kon nomi o'zgarmaydi. */
+    override val receiptFooter: String get() = Locator.prefs.receiptFooter.trim().ifEmpty { Locator.data.state.value.snapshot?.shopFooter.orEmpty() }
     override val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle
-        get() = uz.imsoft.shared.receipt.ReceiptStyle.decode(Locator.data.state.value.snapshot?.receiptStyle)
+        get() {
+            val base = uz.imsoft.shared.receipt.ReceiptStyle.decode(Locator.data.state.value.snapshot?.receiptStyle)
+            val p = Locator.prefs
+            val sub = p.receiptSub.trim()
+            val thanks = p.receiptThanks.trim()
+            if (sub.isEmpty() && thanks.isEmpty()) return base
+            return base.copy(
+                sub = if (sub.isEmpty()) base.sub else listOf(sub, base.sub).filter { it.isNotBlank() }.joinToString("\n"),
+                thanks = thanks.ifEmpty { base.thanks },
+            ).normalized()
+        }
     override val receiptLogo: android.graphics.Bitmap? get() = uz.imsoft.shared.android.LogoCache.fromBase64(Locator.data.state.value.snapshot?.receiptLogo)
     override val fuzzySearch: Boolean get() = Locator.prefs.fuzzy
 
@@ -77,6 +88,11 @@ object MijozLedgerHost : LedgerHost {
         showPriceType = false, defaultWholesale = true, showNote = true,
         confirmLabel = R.string.lgm_send, hint = ctx.getString(R.string.cart_hint), tag = CART,
     )
+
+    /** v3.2: savdo chekini tuzatishni so'rash (Admin tasdiqlaydi). */
+    override fun editLabel(doc: LedgerDoc): Int = if (doc.kind == EntryKind.SALE && Locator.prefs.link != null) R.string.ed_request else 0
+
+    override fun requestEdit(f: androidx.fragment.app.Fragment, doc: LedgerDoc) = uz.imsoft.mijoz.ui.extra.RequestsFragment.askEdit(f, doc)
 
     override fun printTargets(ctx: Context): List<PrintTarget> {
         if (!Locator.prefs.printerSection) return emptyList()

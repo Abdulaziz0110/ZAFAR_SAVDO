@@ -90,9 +90,10 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
     }
 
     /** Chekni navbatga qo'yadi; internet bo'lmasa — diskda kutadi. */
-    suspend fun pushReceipt(c: ShareClient, s: AppSale) {
-        if (c.queueKey.isEmpty() || !store.isCloudReady) return
-        val ok = runCatching { withContext(Dispatchers.IO) { if (autoOn(c)) send(c, s) } }.isSuccess
+    /** [force]: true — 2-filial printerida albatta, false — chiqarilmaydi, null — 2-ilovadagi "avtomatik" sozlamasi bo'yicha. */
+    suspend fun pushReceipt(c: ShareClient, s: AppSale, force: Boolean? = null) {
+        if (c.queueKey.isEmpty() || !store.isCloudReady || force == false) return
+        val ok = runCatching { withContext(Dispatchers.IO) { if (force ?: autoOn(c)) send(c, s) } }.isSuccess
         if (!ok) mutex.withLock { withContext(Dispatchers.IO) { addPending(c.id, s.id) } }
     }
 

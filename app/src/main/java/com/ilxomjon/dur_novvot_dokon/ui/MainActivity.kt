@@ -1,6 +1,8 @@
 package com.ilxomjon.dur_novvot_dokon.ui
 
+import android.content.Intent
 import android.os.Bundle
+import com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -77,6 +79,10 @@ class MainActivity : AppCompatActivity(), Navigator {
         if (savedInstanceState == null) backgroundAt = 0L
 
         binding.tvStatus.setOnClickListener { DiagnosticsSheet.show(supportFragmentManager) }
+        binding.root.viewTreeObserver.addOnGlobalLayoutListener {
+            val open = androidx.core.view.ViewCompat.getRootWindowInsets(binding.root)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+            if (open != imeOpen) { imeOpen = open; binding.root.post { updateChrome() } }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(ServiceLocator.network.state, ServiceLocator.outbox.counts, ServiceLocator.outbox.lastError) { n, c, e -> Triple(n, c, e) }
@@ -88,10 +94,51 @@ class MainActivity : AppCompatActivity(), Navigator {
             loggedIn = state.agent != null
             if (savedInstanceState == null) {
                 if (loggedIn) startTabs() else showLogin()
+                if (loggedIn) handleQuick(intent)
             } else {
                 updateChrome()
             }
         }
+        // v3.2: avtomatik yangilash (ish vaqtida har N daqiqada, ilova ochiq turganda) va kunlik zaxira
+        if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.apply(applicationContext)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                runCatching { com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.dailyBackupIfDue() }
+                while (true) {
+                    kotlinx.coroutines.delay(30_000)
+                    val cat = ServiceLocator.catalog.state.value
+                    val due = System.currentTimeMillis() - cat.lastSyncAt >= com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.intervalMs()
+                    if (due && cat.agent != null && !cat.syncing && ServiceLocator.network.state.value.online) {
+                        runCatching { ServiceLocator.catalog.sync() }
+                        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) com.ilxomjon.dur_novvot_dokon.data.share.ShareWorker.kick(applicationContext, 1)
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (loggedIn) handleQuick(intent)
+    }
+
+    /** v3.2 vidjet: tez savdo (tanlangan do'kon bilan), skaner yoki to'lov. Savatcha to'la bo'lsa — do'kon almashtirilmaydi. */
+    private fun handleQuick(i: Intent?) {
+        i ?: return
+        val storeId = i.getStringExtra(QuickWidget.EXTRA_STORE)
+        val action = i.getStringExtra(QuickWidget.EXTRA_ACTION).orEmpty()
+        if (storeId == null && action.isEmpty()) return
+        i.removeExtra(QuickWidget.EXTRA_STORE)
+        i.removeExtra(QuickWidget.EXTRA_ACTION)
+        when (action) {
+            QuickWidget.ACT_PAYMENT -> { openTab(R.id.nav_payment); return }
+            QuickWidget.ACT_SCAN -> { openTab(R.id.nav_sale); push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment()); return }
+        }
+        val draft = ServiceLocator.draft
+        val st = storeId?.let { ServiceLocator.catalog.storeById(it) }
+        if (st != null && draft.state.value.lines.isEmpty()) draft.setStore(st)
+        openTab(R.id.nav_sale)
     }
 
     // v2.6: ulanadigan (Bluetooth/USB) shtrix kod skaneri klaviatura kabi yozadi. Savdo ekrani ochiq va hech qaysi
@@ -141,6 +188,7 @@ class MainActivity : AppCompatActivity(), Navigator {
             val away = System.currentTimeMillis() - backgroundAt
             if (backgroundAt == 0L || away >= maxOf(p.lockAfterMin * 60_000L, 5_000L)) showLock()
         }
+        com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget.refresh(applicationContext)
         // Mijoz ilovasi: ilova ochilganda 2-ilova so'rovi va buyurtmalari darhol tekshiriladi.
         if (ServiceLocator.shareStore.isConfigured) com.ilxomjon.dur_novvot_dokon.data.share.ShareWorker.kick(this, 1)
         // Avto-yangilash: ma'lumot eski bo'lsa (Qulayliklar ▸ Avto-yangilash)
@@ -282,8 +330,11 @@ class MainActivity : AppCompatActivity(), Navigator {
         tx.commitNowAllowingStateLoss()
     }
 
+    /** v3.1: klaviatura ochiq — pastki menyu yashiriladi (ro'yxatga joy). */
+    private var imeOpen = false
+
     private fun updateChrome() {
-        val showNav = loggedIn && supportFragmentManager.backStackEntryCount == 0
+        val showNav = loggedIn && supportFragmentManager.backStackEntryCount == 0 && !imeOpen
         binding.bottomNav.visibility = if (showNav) android.view.View.VISIBLE else android.view.View.GONE
     }
 

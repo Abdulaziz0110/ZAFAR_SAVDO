@@ -84,9 +84,17 @@ class RelayService : Service() {
     private suspend fun mainLoop() {
         val host = ServiceLocator.relayHost
         val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull().orEmpty()
+        var tickAt = 0L
         while (scope.isActive) {
             if (!ServiceLocator.shareStore.relayOn) { stopSelf(); return }
+            val st = ServiceLocator.shareStore
+            if (st.isCloudReady && st.agentKey.isEmpty()) st.agentKey = uz.imsoft.shared.CloudDb.newKey()
             runCatching { host.pump(version = version) }
+            // v3.1: kompyuterdan kelganlar, 2-ilova so'rovlari (qarzni yangilash) va yuborish — har daqiqada
+            if (System.currentTimeMillis() - tickAt >= 55_000L) {
+                tickAt = System.currentTimeMillis()
+                runCatching { ServiceLocator.share.tick() }
+            }
             val s = host.stats
             val time = if (s.at > 0) SimpleDateFormat("HH:mm", Locale.US).format(Date(s.at)) else "—"
             update(if (s.error.isNotEmpty()) getString(R.string.rl_notif_error, time) else getString(R.string.rl_notif_ok, time, s.written))
@@ -178,9 +186,10 @@ class RelayService : Service() {
             runCatching { WorkManager.getInstance(ctx).cancelUniqueWork(WORK) }
         }
 
-        /** Ilova ochilganda: yoqilgan bo'lsa ishlab tursin. */
+        /** Ilova ochilganda / telefon yonganda: yoqilgan (standart) va Firebase sozlangan bo'lsa ishlab tursin. */
         fun ensureRunning(ctx: Context) {
-            if (AppRole.isAdmin && ServiceLocator.shareStore.relayOn) start(ctx)
+            val st = ServiceLocator.shareStore
+            if (AppRole.isAdmin && st.relayOn && st.isCloudReady) start(ctx)
         }
 
         /** Zaxira: xizmat to'xtatilgan bo'lsa ham 15 daqiqada bir navbat ishlanadi. */

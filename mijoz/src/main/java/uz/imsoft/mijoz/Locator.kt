@@ -20,6 +20,10 @@ object Locator {
     val login: uz.imsoft.mijoz.data.LoginRepository by lazy { uz.imsoft.mijoz.data.LoginRepository(app, prefs) }
     val cart: uz.imsoft.mijoz.data.OrderCart by lazy { uz.imsoft.mijoz.data.OrderCart(app) }
     val data: SnapshotRepository by lazy { SnapshotRepository(app, prefs) { force -> login.relogin(force) } }
+    /** v3.2: o'z kassasi (faqat telefonda). */
+    val pos: uz.imsoft.mijoz.data.PosDb by lazy { uz.imsoft.mijoz.data.PosDb(app) }
+    /** v3.2: Admin'ga to'lov va chek tuzatish so'rovlari. */
+    val requests: uz.imsoft.mijoz.data.ClientRequests by lazy { uz.imsoft.mijoz.data.ClientRequests(prefs) }
 
     fun init(a: Application) {
         if (::app.isInitialized) return
@@ -27,8 +31,9 @@ object Locator {
         applyUi()
         Thread({ uz.imsoft.shared.android.PrintFonts.init(a) }, "print-fonts").start()
         scope.launch { runCatching { data.loadLocal() } }
-        // Fonda avtomatik yangilash (Sozlamalar ▸ Ma'lumot)
-        uz.imsoft.mijoz.data.RefreshWorker.schedule(a, prefs.autoMinutes)
+        // Fonda avtomatik yangilash (Sozlamalar ▸ Ma'lumot) + v3.2 ish vaqti budilnigi
+        uz.imsoft.mijoz.data.MijozAuto.apply(a)
+        scope.launch { runCatching { pos.load() } }
     }
 
     /** BroadcastReceiver uchun (jarayon endi boshlangan bo'lsa ham). */

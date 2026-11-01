@@ -73,6 +73,7 @@ class LabelsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         b.toolbar.setNavigationOnClickListener { navigator().pop() }
+        b.toolbar.menu.findItem(R.id.action_import_plu)?.isVisible = false // v3.2: PLU kompyuterdan o'zi keladi
         b.toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.action_printer -> { LabelPrinterSheet.show(childFragmentManager); true }

@@ -430,7 +430,7 @@ class ShareRepository(
             withContext(Dispatchers.IO) {
                 val old = store.client(clientId) ?: return@withContext
                 store.update(clientId) { it.copy(readKey = CloudDb.newKey(), dirty = true, lastRequestServed = 0L) }
-                val c = store.client(clientId)!!
+                val c = store.client(clientId) ?: return@withContext
                 if (store.isCloudReady) {
                     runCatching { writeMembers(c) }
                     // Hali ko'rilmagan buyurtmalar yo'qolmasin — yangi kalit ostiga ko'chiriladi.
@@ -519,8 +519,9 @@ class ShareRepository(
     /** Saqlash. [toCurrent] — fayldagi nomdan qat'i nazar joriy mijozga. @return mijoz id si. */
     suspend fun commit(p: ImportPreview, toCurrent: Boolean = false): String = mutex.withLock {
         withContext(Dispatchers.IO) {
+            val cur = store.current()
             val id = when {
-                toCurrent && store.current() != null -> store.current()!!.id
+                toCurrent && cur != null -> cur.id
                 p.target.existingId != null -> p.target.existingId
                 else -> createClient(p.target.newName, p.target.newStoreId).id
             }
@@ -560,14 +561,28 @@ class ShareRepository(
     // ---------------- kompyuterdan avtomatik (1C COM -> in/{inbox}) ----------------
 
     /** Kompyuter qancha vaqtda eksport qilsin — bulutga yoziladi, kompyuter har aylanishda o'qiydi. */
-    suspend fun setPcSchedule(hours: Int, days: Int) {
+    suspend fun setPcSchedule(hours: Int, days: Int, minutes: Int = store.pcMinutes) {
         store.pcHours = hours
         store.pcDays = days
+        store.pcMinutes = minutes
         publishState()
         if (!store.isCloudReady) return
         if (store.inboxKey.isEmpty()) store.inboxKey = CloudDb.newKey()
-        withContext(Dispatchers.IO) { cloud().put("p/${store.inboxKey}/exp", linkedMapOf("h" to hours, "d" to days, "at" to CloudDb.SERVER_TIME)) }
+        // v3.2: daqiqalik yangilash va ish vaqti (kompyuter shu oraliqda tez, tashqarida soatiga bir; tugashidan 1 daqiqa oldin to'liq)
+        val wh = workHours()
+        withContext(Dispatchers.IO) {
+            cloud().put(
+                "p/${store.inboxKey}/exp",
+                linkedMapOf("h" to hours, "d" to days, "m" to minutes, "won" to wh.on, "ws" to wh.start, "we" to wh.end, "at" to CloudDb.SERVER_TIME),
+            )
+        }
     }
+
+    /** Ish vaqti (Admin sozlamasi) — ServiceLocator beradi. */
+    var workHours: () -> uz.imsoft.shared.sched.WorkHours = { uz.imsoft.shared.sched.WorkHours.DEFAULT }
+
+    /** v3.2: kompyuter yuborgan 1C ma'lumotlari ("sales", "supp") — OneCRepository qabul qiladi. */
+    var dataHook: (suspend (kind: String, bytes: ByteArray) -> Boolean)? = null
 
     /** Kompyuter qoldirgan holat (oxirgi eksport vaqti, xato). */
     suspend fun refreshPcStatus() {
@@ -595,6 +610,11 @@ class ShareRepository(
             val ok = runCatching {
                 val raw = B64.decode(o.str("b"))
                 val bytes = if (o.bool("gz")) B64.gunzip(raw) else raw
+                val dk = o.str("k")
+                if (dk == "sales" || dk == "supp") {
+                    (dataHook ?: throw IllegalStateException(dk)).invoke(dk, bytes)
+                    return@runCatching
+                }
                 if (o.str("k") == "codes") {
                     // Tovar kodlari (1C: PLU va shtrix) — mijoz hisoboti emas
                     (codesHook ?: throw IllegalStateException("codes")).invoke(bytes)
@@ -651,13 +671,14 @@ class ShareRepository(
                 Pricing.unitPrice(p, PriceType.CASH, Currency.SOM, cat.rate), Pricing.unitPrice(p, PriceType.CASH, Currency.USD, cat.rate),
                 Pricing.unitPrice(p, PriceType.WHOLESALE, Currency.SOM, cat.rate), Pricing.unitPrice(p, PriceType.WHOLESALE, Currency.USD, cat.rate),
                 plu = pluOf(p.id).orEmpty(),
+                l12 = listOf(1, 2).flatMap { lv -> listOf(Pricing.unitPrice(p, lv, Currency.SOM, cat.rate), Pricing.unitPrice(p, lv, Currency.USD, cat.rate)) },
             )
         }
         val debt = if (c.storeId.isEmpty()) null else runCatching { catalog.knownDebt(c.storeId) }.getOrNull()?.let { DebtInfo(it.som, it.usd, it.fetchedAt, "server") }
         val features = if (store.acceptOrders && store.rulesVersion >= 2 && c.kind == "c") setOf(ClientSnapshot.FEATURE_ORDERS) else emptySet()
         return ClientSnapshot(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
-            items.sortedBy { it.name.lowercase() }, b.entries + mirror.entriesFor(c.id, b.entries, b.coverage), b.coverage, cat.lastSyncAt, reportBalance = b.balance,
+            items.sortedBy { it.name.lowercase() }, (b.entries + mirror.entriesFor(c.id, b.entries, b.coverage)).let { l -> editHook?.invoke(c.id, l) ?: l }, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
             features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
             receiptStyle = store.receiptStyle, receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
         )
@@ -740,8 +761,21 @@ class ShareRepository(
         if (sent) for ((id, req) in served) store.update(id) { it.copy(lastRequestServed = req) }
         if (store.acceptOrders && store.rulesVersion >= 2) runCatching { refreshOrders(notify = true) }
         runCatching { mirror.retryPending() }
+        extraTick?.let { f -> runCatching { f() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it } }
         return sent
     }
+
+    /** v3.2: keyingi savdo cheki 2-filial printeriga (true), faqat do'konda (false) yoki odatdagidek (null). */
+    @Volatile var nextBranchPrint: Pair<String, Boolean>? = null
+
+    /** Shu do'kon 2-ilova ro'yxatida va uning printeri ulanganmi. */
+    fun branchPrinterFor(storeId: String): Boolean = storeId.isNotEmpty() && store.clients().any { it.storeId == storeId && it.queueKey.isNotEmpty() }
+
+    /** v3.2: tasdiqlangan chek tuzatishlari (ClientRequestsRepository.apply). */
+    var editHook: ((clientId: String, entries: List<LedgerEntry>) -> List<LedgerEntry>)? = null
+
+    /** v3.2: har tick oxirida (mijoz so'rovlari, 1C yozuv natijalari). */
+    var extraTick: (suspend () -> Unit)? = null
 
     /**
      * 1-ilovada savdo navbatga qo'yilganda: mijoz ro'yxatda bo'lsa — uning 2-ilovasiga darhol yuboriladi (tarixda ko'rinadi)
@@ -755,7 +789,9 @@ class ShareRepository(
         store.update(c.id) { it.copy(dirty = true) }
         mutex.withLock { publishState() }
         val fresh = store.client(c.id) ?: c
-        runCatching { mirror.pushReceipt(fresh, s) }
+        val force = nextBranchPrint?.takeIf { it.first == sent.storeId }?.second
+        if (force != null) nextBranchPrint = null
+        runCatching { mirror.pushReceipt(fresh, s, force) }
         if (store.autoPublish) runCatching { publishOne(c.id) }.onFailure { ShareWorker.kick(context) }
         else ShareWorker.kick(context)
     }

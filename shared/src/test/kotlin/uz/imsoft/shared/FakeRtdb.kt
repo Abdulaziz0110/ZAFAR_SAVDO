@@ -52,6 +52,8 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
         p.size == 3 && p[0] == "s" && p[2] == "req" -> p[1].length >= 24 && newValue is Number
         // CloudDb.RULES "ord": faqat yangi yozuv, belgilangan maydonlar, cheklangan uzunlik
         p.size == 4 && p[0] == "s" && p[2] == "ord" -> p[1].length >= 24 && get(p) == null && orderOk(p[3], newValue)
+        // v5: 2-ilova to'lov va chek tuzatish so'rovlari
+        p.size == 4 && p[0] == "s" && p[2] in setOf("pay", "ed") -> p[1].length >= 24 && get(p) == null && clientReqOk(p[2], p[3], newValue)
         p.size == 3 && p[0] == "q" -> p[1].length >= 24 && newValue == null
         p.size >= 2 && p[0] == "p" -> p[1].length >= 24
         p.size == 3 && p[0] == "g" && p[2] in setOf("sig", "creq") -> p[1].length >= 24 && newValue is Number
@@ -71,6 +73,20 @@ class FakeRtdb(private val secret: String) : AutoCloseable {
                 (m["u"] as? String)?.let { it.length <= 40 } == true && m["t"] in setOf("1", "4") && (m["p"] as? String)?.let { it.length <= 60000 } == true &&
                 (m["m"] == null || (m["m"] as? String)?.let { it.length <= 60000 } == true)
             "lb" -> id.length >= 24 && m.keys.all { it in setOf("at", "n", "b") } && m["n"] is Number && m["b"] is String
+            else -> false
+        }
+    }
+
+    private fun clientReqOk(kind: String, id: String, v: Any?): Boolean {
+        val m = v as? Map<*, *> ?: return false
+        if (id.length !in 10..40 || (m["at"] as? Number)?.toLong() != now - 1) return false
+        (m["by"])?.let { if (it !is String || it.length > 80) return false }
+        (m["n"])?.let { if (it !is String || it.length > 300) return false }
+        return when (kind) {
+            "pay" -> m.keys.all { it in setOf("at", "by", "s", "u", "m", "n") } && (m["s"] as? Number)?.toDouble()?.let { it >= 0 } == true &&
+                (m["u"] as? Number)?.toDouble()?.let { it >= 0 } == true && (m["m"] == null || (m["m"] as? String)?.let { it.length <= 2 } == true)
+            "ed" -> m.keys.all { it in setOf("at", "by", "d", "l", "n") } && (m["d"] as? String)?.let { it.length <= 200 } == true &&
+                (m["l"] as? String)?.let { it.length <= 30000 } == true
             else -> false
         }
     }

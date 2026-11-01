@@ -1,10 +1,16 @@
-# Test hisoboti — Agent/Admin 3.0 + Savdo Mijoz 1.4 (2026-10-31)
+# Test hisoboti — Agent/Admin 3.2 + Savdo Mijoz 1.6 (2026-11-01)
 
 ## Natija (shu muhitda bajarilgan)
 | Tekshiruv | Natija |
 |---|---|
 | Kotlin kompilyatsiyasi: `app` + `shared` (Android SDK, JDK'siz) | **0 xato** |
 | Kotlin kompilyatsiyasi: `mijoz` + `shared` | **0 xato** |
+| JVM unit testlar (app + shared) | **176/176** |
+| `V32Test` (6, v3.2) — ish vaqti (tungi smena, oxirgi yuklash), 1C savdolar/ta'minotchilar kodeki, 1C'ga yozish so'rovi va tekshiruvi, 2-ilova to'lov/tuzatish so'rovlari va Firebase qoidalari (soxta RTDB), Kassa (qarz, hisobot, chek) | 6/6 |
+| `pc/test_onec_data.py` (11, v3.2) — davr, 1C sana, savdo/ta'minotchi so'rovlari (faqat ВЫБРАТЬ, yo'q hujjat o'tkaziladi), bugungi harakatlar; 1C'ga kiritish soxta COM bilan: kirim (so'm/$), to'lov, shtrix (dublikat yo'q), bekor qilish, jurnal (qayta kiritilmaydi, qayta ishga tushgandan keyin ham), zaxirasiz yozilmaydi, o'chiq rejim, xatolar; daqiqalik jadval | 11/11 |
+| `pc/test_onec_export.py`, `test_forwarder.py`, `test_ornatish.py`, `test_label_printer.py` | 21 + 8 + 6 + 19 — hammasi o'tdi |
+| `snapshotCarriesFourPrices` (v3.1) — 1..4-narx snapshot orqali, 1C'da 2-narx yo'q bo'lsa 4-narx, eski 8 elementli format | o'tdi |
+| Tugma matni sig'ishi (360dp, lotin/kirill): Savdo, Shtrix-savdo, Mijoz Narxlar (4 tugma) | o'tdi (o'lchov skripti) |
 | `BarcodesTest` (6) — EAN/UPC tekshiruv raqami, kanonik kalit (UPC-A = EAN-13 = Excel soni); tarozi yorlig'i (gramm, 10 gramm, 6+4 xonali, xato tekshiruv, 0 og'irlik); 1C "Вывести список" jadvalidan ustunlarni topish (sarlavha, bo'shliqli kod, son bo'lib qolgan kod); narx ro'yxatini rad etish; kod -> nom bog'lash (ikki ma'noli nom bog'lanmaydi); resolver (tarozi kodi — tasdiq bilan) | 6/6 |
 | Haqiqiy 1C shtrix kodlar fayli (`.xls`, repoga kiritilmagan): 4 212 qator, ustunlar to'g'ri topildi, 89 ms; tarozi prefikslari 28/29; UPC-A, tarozi yorlig'i (1,234 kg), tekshiruvsiz o'z kodi — hammasi topildi | qo'lda |
 | Do'kondagi haqiqiy yorliqlar (rasm): `2900025002028` -> Keshu 210, 0,202 kg; `2500000024375` -> Saryog Asal 200 gr (`BarcodesTest.realLabels`) | o'tdi |

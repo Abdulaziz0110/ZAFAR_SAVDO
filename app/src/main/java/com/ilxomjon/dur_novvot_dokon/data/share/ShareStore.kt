@@ -89,7 +89,8 @@ class ShareStore(private val context: Context) {
     /** v3.0 Admin: agentlar ko'prigi kaliti (g/{kalit}) — Agent ulanish kodida boradi. */
     var agentKey: String get() = s("agent_key"); set(v) = put("agent_key", v)
     /** v3.0 Admin: ko'prik yoqilgan (fonda ishlaydi). */
-    var relayOn: Boolean get() = prefs.getBoolean("relay_on", false); set(v) = prefs.edit().putBoolean("relay_on", v).apply()
+    /** v3.1: standart — yoqilgan (Firebase sozlangan bo'lsa ko'prik o'zi ishlaydi; foydalanuvchi o'chirishi mumkin). */
+    var relayOn: Boolean get() = prefs.getBoolean("relay_on", true); set(v) = prefs.edit().putBoolean("relay_on", v).apply()
     /** Fon yangilanishi oralig'i, daqiqa (0 — o'chiq). */
     var syncMinutes: Int get() = prefs.getInt("sync_min", 60); set(v) = prefs.edit().putInt("sync_min", v).apply()
     /** Kompyuterdan avtomatik eksport (1C COM) uchun "kirish qutisi" kaliti. */
@@ -100,6 +101,14 @@ class ShareStore(private val context: Context) {
     /** Kompyuter necha soatda bir eksport qilsin (0 — o'chiq) va necha kunlik. Bulut orqali kompyuterga yetkaziladi. */
     var pcHours: Int get() = prefs.getInt("pc_hours", 2); set(v) = prefs.edit().putInt("pc_hours", v).apply()
     var pcDays: Int get() = prefs.getInt("pc_days", 7); set(v) = prefs.edit().putInt("pc_days", v).apply()
+    /** v3.2: kompyuter tezkor yangilash oralig'i (daqiqa, 0 — o'chiq). */
+    var pcMinutes: Int get() = prefs.getInt("pc_min", 5); set(v) = prefs.edit().putInt("pc_min", v).apply()
+    /** v3.2 jadvali (daqiqa, ish vaqti) kompyuterga bir marta avtomatik yuborilganmi. */
+    var pcLiveSent: Boolean get() = prefs.getBoolean("pc_live_sent", false); set(v) = prefs.edit().putBoolean("pc_live_sent", v).apply()
+    /** v3.2: tasdiqlangan mijoz chek tuzatishlari (JSON: mijoz id -> hujjat kaliti -> qatorlar). */
+    var edits: String get() = s("edits"); set(v) = put("edits", v)
+    /** v3.2: Admin tasdiqlagan mijoz to'lovlari (so'rov id -> navbat id), holat kuzatish uchun. */
+    var payLinks: String get() = s("pay_links"); set(v) = put("pay_links", v)
 
     /** Ekranda tanlangan mijoz (1C tarixi, chek printeri). */
     var currentId: String get() = s("current_client"); set(v) = put("current_client", v)

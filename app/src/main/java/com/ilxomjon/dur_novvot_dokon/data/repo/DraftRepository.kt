@@ -61,6 +61,7 @@ class DraftRepository(
             DraftState(
                 store = readStore(),
                 priceType = PriceType.fromCode(prefs.getString(K_PRICE_TYPE, PriceType.WHOLESALE.code)),
+                priceLevel = prefs.getInt(K_PRICE_LEVEL, 0),
                 currency = Currency.fromCode(prefs.getString(K_CURRENCY, Currency.SOM.code)),
                 mode = DealMode.fromCode(prefs.getString(K_MODE, DealMode.SALE.code)),
                 lines = cart.lines(),
@@ -104,8 +105,11 @@ class DraftRepository(
         cart.updateStore(s.store)
     }
 
-    fun setPriceType(type: PriceType) = mutate({ reprice(it.copy(priceType = type)) }) { s ->
-        prefs.edit().putString(K_PRICE_TYPE, type.code).apply()
+    fun setPriceType(type: PriceType) = setPriceLevel(PriceType.levelOf(type))
+
+    /** v3.1: narx 1..4 (savatchadagilar qayta hisoblanadi). */
+    fun setPriceLevel(level: Int) = mutate({ reprice(it.copy(priceType = PriceType.forLevel(level), priceLevel = level.coerceIn(1, 4))) }) { s ->
+        prefs.edit().putString(K_PRICE_TYPE, s.priceType.code).putInt(K_PRICE_LEVEL, s.level).apply()
         allLinesWrite(s)
     }
 
@@ -195,7 +199,7 @@ class DraftRepository(
     fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>) =
         mutate({ DraftState(store = store, priceType = priceType, currency = currency, mode = mode, lines = lines) }) { s ->
             prefs.edit().putString(K_STORE_ID, store?.id.orEmpty()).putString(K_REGION_ID, store?.regionId.orEmpty())
-                .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, priceType.code)
+                .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, priceType.code).putInt(K_PRICE_LEVEL, 0)
                 .putString(K_CURRENCY, currency.code).putString(K_MODE, mode.code).apply()
             cart.clear()
             allLinesWrite(s)
@@ -207,7 +211,7 @@ class DraftRepository(
         return s.copy(
             lines = s.lines.map { line ->
                 val p = c.productsById[line.productId] ?: return@map line
-                line.copy(price = Pricing.unitPrice(p, s.priceType, s.currency, c.rate))
+                line.copy(price = Pricing.unitPrice(p, s.level, s.currency, c.rate))
             },
         )
     }
@@ -219,6 +223,7 @@ class DraftRepository(
         const val K_REGION_ID = "tan_region_id"
         const val K_STORE_NAME = "tan_dokon_nomi"
         const val K_PRICE_TYPE = "savdo_turi"
+        const val K_PRICE_LEVEL = "narx_daraja"
         const val K_CURRENCY = "valyuta_turi"
         const val K_MODE = "vazvrat"
     }

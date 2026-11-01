@@ -86,6 +86,8 @@ class SaleFragment : Fragment() {
             vm.storeById(id)?.let { vm.setStore(it) }
         }
         binding.rowStore.setOnClickListener { StorePickerSheet.show(childFragmentManager, REQ_STORE) }
+        // Do'kon kartasi (qarz, oxirgi buyurtma, to'lov) — uzoq bosilganda
+        binding.rowStore.setOnLongClickListener { lastDraft.store?.let { StoreCardSheet.show(childFragmentManager, it.id) }; true }
 
         binding.btnClear.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
@@ -100,11 +102,28 @@ class SaleFragment : Fragment() {
         binding.btnFav0.setOnClickListener { vm.favorites.value.getOrNull(0)?.let { vm.setStore(it) } }
         binding.btnFav1.setOnClickListener { vm.favorites.value.getOrNull(1)?.let { vm.setStore(it) } }
         binding.btnOtherStore.setOnClickListener { StorePickerSheet.show(childFragmentManager, REQ_STORE) }
+        // v3.1: qidirayotganda (klaviatura ochiq) — narx/rejim qatorlari va pastki jami yashiriladi, ro'yxatga joy qoladi
+        // (insets tinglovchisi o'rnatilmaydi — tizim chetlari ishlovini buzmaslik uchun; joylashuv o'zgarganda tekshiriladi)
+        val imeWatch = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            val bb = _binding ?: return@OnGlobalLayoutListener
+            val ime = androidx.core.view.ViewCompat.getRootWindowInsets(bb.root)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+            setSearchCompact(ime && bb.edtSearch.hasFocus())
+        }
+        binding.root.viewTreeObserver.addOnGlobalLayoutListener(imeWatch)
+        viewLifecycleOwner.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                _binding?.root?.viewTreeObserver?.removeOnGlobalLayoutListener(imeWatch)
+            }
+        })
+        binding.edtSearch.setOnFocusChangeListener { _, has ->
+            val ime = androidx.core.view.ViewCompat.getRootWindowInsets(binding.root)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+            setSearchCompact(has && ime)
+        }
 
         binding.toggleType.addOnButtonCheckedListener { _, id, checked ->
             if (!checked || rendering) return@addOnButtonCheckedListener
-            val type = if (id == R.id.btnCash) PriceType.CASH else PriceType.WHOLESALE
-            if (type != lastDraft.priceType) confirmReprice { vm.setPriceType(type) }
+            val level = levelOfButton(id)
+            if (level != lastDraft.level) confirmReprice { vm.setPriceLevel(level) }
         }
         binding.toggleCurrency.addOnButtonCheckedListener { _, id, checked ->
             if (!checked || rendering) return@addOnButtonCheckedListener
@@ -165,7 +184,6 @@ class SaleFragment : Fragment() {
                     SaleEvent.NothingToRepeat -> Snackbar.make(binding.root, R.string.sale_repeat_none, Snackbar.LENGTH_SHORT).show()
                     is SaleEvent.AddedUsual -> undoSnack(getString(R.string.usual_added, e.count), e.before)
                     is SaleEvent.Cleared -> undoSnack(getString(R.string.cart_cleared), e.before)
-                    is SaleEvent.StoreCard -> StoreCardSheet.show(childFragmentManager, e.storeId)
                 }
             }
         }
@@ -235,6 +253,32 @@ class SaleFragment : Fragment() {
         if (hidden) autoPicked = false else maybeAutoPickStore()
     }
 
+    private var compact = false
+
+    private fun setSearchCompact(on: Boolean) {
+        val bb = _binding ?: return
+        if (on == compact) return
+        compact = on
+        bb.rowPrice.show(!on)
+        bb.rowMode.show(!on)
+        bb.bottomBar.show(!on)
+        if (!on) updateEmpty()
+    }
+
+    private fun levelOfButton(id: Int): Int = when (id) {
+        R.id.btnP1 -> 1
+        R.id.btnP2 -> 2
+        R.id.btnCash -> 3
+        else -> 4
+    }
+
+    private fun buttonOfLevel(level: Int): Int = when (level) {
+        1 -> R.id.btnP1
+        2 -> R.id.btnP2
+        3 -> R.id.btnCash
+        else -> R.id.btnWholesale
+    }
+
     private fun confirmReprice(apply: () -> Unit) {
         if (lastDraft.lines.isEmpty()) { apply(); return }
         MaterialAlertDialogBuilder(requireContext())
@@ -248,7 +292,7 @@ class SaleFragment : Fragment() {
 
     private fun maybeAutoPickStore() {
         if (autoPicked || isHidden || _binding == null) return
-        if (lastList.loaded && lastList.hasProducts && lastDraft.store == null && vm.favorites.value.isEmpty()) {
+        if (lastList.loaded && lastList.hasProducts && lastDraft.store == null) {
             autoPicked = true
             StorePickerSheet.show(childFragmentManager, REQ_STORE)
         }
@@ -289,14 +333,13 @@ class SaleFragment : Fragment() {
                 else -> R.string.sale_empty_products
             },
         )
-        // Tez do'konlar: faqat do'kon tanlanmagan holatda katta tugma bo'lib chiqadi.
-        val favs = vm.favorites.value
-        val showFavs = noStore && s.hasProducts
-        binding.btnFav0.show(showFavs && favs.isNotEmpty())
-        binding.btnFav1.show(showFavs && favs.size > 1)
-        binding.btnOtherStore.show(showFavs)
-        favs.getOrNull(0)?.let { binding.btnFav0.text = it.name }
-        favs.getOrNull(1)?.let { binding.btnFav1.text = it.name }
+        // v3.1: do'kon tanlanmagan — orqa fon bo'sh (qidiruv va filtrlar yashirin), faqat "Do'kon tanlash"; tanlash oynasi o'zi ochiladi
+        val pick = noStore && s.hasProducts
+        binding.searchBox.show(!pick)
+        binding.chipScroll.show(!pick)
+        binding.btnFav0.show(false)
+        binding.btnFav1.show(false)
+        binding.btnOtherStore.show(pick)
     }
 
     /** Sarlavha, savatcha va pastki panel: savatcha har o'zgarganda (faqat o'zgargan qatorlar yangilanadi). */
@@ -313,7 +356,11 @@ class SaleFragment : Fragment() {
         b.tvStoreInfo.text = info.joinToString(" · ")
         b.tvStoreInfo.show(info.isNotEmpty())
 
-        b.toggleType.check(if (d.priceType == PriceType.CASH) R.id.btnCash else R.id.btnWholesale)
+        b.toggleType.check(buttonOfLevel(d.level))
+        // v3.1: 2-filial mijozlariga (Mijozlar ro'yxatidagi do'konlar) narx doim 4 (optom) — almashtirib bo'lmaydi
+        val fixed4 = store != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == store.id }
+        for (i in 0 until b.toggleType.childCount) b.toggleType.getChildAt(i).isEnabled = !fixed4
+        if (fixed4 && d.level != 4) b.root.post { vm.setPriceLevel(4) }
         b.toggleCurrency.check(if (d.currency == Currency.USD) R.id.btnUsd else R.id.btnSom)
         b.toggleMode.check(if (d.mode == DealMode.RETURN) R.id.btnReturn else R.id.btnSale)
         b.btnClear.show(d.lines.isNotEmpty())

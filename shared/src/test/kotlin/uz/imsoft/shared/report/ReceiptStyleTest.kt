@@ -115,4 +115,20 @@ class ReceiptStyleTest {
         assertEquals("", old.receiptStyle)
         assertEquals(ReceiptStyle.STANDARD, ReceiptStyle.decode(old.receiptStyle))
     }
+
+    @Test fun snapshotCarriesFourPrices() {
+        val p = PriceItem("T1", "Pista", "", 100.0, 1.0, 90.0, 0.9, "5", listOf(120.0, 1.2, 0.0, 0.0))
+        val s = ClientSnapshot(1L, "c", "C", 100.0, null, listOf(p, p.copy(id = "T2", l12 = emptyList())), emptyList(), emptyList(), 0L)
+        val back = SnapshotCodec.unpack(SnapshotCodec.pack(s)).products
+        assertEquals(p, back[0])
+        assertEquals(120.0, back[0].price(1, false), 0.0)
+        assertEquals(1.2, back[0].price(1, true), 0.0)
+        // 2-narx 1C da yo'q — 4-narx (Optom)
+        assertEquals(90.0, back[0].price(2, false), 0.0)
+        assertEquals(100.0, back[0].price(3, false), 0.0)
+        assertEquals(0.9, back[0].price(4, true), 0.0)
+        // Eski Admin ma'lumoti (9-element yo'q)
+        assertTrue(back[1].l12.isEmpty())
+        assertEquals(90.0, back[1].price(1, false), 0.0)
+    }
 }

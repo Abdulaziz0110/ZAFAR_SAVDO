@@ -866,8 +866,10 @@
                         android:paddingStart="16dp"
                         android:paddingTop="4dp"
                         android:paddingEnd="16dp"
-                        android:paddingBottom="8dp">
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
 
+                        <!-- v3.1: do'kon kartasi endi tanlashda chiqmaydi (do'kon qatorini uzoq bosing) -->
                         <com.google.android.material.materialswitch.MaterialSwitch
                             android:id="@+id/swStoreCard"
                             android:layout_width="match_parent"

@@ -169,15 +169,21 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
         withContext(Dispatchers.IO) { if (item.scale) scaleLearned.remove(item.key) else learned.remove(item.key); saveLocked() }
     }
 
+    /** v3.2: yangi (tarozi emas) shtrix kod bog'langanda — 1C'ga yozish uchun (Admin: navbat, Agent: Admin orqali). */
+    @Volatile var onLearned: (suspend (productId: String, barcode: String) -> Unit)? = null
+
     /** Skanerda tanlangan tovarni eslab qoladi: oddiy kod -> shtrix kod bo'yicha; tarozi -> yorliqdagi tovar kodi bo'yicha. */
-    suspend fun learn(r: BarcodeResolver.Result.Unknown, productId: String) = mutex.withLock {
-        withContext(Dispatchers.IO) {
-            loadLocked()
-            val sc = r.scaleCode
-            if (sc != null) scaleLearned[sc] = productId
-            else { val k = Ean.canonical(r.raw); learned[k] = productId; learnedRaw[k] = r.raw.trim() }
-            saveLocked()
+    suspend fun learn(r: BarcodeResolver.Result.Unknown, productId: String) {
+        mutex.withLock {
+            withContext(Dispatchers.IO) {
+                loadLocked()
+                val sc = r.scaleCode
+                if (sc != null) scaleLearned[sc] = productId
+                else { val k = Ean.canonical(r.raw); learned[k] = productId; learnedRaw[k] = r.raw.trim() }
+                saveLocked()
+            }
         }
+        if (r.scaleCode == null) onLearned?.let { f -> runCatching { f(productId, r.raw.trim()) } }
     }
 
     /**

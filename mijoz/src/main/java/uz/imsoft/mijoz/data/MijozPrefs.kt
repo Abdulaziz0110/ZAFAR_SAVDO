@@ -63,6 +63,11 @@ class MijozPrefs(context: Context) {
     var fontScale: Float get() = p.getFloat("font_scale", 0.9f); set(v) = p.edit().putFloat("font_scale", v).apply()
     /** Narxlar: "cash" (Naqd) / "wholesale" (Optom). */
     var priceType: String get() = s("price_type", "wholesale"); set(v) = put("price_type", v)
+
+    /** v3.1: 1..4-narx ("cash" = 3, "wholesale" = 4, "1"/"2"). */
+    var priceLevel: Int
+        get() = when (priceType) { "cash" -> 3; "1" -> 1; "2" -> 2; else -> 4 }
+        set(v) { priceType = when (v) { 3 -> "cash"; 1 -> "1"; 2 -> "2"; else -> "wholesale" } }
     /** "som" / "usd". */
     var currency: String get() = s("currency", "som"); set(v) = put("currency", v)
     var fuzzy: Boolean get() = b("fuzzy", true); set(v) = putB("fuzzy", v)
@@ -102,4 +107,26 @@ class MijozPrefs(context: Context) {
         set(v) { p.edit().putString("inflight", v).commit() }
     var printedTotal: Int get() = p.getInt("printed_total", 0); set(v) = p.edit().putInt("printed_total", v).apply()
     var lastPrintAt: Long get() = p.getLong("last_print", 0L); set(v) = p.edit().putLong("last_print", v).apply()
+
+    // ---------------- v3.2 ----------------
+    /** Ish vaqti: avtomatik yangilash shu oraliqda tez; tugashidan 1 daqiqa oldin oxirgi to'liq yuklab olish. */
+    var workHours: uz.imsoft.shared.sched.WorkHours
+        get() = uz.imsoft.shared.sched.WorkHours.decode(p.getString("work_hours", null))
+        set(v) = p.edit().putString("work_hours", v.normalized().encode()).apply()
+    /** Ilova ochiq turganda ish vaqtida yangilash oralig'i (daqiqa). */
+    var liveMinutes: Int get() = p.getInt("live_min", 2); set(v) = p.edit().putInt("live_min", v.coerceIn(1, 60)).apply()
+    var lastFinalAt: Long get() = p.getLong("final_at", 0L); set(v) = p.edit().putLong("final_at", v).apply()
+    /** Kunlik zaxira. */
+    var dailyBackup: Boolean get() = b("daily_backup", true); set(v) = putB("daily_backup", v)
+    var lastBackupAt: Long get() = p.getLong("backup_at", 0L); set(v) = p.edit().putLong("backup_at", v).apply()
+    var lastBackupError: String get() = s("backup_err"); set(v) = put("backup_err", v)
+    /** Chek qo'shimchalari (sarlavha — do'kon nomi — o'zgarmaydi): sarlavha ostidagi qatorlar, chek osti, rahmat matni. */
+    var receiptSub: String get() = s("rc_sub"); set(v) = put("rc_sub", v)
+    var receiptFooter: String get() = s("rc_footer"); set(v) = put("rc_footer", v)
+    var receiptThanks: String get() = s("rc_thanks"); set(v) = put("rc_thanks", v)
+    /** Shu telefondan yuborilgan to'lov va tuzatish so'rovlari (id lar). */
+    var myPays: String get() = s("my_pays"); set(v) = put("my_pays", v)
+    var myEdits: String get() = s("my_edits"); set(v) = put("my_edits", v)
+    /** Bosh sahifada "Kassa" (o'z savdosi). */
+    var posOn: Boolean get() = b("pos_on", true); set(v) = putB("pos_on", v)
 }

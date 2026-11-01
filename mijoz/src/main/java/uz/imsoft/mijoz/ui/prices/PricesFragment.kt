@@ -30,7 +30,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-/** Narxlar: faqat shu mijoz olgan tovarlar; Naqd/Optom, So'm/$; kelgan narx YO'Q. v2.6: "+" bilan buyurtma savatchasi. */
+/** Narxlar: faqat shu mijoz olgan tovarlar; 1..4-narx, So'm/$; kelgan narx YO'Q. v2.6: "+" bilan buyurtma savatchasi. */
 class PricesFragment : Fragment() {
     private var _b: FragmentPricesBinding? = null
     private val b get() = _b!!
@@ -58,11 +58,14 @@ class PricesFragment : Fragment() {
         b.edtSearch.onTextChanged { vm.query.value = it }
         val p = Locator.prefs
         rendering = true
-        b.toggleType.check(if (p.priceType == "cash") R.id.btnCash else R.id.btnWholesale)
+        b.toggleType.check(when (p.priceLevel) { 1 -> R.id.btnP1; 2 -> R.id.btnP2; 3 -> R.id.btnCash; else -> R.id.btnWholesale })
         b.toggleCurrency.check(if (p.currency == "usd") R.id.btnUsd else R.id.btnSom)
         rendering = false
         b.toggleType.addOnButtonCheckedListener { _, id, checked ->
-            if (checked && !rendering) { p.priceType = if (id == R.id.btnCash) "cash" else "wholesale"; adapter.notifyDataSetChanged() }
+            if (checked && !rendering) {
+                p.priceLevel = when (id) { R.id.btnP1 -> 1; R.id.btnP2 -> 2; R.id.btnCash -> 3; else -> 4 }
+                adapter.notifyDataSetChanged()
+            }
         }
         b.toggleCurrency.addOnButtonCheckedListener { _, id, checked ->
             if (checked && !rendering) { p.currency = if (id == R.id.btnUsd) "usd" else "som"; adapter.notifyDataSetChanged() }
@@ -91,13 +94,7 @@ class PricesFragment : Fragment() {
     private fun priceOf(r: PriceRow): Pair<Double, Boolean> {
         val p = Locator.prefs
         val usd = p.currency == "usd"
-        val cash = p.priceType == "cash"
-        return when {
-            cash && usd -> r.item.cashUsd
-            cash -> r.item.cashSom
-            usd -> r.item.wholesaleUsd
-            else -> r.item.wholesaleSom
-        } to usd
+        return r.item.price(p.priceLevel, usd) to usd
     }
 
     /** "+": miqdor so'raladi (oldingi olingan miqdor taklif qilinadi). 0 — savatchadan olib tashlaydi. */
@@ -192,13 +189,7 @@ class PricesFragment : Fragment() {
                 b.tvName.text = bold(r.item.name, r.ranges)
                 val p = Locator.prefs
                 val usd = p.currency == "usd"
-                val cash = p.priceType == "cash"
-                val price = when {
-                    cash && usd -> r.item.cashUsd
-                    cash -> r.item.cashSom
-                    usd -> r.item.wholesaleUsd
-                    else -> r.item.wholesaleSom
-                }
+                val price = r.item.price(p.priceLevel, usd)
                 b.tvPrice.text = if (r.item.id.isEmpty() || price == 0.0) ctx.getString(R.string.price_none) else ctx.money(price, usd)
                 val last = r.last
                 // v2.7: tovar kodi va tarozi PLU raqami (1-ilovadan)

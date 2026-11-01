@@ -93,7 +93,7 @@ class ProductAdapter(
     private fun firstAmount(p: Product): Double = if (lines[p.id] == null) (suggested[p.id] ?: 1.0) else 1.0
 
     private fun priceOf(p: Product): Double =
-        lines[p.id]?.price ?: Pricing.unitPrice(p, ctx.type, ctx.currency, ctx.rate)
+        lines[p.id]?.price ?: Pricing.unitPrice(p, ctx.level, ctx.currency, ctx.rate)
 
     override fun getItemCount() = products.size
 
@@ -152,7 +152,7 @@ class ProductAdapter(
             val meta = parts.joinToString(" · ")
             b.tvMeta.text = meta
             b.tvMeta.show(meta.isNotEmpty())
-            b.tvPrice.text = ctxt.money(line?.price ?: priceOverride?.invoke(p) ?: Pricing.unitPrice(p, ctx.type, ctx.currency, ctx.rate), ctx.currency)
+            b.tvPrice.text = ctxt.money(line?.price ?: priceOverride?.invoke(p) ?: Pricing.unitPrice(p, ctx.level, ctx.currency, ctx.rate), ctx.currency)
             val inCart = line != null
             // Savatchadagi tovar yengil fon bilan ajralib turadi
             if (inCart) {

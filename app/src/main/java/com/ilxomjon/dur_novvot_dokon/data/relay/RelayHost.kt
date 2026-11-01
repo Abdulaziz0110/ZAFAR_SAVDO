@@ -43,9 +43,14 @@ class RelayHost(
         fun codes(): Pair<Long, ByteArray>?
         suspend fun printLabels(data: ByteArray): String
         suspend fun mirrorSale(sale: RelayCodec.Sale, key: String)
+        /** v3.2: agent tovarga yangi shtrix kod bog'ladi — Admin 1C'ga yozish navbatiga qo'yadi. */
+        suspend fun barcode(productId: String, name: String, code: String): Boolean = false
     }
 
     class Stats(val at: Long = 0L, val requests: Int = 0, val written: Int = 0, val labels: Int = 0, val error: String = "", val catalogAt: Long = 0L)
+
+    /** v3.2: katalogni agentlarga qayta joylash oralig'i (ish vaqtida tezroq). Standart — 20 daqiqa. */
+    @Volatile var catalogPeriodMs: () -> Long = { 20 * 60_000L }
 
     @Volatile var stats = Stats()
         private set
@@ -119,7 +124,7 @@ class RelayHost(
         }
         // 4) katalog: agent so'rasa yoki 20 daqiqada bir
         val asked = (runCatching { io { db.get(c.path("creq")) } }.getOrNull() as? Number)?.toLong() ?: 0L
-        if (forceCatalog || asked > catalogAt || now() - catalogAt > 20 * 60_000L) {
+        if (forceCatalog || asked > catalogAt || now() - catalogAt > catalogPeriodMs()) {
             runCatching { publishCatalog(db, c) }.onFailure { e -> if (e is CancellationException) throw e; error = (e.message ?: "catalog").take(200) }
         }
         // 5) 1C kodlari (kompyuterdan Admin'ga kelgani)
@@ -179,6 +184,7 @@ class RelayHost(
             "debt" -> server.fetchDebt(o.str("a"), o.str("st")).let { linkedMapOf("s" to it.first, "u" to it.second) }
             "report" -> server.fetchReport(o.str("a"), o.str("p"))
             "time" -> server.serverTimeMillis()
+            "bc" -> hooks.barcode(o.str("i"), o.str("n"), o.str("c"))
             else -> throw IllegalArgumentException("unknown_op")
         }
     }

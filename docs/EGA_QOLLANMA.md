@@ -288,6 +288,33 @@ yuklash) yoki tovarni bosib PLU ni qo'lda yozish (qo'lda yozilgani doim ustun).
 * Admin telefoni internetda bo'lmasa: agentlar sotaveradi, savdolar "kutilmoqda"; Admin ulanganda hammasi serverga yoziladi.
 * Agentda "yuborildi" — faqat server tasdig'idan keyin. Navbatda "Admin'ga yetdi, server tasdig'i kutilmoqda" ko'rinishi mumkin.
 
+# 3.2 — yangi qismlar (Admin 3.2, Agent 3.2, Mijoz 1.6)
+
+## (t1) Yangilash
+1. GitHub Actions'da build: `SavdoAgent`, `SavdoAdmin`, `SavdoMijoz` APK'lari. Ustidan o'rnating (ma'lumot qoladi).
+2. Kompyuterga yangi `IMSOFT_kompyuter.zip` dagi 5 ta faylni qo'ying va `ORNATISH.bat` ni qayta oching.
+
+## (t2) Admin ▸ Boshqaruv
+* **Kompyuter (1C)**: "Tezkor yangilash" — 1 yoki 5 daqiqa. Ish vaqtini "Avtomatik yangilash" sahifasida qo'ying.
+* **1C savdolar** — oxirgi 30 kun o'zi keladi; boshqa davr: "Davr tanlash" (1 daqiqada keladi).
+* **Ta'minotchilar** — qarzimiz va hujjatlar. Ta'minotchini bosing: Kirim / To'lov / Qaytarish.
+* **1C'ga kiritish**: tovarlarni qo'shing -> "Tasdiqlash" -> xulosani tekshirib "Ha, kiritilsin". Navbatda "1C'ga kiritildi №..."
+  chiqqach, 1C'da hujjatni bir marta ochib tekshiring (birinchi kunlari). Xato bo'lsa — yozuvni bosib "Bekor qilish".
+* **Mijoz so'rovlari** — 2-filial yuborgan to'lov va chek tuzatishlari: "Tasdiqlash" yoki "Rad etish".
+
+## (t3) Avtomatik yangilash va zaxira (hammada)
+Sozlamalar ▸ "Avtomatik yangilash va zaxira": ish vaqti, tezlik, "Aniq vaqt ruxsati" (Android 12+), kunlik zaxira, tiklash.
+
+## (t4) Vidjet
+Bosh ekranni uzoq bosing ▸ Vidjetlar ▸ Savdo ▸ "Tez savdo". Tugmalardagi do'konlar — Sozlamalar ▸ Tez do'konlar
+(masalan Naqd va Dadaxon aka).
+
+## (t5) 2-filial (Mijoz 1.6)
+* **Kassa** — o'z mijozlaringizga savdo, qarz, to'lov, hisobot (faqat shu telefonda).
+* **To'lov kiritish** — do'kon egasi tasdiqlagach chek chiqadi.
+* 1C tarixida savdo chekini oching ▸ **"Chekni tuzatishni so'rash"**.
+* Sozlamalar ▸ **Chek qo'shimchalari** — manzil, telefon, rahmat matni.
+
 ## (s) Ko'rsatmalar va sirli menyu
 * Har ekran birinchi ochilganda kerakli tugmalar yoritilib, izoh chiqadi. "O'tkazib yuborish" — shu ekran uchun yopiladi.
 * **Sirli xona**: Sozlamalar ▸ eng pastdagi versiya yozuvini **uzoq bosing**. U yerda:

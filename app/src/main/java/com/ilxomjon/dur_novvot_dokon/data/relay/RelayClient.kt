@@ -65,6 +65,10 @@ class RelayClient(
 
     private fun signal(db: CloudDb, c: RelayCodec.Config) { runCatching { db.put(c.path("sig"), CloudDb.SERVER_TIME) } }
 
+    /** v3.2: tovarga bog'langan yangi shtrix kod Admin orqali 1C'ga. */
+    suspend fun sendBarcode(productId: String, name: String, code: String): Boolean =
+        rpc("bc", mapOf("i" to productId, "n" to name.take(120), "c" to code.take(40)), 30_000) == true
+
     /** Admin'ga so'rov va javobni kutish. Admin javob bermasa [ServerError.TIMEOUT] ("admin_offline"). */
     private suspend fun rpc(op: String, params: Map<String, Any?>, timeoutMs: Long): Any? {
         val (db, c) = ctx()

@@ -26,22 +26,69 @@ object LabelBitmap {
 
     private fun bold(): Typeface = font ?: Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
+    /** Silliq chiziqlar uchun 3 baravar katta chiziladi, keyin printer nuqtalariga kichraytiriladi (v3.1). */
+    private const val SS = 3
+
     /** [w]×[h] — nuqtalarda (58×40 mm, 203 dpi = 464×320). */
     fun render(d: LabelData, kind: LabelKind, w: Int, h: Int): Bitmap {
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
+        val big = Bitmap.createBitmap(w * SS, h * SS, Bitmap.Config.ARGB_8888)
+        val c = Canvas(big)
         c.drawColor(Color.WHITE)
         when (kind) {
-            LabelKind.PLU -> drawPlu(c, d, w.toFloat(), h.toFloat())
-            LabelKind.BARCODE -> drawBarcode(c, d, w.toFloat(), h.toFloat())
+            LabelKind.PLU -> drawPlu(c, d, (w * SS).toFloat(), (h * SS).toFloat())
+            LabelKind.BARCODE -> drawBarcode(c, d, (w * SS).toFloat(), (h * SS).toFloat(), w)
         }
-        return threshold(bmp)
+        return downsample(big, w, h)
     }
 
-    private fun paint(size: Float, tf: Typeface = bold()) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+    /** Qalin harflar: Arial Bold + ozgina chiziq (Windows drayveri chiqargandek to'q). */
+    private fun paint(size: Float, tf: Typeface = bold(), heavy: Boolean = true) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
         textSize = size
         typeface = tf
+        if (heavy) {
+            style = Paint.Style.FILL_AND_STROKE
+            strokeWidth = size * 0.035f
+            strokeJoin = Paint.Join.ROUND
+        }
+    }
+
+    /** SS×SS blok o'rtachasi -> qora/oq (chegara 150: qalinroq, uzilmaydi). */
+    private fun downsample(big: Bitmap, w: Int, h: Int): Bitmap {
+        val bw = big.width
+        val src = IntArray(bw * big.height)
+        big.getPixels(src, 0, bw, 0, 0, bw, big.height)
+        big.recycle()
+        val out = IntArray(w * h)
+        val n = SS * SS
+        for (y in 0 until h) for (x in 0 until w) {
+            var sum = 0
+            for (dy in 0 until SS) {
+                val row = (y * SS + dy) * bw + x * SS
+                for (dx in 0 until SS) sum += src[row + dx] and 0xFF
+            }
+            out[y * w + x] = if (sum / n < 150) Color.BLACK else Color.WHITE
+        }
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        bmp.setPixels(out, 0, w, 0, 0, w, h)
+        return bmp
+    }
+
+    /** Kalibrlash yorlig'i: qog'oz chegarasi (ramka), markaz chiziqlari va o'lcham. */
+    fun calibration(w: Int, h: Int, text: String): Bitmap {
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(Color.WHITE)
+        val line = Paint().apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = false }
+        c.drawRect(1.5f, 1.5f, w - 1.5f, h - 1.5f, line)
+        line.strokeWidth = 1f
+        c.drawLine(w / 2f, 0f, w / 2f, h.toFloat(), line)
+        c.drawLine(0f, h / 2f, w.toFloat(), h / 2f, line)
+        val p = paint(h * 0.16f, heavy = false).apply { isAntiAlias = false }
+        val tw = p.measureText(text)
+        c.drawRect(w / 2f - tw / 2 - 4, h / 2f - p.textSize * 0.9f, w / 2f + tw / 2 + 4, h / 2f + p.textSize * 0.3f, Paint().apply { color = Color.WHITE })
+        c.drawText(text, (w - tw) / 2f, h / 2f + p.textSize * 0.2f, p)
+        return bmp
     }
 
     /**
@@ -60,7 +107,7 @@ object LabelBitmap {
                 .setEllipsize(android.text.TextUtils.TruncateAt.END).build()
             val ellipsized = (0 until sl.lineCount).any { sl.getEllipsisCount(it) > 0 }
             val wide = (0 until sl.lineCount).any { sl.getLineWidth(it) > bw + 0.5f }
-            if ((sl.height <= bh && !ellipsized && !wide) || s < 9f) break
+            if ((sl.height <= bh && !ellipsized && !wide) || s < 9f * SS) break
             s *= 0.93f
         }
         c.save()
@@ -83,7 +130,7 @@ object LabelBitmap {
      * "ГодехШтрих" (nom / narx / shtrix kod). Do'kondagi 1C yorlig'idan: nom markazi 22%, narx 50%,
      * chiziqlar 64%..86%, raqamlar ostida; harf balandligi 7.5% / 10%.
      */
-    private fun drawBarcode(c: Canvas, d: LabelData, w: Float, h: Float) {
+    private fun drawBarcode(c: Canvas, d: LabelData, w: Float, h: Float, finalW: Int) {
         boxText(c, d.name, h * 0.105f, w * 0.03f, h * 0.06f, w * 0.97f, h * 0.38f, 2)
         boxText(c, d.price, h * 0.14f, w * 0.03f, h * 0.41f, w * 0.97f, h * 0.59f, 1)
         val sym = BarcodeEncode.forShopCode(d.barcode) ?: return
@@ -93,9 +140,10 @@ object LabelBitmap {
         val barsBottom = bottom - digitsH
         // Modul — butun nuqta (skaner aniq o'qisin); 1C'dagidek eni ~93%
         val total = sym.modules.size + 2 * sym.quiet
-        val mw = maxOf(1, (w * 0.97f / total).toInt())
+        // Modul eni printer nuqtasida butun son (skaner aniq o'qisin), keyin katta chizish masshtabiga
+        val mw = maxOf(1, (finalW * 0.97f / total).toInt()) * SS
         val bw = sym.modules.size * mw
-        val x0 = ((w - bw) / 2f).toInt().toFloat()
+        val x0 = (((w - bw) / 2f).toInt() / SS * SS).toFloat()
         val bar = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL; isAntiAlias = false }
         val guards = guardModules(sym)
         var i = 0
@@ -109,7 +157,7 @@ object LabelBitmap {
                 i = j
             } else i++
         }
-        val pd = paint(digitsH * 0.95f, Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL))
+        val pd = paint(digitsH * 0.95f, bold(), heavy = false)
         val base = bottom - digitsH * 0.08f
         when (sym.kind) {
             BarcodeEncode.Kind.EAN13 -> {
@@ -143,20 +191,6 @@ object LabelBitmap {
             val t = ch.toString()
             c.drawText(t, from + cell * k + (cell - p.measureText(t)) / 2f, base, p)
         }
-    }
-
-    /** Qora-oq (1 bit) ko'rinishga: termoprinterda kulrang chiqmaydi. Chegara 170 — qalin shrift ingichkalashmasin. */
-    private fun threshold(src: Bitmap): Bitmap {
-        val w = src.width; val h = src.height
-        val px = IntArray(w * h)
-        src.getPixels(px, 0, w, 0, 0, w, h)
-        for (i in px.indices) {
-            val c = px[i]
-            val lum = (Color.red(c) * 299 + Color.green(c) * 587 + Color.blue(c) * 114) / 1000
-            px[i] = if (lum < 170) Color.BLACK else Color.WHITE
-        }
-        src.setPixels(px, 0, w, 0, 0, w, h)
-        return src
     }
 
     fun png(b: Bitmap): ByteArray = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()

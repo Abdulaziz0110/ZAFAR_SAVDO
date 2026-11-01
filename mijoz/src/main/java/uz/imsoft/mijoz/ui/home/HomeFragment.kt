@@ -44,6 +44,10 @@ class HomeFragment : Fragment() {
             activity?.let { a -> com.google.android.material.snackbar.Snackbar.make(a.findViewById(android.R.id.content), R.string.home_order_hint, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show() }
         }
         b.btnReport.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_report) }
+        // v3.2: o'z kassasi va to'lov kiritish
+        b.btnPos.setOnClickListener { (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.PosFragment()) }
+        b.btnPay.setOnClickListener { (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) }
+        b.btnPos.show(Locator.prefs.posOn)
         launchOnStarted { Locator.data.state.collect { render(it) } }
     }
 
@@ -72,6 +76,7 @@ class HomeFragment : Fragment() {
         bb.btnRefresh.isEnabled = !s.loading && s.linked
         bb.cardLink.show(s.loaded && !s.linked)
         bb.btnOrder.show(s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true)
+        bb.btnPay.show(s.linked)
         val snap = s.snapshot
         bb.toolbar.title = snap?.clientName?.ifEmpty { null } ?: Locator.prefs.link?.clientName?.ifEmpty { null } ?: getString(R.string.app_name)
         // Qarz: faqat server (1-ilova) ma'lumoti; vaqti bilan.
@@ -84,8 +89,10 @@ class HomeFragment : Fragment() {
             if (usd != 0.0) parts += ctx.money(usd, true)
             return parts.joinToString("\n")
         }
+        // v3.1: qaysi biri YANGIROQ bo'lsa katta raqamda o'sha: serverdan olingan qarz yoki 1C hisoboti (import vaqti bo'yicha)
+        val reportNewer = rb != null && (snap?.lastImportAt ?: 0L) > (debt?.at ?: 0L)
         when {
-            debt != null -> {
+            debt != null && !reportNewer -> {
                 bb.tvDebt.text = amount(debt.som, debt.usd)
                 val lines = arrayListOf(getString(R.string.home_debt_at, if (debt.at > 0) Fmt.dateTime(debt.at) else "—"))
                 if (rb != null) lines += getString(R.string.home_report_balance, Stamp.formatDate(rb.first), ctx.money2(rb.second))
@@ -93,7 +100,9 @@ class HomeFragment : Fragment() {
             }
             rb != null -> {
                 bb.tvDebt.text = amount(rb.second.som, rb.second.usd)
-                bb.tvDebtAt.text = getString(R.string.home_debt_report_at, Stamp.formatDate(rb.first))
+                val lines = arrayListOf(getString(R.string.home_debt_report_at, Stamp.formatDate(rb.first)))
+                if (debt != null) lines += getString(R.string.home_debt_at, if (debt.at > 0) Fmt.dateTime(debt.at) else "—") + ": " + amount(debt.som, debt.usd).replace("\n", " + ")
+                bb.tvDebtAt.text = lines.joinToString("\n")
             }
             else -> {
                 bb.tvDebt.text = "—"

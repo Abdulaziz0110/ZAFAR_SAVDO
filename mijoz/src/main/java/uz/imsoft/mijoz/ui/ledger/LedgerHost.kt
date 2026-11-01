@@ -65,6 +65,12 @@ interface LedgerHost {
     /** Muvaffaqiyatli yuborilgandan keyin (masalan savdo ekraniga o'tish). */
     fun afterSubmit(activity: android.app.Activity, plan: RepeatPlan) = Unit
     fun printTargets(ctx: android.content.Context): List<PrintTarget>
+
+    /** v3.2: "Chekni tuzatish" (2-ilova -> Admin tasdig'i) tugmasi matni; 0 — tugma yo'q. */
+    fun editLabel(doc: LedgerDoc): Int = 0
+
+    /** v3.2: tuzatish so'rovi oynasi. */
+    fun requestEdit(f: Fragment, doc: LedgerDoc) = Unit
 }
 
 /** Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. */

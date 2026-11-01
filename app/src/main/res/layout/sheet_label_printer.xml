@@ -284,6 +284,102 @@
                 android:maxLines="2" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
+        <!-- v3.1: qog'ozga moslash — kalibrlash yorlig'i bo'yicha siljitish, qoralik, boshqa o'lcham -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/lb_fit_title"
+            android:textAppearance="@style/TextAppearance.App.Section" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/lb_fit_hint"
+            android:textAppearance="@style/TextAppearance.App.ItemSub" />
+
+        <TextView
+            android:id="@+id/tvShiftX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textAppearance="@style/TextAppearance.App.ItemSub" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sShiftX"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="0.5"
+            android:valueFrom="-15"
+            android:valueTo="15"
+            app:labelBehavior="gone" />
+
+        <TextView
+            android:id="@+id/tvShiftY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textAppearance="@style/TextAppearance.App.ItemSub" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sShiftY"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="0.5"
+            android:valueFrom="-10"
+            android:valueTo="10"
+            app:labelBehavior="gone" />
+
+        <TextView
+            android:id="@+id/tvDensity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textAppearance="@style/TextAppearance.App.ItemSub" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sDensity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="1"
+            android:valueFrom="4"
+            android:valueTo="15"
+            app:labelBehavior="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCalib"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/lb_calib" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCustomSize"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:maxLines="2"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/lb_custom_size" />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -64,6 +64,9 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
             }
         }
         binding.btnImportFile.setOnClickListener { openFile.launch(arrayOf("*/*")) }
+        // v3.2: Excel import olib tashlandi — 1C tarixi kompyuterdan internet orqali o'zi keladi
+        binding.btnImportFile.show(false)
+        binding.btnHowExport.show(false)
         binding.btnHowExport.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.share_how_export).setMessage(R.string.share_how_export_text)
                 .setPositiveButton(R.string.close, null).show()

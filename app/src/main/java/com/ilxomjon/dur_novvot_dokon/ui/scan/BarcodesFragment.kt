@@ -47,6 +47,7 @@ class BarcodesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         b.toolbar.setNavigationOnClickListener { navigator().pop() }
         b.btnImport.setOnClickListener { openFile.launch(arrayOf("*/*")) }
+        b.btnImport.visibility = View.GONE // v3.2: shtrix kodlar kompyuterdan (1C) o'zi keladi
         b.btnHow.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.bc_how_title).setMessage(R.string.bc_how_text).setPositiveButton(R.string.close, null).show()
         }

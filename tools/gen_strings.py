@@ -906,6 +906,18 @@ STRINGS.update({
 
 })
 
+STRINGS.update({
+ # v3.1: 4 narx, yorliqni moslash
+ 'price_l1': '1', 'price_l2': '2', 'price_l3': '3', 'price_l4': '4',
+ 'price_l1_desc': '1-narx', 'price_l2_desc': '2-narx', 'price_l3_desc': '3-narx (naqd)', 'price_l4_desc': '4-narx (optom)',
+ 'lb_fit_title': "Qog'ozga moslash",
+ 'lb_fit_hint': "\"Kalibrlash yorlig'i\"ni chiqaring: ramka qog'oz chetiga to'g'ri tushishi kerak. Ramka chapga surilgan bo'lsa siljitishni + tomonga suring. Ramka qog'ozdan kichik yoki katta bo'lsa — \"Boshqa o'lcham\"da haqiqiy o'lchamni yozing.",
+ 'lb_shift_x': "Chap ↔ o'ng siljitish: %1$s mm", 'lb_shift_y': "Tepa ↕ past siljitish: %1$s mm", 'lb_density': 'Qoralik: %1$d',
+ 'lb_calib': "Kalibrlash yorlig'i", 'lb_calib_sent': "Kalibrlash yorlig'i yuborildi", 'lb_custom_size': "Boshqa o'lcham",
+ 'lb_size_w': 'Eni, mm', 'lb_size_h': "Bo'yi, mm",
+
+})
+
 # kirillni qo'lda to'g'rilash kerak bo'lgan joylar
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from strings_ledger import LEDGER  # noqa: E402
@@ -966,6 +978,147 @@ def to_cyr(s):
         elif PROTECT.fullmatch(part) : res.append(part)
         else: res.append(TOKEN.sub(lambda m: conv_token(m.group(0)), part))
     return ''.join(res)
+
+STRINGS.update({
+ # v3.2 — Admin boshqaruv
+ 'ad_title': 'Boshqaruv',
+ 'ad_hint': "Admin'ning qo'shimcha imkoniyatlari bo'limlarga ajratilgan: 1C ma'lumotlari va 1C'ga kiritish, mijozlar, agentlar, tovarlar, ilova.",
+ 'ad_card_sub': "1C savdolar, ta'minotchilar, 1C'ga kiritish, mijoz so'rovlari, kompyuter",
+ 'ad_sec_1c': '1C (kompyuter orqali)',
+ 'ad_sales': "1C savdolar ro'yxati", 'ad_sales_sub': 'Oxirgi 30 kun, istalgan davr, qidiruv',
+ 'ad_sales_st': '%1$d ta hujjat · %2$s',
+ 'ad_supp': "Ta'minotchilar", 'ad_supp_sub': "Qarzimiz, kirimlar, to'lovlar, qaytarishlar",
+ 'ad_supp_st': "%1$d ta ta'minotchi",
+ 'ad_writes': "1C'ga kiritish navbati", 'ad_writes_sub': 'Tasdiqlangan yozuvlar, natijasi, bekor qilish',
+ 'ad_writes_st': 'Kutmoqda: %1$d · xato: %2$d',
+ 'ad_writes_wait': "1C'ga kiritish kutmoqda: %1$d",
+ 'ad_new_receipt': "Tovar kirimi (1C'ga)", 'ad_new_receipt_sub': "Ta'minotchidan kelgan tovar",
+ 'ad_client_return': "Mijoz qaytargan tovar (1C'ga)", 'ad_client_return_sub': "Qaytgan tovar 1C'ga kiritiladi",
+ 'ad_pc': 'Kompyuter (1C)', 'ad_pc_sub': 'Holat, yangilash tezligi, ish vaqti, kompyuter sozlamasi',
+ 'ad_sec_clients': 'Mijozlar',
+ 'ad_requests': "Mijoz so'rovlari", 'ad_requests_sub': "2-ilovadan to'lov va chek tuzatish",
+ 'ad_requests_new': "Yangi so'rov: %1$d", 'ad_requests_none': "Yangi so'rov yo'q",
+ 'ad_debtors': 'Qarzdorlar', 'ad_debtors_sub': 'Qarzi kattalari birinchi',
+ 'ad_share': 'Mijozlar va 2-ilova', 'ad_share_sub': 'Ulanish, xodimlar, printer, yuborish',
+ 'ad_receipt_style': "Chek ko'rinishi", 'ad_receipt_style_sub': 'Logo, shrift, qatorlar',
+ 'ad_sec_agents': 'Agentlar', 'ad_relay': "Agentlar ko'prigi",
+ 'ad_sec_goods': 'Tovarlar',
+ 'ad_labels': 'Narx yorliqlari', 'ad_labels_sub': '{{Xprinter}}, PLU va shtrix',
+ 'ad_barcodes': 'Shtrix kodlar', 'ad_barcodes_sub': "Tarozi formati, telefonda bog'langan kodlar",
+ 'ad_sec_app': 'Ilova', 'ad_settings': 'Sozlamalar', 'ad_settings_sub': 'Server, til, zaxira',
+ 'ad_none_yet': 'Hali kelmagan — kompyuter yoqilganini tekshiring',
+ 'ad_error': 'Xato: %1$s',
+ 'ad_product_pick': 'Tovar tanlang', 'ad_product_search': 'Tovar nomi yoki kodi', 'ad_product_code': 'Kod: %1$s',
+ 'ad_qty': 'Miqdori', 'ad_price_som': "Narxi (so'm)", 'ad_price_usd': 'Narxi ($)',
+ # Avtomatik yangilash
+ 'au_title': 'Avtomatik yangilash va zaxira', 'au_sub': 'Ish vaqti, tezlik, kunlik zaxira',
+ 'au_hint': "Ish vaqtida ma'lumot (narx, qarz, mijozlar) o'zi yangilanadi. Ish tugashidan 1 daqiqa oldin hammasi to'liq yuklab olinadi — keyin internetsiz ham ko'rinadi.",
+ 'au_auto': 'Avtomatik yangilash', 'au_every': 'Ish vaqtida har',
+ 'au_work_on': 'Ish vaqtida tez (tashqarida — 15 daqiqada)',
+ 'au_start': 'Boshlanishi', 'au_end': 'Tugashi',
+ 'au_final_hint': "Ilova yopiq bo'lsa ham telefon 15 daqiqada bir yangilaydi. Oxirgi yuklash aynan vaqtida bo'lishi uchun \"Aniq vaqt ruxsati\"ni bering.",
+ 'au_exact': 'Aniq vaqt ruxsati',
+ 'au_backup': 'Kunlik zaxira', 'au_backup_on': "Har kuni avtomatik (eskisi almashadi)",
+ 'au_backup_now': 'Hozir zaxiralash', 'au_restore': 'Zaxiradan tiklash', 'au_backup_done': 'Zaxira saqlandi',
+ 'au_backup_last': 'Oxirgi zaxira: %1$s', 'au_backup_never': 'Hali zaxira olinmagan', 'au_backup_where': 'Fayl: %1$s',
+ 'au_restore_text': "%1$s dagi zaxira tiklanadi: hozirgi tarix va navbat almashadi. Davom etasizmi?",
+ 'au_restored': 'Tiklandi: %1$d ta yozuv',
+ # Kompyuter
+ 'pc_refresh_status': 'Holatni yangilash',
+ 'pc_live': 'Tezkor yangilash',
+ 'pc_live_hint': "Kompyuter shu oraliqda bugungi o'zgarishlar, 1C savdolar, ta'minotchilar va tovar kodlarini yuboradi (faqat o'zgarganda).",
+ 'pc_off': "O'chiq", 'pc_min': '%1$d daq',
+ 'pc_full': "To'liq hisobot", 'pc_full_hint': "Hamma mijozlar kartochkasi shu oraliqda to'liq yangilanadi.",
+ 'pc_hours': '%1$d soat', 'pc_days': '%1$d kun',
+ 'pc_work': 'Ish vaqti',
+ 'pc_work_on': "%1$s – %2$s · oxirgi to'liq yuklash %3$s",
+ 'pc_work_off': "Ish vaqti o'chiq — doim bir xil tezlikda",
+ 'pc_work_change': "Ish vaqtini o'zgartirish",
+ 'pc_setup': 'Kompyuter sozlamasi',
+ 'pc_setup_hint': "Kompyuterga yangi o'rnatishda: shu matnni yuboring, ORNATISH.bat Bloknot ochganda joylab saqlang.",
+ 'pc_codes_now': '1C kodlarini hozir yangilash',
+ 'pc_saved': "Saqlandi — kompyuter 30 soniyada o'qiydi",
+ 'pc_write_hint': "1C'ga kiritish: kompyuter har kuni birinchi yozuvdan oldin baza nusxasini oladi (backup papkasi, 7 kun) va hamma yozuvlarni jurnalga yozadi.",
+ # 1C savdolar
+ 'oc_sales_title': '1C savdolar', 'oc_search': 'Mijoz, tovar yoki hujjat raqami',
+ 'oc_f_all': 'Hammasi', 'oc_f_sales': 'Savdo', 'oc_f_retail': 'Chakana', 'oc_f_returns': 'Qaytish',
+ 'oc_last30': 'Oxirgi 30 kun', 'oc_range': 'Davr tanlash',
+ 'oc_empty': "Hujjat yo'q",
+ 'oc_none': "Ma'lumot hali kelmagan. Kompyuterda {{onec_export}} ishlayotganini tekshiring.",
+ 'oc_requested': "So'rov yuborildi — kompyuter 1 daqiqa ichida yuboradi",
+ 'oc_row_sub': '%1$s №%2$s · %3$s · %4$d qator',
+ 'oc_period': 'Davr: %1$s – %2$s · olingan %3$s',
+ 'oc_errors': 'Ogohlantirish: %1$s',
+ 'oc_total': '%1$d ta hujjat · jami %2$s',
+ 'oc_no_cloud': "{{Firebase}} sozlanmagan yoki kompyuter ulanmagan",
+ 'oc_request_sent': "So'rov yuborildi",
+ 'oc_doc_head': '%1$s №%2$s · %3$s',
+ 'oc_line': '%1$s × %2$s = %3$s',
+ 'oc_doc_total': 'Jami: %1$s',
+ 'oc_k_sale': 'Savdo', 'oc_k_mobile': 'Mobil savdo', 'oc_k_retail': 'Chakana', 'oc_k_return': 'Qaytarish',
+ 'oc_k_receipt': 'Kirim', 'oc_k_pay': "To'lov", 'oc_k_sret': "Ta'minotchiga qaytarildi", 'oc_k_other': 'Hujjat',
+ # Ta'minotchilar
+ 'sp_title': "Ta'minotchilar", 'sp_search': 'Nomi yoki telefon', 'sp_new_receipt': 'Yangi kirim', 'sp_refresh': 'Yangilash',
+ 'sp_empty': "Ta'minotchilar hali kelmagan",
+ 'sp_docs': '%1$d ta hujjat', 'sp_settled': "Hisob-kitob yo'q", 'sp_we_owe': 'qarzimiz', 'sp_they_owe': 'ular qarzdor',
+ 'sp_info': '%1$d ta · jami qarzimiz %2$s · %3$s',
+ 'sp_balance_we': 'Qarzimiz: %1$s', 'sp_balance_they': 'Ular qarzdor: %1$s',
+ 'sp_receipt': 'Kirim', 'sp_pay': "To'lov", 'sp_return': 'Qaytarish',
+ 'sp_no_docs': "Hujjat yo'q (oxirgi 90 kun)",
+ 'sp_doc_sub': '№%1$s · %2$s · %3$d qator',
+ # 1C'ga kiritish shakli
+ 'wf_receipt': 'Tovar kirimi', 'wf_pay': "Ta'minotchiga to'lov", 'wf_sreturn': "Ta'minotchiga qaytarish", 'wf_creturn': 'Mijoz qaytargan tovar',
+ 'wf_hint': "Hammasini tekshiring: tasdiqlagandan keyin kompyuter 1C'ga kiritadi va hujjat raqamini qaytaradi.",
+ 'wf_client': 'Mijoz', 'wf_supplier': "Ta'minotchi", 'wf_pick': 'Tanlash', 'wf_not_chosen': 'Tanlanmagan',
+ 'wf_goods': 'Tovarlar', 'wf_add': "Tovar qo'shish", 'wf_no_goods': "Tovar qo'shilmagan", 'wf_amounts': 'Summa',
+ 'wf_cash_som': "Naqd (so'm)", 'wf_cash_usd': 'Naqd ($)', 'wf_card_som': "Plastik (so'm)", 'wf_card_usd': 'Plastik ($)',
+ 'wf_note': 'Izoh', 'wf_total': 'Jami: %1$s', 'wf_confirm': 'Tasdiqlash',
+ 'wf_safety': "1C'ga kiritishdan oldin kompyuter baza nusxasini oladi. Xato bo'lsa — navbatda \"Bekor qilish\".",
+ 'wf_supplier_name': "Ta'minotchi nomi (1C'dagidek)",
+ 'wf_supplier_manual': "Ta'minotchilar ro'yxati hali kelmagan. Nomni 1C'dagidek aniq yozing.",
+ 'wf_edit': "O'zgartirish", 'wf_remove': 'Olib tashlash',
+ 'wf_err_party': 'Kontragentni tanlang', 'wf_err_lines': "Tovar qo'shing", 'wf_err_amount': 'Summani yozing',
+ 'wf_err_line': "Miqdor yoki narx noto'g'ri",
+ 'wf_sum_lines': '%1$d xil tovar',
+ 'wf_confirm_title': "1C'ga kiritilsinmi?", 'wf_confirm_text': "Kompyuter 1C'ga kiritadi va hujjatni o'tkazadi.",
+ 'wf_confirm_yes': 'Ha, kiritilsin',
+ 'wf_sent': "Navbatga qo'yildi", 'wf_sent_later': "Internet yo'q — navbatda turibdi, keyin yuboriladi",
+ # Navbat
+ 'wr_title': "1C'ga kiritish",
+ 'wr_hint': "Kompyuter har 30 soniyada tekshiradi. \"Kiritildi\" — faqat 1C hujjat raqami kelgandan keyin.",
+ 'wr_empty': "Hali yozuv yo'q",
+ 'wr_barcode': 'Shtrix kod', 'wr_undo': 'Bekor qilish',
+ 'wr_st_unsent': 'Yuborilmadi (internet)', 'wr_st_wait': 'Kompyuterni kutmoqda', 'wr_st_undone': 'Bekor qilingan',
+ 'wr_st_skip': "1C'da bor edi", 'wr_st_done': "1C'ga kiritildi №%1$s", 'wr_st_err': 'Xato: %1$s',
+ 'wr_undo_btn': 'Bekor qilish', 'wr_undo_title': 'Bekor qilinsinmi?',
+ 'wr_undo_text': "1C'da hujjatga o'chirish belgisi qo'yiladi (o'tkazilmagan bo'ladi). Kerak bo'lsa 1C'da belgini olib tiklash mumkin.",
+ 'wr_resend': 'Qayta yuborish',
+ # Mijoz so'rovlari
+ 'cr_hint': "2-ilova (Mijoz) yuborgan to'lov va chek tuzatish so'rovlari. To'lov tasdiqlansa serverga yoziladi; mijozda chek server tasdiqlagandan keyin chiqadi.",
+ 'cr_pays': "To'lovlar", 'cr_edits': 'Chek tuzatishlari', 'cr_none': "Yo'q",
+ 'cr_st_ok': 'Tasdiqlandi (server: %1$s)', 'cr_st_no': 'Rad etildi', 'cr_st_acc': 'Qabul qilindi — serverga yozilmoqda', 'cr_st_new': 'Yangi',
+ 'cr_m_card': 'plastik', 'cr_m_click': '{{Click}}', 'cr_m_cash': 'naqd',
+ 'cr_edit_lines': '%1$d qator',
+ 'cr_pay_title': "To'lov so'rovi",
+ 'cr_pay_text': '%1$s\n%2$s (%3$s)\nIzoh: %4$s\n\n%5$s',
+ 'cr_accept': 'Tasdiqlash', 'cr_reject': 'Rad etish', 'cr_accepted': 'Qabul qilindi — serverga yuborilmoqda',
+ 'cr_reason': "Sababi (mijozga ko'rinadi)",
+ 'cr_edit_title': 'Chekni tuzatish', 'cr_edit_doc': 'Chek: %1$s', 'cr_edit_new': "Mijoz so'ragan qatorlar:",
+ 'cr_edit_done': "Tasdiqlandi — mijoz chekida o'zgaradi",
+ 'cr_err_no_store': "Bu mijoz do'konga bog'lanmagan", 'cr_err_no_client': 'Mijoz topilmadi',
+ 'cr_pay_note': '2-ilova:', 'cr_notif_title': "Mijoz so'rovi", 'cr_notif_text': "Yangi so'rovlar: %1$d",
+ # Qarzdorlar
+ 'dbt_search': "Do'kon yoki hudud", 'dbt_empty': "Qarzdor yo'q",
+ 'dbt_info': '%1$d ta qarzdor · jami %2$s · %3$s holatiga',
+ 'dbt_sync': 'Qarzlarni yangilash', 'dbt_payment': "To'lov qabul qilish",
+ # Yakunlash: chek qayerda
+ 'fs_where': 'Chek qayerda chiqsin', 'fs_here': "Do'konda", 'fs_branch': '2-filialda',
+ # Sozlamalar
+ 'st_more': "Ko'proq sozlamalar", 'st_less': 'Kamroq',
+ # Vidjet
+ 'wg_title': 'Tez savdo', 'wg_desc': "Sevimli do'konlar bilan tez savdo, skaner, to'lov",
+ 'wg_fav_empty': "Sozlamalarda tez do'kon tanlang", 'wg_scan': 'Skaner', 'wg_pay': "To'lov",
+})
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)
 

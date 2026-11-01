@@ -66,7 +66,7 @@ data class ListState(
 )
 
 /** Narx hisoblash sharoiti. */
-data class PricingCtx(val type: PriceType, val currency: Currency, val rate: Double)
+data class PricingCtx(val type: PriceType, val currency: Currency, val rate: Double, val level: Int = PriceType.levelOf(type))
 
 sealed interface SaleEvent {
     /** [before] — "Bekor qilish" uchun oldingi savatcha. [missing] — katalogda yo'qligi uchun o'tkazib yuborilganlar. */
@@ -75,7 +75,6 @@ sealed interface SaleEvent {
     class AddedUsual(val count: Int, val before: List<CartLine>) : SaleEvent
     class Cleared(val before: List<CartLine>) : SaleEvent
     /** Do'kon tanlandi: xulosa kartasini ko'rsatish. */
-    class StoreCard(val storeId: String) : SaleEvent
 }
 
 /** Aqlli asosiy tugma amali. Joyi va rangi doim bir xil, faqat yozuvi o'zgaradi. */
@@ -128,7 +127,7 @@ class SaleViewModel(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val pricing: StateFlow<PricingCtx> = combine(draftRepo.state, catalog.state) { d, c ->
-        PricingCtx(d.priceType, d.currency, c.rate)
+        PricingCtx(d.priceType, d.currency, c.rate, d.level)
     }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, PricingCtx(PriceType.WHOLESALE, Currency.SOM, 0.0))
 
     /** Faqat "Savatchada" filtri tanlanganda savatcha tarkibi kuzatiladi. */
@@ -256,7 +255,7 @@ class SaleViewModel(
         val items = suggestions.value.mapNotNull { s ->
             if (d.lineFor(s.productId) != null) return@mapNotNull null
             val p = c.productsById[s.productId] ?: return@mapNotNull null
-            Triple(p, s.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
+            Triple(p, s.qty, Pricing.unitPrice(p, d.level, d.currency, c.rate))
         }
         if (items.isEmpty()) return
         val before = d.lines
@@ -281,13 +280,24 @@ class SaleViewModel(
     fun undo(before: List<CartLine>) = draftRepo.replaceLines(before)
 
     /** Foydalanuvchi do'kon tanladi (ro'yxatdan yoki tez tugmadan). */
+    /**
+     * v3.1: do'kon tanlanganda "Boshlash" oynasisiz — darhol savdo; qarzi fonda serverdan (yoki Admin orqali) yangilanib
+     * tepada ko'rinadi (yangilab bo'lmasa — oxirgi ma'lum qiymat qoladi).
+     */
     fun setStore(store: Store?) {
         draftRepo.setStore(store)
-        if (store != null && prefs.fStoreCard && draftRepo.state.value.lines.isEmpty()) _events.tryEmit(SaleEvent.StoreCard(store.id))
+        if (store == null) return
+        viewModelScope.launch {
+            runCatching { catalog.refreshDebt(store.id) }.onSuccess {
+                val fresh = catalog.storeById(store.id)
+                if (fresh != null && draftRepo.state.value.store?.id == store.id) draftRepo.setStore(fresh)
+            }
+        }
     }
 
     fun park() = viewModelScope.launch { parked.parkActive(); kpi.cancel() }
     fun setPriceType(t: PriceType) = draftRepo.setPriceType(t)
+    fun setPriceLevel(level: Int) = draftRepo.setPriceLevel(level)
     fun setCurrency(c: Currency) = draftRepo.setCurrency(c)
     fun setMode(m: DealMode) = draftRepo.setMode(m)
     fun clearCart() {
@@ -305,7 +315,7 @@ class SaleViewModel(
         val last = lastOrder.value
         val items = last.mapNotNull { l ->
             val p = c.productsById[l.productId] ?: return@mapNotNull null
-            Triple(p, l.qty, Pricing.unitPrice(p, d.priceType, d.currency, c.rate))
+            Triple(p, l.qty, Pricing.unitPrice(p, d.level, d.currency, c.rate))
         }
         if (items.isEmpty()) { _events.tryEmit(SaleEvent.NothingToRepeat); return }
         val before = d.lines

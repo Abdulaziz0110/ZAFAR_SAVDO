@@ -64,6 +64,10 @@ class OrderRepository(
 
     /** @return kvitansiya kodi (masalan "T-0013") */
     suspend fun sendPayment(storeId: String, storeName: String, cash: Double, transfer: Double, click: Double, note: String, printer: String): String =
+        OutboxEntry.receiptOf(OutboxKind.PAYMENT, sendPaymentId(storeId, storeName, cash, transfer, click, note, printer))
+
+    /** v3.2: navbat id'si bilan (2-ilova to'lov so'rovi holatini kuzatish uchun). */
+    suspend fun sendPaymentId(storeId: String, storeName: String, cash: Double, transfer: Double, click: Double, note: String, printer: String): Long =
         sendLock.withLock {
             val agent = catalog.state.value.agent ?: throw IllegalStateException("Agent topilmadi")
             val now = Date()
@@ -71,6 +75,6 @@ class OrderRepository(
             val sent = SentPayment(0, now.time, storeId, storeName, cash, transfer, click, Protocol.cleanText(note), pending = true)
             val id = outbox.enqueuePayment(agent.id, payload, sent)
             outbox.kick()
-            OutboxEntry.receiptOf(OutboxKind.PAYMENT, id)
+            id
         }
 }

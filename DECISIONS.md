@@ -245,3 +245,43 @@ yangi dastur ham kerak emas. Savdo kaliti = sha256(agent, tur, matn): Firebase'd
 qidiradi (natijani joylashdan oldin o'chsa ham dublikat yo'q); agentda SENT faqat server ID'si bilan. Kirish: parol yuborilmaydi,
 PBKDF2 isbot (tasodifiy tuz) Admin serverdagi parol bilan solishtiradi. Admin fon xizmati specialUse turida (Android 15 dagi
 dataSync 6 soat cheklovi tufayli), zaxira — 15 daqiqalik WorkManager. Admin oflayn — agentlar ishlaydi, savdolar kutadi.
+
+## D-055 — 4 ta narx (v3.1)
+- 3 = Naqd (server kodi "0"), 4 = Optom ("1"). 1 va 2 — 1C sotish narxlari (ПродажЦена1/2, kompyuterdan `prices_1c.json`);
+  1C'da bo'lmasa 4-narx olinadi. Serverga 1/2-narx Optom kodi bilan, lekin har qator narxi aniq yoziladi — protokol o'zgarmaydi.
+- Mijoz'ga 1/2-narx snapshot'da `p` qatorining 9-elementi bo'lib boradi (qo'shimcha); eski Mijoz uni e'tiborsiz qoldiradi.
+- 2-ilova ro'yxatidagi mijozlar (Dadaxon aka) uchun savdoda doim 4-narx (tugmalar qulflanadi).
+
+## D-056 — Yorliqni qog'ozga moslash (v3.1)
+- 1C yorliqni Windows drayveri orqali АвтоМасштаб bilan chiqaradi; biz TSPL'ni to'g'ridan yuboramiz. Printerdagi qog'oz
+  joylashuvi farqini dasturda tuzatish uchun: siljitish (mm, nuqtaga aylantiriladi; manfiy — chap/yuqoridan kesiladi),
+  DENSITY, kalibrovka yorlig'i (ramka va markaz chiziqlari). Rasm 3x katta chizilib kichraytiriladi (silliq qirralar).
+
+## D-057 — 1C'ga yozish: Admin tasdig'i + kompyuter (v3.2)
+- Telefon 1C'ga to'g'ridan yozmaydi. Admin egasi xulosani ko'rib tasdiqlaydi -> `w/{inbox}/{id}`; kompyuter (`onec_write.py`)
+  kun birinchi yozuvidan oldin fayl bazani nusxalaydi (7 kun), hujjatni yaratib o'tkazadi, jurnalga (id, UUID, raqam) yozadi,
+  natijani `wr/{inbox}/{id}` ga qaytaradi. "Kiritildi" faqat hujjat raqami kelganda.
+- Bir so'rov id'si jurnalda bo'lsa qayta kiritilmaydi (natija qayta yuboriladi). Bekor qilish — o'chirish belgisi (o'chirish emas).
+- Hujjat maydonlari do'kon 1C konfiguratsiyasi kodidan (Поступления, ЮкБерувчигаТулов, Возврат_*): ombor = Константы.Склад1,
+  kurs = Константы.Курс, xodim = Сотрудники.Дукон; tovar narxi 1C'dagi tovar valyutasida (telefonda boshqasida yozilsa — kurs bilan).
+
+## D-058 — 1C savdolar va ta'minotchilar (v3.2)
+- Kompyuter jadval bo'yicha (o'zgarganda) oxirgi 30 kun savdolarni va 90 kun ta'minotchilarni, Admin so'rasa istalgan davrni
+  (400 kungacha) JSON qilib yuboradi. Faqat ВЫБРАТЬ so'rovlari. Bazada biror hujjat turi bo'lmasa — qolganlari ishlaydi.
+- Ta'minotchilar — Поступления hujjati bor kontragentlar; qoldiq ВзаиморасчетСКонтрагентом registridan (manfiy — qarzimiz).
+
+## D-059 — Ish vaqti va avtomatik yangilash (v3.2)
+- Har ilovada ish vaqti (standart 08:00–20:00). Ish vaqtida ochiq ilova N daqiqada (Agent/Admin 5, Mijoz 2), tashqarida 15
+  daqiqada; yopiq ilova — WorkManager 15 daqiqa (Android cheklovi). Tugashidan 1 daqiqa oldin budilnik — to'liq yuklab olish.
+  Aniq budilnik ruxsati bo'lmasa — taxminiy.
+- Admin ish vaqti va tezkor oraliqni kompyuterga `p/{inbox}/exp` (m, won, ws, we) orqali yuboradi. Kompyuter har 30 soniyada
+  o'qiydi; ish vaqtidan tashqarida soatiga bir.
+
+## D-060 — 2-ilova so'rovlari (v3.2)
+- `s/{readKey}/pay` va `s/{readKey}/ed`: 2-ilova faqat yangi yozuv qo'shadi (qoidalar v5), holatni Admin secret bilan yozadi.
+- To'lov: Admin tasdiqlasa — odatdagi to'lov navbati (server, tur 4); 2-ilovada "Tasdiqlandi" va chek faqat server ID'si kelgach.
+- Chek tuzatish: tasdiqlansa Admin snapshot'ida shu hujjat qatorlari almashadi (2-ilova chekida). 1C hujjati o'zgarmaydi.
+
+## D-061 — Mijoz Kassa (v3.2)
+- 2-filialning o'z mijozlariga savdosi faqat telefondagi `kassa.db` da (serverga, Admin'ga bormaydi). Summalar so'mda.
+  Chekda do'kon nomi (brend) — 1-ilovadan; manzil/telefon/rahmat — 2-filial sozlamasi.

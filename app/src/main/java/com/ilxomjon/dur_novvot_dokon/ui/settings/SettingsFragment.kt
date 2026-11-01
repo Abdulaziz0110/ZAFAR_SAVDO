@@ -87,6 +87,7 @@ class SettingsFragment : Fragment() {
             childFragmentManager.setFragmentResultListener("fav_$slot", viewLifecycleOwner) { _, bundle ->
                 val id = bundle.getString(StorePickerSheet.KEY_ID).orEmpty()
                 if (id.isNotEmpty()) vm.setFavorite(slot, id)
+                com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget.refresh(requireContext().applicationContext)
             }
         }
         binding.btnFavPick0.setOnClickListener { StorePickerSheet.show(childFragmentManager, "fav_0") }
@@ -130,6 +131,7 @@ class SettingsFragment : Fragment() {
             requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
         }.getOrNull().orEmpty()
         binding.tvVersion.text = getString(R.string.settings_version, version)
+        simplify()
         // Sirli menyu: versiya yozuvini uzoq bosish
         binding.tvVersion.setOnLongClickListener {
             it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
@@ -164,6 +166,44 @@ class SettingsFragment : Fragment() {
 
     private fun snack(res: Int) = Snackbar.make(binding.root, res, Snackbar.LENGTH_LONG).show()
     private fun snackText(t: String) = Snackbar.make(binding.root, t, Snackbar.LENGTH_LONG).show()
+
+    /**
+     * v3.2: "Avtomatik yangilash va zaxira" bandi (hammada); Agent'da kam ishlatiladiganlar (shtrix kodlar, qulayliklar,
+     * masofadan yordam, diagnostika, tajribaviy sozlamalar) "Ko'proq sozlamalar" ostida yashirin.
+     */
+    private fun simplify() {
+        val column = binding.tvVersion.parent as? ViewGroup ?: return
+        fun top(v: View): View? {
+            var cur: View = v
+            while (true) {
+                val p = cur.parent as? View ?: return null
+                if (p === column) return cur
+                cur = p
+            }
+        }
+        val ctx = requireContext()
+        val first = top(binding.btnServer) ?: return
+        if (column.findViewWithTag<View>("au_card") == null) {
+            val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
+            card.tag = "au_card"
+            col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub)) { navigator().push(AutoUpdateFragment()) })
+            column.addView(card, column.indexOfChild(first), ViewGroup.MarginLayoutParams(first.layoutParams).apply {
+                (first.layoutParams as? ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
+            })
+        }
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) return
+        val advanced = listOfNotNull(top(binding.btnBarcodes), top(binding.btnExtras), top(binding.btnRemoteHelp), top(binding.btnDiagnostics), top(binding.swSmart))
+            .distinct().filter { it !== top(binding.btnServer) && it !== top(binding.btnQueue) && it !== top(binding.btnExport) }
+        if (advanced.isEmpty()) return
+        var open = false
+        advanced.forEach { it.show(false) }
+        val more = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.st_more), outlined = true, top = 12) { b ->
+            open = !open
+            advanced.forEach { it.show(open) }
+            (b as? com.google.android.material.button.MaterialButton)?.text = getString(if (open) R.string.st_less else R.string.st_more)
+        }
+        column.addView(more, column.indexOfChild(binding.tvVersion))
+    }
 
     private fun bindFlag(sw: com.google.android.material.materialswitch.MaterialSwitch, value: Boolean, set: (Boolean) -> Unit) {
         sw.isChecked = value

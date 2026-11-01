@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity() {
             showTab(start)
         }
         handleUsb(intent)
+        if (savedInstanceState == null) openFromWidget(intent)
         if (savedInstanceState == null) uz.imsoft.mijoz.ui.ledger.SecretPrefs.countLaunch(this)
         if (Locator.prefs.link == null && !Locator.prefs.skipLogin && intent.getStringExtra(EXTRA_TAB) != TAB_PRINTER) showLogin()
         // Kirish bekor qilinsa (1-ilovada telefon o'chirildi) — kirish oynasi.
@@ -93,12 +94,27 @@ class MainActivity : AppCompatActivity() {
         if (Locator.prefs.printerSection && Locator.prefs.printerOn && !PrinterHub.state.value.running) {
             runCatching { PrintService.start(this) }
         }
+        // v3.2: ish vaqtida har N daqiqada yangilash (ilova ochiq turganda) va kunlik zaxira
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                runCatching { uz.imsoft.mijoz.data.MijozAuto.backupIfDue(applicationContext) }
+                while (true) {
+                    kotlinx.coroutines.delay(30_000L)
+                    val pr = Locator.prefs
+                    if (pr.link != null && System.currentTimeMillis() - pr.fetchedAt >= uz.imsoft.mijoz.data.MijozAuto.liveIntervalMs()) {
+                        runCatching { Locator.data.refresh(askFresh = false) }
+                        uz.imsoft.mijoz.ui.extra.MijozWidget.refresh(applicationContext)
+                    }
+                }
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleUsb(intent)
         if (intent.getStringExtra(EXTRA_TAB) == TAB_PRINTER && Locator.prefs.printerSection) binding.bottomNav.selectedItemId = R.id.nav_printer
+        openFromWidget(intent)
     }
 
     override fun onResume() {
@@ -115,10 +131,26 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        uz.imsoft.mijoz.ui.extra.MijozWidget.refresh(applicationContext)
         val p = Locator.prefs
-        if (p.autoRefresh && p.link != null && System.currentTimeMillis() - p.fetchedAt > 5 * 60_000L) {
-            lifecycleScope.launch { runCatching { Locator.data.refresh(askFresh = false) } }
+        // v3.1: ochilganda — eng so'nggi ma'lumot va Admin'dan qarzni serverdan yangilash so'raladi; javob ~1 daqiqada keladi
+        if (p.autoRefresh && p.link != null && System.currentTimeMillis() - p.fetchedAt > 2 * 60_000L) {
+            lifecycleScope.launch {
+                runCatching { Locator.data.refresh(askFresh = true) }
+                kotlinx.coroutines.delay(45_000L)
+                runCatching { Locator.data.refresh(askFresh = false) }
+            }
         }
+    }
+
+    /** v3.2 vidjet: Narxlar yoki Kassa. */
+    private fun openFromWidget(i: Intent?) {
+        when (i?.getStringExtra(EXTRA_TAB)) {
+            TAB_PRICES -> if (Locator.prefs.link != null) binding.bottomNav.selectedItemId = R.id.nav_prices
+            TAB_POS -> push(uz.imsoft.mijoz.ui.extra.PosFragment())
+            else -> return
+        }
+        i.removeExtra(EXTRA_TAB)
     }
 
     /** Printer ulanganda ilova ochilsa — servis darhol tekshiradi. */
@@ -178,6 +210,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_TAB = "tab"
+        const val TAB_PRICES = "prices"
+        const val TAB_POS = "pos"
         const val TAB_PRINTER = "printer"
         private const val TAG_LOGIN = "login"
     }

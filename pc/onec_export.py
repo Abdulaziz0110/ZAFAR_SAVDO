@@ -7,7 +7,7 @@ Har N soatda (N = 1-ilovada tanlanadi: 1/2/3 soat, 0 — o'chiq) 1C bazaga COM o
 har bir mijoz / yuk beruvchi uchun "kartochka" hisobotini tuzadi, Excel (.xlsx) qilib saqlaydi va Firebase'ga
 `in/{inbox}/{id}` ga qo'yadi. 1-ilova (telefon) o'zi yuklab, 1C tarixiga import qiladi (xuddi qo'lda Excel yuklagandek).
 
-1C'ga HECH NARSA YOZILMAYDI: faqat hisobot tuziladi. Konfigurator va server paroli kerak emas.
+Hisobot tuzishda 1C'ga HECH NARSA YOZILMAYDI. Yozish faqat Admin'da tasdiqlangan so'rovlar uchun (onec_write.py). Konfigurator va server paroli kerak emas.
 
 Talab: Windows, 1C:Enterprise 8.3 (COM komponenti "V83.COMConnector" ro'yxatdan o'tgan), Python 3.8+, pywin32:
     pip install pywin32
@@ -21,6 +21,10 @@ Buyruqlar:
   python onec_export.py              — doimiy ishlash (odatda onec_export.vbs orqali oynasiz)
 
 Sozlama: forwarder.ini ([firebase] url/secret/inbox — 1-ilova beradi; [onec] — o'zingiz to'ldirasiz).
+
+v3.2: Admin'da tanlangan daqiqalik jadval (1, 5, 15, 30, 60 daqiqa) va ish vaqti — har aylanishda bugun harakati
+bo'lgan mijozlar kartochkasi, 1C savdolar ro'yxati va ta'minotchilar (onec_data.py) yuboriladi; ish tugashidan 1 daqiqa
+oldin hammasi to'liq. Admin tasdiqlagan yozuvlar 1C'ga kiritiladi (onec_write.py: zaxira, jurnal, bekor qilish).
 
 Tovar kodlari (v2.7): 1C'dagi tarozi PLU raqamlari va shtrix kodlar har [codes] hours soatda (standart 6) yoki
 1-ilovada "Kompyuterdan yangilash" bosilganda `in/{inbox}/` ga "codes" bo'lib yuboriladi. Qayerda saqlanishi
@@ -52,7 +56,7 @@ STATE = os.path.join(HERE, "export_state.json")
 OUT_DIR = os.path.join(HERE, "export")
 DISCOVER = os.path.join(HERE, "discover.txt")
 CODES_OUT = os.path.join(HERE, "codes.json")
-TICK_SEC = 120                    # jadval va telefon so'rovi shuncha vaqtda bir tekshiriladi
+TICK_SEC = 30                     # jadval, telefon so'rovlari va 1C'ga yozish navbati shuncha vaqtda bir tekshiriladi
 
 MAX_FILE = 8 * 1024 * 1024        # bitta Excel shundan katta bo'lsa yuborilmaydi (jurnalga yoziladi)
 POLL_SEC = 10 * 60                # jadval o'chiq bo'lsa — shuncha vaqtda bir tekshiriladi
@@ -163,6 +167,16 @@ class Config:
         # Narxlar: "attr:Цена1,Цена2" yoki "<RegistrSvedeniy>:<tovar>:<narx turi>:<narx>"
         self.price_src = gc("price")
         self.codes_hours = max(1, int(gc("hours", "6") or 6))
+        # v3.2: 1C'ga yozish ("Tasdiqlab kiritish") va 1C ma'lumotlari (savdolar, ta'minotchilar)
+        wr = cp["write"] if cp.has_section("write") else {}
+        gw = lambda k, d="": (wr.get(k, d) or d).strip()  # noqa: E731
+        self.write_on = gw("enabled", "1") not in ("0", "no", "false", "yoq")
+        self.require_backup = gw("require_backup", "1") not in ("0", "no", "false", "yoq")
+        da = cp["data"] if cp.has_section("data") else {}
+        gd = lambda k, d="": (da.get(k, d) or d).strip()  # noqa: E731
+        self.data_on = gd("enabled", "1") not in ("0", "no", "false", "yoq")
+        self.sales_days = max(1, min(400, int(gd("sales_days", "30") or 30)))
+        self.supp_days = max(1, min(400, int(gd("supp_days", "90") or 90)))
 
     def check_cloud(self):
         if not self.url or not self.secret:
@@ -222,6 +236,11 @@ class Cloud:
         """1-ilova "Kompyuterdan yangilash" bosgan vaqt (ms) yoki 0."""
         v = self.call("GET", "p/%s/creq" % self.cfg.inbox, timeout=30)
         return v if isinstance(v, (int, float)) else 0
+
+    def data_request(self):
+        """Admin "shu davrni yuboring" so'rovi: {k, f, t, at} yoki {}."""
+        v = self.call("GET", "p/%s/dreq" % self.cfg.inbox, timeout=30)
+        return v if isinstance(v, dict) else {}
 
     def status(self, text, ok):
         self.call("PUT", "p/%s/st" % self.cfg.inbox, {"at": {".sv": "timestamp"}, "text": text[:300], "ok": bool(ok)}, timeout=30, print="silent")
@@ -1127,11 +1146,96 @@ def parse_schedule(sch, cfg):
     return max(0, min(h, 24)), max(1, min(d, 400))
 
 
+def parse_live(sch):
+    """v3.2 jadval: (daqiqa, ish vaqti yoqiqmi, boshi, oxiri) — daqiqa 0 bo'lsa eski soatlik rejim."""
+    sch = sch or {}
+    def gi(k, d):
+        try:
+            return int(sch.get(k, d) or d) if sch.get(k, d) is not None else d
+        except (TypeError, ValueError):
+            return d
+    m = max(0, min(gi("m", 0), 24 * 60))
+    won = bool(sch.get("won", False))
+    ws = max(0, min(gi("ws", 8 * 60), 1439))
+    we = max(0, min(gi("we", 20 * 60), 1439))
+    return m, won, ws, we
+
+
+def is_work_time(won, ws, we, minute):
+    if not won or ws == we:
+        return True
+    if ws < we:
+        return ws <= minute < we
+    return minute >= ws or minute < we
+
+
+def final_minute(we):
+    return (we + 1439) % 1440
+
+
+def live_interval(minutes, hours, won, ws, we, now=None):
+    """Tezkor yangilash oralig'i (soniya) yoki 0 (o'chiq). Ish vaqtidan tashqarida — soatiga bir."""
+    if minutes <= 0:
+        return 0
+    now = now or dt.datetime.now()
+    sec = max(60, minutes * 60)
+    if not is_work_time(won, ws, we, now.hour * 60 + now.minute):
+        sec = max(sec, 3600)
+    return sec
+
+
+def upload_json(cloud, kind, payload, state, force=False):
+    """JSON'ni faqat o'zgargan bo'lsa yuboradi. @return yuborildimi."""
+    import onec_data
+    sig = onec_data.payload_sig(payload)
+    key = "__%s__" % kind
+    if not force and state.get(key) == sig:
+        return False
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    cloud.upload(file_key(kind, int(time.time() * 1000)), kind + ".json", raw, "", kind)
+    state[key] = sig
+    save_state(state)
+    return True
+
+
+def data_tick(cfg, cloud, onec, req=None, now=None):
+    """Savdolar va ta'minotchilar (1C'dan o'qish). [req] — Admin so'rovi ({k, f, t}) yoki None (jadval). @return matn."""
+    import onec_data
+    now = now or dt.datetime.now()
+    st = load_state()
+    out = []
+    kinds = [req.get("k")] if req and req.get("k") in ("sales", "supp") else ["sales", "supp"]
+    onec.connect()
+    try:
+        ms = int(time.time() * 1000)
+        if "sales" in kinds:
+            f, t = onec_data.period_of(req if req and req.get("k") == "sales" else None, cfg.sales_days, now)
+            p = onec_data.sales_payload(onec, f, t, ms)
+            sent = upload_json(cloud, "sales", p, st, force=bool(req))
+            out.append("1C savdolar: %d ta hujjat%s" % (len(p["docs"]), "" if sent else " (o'zgarmagan)"))
+        if "supp" in kinds:
+            f, t = onec_data.period_of(req if req and req.get("k") == "supp" else None, cfg.supp_days, now)
+            p = onec_data.suppliers_payload(onec, f, t, ms)
+            sent = upload_json(cloud, "supp", p, st, force=bool(req))
+            out.append("Ta'minotchilar: %d ta%s" % (len(p["list"]), "" if sent else " (o'zgarmagan)"))
+    finally:
+        onec.close()
+    return "; ".join(out)
+
+
 def loop(cfg):
+    try:
+        import onec_data
+        import onec_write
+    except ImportError as e:
+        raise SystemExit("onec_data.py va onec_write.py onec_export.py yonida bo'lishi kerak (%s)" % e)
     cloud = Cloud(cfg)
     onec = OneC(cfg)
+    writer = onec_write.Writer(cfg, cloud, onec, HERE)
     last_run = 0.0
     last_codes = 0.0
+    last_live = 0.0
+    last_final_day = ""
     while True:
         try:
             sch = cloud.schedule()
@@ -1139,7 +1243,14 @@ def loop(cfg):
             log.warning("jadvalni o'qib bo'lmadi: %s", e)
             sch = {}
         hours, days = parse_schedule(sch, cfg)
-        if hours > 0 and cfg.report and time.time() - last_run >= hours * 3600 - 60:
+        minutes, won, ws, we = parse_live(sch)
+        now = dt.datetime.now()
+        # Ish tugashidan 1 daqiqa oldin — hammasi to'liq (telefonlar oxirgi ma'lumotni olib qoladi)
+        final_now = won and now.hour * 60 + now.minute == final_minute(we) and last_final_day != now.strftime("%Y%m%d")
+        if final_now:
+            last_final_day = now.strftime("%Y%m%d")
+        full_due = (hours > 0 or minutes > 0) and cfg.report and time.time() - last_run >= max(hours, 1) * 3600 - 60
+        if full_due or (final_now and cfg.report):
             last_run = time.time()
             try:
                 sent, checked, errors = run_once(cfg, cloud, onec, days)
@@ -1152,6 +1263,63 @@ def loop(cfg):
             except Exception:
                 log.exception("eksport xatosi")
                 safe_status(cloud, "Xato: eksport", False)
+        # Tezkor (daqiqalik): bugun harakati borlarning kartochkasi, savdolar, ta'minotchilar, kodlar
+        live = live_interval(minutes, hours, won, ws, we, now)
+        if (live and time.time() - last_live >= live - 5) or final_now:
+            last_live = time.time()
+            try:
+                if cfg.report and not full_due:
+                    onec.connect()
+                    try:
+                        names = onec_data.active_today(onec, now)
+                    finally:
+                        onec.close()
+                    if names and cfg.only:
+                        names = names & set(cfg.only)
+                    if names:
+                        sent, checked, errors = run_once(cfg, cloud, onec, days, only=sorted(names))
+                        if sent:
+                            log.info("tezkor: %s", status_text(sent, checked, errors))
+                if cfg.data_on:
+                    msg = data_tick(cfg, cloud, onec, now=now)
+                    log.info(msg)
+                if cfg.codes_on:
+                    st = load_state()
+                    if time.time() - st.get("__codes_live__", 0) >= max(live, 300) or final_now:
+                        run_codes(cfg, cloud, onec, st)
+                        st = load_state()
+                        st["__codes_live__"] = time.time()
+                        save_state(st)
+            except SystemExit as e:
+                log.error("%s", e)
+                safe_status(cloud, str(e), False)
+            except Exception:
+                log.exception("tezkor yangilash xatosi")
+        # Admin so'rovi: "shu davrdagi savdolar / ta'minotchilar"
+        try:
+            req = cloud.data_request()
+        except Exception:
+            req = {}
+        if req and cfg.data_on:
+            st = load_state()
+            at = req.get("at") or 0
+            if at and at > st.get("__dreq__", 0):
+                try:
+                    msg = data_tick(cfg, cloud, onec, req=req)
+                    safe_status(cloud, msg, True)
+                except Exception as e:  # noqa: BLE001
+                    log.exception("so'rov bajarilmadi")
+                    safe_status(cloud, "1C ma'lumoti: %s" % str(e)[:200], False)
+                st = load_state()
+                st["__dreq__"] = at
+                save_state(st)
+        # 1C'ga yozish navbati (Admin tasdiqlagan)
+        try:
+            done, errs = writer.run()
+            if done or errs:
+                safe_status(cloud, "1C'ga yozildi: %d ta%s" % (done, ", xato: %d" % errs if errs else ""), errs == 0)
+        except Exception as e:  # noqa: BLE001
+            log.warning("1C'ga yozish navbati: %s", e)
         if cfg.codes_on:
             codes_tick(cfg, cloud, onec, last_codes)
             st = load_state()

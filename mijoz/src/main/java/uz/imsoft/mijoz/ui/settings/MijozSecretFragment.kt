@@ -30,10 +30,13 @@ class MijozSecretFragment : SecretFragment() {
     override fun screenTitle(): String = getString(R.string.sx_title)
     override fun screenHint(n: Int): String = getString(R.string.sx_hint)
 
-    override fun products(): List<Pair<String, String>> =
-        Locator.data.state.value.snapshot?.products.orEmpty().filter { it.wholesaleSom > 0 || it.wholesaleUsd > 0 }.map { p ->
-            p.name to if (p.wholesaleSom > 0) requireContext().money(p.wholesaleSom, false) else requireContext().money(p.wholesaleUsd, true)
+    override fun products(): List<Pair<String, String>> {
+        val lv = Locator.prefs.priceLevel
+        return Locator.data.state.value.snapshot?.products.orEmpty().filter { it.price(lv, false) > 0 || it.price(lv, true) > 0 }.map { p ->
+            val som = p.price(lv, false)
+            p.name to if (som > 0) requireContext().money(som, false) else requireContext().money(p.price(lv, true), true)
         }
+    }
 
     override fun appItems(): List<SecretItem> {
         val l = ArrayList<SecretItem>()

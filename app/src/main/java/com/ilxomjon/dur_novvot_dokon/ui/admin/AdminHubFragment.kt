@@ -1,0 +1,105 @@
+package com.ilxomjon.dur_novvot_dokon.ui.admin
+
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.LinearLayout
+import com.ilxomjon.dur_novvot_dokon.R
+import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
+import com.ilxomjon.dur_novvot_dokon.ui.formatDateTime
+import com.ilxomjon.dur_novvot_dokon.ui.launchOnStarted
+import com.ilxomjon.dur_novvot_dokon.ui.navigator
+import kotlinx.coroutines.flow.combine
+import uz.imsoft.shared.android.Ui
+
+/**
+ * v3.2 Admin "Boshqaruv": hamma qo'shimcha imkoniyatlar bo'limlarga ajratilgan (1C, mijozlar, agentlar, yorliqlar, ilova).
+ * Har bo'lim ostida qisqa holat — qaysi ish kutib turgani darhol ko'rinadi.
+ */
+class AdminHubFragment : CodeFragment() {
+    private lateinit var info1c: LinearLayout
+    private var tvSales: android.widget.TextView? = null
+    private var tvSupp: android.widget.TextView? = null
+    private var tvWrites: android.widget.TextView? = null
+    private var tvReq: android.widget.TextView? = null
+
+    override fun build(inflater: LayoutInflater): View {
+        val p = page(R.string.ad_title)
+        val c = p.content
+        c.addView(Ui.hint(ctx, getString(R.string.ad_hint), 4))
+
+        c.addView(Ui.section(ctx, getString(R.string.ad_sec_1c)))
+        val (card1, col1) = Ui.card(ctx)
+        info1c = col1
+        col1.addView(Ui.item(ctx, getString(R.string.ad_sales), getString(R.string.ad_sales_sub)) { navigator().push(OneCSalesFragment()) })
+        tvSales = Ui.hint(ctx, "", 0).also { col1.addView(it) }
+        col1.addView(Ui.divider(ctx))
+        col1.addView(Ui.item(ctx, getString(R.string.ad_supp), getString(R.string.ad_supp_sub)) { navigator().push(SuppliersFragment()) })
+        tvSupp = Ui.hint(ctx, "", 0).also { col1.addView(it) }
+        col1.addView(Ui.divider(ctx))
+        col1.addView(Ui.item(ctx, getString(R.string.ad_writes), getString(R.string.ad_writes_sub)) { navigator().push(WritesFragment()) })
+        tvWrites = Ui.hint(ctx, "", 0).also { col1.addView(it) }
+        col1.addView(Ui.divider(ctx))
+        col1.addView(Ui.item(ctx, getString(R.string.ad_new_receipt), getString(R.string.ad_new_receipt_sub)) {
+            navigator().push(WriteFormFragment.of(uz.imsoft.shared.onec.WriteKind.RECEIPT, "", ""))
+        })
+        col1.addView(Ui.divider(ctx))
+        col1.addView(Ui.item(ctx, getString(R.string.ad_client_return), getString(R.string.ad_client_return_sub)) {
+            navigator().push(WriteFormFragment.of(uz.imsoft.shared.onec.WriteKind.CLIENT_RETURN, "", ""))
+        })
+        col1.addView(Ui.divider(ctx))
+        col1.addView(Ui.item(ctx, getString(R.string.ad_pc), getString(R.string.ad_pc_sub)) { navigator().push(PcFragment()) })
+        c.addView(card1)
+
+        c.addView(Ui.section(ctx, getString(R.string.ad_sec_clients)))
+        val (card2, col2) = Ui.card(ctx)
+        col2.addView(Ui.item(ctx, getString(R.string.ad_requests), getString(R.string.ad_requests_sub)) { navigator().push(ClientRequestsFragment()) })
+        tvReq = Ui.hint(ctx, "", 0).also { col2.addView(it) }
+        col2.addView(Ui.divider(ctx))
+        col2.addView(Ui.item(ctx, getString(R.string.ad_debtors), getString(R.string.ad_debtors_sub)) { navigator().push(DebtorsFragment()) })
+        col2.addView(Ui.divider(ctx))
+        col2.addView(Ui.item(ctx, getString(R.string.ad_share), getString(R.string.ad_share_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.ShareFragment()) })
+        col2.addView(Ui.divider(ctx))
+        col2.addView(Ui.item(ctx, getString(R.string.ad_receipt_style), getString(R.string.ad_receipt_style_sub)) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.ReceiptStyleFragment())
+        })
+        c.addView(card2)
+
+        c.addView(Ui.section(ctx, getString(R.string.ad_sec_agents)))
+        val (card3, col3) = Ui.card(ctx)
+        col3.addView(Ui.item(ctx, getString(R.string.ad_relay), getString(if (ServiceLocator.shareStore.relayOn) R.string.rl_on_short else R.string.rl_off_short)) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.RelayFragment())
+        })
+        c.addView(card3)
+
+        c.addView(Ui.section(ctx, getString(R.string.ad_sec_goods)))
+        val (card4, col4) = Ui.card(ctx)
+        col4.addView(Ui.item(ctx, getString(R.string.ad_labels), getString(R.string.ad_labels_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) })
+        col4.addView(Ui.divider(ctx))
+        col4.addView(Ui.item(ctx, getString(R.string.ad_barcodes), getString(R.string.ad_barcodes_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment()) })
+        c.addView(card4)
+
+        c.addView(Ui.section(ctx, getString(R.string.ad_sec_app)))
+        val (card5, col5) = Ui.card(ctx)
+        col5.addView(Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.AutoUpdateFragment()) })
+        col5.addView(Ui.divider(ctx))
+        col5.addView(Ui.item(ctx, getString(R.string.ad_settings), getString(R.string.ad_settings_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsFragment()) })
+        c.addView(card5)
+        return p.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
+        launchUi { ServiceLocator.onec.load() }
+        launchOnStarted {
+            combine(ServiceLocator.onec.state, ServiceLocator.clientRequests.state) { a, b -> a to b }.collect { (o, r) ->
+                tvSales?.text = o.sales?.let { getString(R.string.ad_sales_st, it.docs.size, formatDateTime(it.at.takeIf { t -> t > 0 } ?: 0L)) } ?: getString(R.string.ad_none_yet)
+                tvSupp?.text = o.suppliers?.let { getString(R.string.ad_supp_st, it.list.size) } ?: getString(R.string.ad_none_yet)
+                val pending = o.writes.count { it.result == null }
+                val failed = o.writes.count { it.result?.ok == false }
+                tvWrites?.text = getString(R.string.ad_writes_st, pending, failed)
+                tvReq?.text = if (r.newCount > 0) getString(R.string.ad_requests_new, r.newCount) else getString(R.string.ad_requests_none)
+            }
+        }
+        launchUi { ServiceLocator.clientRequests.refresh() }
+        launchUi { ServiceLocator.onec.refreshResults() }
+    }
+}

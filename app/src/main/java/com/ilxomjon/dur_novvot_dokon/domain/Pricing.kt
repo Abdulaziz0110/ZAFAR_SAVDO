@@ -8,10 +8,26 @@ import com.ilxomjon.dur_novvot_dokon.core.Money
  *  - Mahsulotning asosiy valyutasi so'm bo'lsa ($ = so'm / kurs), aks holda dollar (so'm = $ * kurs).
  */
 object Pricing {
-    fun unitPrice(p: Product, type: PriceType, currency: Currency, rate: Double): Double {
+    /**
+     * v3.1: 1- va 2-narx (so'mda) — 1C'dan kompyuter orqali keladi (ПродажЦена1/2). Yo'q bo'lsa — 4-narx (optom).
+     * Ilova ishga tushganda o'rnatiladi.
+     */
+    @Volatile var level12: (productId: String, level: Int) -> Double? = { _, _ -> null }
+
+    fun unitPrice(p: Product, type: PriceType, currency: Currency, rate: Double): Double =
+        unitPrice(p, PriceType.levelOf(type), currency, rate)
+
+    /** [level] 1..4: 3 — Naqd (chakana), 4 — Optom, 1/2 — 1C narxi. */
+    fun unitPrice(p: Product, level: Int, currency: Currency, rate: Double): Double {
+        if (level == 1 || level == 2) {
+            val som1c = level12(p.id, level)
+            if (som1c != null && som1c > 0) {
+                return Money.round2(if (currency == Currency.SOM) som1c else if (rate > 0) som1c / rate else 0.0)
+            }
+        }
         val som: Double
         val usd: Double
-        if (type == PriceType.CASH) { som = p.cashSom; usd = p.cashUsd } else { som = p.wholesaleSom; usd = p.wholesaleUsd }
+        if (level == 3) { som = p.cashSom; usd = p.cashUsd } else { som = p.wholesaleSom; usd = p.wholesaleUsd }
         val baseSom: Double
         val baseUsd: Double
         if (p.baseIsSom) {

@@ -175,6 +175,62 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- v3.1: shtrix kod bilan savdoda ham narx (1..4) almashtiriladi -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/tgLevel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="10dp"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/lvl1"
+            style="@style/Widget.App.Segment"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:contentDescription="@string/price_l1_desc"
+            android:minHeight="40dp"
+            android:maxLines="2"
+            android:text="@string/price_l1_desc" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/lvl2"
+            style="@style/Widget.App.Segment"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:contentDescription="@string/price_l2_desc"
+            android:minHeight="40dp"
+            android:maxLines="2"
+            android:text="@string/price_l2_desc" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/lvl3"
+            style="@style/Widget.App.Segment"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:contentDescription="@string/price_l3_desc"
+            android:minHeight="40dp"
+            android:maxLines="2"
+            android:text="@string/price_l3_desc" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/lvl4"
+            style="@style/Widget.App.Segment"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:contentDescription="@string/price_l4_desc"
+            android:minHeight="40dp"
+            android:maxLines="2"
+            android:text="@string/price_l4_desc" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <!-- qidiruv + filtr -->
     <LinearLayout
         android:id="@+id/searchRow"

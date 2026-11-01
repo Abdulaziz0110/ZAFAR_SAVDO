@@ -14,13 +14,23 @@ import java.net.Socket
 object Tspl {
     /**
      * [black] — w×h, true = qora nuqta. [wMm]/[hMm] — yorliq o'lchami, [gapMm] — yorliqlar orasidagi bo'shliq.
-     * [rotate] — 180° burish (DIRECTION 0/1).
+     * [rotate] — 180° burish (DIRECTION 0/1). [xDots]/[yDots] — qog'ozga moslash uchun siljitish (nuqtada, manfiy ham bo'ladi:
+     * rasmning o'sha qismi kesiladi).
      */
     fun build(
-        black: BooleanArray, w: Int, h: Int, copies: Int,
+        black0: BooleanArray, w0: Int, h0: Int, copies: Int,
         wMm: Double, hMm: Double, gapMm: Double = 2.0, rotate: Boolean = false, density: Int = 8, speed: Int = 4,
+        xDots: Int = 0, yDots: Int = 0,
     ): ByteArray {
-        require(black.size == w * h) { "tspl: size" }
+        require(black0.size == w0 * h0) { "tspl: size" }
+        // Manfiy siljitish: rasmning chap/tepa qismi kesiladi (TSPL koordinatasi manfiy bo'lmaydi)
+        val cutX = (-xDots).coerceIn(0, w0 - 1)
+        val cutY = (-yDots).coerceIn(0, h0 - 1)
+        val w = w0 - cutX
+        val h = h0 - cutY
+        val black = if (cutX == 0 && cutY == 0) black0 else BooleanArray(w * h) { i -> black0[(i / w + cutY) * w0 + (i % w + cutX)] }
+        val bx = xDots.coerceAtLeast(0)
+        val by = yDots.coerceAtLeast(0)
         val wb = (w + 7) / 8
         val data = ByteArray(wb * h) { 0xFF.toByte() }
         for (y in 0 until h) {
@@ -37,7 +47,7 @@ object Tspl {
             "REFERENCE 0,0\r\nDENSITY ${density.coerceIn(0, 15)}\r\nSPEED ${speed.coerceIn(1, 6)}\r\nCLS\r\n"
         val o = ByteArrayOutputStream(head.length + data.size + 64)
         o.write(head.toByteArray(Charsets.US_ASCII))
-        o.write("BITMAP 0,0,$wb,$h,0,".toByteArray(Charsets.US_ASCII))
+        o.write("BITMAP $bx,$by,$wb,$h,0,".toByteArray(Charsets.US_ASCII))
         o.write(data)
         o.write("\r\nPRINT 1,${copies.coerceIn(1, 999)}\r\n".toByteArray(Charsets.US_ASCII))
         return o.toByteArray()

@@ -81,6 +81,7 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch { runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.load() } }
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HOME)
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) addAdminCard()
 
         launchOnStarted { vm.state.collect { render(it) } }
         launchOnStarted {
@@ -92,6 +93,34 @@ class HomeFragment : Fragment() {
                     ).show()
                 }
             }
+        }
+    }
+
+    /** v3.2 Admin: "Boshqaruv" kartasi (1C, ta'minotchilar, mijoz so'rovlari, kompyuter) — Savdo kartasi ustida. */
+    private fun addAdminCard() {
+        val parent = binding.cardSale.parent as? android.view.ViewGroup ?: return
+        if (parent.findViewWithTag<View>("admin_card") != null) return
+        val ctx = requireContext()
+        val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
+        card.tag = "admin_card"
+        val badge = uz.imsoft.shared.android.Ui.hint(ctx, "", 0)
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.ad_title), getString(R.string.ad_card_sub)) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment())
+        })
+        col.addView(badge)
+        val lp = binding.cardSale.layoutParams
+        parent.addView(card, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            (lp as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
+        })
+        launchOnStarted {
+            kotlinx.coroutines.flow.combine(ServiceLocator.clientRequests.state, ServiceLocator.onec.state) { r, o -> r.newCount to o.writes.count { it.result == null } }
+                .collect { (req, wr) ->
+                    val parts = ArrayList<String>()
+                    if (req > 0) parts += getString(R.string.ad_requests_new, req)
+                    if (wr > 0) parts += getString(R.string.ad_writes_wait, wr)
+                    badge.text = parts.joinToString(" · ")
+                    badge.show(parts.isNotEmpty())
+                }
         }
     }
 

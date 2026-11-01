@@ -1,7 +1,7 @@
 # Kompyuter dasturlari
 
 ## Eng oddiy yo'l: `ORNATISH.bat` (hammasini o'zi qiladi)
-Kompyuterga faqat 3 ta fayl kerak: `ORNATISH.bat`, `ornatish.py`, `onec_export.py` (masalan `D:\imsoft\` ga).
+Kompyuterga 5 ta fayl kerak: `ORNATISH.bat`, `ornatish.py`, `onec_export.py`, `onec_data.py`, `onec_write.py` (masalan `D:\imsoft\` ga).
 `ORNATISH.bat` ni ikki marta bosing — administrator so'raydi va ketma-ket:
 1. eski `label_printer.py` ni to'xtatib, avtozapuskdan olib tashlaydi;
 2. Xprinter'ni telefon uchun ulashadi (Windows LPD, nomi `xprinter`, 515-port) va sinov yorlig'i chiqaradi;
@@ -139,3 +139,12 @@ python pc/test_forwarder.py
 python pc/test_onec_export.py
 python pc/test_label_printer.py
 ```
+
+
+## v3.2 — 1C savdolar, ta'minotchilar, 1C'ga kiritish
+* `onec_data.py` — 1C savdolar ro'yxati va ta'minotchilar (faqat o'qish), Admin jadvali yoki so'rovi bo'yicha.
+* `onec_write.py` — Admin'da tasdiqlangan yozuvlarni 1C'ga kiritadi: kirim, ta'minotchiga to'lov, qaytarishlar, shtrix kodlar.
+  Har kuni birinchi yozuvdan oldin `backup\1Cv8_YYYYMMDD.1CD` (oxirgi 7 ta), jurnal `write_journal.jsonl`.
+  O'chirish: `onec.ini` ga `[write]` / `enabled = 0`. Zaxira olinmasa ham yozish: `require_backup = 0` (tavsiya etilmaydi).
+* Sozlama (`onec.ini`, ixtiyoriy): `[data]` `sales_days = 30`, `supp_days = 90`, `enabled = 1`.
+* Test: `python test_onec_data.py`.
