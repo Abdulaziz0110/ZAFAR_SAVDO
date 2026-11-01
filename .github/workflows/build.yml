@@ -3,10 +3,11 @@
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
 #   2) builds three APKs - Agent, Admin, Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
 #   3) runs unit tests, lint, the PC script tests and the iPhone (web) agent tests; reports go to the "reports" artifact,
-#   4) publishes the iPhone agent (web/agent) to GitHub Pages (Settings > Pages > Source: GitHub Actions).
-#      If Pages is not available (private repo on a free plan) only that last job fails - APKs are not affected.
+#   4) publishes the iPhone agent (web/agent) to Cloudflare Pages (free, works with a private repo).
+#      Without the CLOUDFLARE_* secrets this job is skipped (green) - APKs are not affected.
 # Secrets (Settings > Secrets and variables > Actions), optional:
 #   SIGNING_KEYSTORE_B64, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD
+#   CLOUDFLARE_API_TOKEN (permission: Account > Cloudflare Pages > Edit), CLOUDFLARE_ACCOUNT_ID
 # The keystore is never committed: it is written to the runner temp folder only for the build.
 name: Android build
 
@@ -143,10 +144,12 @@ jobs:
           cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-$MV-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
 
-      - name: Upload iPhone agent (web) for Pages
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload iPhone agent (web)
+        uses: actions/upload-artifact@v4
         with:
+          name: web-agent
           path: web/agent
+          retention-days: 7
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
@@ -215,17 +218,43 @@ jobs:
             echo "::warning::Tests failed - see the reports artifact"
           fi
 
-  pages:
+  web:
     needs: build
     runs-on: ubuntu-latest
     continue-on-error: true
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      CF_PROJECT: zafar-savdo-agent
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Publish iPhone agent to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Check Cloudflare secrets
+        id: chk
+        shell: bash
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::iPhone agent not published: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets"
+          fi
+
+      - name: Download iPhone agent (web)
+        if: steps.chk.outputs.ok == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: web-agent
+          path: site
+
+      - name: Create Cloudflare Pages project (first run only)
+        if: steps.chk.outputs.ok == 'true'
+        continue-on-error: true
+        shell: bash
+        run: npx --yes wrangler@3.90.0 pages project create "$CF_PROJECT" --production-branch=main
+
+      - name: Publish iPhone agent to Cloudflare Pages
+        if: steps.chk.outputs.ok == 'true'
+        shell: bash
+        run: |
+          rm -rf site/test
+          npx --yes wrangler@3.90.0 pages deploy site --project-name="$CF_PROJECT" --branch=main --commit-dirty=true
+          echo "::notice::iPhone agent: https://$CF_PROJECT.pages.dev (if the name was taken, see the Cloudflare dashboard)"
