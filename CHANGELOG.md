@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 4.0 (versionCode 25), Savdo Mijoz 2.0 (versionCode 17) — 2026-11-02
+* **Kalitsiz ishlash**: Agent va Mijoz ochilishi bilan Admin ▸ Qurilmalar'ga tushadi; Admin kimligini belgilaydi yoki bloklaydi.
+  GitHub'ga bir marta SHOP_CODE qo'yiladi. iPhone uchun — bitta havola.
+* **O'zi yangilanish**: build tugashi bilan har ilovada "Yangi versiya — O'rnatish".
+* **Yagona savdo ro'yxati** (Tarix ▸ Hammasi): 1C savdolari + telefonda qilingan ("1C'ga ketmoqda" → 1C'dan kelgach almashadi).
+* **Chek**: Printer 1 (do'kon) / Printer 2 (filial — Dadaxon aka) / Ikkalasi / Cheksiz.
+* **Boss** (Admin bosh sahifasi): bugungi savdo, foyda, tushum, qarzlar (oxirgi to'lovdan beri kun), agentlar, tizim holati;
+  kechki hisobot bildirishnomasi.
+* **Statistika** uchala ilovada: kun/hafta/oy/yil grafiklari, foyda, eng ko'p sotilgan tovarlar, narx o'zgarishlari.
+* **Kelgan narx** — oxirgi kirim narxi; 4-narx taklifi (kelgan + 2 000). Dollar kursi telefondan.
+* **Mijoz**: sodda savdo (nasiyasiz), "Olgan tovarlarim", filial printeri o'zi yoqiladi.
+* **Sozlamalar** qaytadan; tugma yozuvlari tuzatildi (4 narx, "Do…"); xato hisoboti Admin'ga o'zi keladi; build'da emulyator tekshiruvi.
+
 ## Savdo Mijoz 1.15 (versionCode 16) — 2026-11-01
 * Tuzatildi: 1.13/1.14 ochilmay yiqilardi — pastki menyuda 6 ta band bor edi (BottomNavigationView ko'pi bilan 5 ta).
   Endi 5-o'rinda "Sozlamalar" yoki (printer bo'limi yoqilgan bo'lsa) "Printer". Tekshiruv skriptiga shu qoida qo'shildi.

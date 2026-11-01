@@ -55,6 +55,7 @@ class AdminHubFragment : CodeFragment() {
             Triple(R.string.ad_client_return, R.string.ad_client_return_sub, R.drawable.ic_assignment_return) to { navigator().push(WriteFormFragment.of(W.CLIENT_RETURN, "", "")) },
             Triple(R.string.wf_pay, R.string.of_supp_pay_sub, R.drawable.ic_payments) to { navigator().push(WriteFormFragment.of(W.SUPPLIER_PAY, "", "")) },
             Triple(R.string.wf_sreturn, R.string.of_supp_return_sub, R.drawable.ic_undo) to { navigator().push(WriteFormFragment.of(W.SUPPLIER_RETURN, "", "")) },
+            Triple(R.string.rt_title, R.string.rt_sub, R.drawable.ic_currency) to { navigator().push(RateFragment()) },
             Triple(R.string.of_cash_in, R.string.of_cash_in_sub, R.drawable.ic_cash_in) to { navigator().push(OneCFormFragment.of(W.CASH_IN)) },
             Triple(R.string.of_cash_out, R.string.of_cash_out_sub, R.drawable.ic_cash_out) to { navigator().push(OneCFormFragment.of(W.CASH_OUT)) },
         )
@@ -80,6 +81,8 @@ class AdminHubFragment : CodeFragment() {
 
         c.addView(Ui.section(ctx, getString(R.string.ad_sec_agents)))
         val (card3, col3) = Ui.card(ctx)
+        col3.addView(Ui.item(ctx, getString(R.string.dv_title), getString(R.string.dv_sub), icon = R.drawable.ic_groups, tone = 1) { navigator().push(DevicesFragment()) })
+        col3.addView(Ui.divider(ctx))
         col3.addView(Ui.item(ctx, getString(R.string.ad_relay), getString(if (ServiceLocator.shareStore.relayOn) R.string.rl_on_short else R.string.rl_off_short), icon = R.drawable.ic_hub) {
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.share.RelayFragment())
         })
@@ -98,7 +101,7 @@ class AdminHubFragment : CodeFragment() {
         val (card5, col5) = Ui.card(ctx)
         col5.addView(Ui.item(ctx, getString(R.string.au_title), getString(R.string.au_sub), icon = R.drawable.ic_download) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.AutoUpdateFragment()) })
         col5.addView(Ui.divider(ctx))
-        col5.addView(Ui.item(ctx, getString(R.string.ad_settings), getString(R.string.ad_settings_sub), icon = R.drawable.ic_settings) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsFragment()) })
+        col5.addView(Ui.item(ctx, getString(R.string.ad_settings), getString(R.string.ad_settings_sub), icon = R.drawable.ic_settings) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment()) })
         c.addView(card5)
         return p.root
     }

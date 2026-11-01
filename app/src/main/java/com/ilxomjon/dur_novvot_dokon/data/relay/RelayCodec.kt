@@ -75,9 +75,11 @@ object RelayCodec {
 
     // ---------------- katalog ----------------
 
-    class Catalog(val snapshot: CatalogSnapshot, val agents: List<RawAgent>, val at: Long)
+    /** [branches] — v4.0: chek Mijoz ilovasi printerida chiqadigan do'konlar (Dadaxon aka) — agentda "Printer 2" shularga. */
+    class Catalog(val snapshot: CatalogSnapshot, val agents: List<RawAgent>, val at: Long, val branches: List<String> = emptyList(), val lastCosts: Map<String, Pair<Double, Double>> = emptyMap())
 
-    fun catalogToJson(s: CatalogSnapshot, agents: List<RawAgent>, at: Long): String = Json.write(
+    /** [lastCosts] — v4.0: oxirgi kirim narxi (tovar id -> so'm, $). */
+    fun catalogToJson(s: CatalogSnapshot, agents: List<RawAgent>, at: Long, branches: List<String> = emptyList(), lastCosts: Map<String, Pair<Double, Double>> = emptyMap()): String = Json.write(
         linkedMapOf(
             "v" to 1, "at" to at,
             "g" to s.groups.map { listOf(it.id, it.name) },
@@ -89,6 +91,8 @@ object RelayCodec {
                     it.cashSom, it.cashVal, it.costSom, it.costVal)
             },
             "a" to agents.map { listOf(it.id, it.fullName, it.boss, it.phone) },
+            "br" to branches,
+            "lc" to lastCosts.entries.sortedBy { it.key }.associate { (k, v) -> k to listOf(v.first, v.second) },
         ),
     )
 
@@ -109,7 +113,11 @@ object RelayCodec {
             agent = null,
             fetchedAt = o.long("at"),
         )
-        return Catalog(snap, agents, o.long("at"))
+        val lc = (o.map["lc"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) ->
+            val l = v as? List<Any?> ?: return@mapNotNull null
+            k to (((l.getOrNull(0) as? Number)?.toDouble() ?: 0.0) to ((l.getOrNull(1) as? Number)?.toDouble() ?: 0.0))
+        }.toMap()
+        return Catalog(snap, agents, o.long("at"), o.arr("br").map { v -> v?.let { str(it) }.orEmpty() }.filter { it.isNotEmpty() }, lc)
     }
 
     /** Katalog blobi: gzip + base64 (Firebase satr sifatida). */
@@ -124,15 +132,17 @@ object RelayCodec {
 
     // ---------------- 2-ilovaga ko'zgu (savdo cheki) ----------------
 
-    fun saleToJson(s: SentOrder, code: String): String = Json.write(
+    /** [branch] — v4.0: chek filial (Mijoz ilovasi) printerida chiqsinmi (null — Admin sozlamasi bo'yicha). */
+    fun saleToJson(s: SentOrder, code: String, branch: Boolean? = null): String = Json.write(
         linkedMapOf(
             "at" to s.sentAt, "st" to s.storeId, "sn" to s.storeName, "m" to s.mode.code, "pt" to s.priceType.code, "c" to s.currency.code,
             "t" to s.total, "d" to s.discount, "pd" to s.paid, "code" to code,
             "l" to s.lines.map { listOf(it.productId, it.name, it.qty, it.price) },
+            "bp" to branch,
         ),
     )
 
-    class Sale(val order: SentOrder, val code: String)
+    class Sale(val order: SentOrder, val code: String, val branch: Boolean? = null)
 
     @Suppress("UNCHECKED_CAST")
     fun saleFromJson(text: String): Sale? = runCatching {
@@ -148,6 +158,7 @@ object RelayCodec {
                 discount = o.num("d"), paid = o.num("pd"), lines = lines,
             ),
             o.str("code"),
+            o.map["bp"] as? Boolean,
         )
     }.getOrNull()
 }

@@ -913,7 +913,7 @@ class ShareRepository(
      * 1-ilovada savdo navbatga qo'yilganda: mijoz ro'yxatda bo'lsa — uning 2-ilovasiga darhol yuboriladi (tarixda ko'rinadi)
      * va 2-ilovada yoqilgan bo'lsa chek printer navbatiga qo'yiladi. Internet bo'lmasa — keyin (fon ishchisi).
      */
-    suspend fun onSale(sent: com.ilxomjon.dur_novvot_dokon.domain.SentOrder, outboxId: Long, code: String, saleId: String? = null) {
+    suspend fun onSale(sent: com.ilxomjon.dur_novvot_dokon.domain.SentOrder, outboxId: Long, code: String, saleId: String? = null, branch: Boolean? = null) {
         if (!store.isConfigured) return
         // Chek uchun "oldingi qarz" — serverdan oxirgi yuklangan qiymat (so'm savdosida)
         val debt = if (sent.currency == com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM) catalog.storeById(sent.storeId)?.debtSom else null
@@ -922,8 +922,10 @@ class ShareRepository(
         if (admin) store.update(c.id) { it.copy(dirty = true) }
         mutex.withLock { publishState() }
         val fresh = store.client(c.id) ?: c
-        val force = nextBranchPrint?.takeIf { it.first == sent.storeId }?.second
-        if (force != null) nextBranchPrint = null
+        // v4.0: agent tanlovi (savdo bilan kelgan) yoki Admin'ning o'z tanlovi
+        val own = nextBranchPrint?.takeIf { it.first == sent.storeId }?.second
+        if (own != null) nextBranchPrint = null
+        val force = branch ?: own
         runCatching { mirror.pushReceipt(fresh, s, force) }
         if (!admin) return
         if (store.autoPublish) runCatching { publishOne(c.id) }.onFailure { ShareWorker.kick(context) }

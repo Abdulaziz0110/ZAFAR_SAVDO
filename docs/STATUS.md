@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 3.12 (versionCode 24) + Savdo Mijoz 1.15 (versionCode 16), 2026-11-01
+# Holat — Savdo Agent / Savdo Admin 4.0 (versionCode 25) + Savdo Mijoz 2.0 (versionCode 17), 2026-11-02
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,28 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## 4.0 — kalitsiz ishlash, o'zi yangilanish, yagona ro'yxat, Boss, statistika
+| Narsa | Holat |
+|---|---|
+| Do'kon kodi (IMSHOP1) / Mijoz kodi (IMSDEV1, agentlar kalitisiz), yangilanish papkasi xeshi — Kotlin, Gradle va Python bir xil | VERIFIED (V40DeviceTest) |
+| Qurilmalar: ro'yxatdan o'tish, Admin biriktiradi/bloklaydi, bloklangandan savdo qabul qilinmaydi, qoidalar v7 | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓; haqiqiy Firebase'da sinash kerak) |
+| Eski usulda kirgan agent 4.0 ga o'tganda chiqarib yuborilmaydi (biriktirilmaguncha) | IMPLEMENTED-UNVERIFIED |
+| Xato hisoboti (yiqilsa — keyingi ochilishda Admin ▸ Qurilmalar) | IMPLEMENTED-UNVERIFIED |
+| O'zi yangilanish: build → Cloudflare yashirin papka → "O'rnatish" oynasi | IMPLEMENTED-UNVERIFIED (SHOP_CODE secret kerak) |
+| Yagona savdo ro'yxati: telefondagi savdo "1C'ga ketmoqda" → 1C'dan kelgach almashadi | VERIFIED (PendingMergeTest) / ekranda IMPLEMENTED-UNVERIFIED |
+| Savdodan keyin kompyuterdan bugungi savdolar so'raladi (2 va 6 daqiqa) | IMPLEMENTED-UNVERIFIED |
+| Chek: Printer 1 (do'kon) / Printer 2 (filial) / Ikkalasi / Cheksiz; agent tanlovi Admin'ga boradi | IMPLEMENTED-UNVERIFIED |
+| Mijoz: kalitsiz, filial printeri o'zi yoqiladi, sodda savdo (nasiyasiz), statistika va olgan tovarlar | IMPLEMENTED-UNVERIFIED |
+| Statistika (kun/hafta/oy/yil, foyda, top tovarlar, narx o'zgarishi) | VERIFIED (StatsTest) / grafik telefonda IMPLEMENTED-UNVERIFIED |
+| Boss ekrani, kechki hisobot, qarz yoshi, agentlar kunlik | IMPLEMENTED-UNVERIFIED |
+| Kelgan narx = oxirgi kirim narxi (agentlarga ham), 4-narx taklifi (+2 000, o'zi qo'yilmaydi) | IMPLEMENTED-UNVERIFIED |
+| Dollar kursi telefondan (Константы.Курс + Курс registri), bekor qilish | VERIFIED (soxta 1C testi) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Tugma yozuvlari (4 narx ko'rinmasligi, "Do…") — chekka 4dp, matn o'zi kichrayadi, shrift 1.15 dan oshmaydi | IMPLEMENTED-UNVERIFIED (telefonda ko'rish kerak) |
+| Sozlamalar qaytadan (bo'limli) | IMPLEMENTED-UNVERIFIED |
+| Build'da emulyatorda ochib tekshirish (smoke) | IMPLEMENTED-UNVERIFIED (birinchi build'da ko'rinadi) |
+| iPhone havolasi (#c=...) bilan ulanish | VERIFIED (sintaksis, E2E) |
+| Ommaviy narx o'zgartirish (guruhga %), tovarni hisobdan chiqarish | NOT-IMPLEMENTED (keyingi versiya; hisobdan chiqarishda 1C'ning o'z xatosi bor) |
 
 ## Mijoz 1.15
 | Narsa | Holat |

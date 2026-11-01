@@ -19,8 +19,11 @@ android {
         applicationId = "com.ibrohimjon.imsoft_mijoz"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.15"
+        versionCode = 17
+        versionName = "2.0"
+        // v4.0: kalitsiz ishlash — do'kon kodidan faqat baza manzili va qurilmalar kaliti (agentlar kaliti Mijozga bormaydi)
+        buildConfigField("String", "DEV_CODE", "\"" + devCode(envCode("SHOP_CODE")) + "\"")
+        buildConfigField("String", "UPDATE_URL", "\"" + envCode("UPDATE_URL") + "\"")
         vectorDrawables {
             generatedDensities?.clear()
         }
@@ -79,4 +82,19 @@ dependencies {
     // v2.5: fonda avtomatik yangilash (1–2 soatda, batareyani tejab)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.security.crypto)
+}
+
+/** Muhit o'zgaruvchisi (CI secret): faqat xavfsiz belgilar qoldiriladi (BuildConfig satriga qo'yiladi). */
+fun envCode(name: String): String =
+    (System.getenv(name) ?: "").trim().filter { it.isLetterOrDigit() || it in ":/._-" }
+
+/** IMSHOP1 (manzil, agentlar kaliti, qurilmalar kaliti) -> IMSDEV1 (manzil, qurilmalar kaliti). */
+fun devCode(shop: String): String {
+    val i = shop.indexOf("IMSHOP1:")
+    if (i < 0) return ""
+    val body = shop.substring(i + 8).takeWhile { it.isLetterOrDigit() || it == '-' || it == '_' }
+    val parts = runCatching { String(java.util.Base64.getUrlDecoder().decode(body.padEnd((body.length + 3) / 4 * 4, '=')), Charsets.UTF_8).split("\n") }.getOrNull() ?: return ""
+    if (parts.size < 3) return ""
+    val dev = parts[0].trim() + "\n" + parts[2].trim()
+    return "IMSDEV1:" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(dev.toByteArray(Charsets.UTF_8))
 }

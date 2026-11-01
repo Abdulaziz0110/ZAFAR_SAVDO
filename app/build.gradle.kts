@@ -20,8 +20,13 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 24
-        versionName = "3.12"
+        versionCode = 25
+        versionName = "4.0"
+
+        // v4.0: kalitsiz ishlash va o'zi yangilanish — GitHub secret SHOP_CODE (Admin ▸ Qurilmalar) va build skripti beradi.
+        // Bo'sh bo'lsa ilova eskicha ishlaydi (ulanish kodi so'raladi, yangilanish tekshirilmaydi).
+        buildConfigField("String", "SHOP_CODE", "\"" + envCode("SHOP_CODE") + "\"")
+        buildConfigField("String", "UPDATE_URL", "\"" + envCode("UPDATE_URL") + "\"")
 
         // Vektorlar build vaqtida PNG'ga aylantirilmaydi (AGP bunda ?attr/@color havolalarda yiqiladi).
         vectorDrawables {
@@ -111,3 +116,7 @@ dependencies {
     // Faqat JVM unit testlar (APK ichiga kirmaydi)
     testImplementation(libs.junit)
 }
+
+/** Muhit o'zgaruvchisi (CI secret): faqat xavfsiz belgilar qoldiriladi (BuildConfig satriga qo'yiladi). */
+fun envCode(name: String): String =
+    (System.getenv(name) ?: "").trim().filter { it.isLetterOrDigit() || it in ":/._-" }

@@ -63,6 +63,8 @@ class MainActivity : AppCompatActivity(), Navigator {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // v4.0: katta shriftda tugma yozuvlari sig'sin (barcha ekranlarda)
+        uz.imsoft.shared.android.FitText.install(this)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.countLaunch(this)
         // v3.0 Admin: agentlar ko'prigi yoqilgan bo'lsa ishlab tursin (ilova ochilganda — fon cheklovlari tufayli)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.relay.RelayService.ensureRunning(applicationContext)
@@ -99,12 +101,17 @@ class MainActivity : AppCompatActivity(), Navigator {
                 updateChrome()
             }
         }
+        // v4.0: yangi versiya bormi (3 soatda bir) — bo'lsa "O'rnatish" oynasi
+        if (savedInstanceState == null) lifecycleScope.launch { kotlinx.coroutines.delay(2_500); checkUpdate(false) }
         // v3.2: avtomatik yangilash (ish vaqtida har N daqiqada, ilova ochiq turganda) va kunlik zaxira
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.apply(applicationContext)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 runCatching { com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.dailyBackupIfDue() }
+                var tick = 0
                 while (true) {
+                    // v4.0: qurilma holati (biriktirish/bloklash) — har daqiqada; Admin ham ro'yxatda ko'rinsin
+                    if (tick++ % 2 == 0) checkDevice()
                     kotlinx.coroutines.delay(30_000)
                     val cat = ServiceLocator.catalog.state.value
                     val due = System.currentTimeMillis() - cat.lastSyncAt >= com.ilxomjon.dur_novvot_dokon.data.AutoUpdate.intervalMs()
@@ -114,6 +121,40 @@ class MainActivity : AppCompatActivity(), Navigator {
                     }
                 }
             }
+        }
+    }
+
+    /** v4.0: ilova yangilanishi. [force] — Sozlamalardan "Tekshirish" bosilganda (topilmasa ham xabar beradi). */
+    fun checkUpdate(force: Boolean) {
+        val u = ServiceLocator.updater
+        if (!u.enabled) { if (force) android.widget.Toast.makeText(this, R.string.up_off, android.widget.Toast.LENGTH_LONG).show(); return }
+        lifecycleScope.launch {
+            val info = runCatching { u.check(force) }.getOrNull()
+            if (info == null) { if (force) android.widget.Toast.makeText(this@MainActivity, R.string.up_none, android.widget.Toast.LENGTH_SHORT).show(); return@launch }
+            if (!force && u.snoozed(info)) return@launch
+            val t = uz.imsoft.shared.android.AppUpdater.Texts(
+                getString(R.string.up_title), getString(R.string.up_body), getString(R.string.up_install), getString(R.string.up_later),
+                getString(R.string.up_loading), getString(R.string.up_error), getString(R.string.up_permission),
+            )
+            u.prompt(this@MainActivity, info, t) { block -> lifecycleScope.launch { block() } }
+        }
+    }
+
+    /**
+     * v4.0: Admin bu telefonni bloklasa yoki boshqa agentga biriktirsa — darhol amal qiladi (ma'lumot ko'rsatilmaydi,
+     * kutish ekrani chiqadi). Internet yo'q — hech narsa o'zgarmaydi (oxirgi holat bilan ishlayveradi).
+     */
+    private suspend fun checkDevice() {
+        val d = ServiceLocator.device() ?: return
+        val before = d.cached()
+        val a = runCatching { d.sync() }.getOrElse { return }
+        if (!ServiceLocator.deviceMode || !loggedIn) return
+        val current = ServiceLocator.catalog.state.value.agent?.id.orEmpty()
+        // Eski usulda kirgan agent (hali biriktirilmagan) — chiqarib yuborilmaydi; Admin biriktirgach shu qoida ishlaydi
+        val kick = if (a == null) before != null else a.blocked || (a.agentId.isNotEmpty() && a.agentId != current)
+        if (kick) {
+            runCatching { ServiceLocator.auth.logout() }
+            onLoggedOut()
         }
     }
 
@@ -290,8 +331,10 @@ class MainActivity : AppCompatActivity(), Navigator {
 
     private fun showLogin() {
         clearAll()
+        // v4.0: kalitsiz (Admin biriktiradi) — kirish oynasi o'rniga kutish ekrani
+        val f: Fragment = if (ServiceLocator.deviceMode) com.ilxomjon.dur_novvot_dokon.ui.login.DeviceWaitFragment() else LoginFragment()
         supportFragmentManager.beginTransaction().setReorderingAllowed(true)
-            .replace(R.id.container, LoginFragment(), TAG_LOGIN).commit()
+            .replace(R.id.container, f, TAG_LOGIN).commit()
         updateChrome()
     }
 

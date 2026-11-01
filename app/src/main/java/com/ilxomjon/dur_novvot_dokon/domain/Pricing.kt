@@ -14,6 +14,12 @@ object Pricing {
      */
     @Volatile var level12: (productId: String, level: Int) -> Double? = { _, _ -> null }
 
+    /**
+     * v4.0: kelgan narx — OXIRGI kirimdagi narx (so'm, $), o'rtacha emas. Admin: 1C kirim hujjatlaridan; Agent: Admin
+     * katalog bilan yuboradi. Yo'q bo'lsa — serverdagi narx.
+     */
+    @Volatile var lastCost: (productId: String) -> Pair<Double, Double>? = { null }
+
     fun unitPrice(p: Product, type: PriceType, currency: Currency, rate: Double): Double =
         unitPrice(p, PriceType.levelOf(type), currency, rate)
 
@@ -42,14 +48,15 @@ object Pricing {
 
     /** Kelgan (kirim) narx: shu valyutada. Mahsulotning asosiy valyutasi qoidasi narxniki bilan bir xil. */
     fun costPrice(p: Product, currency: Currency, rate: Double): Double {
+        val (cs, cu) = lastCost(p.id)?.takeIf { it.first > 0 || it.second > 0 } ?: (p.costSom to p.costUsd)
         val baseSom: Double
         val baseUsd: Double
         if (p.baseIsSom) {
-            baseSom = p.costSom
-            baseUsd = if (rate > 0) p.costSom / rate else 0.0
+            baseSom = if (cs > 0) cs else cu * rate
+            baseUsd = if (rate > 0) baseSom / rate else 0.0
         } else {
-            baseUsd = p.costUsd
-            baseSom = p.costUsd * rate
+            baseUsd = if (cu > 0) cu else if (rate > 0) cs / rate else 0.0
+            baseSom = baseUsd * rate
         }
         return Money.round2(if (currency == Currency.SOM) baseSom else baseUsd)
     }

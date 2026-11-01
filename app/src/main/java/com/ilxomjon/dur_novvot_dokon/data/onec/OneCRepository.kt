@@ -55,6 +55,36 @@ class OneCRepository(private val context: Context, private val store: ShareStore
 
     val ready: Boolean get() = store.isCloudReady && inbox.isNotEmpty()
 
+    @Volatile private var costsOf: Suppliers? = null
+    @Volatile private var costs: Map<String, Pair<Double, Double>> = emptyMap()
+
+    /**
+     * v4.0: oxirgi kirim narxi (so'm, $) tovar kodi bo'yicha — ta'minotchilar kirim hujjatlaridan (eng yangisi).
+     * Agentlarga katalog bilan boradi; "Kelgan narx" va foyda shu bilan hisoblanadi.
+     */
+    fun lastCosts(): Map<String, Pair<Double, Double>> {
+        val s = _state.value.suppliers ?: return emptyMap()
+        if (s === costsOf) return costs
+        val out = HashMap<String, Pair<Double, Double>>()
+        val stampOf = HashMap<String, Long>()
+        for (sup in s.list) for (d in sup.docs) {
+            if (d.kind != uz.imsoft.shared.onec.OneCDoc.RECEIPT) continue
+            for (l in d.lines) {
+                val key = l.code
+                if (key.isEmpty()) continue
+                if ((stampOf[key] ?: 0L) > d.stamp) continue
+                if (l.priceSom <= 0 && l.priceUsd <= 0) continue
+                stampOf[key] = d.stamp
+                out[key] = l.priceSom to l.priceUsd
+            }
+        }
+        costsOf = s
+        costs = out
+        return out
+    }
+
+    fun lastCost(productId: String): Pair<Double, Double>? = lastCosts()[productId]
+
     suspend fun load() = mutex.withLock {
         if (loaded) return@withLock
         withContext(Dispatchers.IO) {

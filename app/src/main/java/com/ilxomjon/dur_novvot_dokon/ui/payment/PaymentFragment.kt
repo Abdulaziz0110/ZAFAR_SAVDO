@@ -59,10 +59,11 @@ class PaymentFragment : Fragment() {
         binding.edtClick.onTextChanged(amountWatcher)
 
         val s0 = vm.state.value
-        binding.chipPrinter1.text = getString(R.string.finish_printer_n, 1)
-        binding.chipPrinter2.text = getString(R.string.finish_printer_n, 2)
-        binding.chipPrinter3.text = getString(R.string.finish_printer_n, 3)
-        binding.chipPrinter.check(when (s0.printer) { "2" -> R.id.chipPrinter2; "3" -> R.id.chipPrinter3; else -> R.id.chipPrinter1 })
+        // v4.0: do'konda bitta printer — "Printer 1 (do'kon)" yoki "Cheksiz"
+        binding.chipPrinter1.text = getString(R.string.pr_shop)
+        binding.chipPrinter2.visibility = android.view.View.GONE
+        binding.chipPrinter3.text = getString(R.string.finish_no_printer)
+        binding.chipPrinter.check(when (s0.printer) { "3" -> R.id.chipPrinter3; else -> R.id.chipPrinter1 })
         binding.chipPrinter.setOnCheckedStateChangeListener { _, ids ->
             vm.setPrinter(when (ids.firstOrNull()) { R.id.chipPrinter2 -> "2"; R.id.chipPrinter3 -> "3"; else -> "1" })
         }

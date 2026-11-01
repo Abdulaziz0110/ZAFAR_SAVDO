@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- v4.0: ilova o'zi yangilanadi (yangi APK'ni o'rnatish oynasini ochish uchun) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Chek printeri: doimiy ishlaydigan servis (USB printer = "connectedDevice") -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

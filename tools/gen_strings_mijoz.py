@@ -322,7 +322,37 @@ for _k in LEDGER:
     assert _k not in STRINGS, _k
 STRINGS.update(LEDGER)
 
+STRINGS.update({
+ # v4.0: kalitsiz ishlash (qurilma kutish ekrani)
+ 'dw_title': "Telefon ro'yxatga olindi",
+ 'dw_text': "Admin ilovasida ▸ Boshqaruv ▸ Qurilmalar'da shu telefonni tanlab, kimligini belgilaydi. Shundan keyin ilova o'zi ochiladi — hech narsa yozish shart emas.",
+ 'dw_phone': '%1$s\nTelefon kodi: %2$s',
+ 'dw_wait': 'Admin belgilashini kutyapmiz…', 'dw_offline': "Internet yo'q — ulanish kutilmoqda…",
+ 'dw_blocked': 'Bu telefon bloklangan', 'dw_blocked_sub': "Admin bu telefonni to'xtatgan. Savol bo'lsa do'kon egasiga murojaat qiling.",
+})
+
 OVERRIDES = {}
+
+STRINGS.update({
+ # v4.0: o'zi yangilanish
+ 'up_title': 'Yangi versiya: %1$s', 'up_body': "Ilovaning yangi versiyasi tayyor. O'rnatilsa ma'lumotlar saqlanib qoladi.",
+ 'up_install': "O'rnatish", 'up_later': 'Keyinroq', 'up_loading': 'Yuklanmoqda…', 'up_error': "Yuklab bo'lmadi: %1$s",
+ 'up_permission': "Telefon ruxsat so'radi: ochilgan oynada \"Ruxsat berish\"ni yoqing, orqaga qayting va yana \"O'rnatish\"ni bosing.",
+ 'up_none': "Eng yangi versiya o'rnatilgan", 'up_off': "Bu versiyada o'zi yangilanish yoqilmagan (GitHub'da SHOP_CODE qo'yilmagan)",
+ 'up_check': 'Yangilanishni tekshirish',
+})
+
+STRINGS.update({
+ # v4.0: statistika
+ 'ms_tile_stats': 'Statistika',
+ 'stt_title': 'Statistika', 'stt_day': 'Kun', 'stt_week': 'Hafta', 'stt_month': 'Oy', 'stt_year': 'Yil',
+ 'stt_payments': "To'lov", 'stt_returns': 'Qaytarish',
+ 'stt_selected': '%1$s: %2$s', 'stt_total': '%1$s bo\'yicha, grafikdagi jami: %2$s',
+ 'stt_prices': "Narxi o'zgargan tovarlar", 'stt_empty': "Bu davrda yozuv yo'q", 'stt_change': '%1$s → %2$s',
+ 'stt_bought': 'Bizdan olganlaringiz', 'stt_bought_hint': "Olingan tovarlar va to'lovlar. \"Yil\" tanlansa — boshidan beri.",
+ 'stt_bought_m': 'Olingan tovar', 'stt_bought_top': "Olgan tovarlarim (eng ko'pi tepada)",
+ 'stt_own': "O'z savdolaringiz", 'stt_own_m': 'Savdo', 'stt_own_top': "Eng ko'p sotgan tovarlaringiz",
+})
 
 if __name__ == '__main__':
     base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'mijoz', 'src', 'main', 'res')

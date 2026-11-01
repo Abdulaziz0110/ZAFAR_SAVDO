@@ -88,6 +88,9 @@ class ShareStore(private val context: Context) {
         set(v) { if (v == null || v.isEmpty()) logoFile.delete() else logoFile.writeBytes(v) }
     /** v3.0 Admin: agentlar ko'prigi kaliti (g/{kalit}) — Agent ulanish kodida boradi. */
     var agentKey: String get() = s("agent_key"); set(v) = put("agent_key", v)
+    /** v4.0 Admin: qurilmalar ro'yxati kaliti (d/{kalit}) — Agent/Mijoz kalitsiz ulanadi, Admin biriktiradi. */
+    val devKey: String
+        get() = s("dev_key").ifEmpty { CloudDb.newKey().also { put("dev_key", it) } }
     /** v3.0 Admin: ko'prik yoqilgan (fonda ishlaydi). */
     /** v3.1: standart — yoqilgan (Firebase sozlangan bo'lsa ko'prik o'zi ishlaydi; foydalanuvchi o'chirishi mumkin). */
     var relayOn: Boolean get() = prefs.getBoolean("relay_on", true); set(v) = prefs.edit().putBoolean("relay_on", v).apply()

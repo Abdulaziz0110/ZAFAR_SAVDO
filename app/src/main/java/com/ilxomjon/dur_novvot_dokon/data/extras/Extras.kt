@@ -52,11 +52,17 @@ object Extras {
 
     // ---------------- ekran o'lchami va shrift ----------------
 
+    /** Ilovadagi eng katta shrift ko'paytuvchisi (tizimniki x ilovaniki). */
+    const val MAX_FONT = 1.15f
+
     /** Activity konteksti: zichlik va shrift foydalanuvchi tanlagan ko'paytuvchi bilan. */
     fun wrap(base: Context, prefs: AppPrefs): Context {
         val scale = prefs.uiScale.coerceIn(0.75f, 1.3f)
         val font = prefs.fontScale.coerceIn(0.8f, 1.4f)
-        if (scale == 1.0f && font == 1.0f) return base
+        // v4.0: tizim shrifti juda katta bo'lsa ham ilovada 1.15 dan oshmaydi (yozuvlar chegaradan chiqmasin)
+        val sys = base.resources.configuration.fontScale
+        val total = (sys * font).coerceIn(0.8f, MAX_FONT)
+        if (scale == 1.0f && total == sys) return base
         val cfg = Configuration(base.resources.configuration)
         if (scale != 1.0f) {
             val sysDpi = cfg.densityDpi.takeIf { it > 0 } ?: base.resources.displayMetrics.densityDpi
@@ -68,7 +74,7 @@ object Extras {
             if (cfg.screenHeightDp > 0) cfg.screenHeightDp = (cfg.screenHeightDp * k).toInt()
             if (cfg.smallestScreenWidthDp > 0) cfg.smallestScreenWidthDp = (cfg.smallestScreenWidthDp * k).toInt()
         }
-        cfg.fontScale = cfg.fontScale * font
+        cfg.fontScale = total
         return base.createConfigurationContext(cfg)
     }
 

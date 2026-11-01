@@ -28,11 +28,11 @@ import shutil
 
 log = logging.getLogger("onec_export")
 
-KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "undo"}
+KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "undo"}
 DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
           "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
 # ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
-GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc"}
+GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc", "rate"}
 PRICE_KEYS = ("p1", "p2", "p3", "p4", "pin")
 KEEP_BACKUPS = 7
 
@@ -126,6 +126,10 @@ def problem(req):
         vals = [req[x] for x in ("ns", "nu", "ps", "pu", "ks")]
         if min(vals) < 0 or sum(vals) <= 0:
             return "summa noto'g'ri"
+    elif k == "rt":
+        r = _fnum(req["f"].get("rate"))
+        if r is None or not 0 < r < 1000000:
+            return "kurs noto'g'ri"
     elif k in ("ge", "ng"):
         f = req["f"]
         if not req["party"] and not req["party_code"]:
@@ -324,6 +328,8 @@ class Writer:
                 return self.goods_edit(c, req)
             if k == "ng":
                 return self.new_goods(c, req)
+            if k == "rt":
+                return self.set_rate(c, req)
             return self.document(c, req)
         except WriteError as e:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)}
@@ -681,14 +687,34 @@ class Writer:
         self.goods_changed = True
         return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Код), "ref": self.uuid_of(c, obj.Ссылка), "doc": "Товары", "new": True, "bc": bc}
 
+    # --- v4.0: dollar kursi ---
+    def set_rate(self, c, req):
+        rate = round(_fnum(req["f"].get("rate")), 2)
+        old = c.Константы.Курс.Получить()
+        c.Константы.Курс.Установить(rate)
+        try:
+            m = c.РегистрыСведений.Курс.СоздатьМенеджерЗаписи()
+            m.Дата = self.now()
+            m.Сумма = rate
+            m.Записать()
+        except Exception:  # noqa: BLE001 — tarix registri bo'lmasa ham kurs o'rnatildi
+            log.warning("Курс registriga yozilmadi")
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(rate), "ref": "rate", "doc": "Курс", "old": {"rate": self._plain(old)}}
+
     def undo(self, c, req):
         t = self.journal.get(req["target"])
         if t is None or not t.get("ok") or not t.get("ref"):
             raise WriteError("bekor qilinadigan yozuv jurnalda topilmadi")
         if t.get("st") == "skip":
             return {"id": req["id"], "ok": True, "st": "done", "no": t.get("no", ""), "ref": t["ref"], "e": "o'zgartirilmagan edi"}
-        uid = c.NewObject("УникальныйИдентификатор", t["ref"])
         doc = t.get("doc", "")
+        if doc == "Курс":
+            old = (t.get("old") or {}).get("rate")
+            if old:
+                c.Константы.Курс.Установить(old)
+            self.journal.add(dict(t, st="undone", undone_by=req["id"]))
+            return {"id": req["id"], "ok": True, "st": "done", "no": str(old or ""), "ref": "rate"}
+        uid = c.NewObject("УникальныйИдентификатор", t["ref"])
         if doc == "Товары":
             obj = c.Справочники.Товары.ПолучитьСсылку(uid).ПолучитьОбъект()
             if obj is None:

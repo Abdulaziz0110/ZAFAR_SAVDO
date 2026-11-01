@@ -338,6 +338,9 @@ object Ui {
                 maxLines = 2
                 insetTop = 0
                 insetBottom = 0
+                minWidth = 0
+                minimumWidth = 0
+                iconPadding = 0
                 setPadding(dp(ctx, 2), paddingTop, dp(ctx, 2), paddingBottom)
             }
             ids += b.id

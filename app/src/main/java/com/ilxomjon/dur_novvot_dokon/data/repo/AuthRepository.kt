@@ -33,6 +33,12 @@ class AuthRepository(
         return true
     }
 
+    /** v4.0: Admin bu telefonni agentga biriktirdi — parolsiz kirish. */
+    suspend fun loginAs(agent: com.ilxomjon.dur_novvot_dokon.data.local.RawAgent) {
+        withContext(Dispatchers.IO) { dao.saveAgent(agent) }
+        catalog.load()
+    }
+
     suspend fun logout() {
         draft.finish()
         withContext(Dispatchers.IO) { dao.clearAgent() }

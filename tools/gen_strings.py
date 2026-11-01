@@ -496,7 +496,7 @@ STRINGS.update({
 
 STRINGS.update({
  # v2.6
- 'finish_no_printer': 'Printersiz (cheksiz)',
+ 'finish_no_printer': 'Cheksiz',
  'sale_zeroed': '%1$s savatchadan olindi',
  'back_again_to_exit': 'Chiqish uchun yana bir marta bosing',
 
@@ -1216,6 +1216,86 @@ STRINGS.update({
  'of_click_som': "Click (so'm)", 'of_click_usd': 'Click ($)', 'of_discount_som': "Chegirma (so'm)",
  'of_err_product': 'Tovarni tanlang', 'of_err_op': 'Kassa moddasini tanlang', 'of_err_empty': "Hech narsa o'zgartirilmadi",
  'of_err_price': "Narx noto'g'ri", 'of_err_plu': "PLU noto'g'ri (0-99999)", 'of_err_name': "Tovar nomi kamida 2 harf bo'lsin",
+})
+
+STRINGS.update({
+ # v4.0: kalitsiz ishlash (qurilma kutish ekrani)
+ 'dw_title': "Telefon ro'yxatga olindi",
+ 'dw_text': "Admin ilovasida ▸ Boshqaruv ▸ Qurilmalar'da shu telefonni tanlab, kimligini belgilaydi. Shundan keyin ilova o'zi ochiladi — hech narsa yozish shart emas.",
+ 'dw_phone': '%1$s\nTelefon kodi: %2$s',
+ 'dw_wait': 'Admin belgilashini kutyapmiz…', 'dw_offline': "Internet yo'q — ulanish kutilmoqda…",
+ 'dw_blocked': 'Bu telefon bloklangan', 'dw_blocked_sub': "Admin bu telefonni to'xtatgan. Savol bo'lsa do'kon egasiga murojaat qiling.",
+ 'dw_other': 'Ulanish kodi bilan kirish',
+ # v4.0: Admin ▸ Qurilmalar
+ 'dv_title': 'Qurilmalar', 'dv_sub': "Agent va Mijoz telefonlari: kimligi, bloklash, xatolar",
+ 'dv_hint': "Agent va Mijoz ilovasi ochilishi bilan telefon shu yerda paydo bo'ladi. Bosing va kimligini belgilang — telefonda kod yoki parol kerak emas. Bloklangan telefonda ma'lumot ko'rinmaydi.",
+ 'dv_shop_code': "Do'kon kodi (GitHub uchun)", 'dv_shop_code_sub': "Bir marta: GitHub'ga SHOP_CODE nomi bilan qo'yiladi",
+ 'dv_shop_code_how': "Shu kodni nusxalab GitHub'ga qo'ying (bir marta):\nrepo ▸ Settings ▸ Secrets and variables ▸ Actions ▸ New repository secret\nName: SHOP_CODE\nSecret: kod\n\nShundan keyingi build'dagi Agent va Mijoz ilovalari kalitsiz ishlaydi va o'zi yangilanadi.\n\n%1$s",
+ 'dv_iphone': 'iPhone uchun havola', 'dv_iphone_sub': "iPhone agentga yuboring — bosishi bilan ulanadi",
+ 'dv_iphone_text': "Savdo Agent (iPhone): havolani Safari'da oching, keyin Ulashish ▸ \"Bosh ekranga qo'shish\".\n%1$s",
+ 'dv_new': 'Yangi — belgilang', 'dv_agents': 'Agentlar', 'dv_clients': 'Mijoz telefonlari', 'dv_blocked': 'Bloklangan', 'dv_admins': 'Admin',
+ 'dv_empty': "Hali hech qaysi telefon yo'q. Agent yoki Mijoz ilovasini (yangi versiya) oching — shu yerda paydo bo'ladi.",
+ 'dv_code': 'kodi %1$s', 'dv_seen': 'oxirgi: %1$s', 'dv_crash': '⚠ xato bor', 'dv_updated': 'Yangilangan: %1$s',
+ 'dv_offline': "Internet yo'q — oxirgi ma'lum ro'yxat",
+ 'dv_as_agent': 'Agent sifatida belgilash', 'dv_as_client': 'Mijozga biriktirish', 'dv_block': 'Bloklash', 'dv_unblock': 'Blokdan chiqarish',
+ 'dv_block_q': "Bu telefonda ma'lumot ko'rsatilmaydi va undan savdo qabul qilinmaydi. Bloklaysizmi?",
+ 'dv_show_crash': "Xatoni ko'rish", 'dv_remove': "Ro'yxatdan o'chirish", 'dv_done': 'Saqlandi — telefon bir daqiqada o\'zgaradi',
+ 'dv_agents_fail': "Agentlar ro'yxatini serverdan olib bo'lmadi (Tailscale yoqilganmi?)",
+ 'dv_no_clients': "Mijozlar yo'q: avval Boshqaruv ▸ Mijozlar bilan ulashishda mijoz qo'shing",
+ 'dv_label': 'Ism (masalan: Dadaxon aka — Sardor)', 'dv_label_hint': "Bu ism savdo va so'rovlarda \"kim\" bo'lib ko'rinadi",
+ 'dv_crash_title': 'Xato (%1$s)', 'dv_copy': 'Nusxalash', 'dv_copied': 'Nusxalandi',
+})
+
+STRINGS.update({
+ # v4.0: o'zi yangilanish
+ 'up_title': 'Yangi versiya: %1$s', 'up_body': "Ilovaning yangi versiyasi tayyor. O'rnatilsa ma'lumotlar saqlanib qoladi.",
+ 'up_install': "O'rnatish", 'up_later': 'Keyinroq', 'up_loading': 'Yuklanmoqda…', 'up_error': "Yuklab bo'lmadi: %1$s",
+ 'up_permission': "Telefon ruxsat so'radi: ochilgan oynada \"Ruxsat berish\"ni yoqing, orqaga qayting va yana \"O'rnatish\"ni bosing.",
+ 'up_none': "Eng yangi versiya o'rnatilgan", 'up_off': "Bu versiyada o'zi yangilanish yoqilmagan (GitHub'da SHOP_CODE qo'yilmagan)",
+ 'up_check': 'Yangilanishni tekshirish',
+})
+
+STRINGS.update({
+ # v4.0: yagona ro'yxat
+ 'history_all': 'Hammasi', 'pending_1c': "⏳ 1C'ga ketmoqda",
+ 'of_suggest': '4-narx taklifi: %1$s + 2 000 = %2$s', 'of_suggest_sub': "Oxirgi kelgan narx bo'yicha. Bosing — 4-narxga yoziladi (o'zi qo'yilmaydi)",
+ 'pr_shop': "Printer 1 (do'kon)", 'pr_branch': 'Printer 2 (filial)', 'pr_both': 'Ikkalasi',
+})
+
+STRINGS.update({
+ # v4.0: statistika
+ 'stt_title': 'Statistika', 'stt_hint': "1C'dagi barcha savdo va to'lovlar bo'yicha (telefonda qilingan, hali 1C'ga yetmaganlari ham). Ustunni bosing — qiymati ko'rinadi.",
+ 'stt_day': 'Kun', 'stt_week': 'Hafta', 'stt_month': 'Oy', 'stt_year': 'Yil',
+ 'stt_sales': 'Savdo', 'stt_payments': "To'lov", 'stt_returns': 'Qaytarish', 'stt_profit': 'Foyda',
+ 'stt_selected': '%1$s: %2$s', 'stt_total': '%1$s bo\'yicha, grafikdagi jami: %2$s',
+ 'stt_top': "Eng ko'p sotilgan tovarlar", 'stt_prices': "Narxi o'zgargan tovarlar", 'stt_empty': "Bu davrda savdo yo'q", 'stt_change': '%1$s → %2$s',
+ # v4.0: Boss
+ 'boss_title': 'Boss', 'boss_card_sub': "Bugungi savdo, foyda, qarzlar, agentlar, tizim holati",
+ 'boss_line': 'Bugun: %1$s · foyda %2$s · tushum %3$s',
+ 'boss_today': 'Bugun', 'boss_docs_vs': '%1$d ta hujjat · kecha %2$s', 'boss_profit_sub': "Sotilgan narx − oxirgi kelgan narx",
+ 'boss_income': 'Tushum (to\'lovlar)', 'boss_income_sub': "Mijozlar to'lagan pul",
+ 'boss_debts': 'Qarzlar', 'boss_debt_total': 'Jami qarz · %1$d ta mijoz', 'boss_debt_sub': "Serverdan oxirgi yangilangan. Bosing — ro'yxat",
+ 'boss_agents': 'Agentlar (bugun)', 'boss_agents_none': "Bugun agentlardan savdo kelmadi",
+ 'boss_agent_id': 'Agent #%1$s', 'boss_agent_sub': "%1$d ta yozuv · to'lov %2$s",
+ 'boss_system': 'Tizim holati', 'boss_pc': 'Kompyuter (1C)', 'boss_server': 'Server (SQL)', 'boss_cloud': 'Bulut (Firebase)',
+ 'boss_cloud_sub': "Agent va Mijoz telefonlari bilan aloqa", 'boss_last': 'oxirgi: %1$s', 'boss_never': "hali aloqa bo'lmagan",
+ 'rt_title': 'Dollar kursi', 'rt_sub': "1C'dagi kursni telefondan o'zgartirish",
+ 'rt_hint': "Yangi kurs 1C'ga yoziladi: bundan keyingi hujjatlar shu kurs bilan. Xato bo'lsa \"Bekor qilish\" eskisini qaytaradi.",
+ 'rt_now': 'Hozirgi kurs: %1$s', 'rt_new': "Yangi kurs (1 $ = so'm)", 'rt_bad': "Kurs noto'g'ri", 'rt_confirm': 'Kurs: %1$s → %2$s',
+ 'boss_paid_ago': "oxirgi to'lov %1$d kun oldin", 'boss_paid_never': "to'lov ko'rinmadi (1 yil)",
+ 'ev_title': 'Bugungi hisobot', 'ev_text': "Savdo: %1$s (%2$d ta)\nFoyda: %3$s\nTushum: %4$s\nUmumiy qarz: %5$s",
+ 'boss_ok': '✓ ishlayapti', 'boss_bad': '⚠ tekshiring', 'boss_devices_sub': '%1$d tasi onlayn (jami %2$d)', 'boss_crashes': '%1$d tasida xato',
+})
+
+STRINGS.update({
+ # v4.0: sozlamalar (qaytadan)
+ 'sg_admin': 'Admin', 'sg_agent': 'Agent', 'sg_version': 'versiya %1$s',
+ 'sg_font': 'Yozuv o\'lchami', 'sg_font_s': 'Kichik', 'sg_font_m': "O'rta", 'sg_font_l': 'Katta',
+ 'sg_work': 'Ish', 'sg_queue': 'Yuborilmagan navbat', 'sg_stats_sub': 'Kun, hafta, oy, yil grafiklari',
+ 'sg_scanner': 'Skaner va tarozi kodlari', 'sg_scanner_sub': "Shtrix kod sozlamalari, sinash, tovush",
+ 'sg_system': 'Tizim (faqat Admin)', 'sg_server_sub': "SQL server manzili (Tailscale)",
+ 'sg_help': 'Yordam', 'sg_update_sub': "Yangi versiya bormi — tekshirish va o'rnatish", 'sg_diag': 'Diagnostika',
+ 'sg_more': 'Boshqa sozlamalar', 'sg_more_sub': "Sevimli do'konlar, zaxira, qo'shimcha imkoniyatlar (eski to'liq ekran)",
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

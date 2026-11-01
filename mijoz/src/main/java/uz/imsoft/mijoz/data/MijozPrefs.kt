@@ -83,6 +83,8 @@ class MijozPrefs(context: Context) {
     // ---------------- chek printeri ----------------
     /** "Printer" bo'limi ko'rinsin (2-filial telefoni). */
     var printerSection: Boolean get() = b("printer_section", false); set(v) = putB("printer_section", v)
+    /** v4.0: kalitsiz ulanishda printer bir marta o'zi yoqilgan (keyin foydalanuvchi tanlovi saqlanadi). */
+    var devPrinterSet: Boolean get() = b("dev_printer_set", false); set(v) = putB("dev_printer_set", v)
     /** Servis yoqilgan (foydalanuvchi "Serverni yoqish" bosgan). */
     var printerOn: Boolean get() = b("printer_on", false); set(v) = putB("printer_on", v)
     /** 1-ilova savdolari chekini qabul qilish (bulutdagi sozlamaning nusxasi). */

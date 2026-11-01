@@ -49,6 +49,14 @@ class RelayHost(
         suspend fun barcode(productId: String, name: String, code: String): Boolean = false
         /** v3.12: "Shtrix kod → 1C" ro'yxati birdaniga: (tovar id, kod). @return navbatga qo'yilganlar soni. */
         suspend fun barcodes(items: List<Pair<String, String>>): Int = 0
+        /** v4.0: chek Mijoz ilovasi (filial) printerida chiqishi mumkin bo'lgan do'konlar id'si. */
+        fun branchStores(): List<String> = emptyList()
+        /** v4.0: savdo/to'lov serverga yozildi (agent statistikasi uchun). */
+        fun written(agentId: String, type: String, payload: String) = Unit
+        /** v4.0: oxirgi kirim narxi (tovar id -> so'm, $). */
+        fun lastCosts(): Map<String, Pair<Double, Double>> = emptyMap()
+        /** v4.0: Admin bloklagan qurilma (undan kelgan savdo/to'lov qabul qilinmaydi). */
+        fun blockedDevice(deviceId: String): Boolean = false
         /** v3.10: 1- va 2-narx (so'm, 1C'dan) — iPhone (veb) agentlar uchun: tovar id -> [1-narx, 2-narx]. */
         fun level12(productIds: List<String>): Map<String, List<Double>> = emptyMap()
     }
@@ -158,6 +166,11 @@ class RelayHost(
         val p = o["p"]?.toString().orEmpty()
         // Avval natija bormi (qayta yuborilgan) — bo'lsa faqat navbatdan olib tashlanadi
         if (io { db.get(c.path("obr/$oid")) } != null) { io { db.delete(c.path("ob/$oid")) }; return false }
+        val dev = o["d"]?.toString().orEmpty()
+        if (dev.isNotEmpty() && hooks.blockedDevice(dev)) {
+            io { db.put(c.path("obr/$oid"), linkedMapOf("at" to CloudDb.SERVER_TIME, "st" to "rej", "m" to "blocked")); db.delete(c.path("ob/$oid")) }
+            return false
+        }
         if (u.isEmpty() || t !in setOf("1", "4") || RelayCodec.oid(u, t, p) != oid) {
             io { db.put(c.path("obr/$oid"), linkedMapOf("at" to CloudDb.SERVER_TIME, "st" to "rej", "m" to "bad_item")); db.delete(c.path("ob/$oid")) }
             return false
@@ -171,6 +184,7 @@ class RelayHost(
         }
         io { db.put(c.path("obr/$oid"), linkedMapOf("at" to CloudDb.SERVER_TIME, "st" to "ok", "id" to id)) }
         io { db.delete(c.path("ob/$oid")) }
+        runCatching { hooks.written(u, t, p) }
         // 2-filial cheki ko'zgusi (savdo bo'lsa)
         o["m"]?.toString()?.let { RelayCodec.saleFromJson(it) }?.let { sale ->
             runCatching { hooks.mirrorSale(sale, "r" + oid.take(16)) }
@@ -217,7 +231,9 @@ class RelayHost(
         val at = now()
         // "at" ham blob ichida — o'zgarish faqat ma'lumotdan aniqlanadi (vaqtsiz)
         val (blob, hash) = withContext(Dispatchers.Default) {
-            RelayCodec.pack(RelayCodec.catalogToJson(snap, agents, at)) to RelayCodec.catalogToJson(snap, agents, 0L).hashCode()
+            val br = hooks.branchStores()
+            val lc = hooks.lastCosts()
+            RelayCodec.pack(RelayCodec.catalogToJson(snap, agents, at, br, lc)) to RelayCodec.catalogToJson(snap, agents, 0L, br, lc).hashCode()
         }
         // O'zgarmagan bo'lsa faqat vaqt yangilanadi (trafik tejaladi; agent "yangi" ekanini vaqtdan biladi)
         if (hash == catalogHash) io { db.update(cfg.path("cat"), linkedMapOf("at" to at)) }

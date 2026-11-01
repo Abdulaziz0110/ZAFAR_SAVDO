@@ -190,6 +190,16 @@ class OneCFormFragment : CodeFragment() {
         goodsBox.addView(Ui.section(ctx, getString(R.string.of_prices_sec, cur)))
         val labels = listOf(GoodsField.P1 to R.string.of_p1, GoodsField.P2 to R.string.of_p2, GoodsField.P3 to R.string.of_p3, GoodsField.P4 to R.string.of_p4, GoodsField.COST to R.string.of_cost)
         for ((k, res) in labels) goodsInputs[k] = Ui.field(ctx, getString(res), Ui.NUMBER, prefill[k].orEmpty()).also { goodsBox.addView(it.first) }.second
+        // v4.0: 4-narx taklifi — oxirgi kelgan narx + 2 000 so'm (o'zi qo'yilmaydi, bosilsa yoziladi)
+        val last = ServiceLocator.onec.lastCost(p.id)
+        val cost = if (p.baseIsSom) last?.first ?: 0.0 else 0.0
+        if (cost > 0) {
+            val sug = cost + SUGGEST_MARKUP
+            goodsBox.addView(Ui.item(ctx, getString(R.string.of_suggest, som(cost), som(sug)), getString(R.string.of_suggest_sub), icon = R.drawable.ic_calculate) {
+                goodsInputs[GoodsField.P4]?.setText(Money.plain(sug))
+                if (goodsInputs[GoodsField.COST]?.text.isNullOrBlank()) goodsInputs[GoodsField.COST]?.setText(Money.plain(cost))
+            })
+        }
         goodsBox.addView(Ui.section(ctx, getString(R.string.of_other_sec)))
         goodsInputs[GoodsField.PLU] = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, prefill[GoodsField.PLU].orEmpty()).also { goodsBox.addView(it.first) }.second
         if (kind == WriteKind.GOODS_EDIT) goodsInputs[GoodsField.NAME] = Ui.field(ctx, getString(R.string.of_name), value = p.name).also { goodsBox.addView(it.first) }.second
@@ -289,6 +299,8 @@ class OneCFormFragment : CodeFragment() {
         private const val ARG_KIND = "kind"
         private const val ARG_PRODUCT = "product"
         private const val REQ_STORE = "of_store"
+        /** 4-narx taklifi: kelgan narxga qo'shiladigan foyda (so'm). */
+        private const val SUGGEST_MARKUP = 2_000.0
 
         fun of(kind: String, productId: String = "") = OneCFormFragment().apply {
             arguments = Bundle().apply { putString(ARG_KIND, kind); putString(ARG_PRODUCT, productId) }

@@ -72,6 +72,16 @@
     view: 'home',
     params: {},
   };
+
+  // v4.0: Admin yuborgan havola (".../#c=IMSAG1:...") — bosilishi bilan ulanadi, kod yozish shart emas.
+  // Kod havolaning # qismida: serverga yuborilmaydi.
+  (function linkFromHash() {
+    var h = location.hash || '';
+    if (h.indexOf('#c=') !== 0) return;
+    var c = C.decodeCode(decodeURIComponent(h.slice(3)));
+    if (c) { S.cfg = c; LS.set('cfg', c); }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* */ }
+  })();
   function newDraft() { return { storeId: '', level: 4, usd: false, mode: '1', lines: [], discount: '', cash: '', card: '', printer: LS.get('printer', '1') }; }
   if (!S.draft) S.draft = newDraft();
   function saveDraft() { LS.set('draft', S.draft); }

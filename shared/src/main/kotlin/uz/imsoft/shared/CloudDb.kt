@@ -106,9 +106,10 @@ class CloudDb(
         /**
          * Qoidalar versiyasi: oshsa 1-ilova ularni o'zi qayta o'rnatadi (v2: 2-ilovadan buyurtma, v3: telefon+parol bilan kirish,
          * v4: agentlar "Admin orqali" — g/{kalit}/..., v5: 2-ilovadan to'lov va chek tuzatish so'rovlari — s/{kalit}/pay, ed,
-         * v6: agentlar Admin'ning "1C tarixi"ni o'qiydi — g/{kalit}/hist).
+         * v6: agentlar Admin'ning "1C tarixi"ni o'qiydi — g/{kalit}/hist,
+         * v7: kalitsiz ishlash — qurilmalar ro'yxati d/{kalit}/{id} (i, c — telefon yozadi; x — faqat Admin), savdoda qurilma id "d").
          */
-        const val RULES_VERSION = 6
+        const val RULES_VERSION = 7
 
         /** Ikki ilova uchun xavfsizlik qoidalari: ildizni hech kim o'qiy/yozolmaydi, faqat kalitni bilgan o'z joyini. */
         const val RULES = """{
@@ -171,6 +172,21 @@ class CloudDb(
     "p": {
       "${'$'}qk": { ".read": "${'$'}qk.length >= 24", ".write": "${'$'}qk.length >= 24" }
     },
+    "d": {
+      "${'$'}dk": {
+        "${'$'}id": {
+          ".read": "${'$'}dk.length >= 24 && ${'$'}id.length >= 24",
+          "i": {
+            ".write": "${'$'}dk.length >= 24 && ${'$'}id.length >= 24",
+            ".validate": "newData.hasChildren(['m', 'r'])"
+          },
+          "c": {
+            ".write": "${'$'}dk.length >= 24 && ${'$'}id.length >= 24",
+            ".validate": "newData.hasChildren(['at', 't']) && newData.child('t').isString() && newData.child('t').val().length <= 8000"
+          }
+        }
+      }
+    },
     "g": {
       "${'$'}gk": {
         "cat": { ".read": "${'$'}gk.length >= 24" },
@@ -201,6 +217,7 @@ class CloudDb(
             "t": { ".validate": "newData.val() == '1' || newData.val() == '4'" },
             "p": { ".validate": "newData.isString() && newData.val().length <= 60000" },
             "m": { ".validate": "newData.isString() && newData.val().length <= 60000" },
+            "d": { ".validate": "newData.isString() && newData.val().length <= 64" },
             "${'$'}other": { ".validate": false }
           }
         },

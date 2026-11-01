@@ -43,17 +43,22 @@ object DokonLedgerHost : LedgerHost {
     private val admin: Boolean get() = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
 
     override val ledgerData: StateFlow<LedgerData> by lazy {
-        if (admin) {
+        val base = if (admin) {
             ServiceLocator.adminHistory.data.map { LedgerData(it.entries, "", it.version, it.loaded) }
-                .stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
         } else {
             // v3.7 Agent: Admin yuborgan "1C tarixi" (barcha savdolar, 1 yil); bo'lmasa — avvalgidek tanlangan mijoz
             startAgentSync()
             kotlinx.coroutines.flow.combine(ServiceLocator.share.ledger, ServiceLocator.historyShare.agent) { l, a ->
                 if (a.entries.isNotEmpty()) LedgerData(a.entries, "", a.version * 2 + 1, true)
                 else LedgerData(l.entries, l.clientName, l.version * 2, l.loaded)
-            }.stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
+            }
         }
+        // v4.0 "Yagona ro'yxat": telefonda qilingan savdo/to'lov 1C'dan kelguncha tepada ("1C'ga ketmoqda")
+        val label = ServiceLocator.context.getString(R.string.pending_1c)
+        kotlinx.coroutines.flow.combine(base, ServiceLocator.localDocs) { d, locals ->
+            if (locals.isEmpty()) d
+            else LedgerData(uz.imsoft.shared.report.PendingMerge.merge(d.entries, locals, label), d.clientName, d.version * 65_536 + (locals.hashCode() and 0xFFFF), true)
+        }.stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false))
     }
 
     private fun startAgentSync() {

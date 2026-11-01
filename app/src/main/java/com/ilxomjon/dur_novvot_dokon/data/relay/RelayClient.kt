@@ -33,6 +33,9 @@ class RelayClient(
     private val sleep: suspend (Long) -> Unit = { delay(it) },
     private val now: () -> Long = { System.currentTimeMillis() },
 ) : Backend {
+    /** v4.0: shu telefonning qurilma id'si (savdo bilan boradi — Admin bloklagan telefondan qabul qilmaydi). */
+    @Volatile var deviceId: () -> String = { "" }
+
     /** Admin yuborgan 1C kodlari (PLU/shtrix/narx turlari) — yorliqlar uchun. */
     var onCodes: (suspend (ByteArray) -> Unit)? = null
 
@@ -127,6 +130,8 @@ class RelayClient(
         }
         val blob = io { db.get(c.path("cat/b")) } as? String ?: throw ServerException(ServerError.CONNECT, "admin_no_catalog")
         val cat = withContext(Dispatchers.Default) { RelayCodec.catalogFromJson(RelayCodec.unpack(blob)) }
+        saveBranches(cat.branches)
+        saveCosts(cat.lastCosts)
         runCatching { pullCodes(db, c) }
         val me = cat.agents.firstOrNull { it.id == agentId }
         // Ma'lumot o'zgarmagan bo'lsa Admin faqat vaqtni yangilaydi — "qachon tekshirilgan" shu vaqt
@@ -195,8 +200,15 @@ class RelayClient(
     private suspend fun push(db: CloudDb, c: RelayCodec.Config, oid: String, userId: String, type: String, payload: String) {
         val item = linkedMapOf<String, Any?>("at" to CloudDb.SERVER_TIME, "u" to userId, "t" to type, "p" to payload)
         saleFile(oid)?.takeIf { it.isFile }?.let { f -> runCatching { f.readText() }.getOrNull()?.let { item["m"] = it } }
+        deviceId().takeIf { it.isNotEmpty() }?.let { item["d"] = it }
         try {
-            io { db.put(c.path("ob/$oid"), item) }
+            try {
+                io { db.put(c.path("ob/$oid"), item) }
+            } catch (e: CloudDb.CloudException) {
+                // Admin hali eski qoidalarda (v7 dan oldin) — qurilma id'siz qayta (aks holda "bor" deb yo'qolib qolmasin)
+                if (!e.denied || item.remove("d") == null) throw e
+                io { db.put(c.path("ob/$oid"), item) }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: CloudDb.CloudException) {
@@ -230,12 +242,48 @@ class RelayClient(
 
     private fun saleFile(oid: String): File? = saleDir?.let { File(it, "$oid.json") }
 
+    private fun branchFile(): File? = saleDir?.parentFile?.let { File(it, "relay_branches.txt") }
+    @Volatile private var branchCache: List<String>? = null
+
+    /** v4.0: chek filial (Mijoz ilovasi) printerida chiqadigan do'konlar — Admin katalog bilan yuboradi. */
+    val branchStores: List<String>
+        get() = branchCache ?: runCatching { branchFile()?.takeIf { it.isFile }?.readLines()?.filter { it.isNotBlank() } }.getOrNull().orEmpty().also { branchCache = it }
+
+    private fun saveBranches(l: List<String>) {
+        branchCache = l
+        runCatching { branchFile()?.writeText(l.joinToString("\n")) }
+    }
+
+    private fun costFile(): File? = saleDir?.parentFile?.let { File(it, "relay_costs.json") }
+    @Volatile private var costCache: Map<String, Pair<Double, Double>>? = null
+
+    /** v4.0: oxirgi kirim narxlari (Admin 1C kirim hujjatlaridan yuboradi). */
+    val lastCosts: Map<String, Pair<Double, Double>>
+        get() = costCache ?: runCatching {
+            val f = costFile()?.takeIf { it.isFile } ?: return@runCatching emptyMap()
+            @Suppress("UNCHECKED_CAST")
+            (uz.imsoft.shared.Json.parse(f.readText()) as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) ->
+                val l = v as? List<Any?> ?: return@mapNotNull null
+                k to (((l.getOrNull(0) as? Number)?.toDouble() ?: 0.0) to ((l.getOrNull(1) as? Number)?.toDouble() ?: 0.0))
+            }.toMap()
+        }.getOrDefault(emptyMap()).also { costCache = it }
+
+    private fun saveCosts(m: Map<String, Pair<Double, Double>>) {
+        costCache = m
+        runCatching { costFile()?.writeText(uz.imsoft.shared.Json.write(m.mapValues { listOf(it.value.first, it.value.second) })) }
+    }
+
+    /** v4.0: agent yakunlashda tanlagan "Printer 2 (filial)" — keyingi savdo bilan Admin'ga boradi. */
+    @Volatile var nextBranch: Pair<String, Boolean>? = null
+
     /** Savdo navbatga qo'yilganda: chek ma'lumoti savdo bilan birga Admin'ga boradi (Admin 2-ilovaga yuboradi). */
     fun rememberSale(agentId: String, payload: String, sent: SentOrder, code: String) {
         val dir = saleDir ?: return
         dir.mkdirs()
         val oid = RelayCodec.oid(agentId, "1", payload)
-        File(dir, "$oid.json").writeText(RelayCodec.saleToJson(sent, code))
+        val branch = nextBranch?.takeIf { it.first == sent.storeId }?.second
+        nextBranch = null
+        File(dir, "$oid.json").writeText(RelayCodec.saleToJson(sent, code, branch))
         dir.listFiles()?.forEach { if (now() - it.lastModified() > 14L * 86_400_000L) it.delete() }
     }
 

@@ -41,8 +41,9 @@ class HomeFragment : Fragment() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_sync -> { vm.sync(); true }
+                R.id.action_stats -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); true }
                 R.id.action_barcodes -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); true }
-                R.id.action_settings -> { navigator().push(SettingsFragment()); true }
+                R.id.action_settings -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment()); true }
                 else -> false
             }
         }
@@ -102,6 +103,30 @@ class HomeFragment : Fragment() {
         val parent = binding.cardSale.parent as? android.view.ViewGroup ?: return
         if (parent.findViewWithTag<View>("admin_card") != null) return
         val ctx = requireContext()
+        // v4.0 "Boss": bugungi savdo, foyda, tushum va tizim holati — bir bosishda batafsil
+        val (bossCard, bossCol) = uz.imsoft.shared.android.Ui.card(ctx, 0)
+        bossCard.tag = "boss_card"
+        val bossItem = uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.boss_title), getString(R.string.boss_card_sub), icon = R.drawable.ic_trending, tone = 1) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment())
+        }
+        bossCol.addView(bossItem)
+        val bossLine = uz.imsoft.shared.android.Ui.title(ctx, "", 4)
+        bossCol.addView(bossLine)
+        val lp0 = binding.cardSale.layoutParams
+        parent.addView(bossCard, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp0.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            (lp0 as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
+        })
+        launchOnStarted {
+            com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.ledgerData.collect { d ->
+                val rate = ServiceLocator.catalog.state.value.rate
+                val now = System.currentTimeMillis()
+                val c0 = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0) }.timeInMillis
+                val t = uz.imsoft.shared.report.Stats.totals(d.entries, uz.imsoft.shared.report.PendingMerge.stampOf(c0), uz.imsoft.shared.report.PendingMerge.stampOf(now + 60_000L), rate,
+                    com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment.costByName(rate))
+                bossLine.text = getString(R.string.boss_line, ctx.money(t.sales, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM),
+                    ctx.money(t.profit, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM), ctx.money(t.payments, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM))
+            }
+        }
         val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
         card.tag = "admin_card"
         val badge = uz.imsoft.shared.android.Ui.hint(ctx, "", 0)

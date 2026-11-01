@@ -49,26 +49,46 @@ class FinishSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * v3.2: 2-ilova mijozi (Dadaxon aka) uchun chek qayerda chiqsin: do'kon printerida (yuqoridagi 1/2) yoki 2-filial
-     * printerida (Mijoz ilova orqali). Tanlov eslab qolinadi. Agent "Admin orqali" ishlasa — Admin sozlamasi bo'yicha.
+     * v4.0: chek qayerda chiqadi — bitta tanlov: "Printer 1 (do'kon)", "Printer 2 (filial — Dadaxon akaning telefoni)",
+     * "Ikkalasi", "Cheksiz". Printer 2 faqat filial printeri ulangan mijozga savdoda ko'rinadi. Tanlov eslab qolinadi.
      */
-    private fun addBranchChoice() {
-        val storeId = ServiceLocator.draft.state.value.store?.id.orEmpty()
-        if (ServiceLocator.isRelay || !ServiceLocator.share.branchPrinterFor(storeId)) { ServiceLocator.share.nextBranchPrint = null; return }
-        val parent = binding.chipPrinter.parent as? ViewGroup ?: return
+    private fun setupPrinters(saved: String) {
         val ctx = requireContext()
+        val storeId = ServiceLocator.draft.state.value.store?.id.orEmpty()
+        val branchOk = storeId.isNotEmpty() && if (ServiceLocator.isRelay) storeId in ServiceLocator.relayClient.branchStores else ServiceLocator.share.branchPrinterFor(storeId)
         val prefs = ctx.getSharedPreferences("user", android.content.Context.MODE_PRIVATE)
-        val branch = prefs.getBoolean("branch_print", true)
-        ServiceLocator.share.nextBranchPrint = storeId to branch
-        val idx = parent.indexOfChild(binding.chipPrinter) + 1
-        parent.addView(uz.imsoft.shared.android.Ui.hint(ctx, getString(R.string.fs_where), 8), idx)
-        parent.addView(uz.imsoft.shared.android.Ui.toggle(ctx, listOf(getString(R.string.fs_here), getString(R.string.fs_branch)), if (branch) 1 else 0, 4) { i ->
-            val b = i == 1
-            prefs.edit().putBoolean("branch_print", b).apply()
-            ServiceLocator.share.nextBranchPrint = storeId to b
-            if (b) binding.chipPrinter.check(R.id.chipPrinter3)
-        }, idx + 1)
-        if (branch) binding.chipPrinter.check(R.id.chipPrinter3)
+        binding.chipPrinter1.text = getString(R.string.pr_shop)
+        binding.chipPrinter2.text = getString(R.string.pr_branch)
+        binding.chipPrinter3.text = getString(R.string.finish_no_printer)
+        binding.chipPrinter2.show(branchOk)
+        var both: com.google.android.material.chip.Chip? = null
+        if (branchOk) {
+            both = com.google.android.material.chip.Chip(ctx).apply {
+                setChipDrawable(com.google.android.material.chip.ChipDrawable.createFromAttributes(ctx, null, 0, com.google.android.material.R.style.Widget_Material3_Chip_Filter))
+                id = View.generateViewId()
+                text = getString(R.string.pr_both)
+                isCheckable = true
+            }
+            binding.chipPrinter.addView(both, 2)
+        }
+        // Tanlov: 1 — do'kon, 2 — filial, 12 — ikkalasi, 0 — cheksiz
+        val choice = if (branchOk) prefs.getString("print_choice", null) ?: (if (saved == "3") "0" else "1") else (if (saved == "3") "0" else "1")
+        fun apply(c: String) {
+            prefs.edit().putString("print_choice", c).apply()
+            // Server (1C) uchun: 1 — do'kon printeri, 3 — chiqarmaslik
+            vm.setPrinter(if (c == "1" || c == "12") "1" else "3")
+            val branch = if (branchOk) (c == "2" || c == "12") else null
+            if (ServiceLocator.isRelay) ServiceLocator.relayClient.nextBranch = branch?.let { storeId to it }
+            else ServiceLocator.share.nextBranchPrint = branch?.let { storeId to it }
+        }
+        binding.chipPrinter.check(
+            when (choice) { "2" -> R.id.chipPrinter2; "12" -> both?.id ?: R.id.chipPrinter1; "0" -> R.id.chipPrinter3; else -> R.id.chipPrinter1 },
+        )
+        apply(if (!branchOk && (choice == "2" || choice == "12")) "1" else choice)
+        binding.chipPrinter.setOnCheckedStateChangeListener { _, ids ->
+            val id = ids.firstOrNull()
+            apply(when { id == R.id.chipPrinter2 -> "2"; both != null && id == both.id -> "12"; id == R.id.chipPrinter3 -> "0"; else -> "1" })
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -80,17 +100,7 @@ class FinishSheet : BottomSheetDialogFragment() {
         binding.tvTotal.text = requireContext().money(s0.total, s0.currency)
         binding.tilCash.hint = getString(if (usd) R.string.finish_cash_usd else R.string.finish_cash_som)
         binding.tilCard.show(!usd)
-        binding.chipPrinter1.text = getString(R.string.finish_printer_n, 1)
-        binding.chipPrinter2.text = getString(R.string.finish_printer_n, 2)
-        // "3" — serverda printersiz (cheksiz) savdo; qiymat o'zgarmaydi, faqat nomi tushunarli.
-        binding.chipPrinter3.text = getString(R.string.finish_no_printer)
-        binding.chipPrinter.check(
-            when (s0.printer) { "2" -> R.id.chipPrinter2; "3" -> R.id.chipPrinter3; else -> R.id.chipPrinter1 },
-        )
-        binding.chipPrinter.setOnCheckedStateChangeListener { _, ids ->
-            vm.setPrinter(when (ids.firstOrNull()) { R.id.chipPrinter2 -> "2"; R.id.chipPrinter3 -> "3"; else -> "1" })
-        }
-        addBranchChoice()
+        setupPrinters(s0.printer)
 
         binding.edtDiscountPercent.onTextChanged {
             if (updating) return@onTextChanged

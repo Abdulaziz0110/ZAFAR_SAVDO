@@ -1,5 +1,7 @@
 package com.ilxomjon.dur_novvot_dokon.core
 
+import com.ilxomjon.dur_novvot_dokon.R
+import com.ilxomjon.dur_novvot_dokon.ui.money
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
@@ -61,11 +63,17 @@ object ServiceLocator {
         applyUiPrefs()
         // v3.1: 1- va 2-narx 1C'dan (kompyuter yuborgan kodlar fayli)
         com.ilxomjon.dur_novvot_dokon.domain.Pricing.level12 = { id, level -> labels.priceForLevel(id, level) }
+        // v4.0: kelgan narx — oxirgi kirim (Admin: 1C kirimlaridan; Agent: Admin yuborgan)
+        com.ilxomjon.dur_novvot_dokon.domain.Pricing.lastCost = { id -> if (AppRole.isAdmin) onec.lastCost(id) else if (isRelay) relayClient.lastCosts[id] else null }
         // Keystore va baza obyektlari asosiy oqimni to'sib qo'ymasligi uchun IO'da oldindan yaratiladi.
         appScope.launch(Dispatchers.IO) {
             // Navbat bazasi yangi versiyaga o'tishidan OLDIN fayl nusxasi olinadi (rollback uchun).
             DbSafety.backupBeforeUpgrade(app, HistoryDb.NAME, HistoryDb.VERSION)
             secure
+            // v4.0: kalitsiz ishlash — build'dagi do'kon kodi bilan Agent o'zi "Admin orqali" ulanadi
+            if (!AppRole.isAdmin) shopCode?.let { sc ->
+                if (secure.relayConfig?.key != sc.agentKey || !secure.relayMode) secure.setRelay(com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(sc.dbUrl, sc.agentKey), true)
+            }
             localDb
             historyDb
             dbHealthy = historyDb.quickCheck()
@@ -75,6 +83,8 @@ object ServiceLocator {
             runCatching { historyDb.purgeOld(System.currentTimeMillis()) }
             outbox.refreshCount()
             outbox.kick()
+            // v4.0: yangi savdo/to'lov navbatga tushishi bilan yagona ro'yxatda ko'rinsin
+            appScope.launch(Dispatchers.IO) { outbox.counts.collect { runCatching { refreshLocalDocs() } } }
             network.start()
             // v2.4: 2-ilova bilan ulashish (sozlangan bo'lsa)
             runCatching {
@@ -94,6 +104,78 @@ object ServiceLocator {
 
     val context: Context get() = app
 
+    /** v4.0: build'ga qo'yilgan do'kon kodi (GitHub secret SHOP_CODE). Yo'q bo'lsa — eskicha (ulanish kodi). */
+    val shopCode: uz.imsoft.shared.DeviceCodes.Shop? by lazy { uz.imsoft.shared.DeviceCodes.decodeShop(com.ilxomjon.dur_novvot_dokon.BuildConfig.SHOP_CODE) }
+    /** v4.0: Agent kalitsiz rejimda (Admin biriktiradi, login yo'q). */
+    val deviceMode: Boolean get() = !AppRole.isAdmin && shopCode != null
+    @Volatile private var deviceCache: uz.imsoft.shared.android.DeviceSession? = null
+
+    /** v4.0: shu telefon qurilma sifatida (Agent: build'dagi koddan; Admin: o'z bulut sozlamasidan). */
+    fun device(): uz.imsoft.shared.android.DeviceSession? {
+        val dev = if (AppRole.isAdmin) {
+            if (shareStore.isCloudReady) uz.imsoft.shared.DeviceCodes.Dev(uz.imsoft.shared.CloudDb.normalizeUrl(shareStore.dbUrl), shareStore.devKey) else null
+        } else shopCode?.dev
+        dev ?: return null
+        deviceCache?.takeIf { it.dev == dev }?.let { return it }
+        return uz.imsoft.shared.android.DeviceSession(
+            app, dev, if (AppRole.isAdmin) uz.imsoft.shared.DeviceCodes.ROLE_ADMIN else uz.imsoft.shared.DeviceCodes.ROLE_AGENT,
+            com.ilxomjon.dur_novvot_dokon.BuildConfig.VERSION_NAME, com.ilxomjon.dur_novvot_dokon.BuildConfig.VERSION_CODE.toLong(),
+        ).also { deviceCache = it }
+    }
+
+    /** v4.0 "Yagona ro'yxat": telefondan yuborilgan oxirgi 3 kunlik savdo/to'lovlar (1C'dan kelguncha ro'yxatda turadi). */
+    val localDocs = kotlinx.coroutines.flow.MutableStateFlow<List<uz.imsoft.shared.report.PendingMerge.Local>>(emptyList())
+
+    suspend fun refreshLocalDocs() {
+        val from = System.currentTimeMillis() - 3L * 86_400_000L
+        val orders = runCatching { history.orders() }.getOrDefault(emptyList()).filter { it.sentAt >= from }
+        val pays = runCatching { history.payments() }.getOrDefault(emptyList()).filter { it.sentAt >= from }
+        val list = orders.map { o ->
+            uz.imsoft.shared.report.PendingMerge.Local(
+                "o${o.id}", o.sentAt,
+                if (o.mode == com.ilxomjon.dur_novvot_dokon.domain.DealMode.RETURN) uz.imsoft.shared.report.EntryKind.RETURN else uz.imsoft.shared.report.EntryKind.SALE,
+                o.storeId, o.storeName, o.lines.map { uz.imsoft.shared.report.PendingMerge.Line(it.name, it.qty, it.price) }, o.total,
+                o.currency == com.ilxomjon.dur_novvot_dokon.domain.Currency.USD,
+            )
+        } + pays.map { p ->
+            uz.imsoft.shared.report.PendingMerge.Local("p${p.id}", p.sentAt, uz.imsoft.shared.report.EntryKind.PAYMENT, p.storeId, p.storeName, emptyList(), p.total)
+        }
+        if (list != localDocs.value) localDocs.value = list
+    }
+
+    /** v4.0: ilova o'zi yangilanadi (build'dagi yashirin manzildan). */
+    val updater by lazy {
+        uz.imsoft.shared.android.AppUpdater(app, com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL, if (AppRole.isAdmin) "admin" else "agent",
+            com.ilxomjon.dur_novvot_dokon.BuildConfig.VERSION_CODE.toLong())
+    }
+
+    /** v4.0 Admin: kechki hisobot bildirishnomasi (kuniga bir marta, 20:00 dan keyin). */
+    private fun eveningReport() {
+        val cal = java.util.Calendar.getInstance()
+        if (cal.get(java.util.Calendar.HOUR_OF_DAY) < 20) return
+        val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(cal.time)
+        val p = app.getSharedPreferences("evening", Context.MODE_PRIVATE)
+        if (p.getString("day", "") == day) return
+        val d = com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.ledgerData.value
+        if (!d.loaded) return
+        val rate = catalog.state.value.rate
+        val from = (day + "000000").toLong()
+        val t = uz.imsoft.shared.report.Stats.totals(d.entries, from, from + 1_000_000L, rate, com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment.costByName(rate))
+        val m = { v: Double -> app.money(v, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM) }
+        val debt = catalog.state.value.stores.sumOf { it.debtSom.coerceAtLeast(0.0) }
+        com.ilxomjon.dur_novvot_dokon.data.extras.Extras.notify(app, 4040, app.getString(R.string.ev_title),
+            app.getString(R.string.ev_text, m(t.sales), t.docs, m(t.profit), m(t.payments), m(debt)))
+        p.edit().putString("day", day).apply()
+    }
+
+    /** v4.0 Admin "Boss": agentlarning kunlik savdosi. */
+    val agentStats by lazy { com.ilxomjon.dur_novvot_dokon.data.share.AgentStats(app).also { it.load() } }
+
+    /** v4.0 Admin: qurilmalar (biriktirish, bloklash). */
+    val deviceAdmin by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.share.DeviceAdmin(shareStore, { share.linkCode(it) }, { directApi.agents() })
+    }
+
     val appPrefs by lazy { AppPrefs(app) }
     val secure by lazy { SecureStore(app) }
     val localDb by lazy { LocalDb(app) }
@@ -108,6 +190,7 @@ object ServiceLocator {
     val relayClient: com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient by lazy {
         com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient({ secure.relayConfig }, saleDir = java.io.File(app.filesDir, "relay_sales")).also { r ->
             r.onCodes = { bytes -> labels.applyCodes(bytes) }
+            r.deviceId = { if (deviceMode) device()?.id.orEmpty() else "" }
         }
     }
     /** Agent Admin orqali ishlayaptimi (Admin ilovada hech qachon). */
@@ -177,6 +260,10 @@ object ServiceLocator {
                     }
                     runCatching { clientRequests.refresh(notify = true) }
                     runCatching { onec.refreshResults() }
+                    // v4.0: kechki hisobot — har kuni 20:00 dan keyin bir marta (bugungi savdo, foyda, tushum)
+                    runCatching { eveningReport() }
+                    // v4.0: qurilmalar ro'yxati (bloklanganlar ko'prikda ishlatiladi) — 3 daqiqada bir
+                    if (System.currentTimeMillis() - deviceAdmin.loadedAt > 3 * 60_000L) runCatching { deviceAdmin.refresh() }
                     // v3.7: kompyuterdan 1 yillik savdolar (30 kunlik bo'laklar)
                     runCatching { onec.backfillStep() }
                     // v3.7: "1C tarixi" agentlarga (faqat o'zgargan 10 kunlik bo'laklar, daqiqada ko'pi bilan bir)
@@ -203,6 +290,24 @@ object ServiceLocator {
             kotlinx.coroutines.delay(10_000L)
         }
         runCatching { share.afterDeal(storeId) }
+        pcSalesSoon()
+    }
+
+    @Volatile private var pcSalesJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * v4.0: savdodan keyin kompyuterdan bugungi 1C savdolari so'raladi (1C serverdan olishiga vaqt beriladi: 2 va 6 daqiqa) —
+     * yagona ro'yxatda "1C'ga ketmoqda" tezroq "1C" yozuviga almashadi. Ketma-ket savdolarda bitta so'rov.
+     */
+    fun pcSalesSoon() {
+        if (!AppRole.isAdmin || !onec.ready || pcSalesJob?.isActive == true) return
+        pcSalesJob = appScope.launch(Dispatchers.IO) {
+            val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+            for (wait in listOf(120_000L, 240_000L)) {
+                kotlinx.coroutines.delay(wait)
+                runCatching { onec.requestData("sales", day, day) }
+            }
+        }
     }
 
     /** v3.7 Admin: "1C tarixi" — kompyuterdagi barcha savdolar + server kartochkalari (to'lovlar bilan), 1 yil. */
@@ -283,10 +388,14 @@ object ServiceLocator {
                 }
                 override suspend fun printLabels(data: ByteArray): String = labels.printRaw(data)
                 override suspend fun mirrorSale(sale: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Sale, key: String) {
-                    share.onSale(sale.order, 0L, sale.code, key)
+                    share.onSale(sale.order, 0L, sale.code, key, sale.branch)
                     appScope.launch(Dispatchers.IO) { afterDealSent(sale.order.storeId, 0L) }
                 }
                 override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
+                override fun blockedDevice(deviceId: String): Boolean = deviceId in deviceAdmin.blockedIds()
+                override fun lastCosts(): Map<String, Pair<Double, Double>> = onec.lastCosts()
+                override fun written(agentId: String, type: String, payload: String) = agentStats.record(agentId, type, payload)
+                override fun branchStores(): List<String> = shareStore.clients().filter { it.queueKey.isNotEmpty() && it.storeId.isNotEmpty() }.map { it.storeId }
                 override suspend fun barcodes(items: List<Pair<String, String>>): Int {
                     if (!onec.ready) return 0
                     val byId = catalog.state.value.productsById

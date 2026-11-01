@@ -207,6 +207,41 @@ class NewKindsTest(unittest.TestCase):
         self.assertTrue(new.deleted)
 
 
+class RateTest(unittest.TestCase):
+    setUp0 = T.WriteTest.setUp
+    tearDown = T.WriteTest.tearDown
+    put = T.WriteTest.put
+    result = T.WriteTest.result
+
+    def setUp(self):
+        self.setUp0()
+        self.onec = CountingOneC()
+        c = self.onec.real
+        box = {"v": 12600}
+        c.Константы.Курс = T.Obj(Получить=lambda: box["v"], Установить=lambda v: box.__setitem__("v", v))
+        self.box = box
+        recs = []
+
+        class Mgr(T.Obj):
+            def Записать(self):
+                recs.append((self.Дата, self.Сумма))
+        c.РегистрыСведений = T.Obj(Курс=T.Obj(СоздатьМенеджерЗаписи=lambda: Mgr()))
+        self.recs = recs
+        self.w = onec_write.Writer(T.Cfg('File="%s";' % self.base), self.cloud, self.onec, self.tmp.name, now=lambda: T.D(2026, 11, 2, 9, 0))
+
+    def test_rate_and_undo(self):
+        self.assertIn("kurs", onec_write.problem(onec_write.parse_request("w", T.req("rt", {"f": {"rate": 0}}))))
+        self.put("w1", T.req("rt", {"f": {"rate": 12750.5}}))
+        self.w.run()
+        self.assertTrue(self.result("w1")["ok"])
+        self.assertEqual(self.box["v"], 12750.5)
+        self.assertEqual(self.recs[0][1], 12750.5)
+        self.put("w2", T.req("undo", {"t": "w1"}))
+        self.w.run()
+        self.assertTrue(self.result("w2")["ok"])
+        self.assertEqual(self.box["v"], 12600)
+
+
 class WakerTest(unittest.TestCase):
     def test_feed(self):
         import importlib.util

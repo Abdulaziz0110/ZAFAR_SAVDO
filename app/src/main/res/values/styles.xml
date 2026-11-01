@@ -56,8 +56,16 @@
         <item name="android:minHeight">40dp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="android:paddingStart">6dp</item>
-        <item name="android:paddingEnd">6dp</item>
+        <!-- v4.0: Material3 tugmasining 24dp chekkasi tor tugmada matnni butunlay yashirardi ("1 2 3 4" ko'rinmasdi) -->
+        <item name="android:paddingLeft">4dp</item>
+        <item name="android:paddingRight">4dp</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minEms">0</item>
+        <item name="iconPadding">0dp</item>
+        <item name="icon">@null</item>
+
         <item name="android:textAppearance">@style/TextAppearance.Material3.LabelLarge</item>
     </style>
     <style name="Widget.App.Chip" parent="Widget.Material3.Chip.Filter">

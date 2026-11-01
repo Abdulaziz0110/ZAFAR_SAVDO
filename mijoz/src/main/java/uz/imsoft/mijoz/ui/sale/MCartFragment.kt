@@ -47,10 +47,8 @@ class MCartFragment : MFragment() {
         body.removeAllViews()
         val s = Locator.sale.state.value
         val d = Locator.pos.state.value
-        val c = d.customer(s.customerId)
-        body.addView(Ui.section(ctx, getString(R.string.pos_client)))
-        body.addView(Ui.item(ctx, c?.name ?: getString(R.string.pos_cash_client),
-            if (c != null) getString(R.string.pos_balance, som(d.balance(c.id))) else getString(R.string.pos_cash_hint), icon = R.drawable.ic_person, tone = 1) { pickCustomer() })
+        // v4.0: sodda — mijoz tanlash va nasiya yo'q (naqd savdo)
+        if (d.customers.isEmpty() && s.customerId != 0L) Locator.sale.setCustomer(0L)
         body.addView(Ui.section(ctx, getString(R.string.pos_goods)))
         if (s.lines.isEmpty()) body.addView(Ui.hint(ctx, getString(R.string.pos_no_goods)))
         s.lines.forEachIndexed { i, l ->
@@ -58,9 +56,8 @@ class MCartFragment : MFragment() {
             body.addView(Ui.divider(ctx))
         }
         val (tDisc, eDisc) = Ui.field(ctx, getString(R.string.pos_discount), Ui.NUMBER, discountText)
-        val (tPaid, ePaid) = Ui.field(ctx, getString(R.string.pos_paid_field), Ui.NUMBER, paidText)
         val (tNote, eNote) = Ui.field(ctx, getString(R.string.pos_note), value = noteText)
-        body.addView(tDisc); body.addView(tPaid); body.addView(tNote)
+        body.addView(tDisc); body.addView(tNote)
         val tvTotal: TextView = Ui.title(ctx, getString(R.string.pos_total_line, som(total())), 8)
         body.addView(tvTotal)
         fun watch(e: TextInputEditText, set: (String) -> Unit) = e.addTextChangedListener(object : android.text.TextWatcher {
@@ -69,7 +66,6 @@ class MCartFragment : MFragment() {
             override fun afterTextChanged(x: android.text.Editable?) { set(x?.toString().orEmpty()); tvTotal.text = getString(R.string.pos_total_line, som(total())) }
         })
         watch(eDisc) { discountText = it }
-        watch(ePaid) { paidText = it }
         watch(eNote) { noteText = it }
         val bSave = Ui.button(ctx, getString(R.string.pos_save_print), icon = R.drawable.ic_print) { save(print = true) }
         val bOnly = Ui.button(ctx, getString(R.string.pos_save), outlined = true, icon = R.drawable.ic_check) { save(print = false) }
@@ -106,11 +102,11 @@ class MCartFragment : MFragment() {
         if (s.lines.isEmpty()) { snack(getString(R.string.pos_no_goods)); return }
         val t = total()
         if (t < 0) { snack(getString(R.string.pos_err_discount)); return }
-        val paid = paidText.filter { !it.isWhitespace() }.replace(',', '.').toDoubleOrNull() ?: if (s.customerId == 0L) t else 0.0
-        if (s.customerId == 0L && paid + 0.009 < t) { snack(getString(R.string.pos_err_cash)); return }
+        // v4.0: naqd savdo — to'liq to'langan
+        val paid = t
         val disc = num(discountText).coerceAtLeast(0.0)
         launchUi {
-            val id = Locator.pos.saveSale(Pos.stampOf(System.currentTimeMillis()), s.customerId, s.lines, disc, paid.coerceAtMost(t), noteText)
+            val id = Locator.pos.saveSale(Pos.stampOf(System.currentTimeMillis()), 0L, s.lines, disc, paid, noteText)
             Locator.sale.clear()
             discountText = ""; paidText = ""; noteText = ""
             snack(getString(R.string.pos_saved))

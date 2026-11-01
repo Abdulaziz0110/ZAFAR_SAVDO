@@ -57,6 +57,7 @@ class WritesFragment : CodeFragment() {
             WriteKind.CASH_OUT -> R.string.of_cash_out
             WriteKind.GOODS_EDIT -> R.string.of_goods_edit
             WriteKind.NEW_GOODS -> R.string.of_new_goods
+            WriteKind.RATE -> R.string.rt_title
             else -> R.string.wr_undo
         },
     )
@@ -71,6 +72,7 @@ class WritesFragment : CodeFragment() {
         WriteKind.CASH_OUT -> R.drawable.ic_cash_out
         WriteKind.GOODS_EDIT -> R.drawable.ic_price
         WriteKind.NEW_GOODS -> R.drawable.ic_add_box
+        WriteKind.RATE -> R.drawable.ic_currency
         else -> R.drawable.ic_undo
     }
 
@@ -104,9 +106,10 @@ class WritesFragment : CodeFragment() {
                 WriteKind.UNDO -> w.req.target
                 WriteKind.CASH_IN, WriteKind.CASH_OUT -> w.req.op
                 WriteKind.NEW_GOODS -> w.req.fields[uz.imsoft.shared.onec.GoodsField.NAME].orEmpty()
+                WriteKind.RATE -> w.req.fields[uz.imsoft.shared.onec.GoodsField.RATE].orEmpty()
                 else -> w.req.party
             }
-            val noMoney = w.req.kind == WriteKind.BARCODE || w.req.kind == WriteKind.UNDO || w.req.kind in WriteKind.GOODS
+            val noMoney = w.req.kind == WriteKind.BARCODE || w.req.kind == WriteKind.UNDO || w.req.kind == WriteKind.RATE || w.req.kind in WriteKind.GOODS
             Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w), if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
         })
     }

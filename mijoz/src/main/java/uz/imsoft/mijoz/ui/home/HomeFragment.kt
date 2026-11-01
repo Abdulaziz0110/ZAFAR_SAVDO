@@ -48,7 +48,8 @@ class HomeFragment : Fragment() {
         // v3.9: o'z savdosi (agentdagidek) — savdo ekrani, mijozlar, kassa tarixi/hisoboti; bizga to'lov kiritish
         val main = { activity as? MainActivity }
         b.btnNewSale.setOnClickListener { main()?.openTab(R.id.nav_sale) }
-        b.tileClients.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_CLIENTS)) }
+        // v4.0: statistika va "olgan tovarlarim" (nasiya mijozlari o'rniga — sodda)
+        b.tileClients.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.StatsFragment()) }
         b.tileHistory.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_HISTORY)) }
         b.tileReport.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_REPORT)) }
         b.tilePay.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) }

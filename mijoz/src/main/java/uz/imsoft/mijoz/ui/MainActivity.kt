@@ -47,6 +47,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // v4.0: katta shriftda tugma yozuvlari sig'sin (barcha ekranlarda)
+        uz.imsoft.shared.android.FitText.install(this)
         binding.bottomNav.setOnItemSelectedListener { showTab(it.itemId); true }
         // Orqaga: avval bosh sahifaga, keyin 2 soniya ichida ikki marta bosilsa chiqadi.
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
@@ -84,9 +86,11 @@ class MainActivity : AppCompatActivity() {
             showTab(start)
         }
         handleUsb(intent)
+        if (savedInstanceState == null) lifecycleScope.launch { kotlinx.coroutines.delay(2_500); checkUpdate(false) }
         if (savedInstanceState == null) openFromWidget(intent)
         if (savedInstanceState == null) uz.imsoft.mijoz.ui.ledger.SecretPrefs.countLaunch(this)
-        if (Locator.prefs.link == null && !Locator.prefs.skipLogin && intent.getStringExtra(EXTRA_TAB) != TAB_PRINTER) showLogin()
+        if (Locator.deviceMode) { if (Locator.prefs.link == null) showLogin() }
+        else if (Locator.prefs.link == null && !Locator.prefs.skipLogin && intent.getStringExtra(EXTRA_TAB) != TAB_PRINTER) showLogin()
         // Kirish bekor qilinsa (1-ilovada telefon o'chirildi) — kirish oynasi.
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
@@ -101,7 +105,10 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 runCatching { uz.imsoft.mijoz.data.MijozAuto.backupIfDue(applicationContext) }
+                var tick = 0
                 while (true) {
+                    // v4.0: Admin biriktirishi/bloklashi — har daqiqada (internet yo'q bo'lsa oxirgi holat bilan ishlayveradi)
+                    if (tick++ % 2 == 0) checkDevice()
                     kotlinx.coroutines.delay(30_000L)
                     val pr = Locator.prefs
                     if (pr.link != null && System.currentTimeMillis() - pr.fetchedAt >= uz.imsoft.mijoz.data.MijozAuto.liveIntervalMs()) {
@@ -111,6 +118,31 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /** v4.0: ilova yangilanishi. [force] — Sozlamalardan "Tekshirish" bosilganda. */
+    fun checkUpdate(force: Boolean) {
+        val u = Locator.updater
+        if (!u.enabled) { if (force) android.widget.Toast.makeText(this, R.string.up_off, android.widget.Toast.LENGTH_LONG).show(); return }
+        lifecycleScope.launch {
+            val info = runCatching { u.check(force) }.getOrNull()
+            if (info == null) { if (force) android.widget.Toast.makeText(this@MainActivity, R.string.up_none, android.widget.Toast.LENGTH_SHORT).show(); return@launch }
+            if (!force && u.snoozed(info)) return@launch
+            val t = uz.imsoft.shared.android.AppUpdater.Texts(
+                getString(R.string.up_title), getString(R.string.up_body), getString(R.string.up_install), getString(R.string.up_later),
+                getString(R.string.up_loading), getString(R.string.up_error), getString(R.string.up_permission),
+            )
+            u.prompt(this@MainActivity, info, t) { block -> lifecycleScope.launch { block() } }
+        }
+    }
+
+    private suspend fun checkDevice() {
+        val d = Locator.device ?: return
+        val before = d.cached()
+        val a = runCatching { d.sync() }.getOrElse { return }
+        if (a == null && before == null && Locator.prefs.link != null) return // eski usulda ulangan, hali biriktirilmagan
+        val ok = Locator.applyDevice(a)
+        if (!ok && !loginShown()) showLogin()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -197,7 +229,7 @@ class MainActivity : AppCompatActivity() {
         if (loginShown()) return
         binding.bottomNav.visibility = android.view.View.GONE
         supportFragmentManager.beginTransaction().setReorderingAllowed(true)
-            .add(R.id.container, uz.imsoft.mijoz.ui.login.LoginFragment(), TAG_LOGIN).commitAllowingStateLoss()
+            .add(R.id.container, if (Locator.deviceMode) uz.imsoft.mijoz.ui.login.DeviceWaitFragment() else uz.imsoft.mijoz.ui.login.LoginFragment(), TAG_LOGIN).commitAllowingStateLoss()
     }
 
     fun closeLogin() {

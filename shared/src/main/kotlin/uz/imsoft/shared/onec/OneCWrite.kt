@@ -33,8 +33,10 @@ object WriteKind {
     const val GOODS_EDIT = "ge"
     /** v3.12: yangi tovar (namuna tovardan nusxa: guruh, o'lchov, valyuta shundan). */
     const val NEW_GOODS = "ng"
+    /** v4.0: dollar kursi (Константы.Курс + kurslar tarixi). Maydon: fields["rate"]. */
+    const val RATE = "rt"
 
-    val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS)
+    val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS, RATE)
     val MONEY = setOf(SUPPLIER_PAY, CLIENT_PAY, CASH_IN, CASH_OUT)
     val GOODS = setOf(GOODS_EDIT, NEW_GOODS)
 }
@@ -51,8 +53,9 @@ object GoodsField {
     const val NAME = "nm"
     const val CUR = "cur"
     const val BARCODE = "bc"
+    const val RATE = "rate"
     val PRICES = listOf(P1, P2, P3, P4, COST)
-    val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE)
+    val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE, RATE)
 }
 
 data class WriteLine(val name: String, val code: String, val qty: Double, val priceSom: Double, val priceUsd: Double) {
@@ -145,6 +148,7 @@ data class WriteRequest(
             }
         }
         WriteKind.GOODS_EDIT, WriteKind.NEW_GOODS -> goodsProblem()
+        WriteKind.RATE -> fields[GoodsField.RATE]?.toDoubleOrNull()?.takeIf { it > 0 && it < 1_000_000 }?.let { null } ?: "rate"
         else -> "kind"
     }
 }

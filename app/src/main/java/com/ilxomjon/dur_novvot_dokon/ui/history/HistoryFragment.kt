@@ -68,6 +68,8 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
         }
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
+        // v4.0 "Yagona ro'yxat": birinchi — hammasi (1C + telefonda qilingan, 1C'ga ketayotgani belgisi bilan)
+        binding.tabs.addTab(binding.tabs.newTab().setText(R.string.history_all))
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.history_orders))
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.history_payments))
         ensureTabs()
@@ -114,7 +116,6 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
     /** "1C tarixi" yorlig'i mijoz tanlangandan keyin paydo bo'ladi; boshqa ekrandan so'ralgan yorliq tanlanadi. */
     private fun ensureTabs() {
         val b = _binding ?: return
-        if (b.tabs.tabCount == 2 && ServiceLocator.shareStore.clients().isNotEmpty()) b.tabs.addTab(b.tabs.newTab().setText(R.string.history_1c))
         if (pendingTab >= 0 && pendingTab < b.tabs.tabCount) b.tabs.getTabAt(pendingTab)?.select()
         pendingTab = -1
     }
@@ -174,7 +175,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
     private fun render() {
         if (_binding == null) return
         val ctx = requireContext()
-        val ledger = binding.tabs.selectedTabPosition == 2
+        val ledger = binding.tabs.selectedTabPosition == TAB_ALL
         binding.ledgerPane.show(ledger)
         binding.toolbar.menu.findItem(R.id.action_pdf)?.isVisible = ledger
         binding.toolbar.menu.findItem(R.id.action_orders)?.isVisible = ledger && ServiceLocator.shareStore.acceptOrders && ServiceLocator.shareStore.isConfigured
@@ -187,7 +188,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
             viewLifecycleOwner.lifecycleScope.launch { ServiceLocator.share.load(); runCatching { if (ServiceLocator.shareStore.acceptOrders) ServiceLocator.share.refreshOrders() } }
             return
         }
-        val rows = if (binding.tabs.selectedTabPosition == 1) last.payments.map { paymentRow(ctx, it) } else last.orders.map { orderRow(ctx, it) }
+        val rows = if (binding.tabs.selectedTabPosition == TAB_PAYMENTS) last.payments.map { paymentRow(ctx, it) } else last.orders.map { orderRow(ctx, it) }
         adapter.submitList(rows)
         binding.tvEmpty.show(last.loaded && rows.isEmpty())
     }
@@ -254,10 +255,14 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
 
     companion object {
         private const val TAG_LEDGER = "ledger"
-        /** Boshqa ekrandan "1C tarixi" ochilishi uchun (2 — 1C yorlig'i). */
+        /** v4.0: yorliqlar tartibi — hammasi (yagona ro'yxat), yuborganlarim, to'lovlar. */
+        const val TAB_ALL = 0
+        const val TAB_ORDERS = 1
+        const val TAB_PAYMENTS = 2
+        /** Boshqa ekrandan "1C tarixi" ochilishi uchun. */
         var pendingTab = -1
         fun open1C(nav: com.ilxomjon.dur_novvot_dokon.ui.Navigator, existing: HistoryFragment?) {
-            pendingTab = 2
+            pendingTab = TAB_ALL
             existing?.ensureTabs()
             nav.openTab(R.id.nav_history)
         }

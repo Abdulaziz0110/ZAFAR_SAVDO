@@ -27,6 +27,42 @@ object Locator {
     /** v3.9: o'z savdosi savatchasi (telefonda saqlanadi). */
     val sale: uz.imsoft.mijoz.data.MCart by lazy { uz.imsoft.mijoz.data.MCart(app) }
 
+    /** v4.0: build'ga qo'yilgan qurilmalar kodi (kalitsiz ishlash). Yo'q bo'lsa — eskicha (do'kon kodi + telefon + parol). */
+    val devCode: uz.imsoft.shared.DeviceCodes.Dev? by lazy { uz.imsoft.shared.DeviceCodes.decodeDev(BuildConfig.DEV_CODE) }
+    val deviceMode: Boolean get() = devCode != null
+    /** v4.0: ilova o'zi yangilanadi. */
+    val updater by lazy { uz.imsoft.shared.android.AppUpdater(app, BuildConfig.UPDATE_URL, "mijoz", BuildConfig.VERSION_CODE.toLong()) }
+    val device: uz.imsoft.shared.android.DeviceSession? by lazy {
+        devCode?.let { uz.imsoft.shared.android.DeviceSession(app, it, uz.imsoft.shared.DeviceCodes.ROLE_MIJOZ, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toLong()) }
+    }
+
+    /**
+     * v4.0: Admin bergan biriktirishni qo'llaydi. @return true — ulangan (ma'lumot ko'rsatiladi), false — kutish/bloklangan.
+     * Ulanish o'zgarsa eski ma'lumot o'chiriladi va yangisi darhol olinadi.
+     */
+    suspend fun applyDevice(a: uz.imsoft.shared.DeviceAssignment?): Boolean {
+        val code = a?.takeIf { !it.blocked }?.link?.let { uz.imsoft.shared.LinkCode.decode(it) }
+        if (code == null) {
+            if (prefs.link != null) data.unlink()
+            return false
+        }
+        if (prefs.link != code) {
+            prefs.setLink(code)
+            // v4.0: filial printeri — chek navbati bor bo'lsa printer bo'limi o'zi yoqiladi (printer ulanishi bilan cheklar chiqadi)
+            if (code.queueKey.isNotEmpty() && !prefs.devPrinterSet) {
+                prefs.printerSection = true
+                prefs.printerOn = true
+                prefs.autostart = true
+                prefs.devPrinterSet = true
+            }
+            data.onLinked()
+            uz.imsoft.mijoz.data.RefreshWorker.schedule(app, prefs.autoMinutes)
+            scope.launch { runCatching { data.refresh(askFresh = true) } }
+        }
+        prefs.memberName = a?.label.orEmpty()
+        return true
+    }
+
     fun init(a: Application) {
         if (::app.isInitialized) return
         app = a
@@ -59,6 +95,8 @@ object Locator {
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        // v4.0: yiqilsa — xato matni Admin'ga ("Qurilmalar") keyingi ochilishda o'zi boradi
+        uz.imsoft.shared.android.CrashLog.install(this, "Mijoz", BuildConfig.VERSION_NAME)
         Locator.init(this)
     }
 }
