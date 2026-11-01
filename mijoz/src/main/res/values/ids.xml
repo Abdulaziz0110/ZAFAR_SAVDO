@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pastki menyuning 5-o'rni: printer bo'limi yoqilganda "Sozlamalar" o'rniga qo'yiladi (menyuda 5 tadan ko'p bo'lmaydi) -->
+    <item name="nav_printer" type="id" />
+</resources>

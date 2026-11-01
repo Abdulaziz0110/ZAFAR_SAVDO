@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Savdo Mijoz 1.15 (versionCode 16) — 2026-11-01
+* Tuzatildi: 1.13/1.14 ochilmay yiqilardi — pastki menyuda 6 ta band bor edi (BottomNavigationView ko'pi bilan 5 ta).
+  Endi 5-o'rinda "Sozlamalar" yoki (printer bo'limi yoqilgan bo'lsa) "Printer". Tekshiruv skriptiga shu qoida qo'shildi.
+
 ## 3.12 (versionCode 24), Savdo Mijoz 1.14 (versionCode 15) — 2026-11-01
 * **Shtrix kod → 1C** (Admin ▸ Boshqaruv, bosh sahifa tepasidagi belgi, Sozlamalar ▸ Shtrix kodlar): istalgan kodni skanerlash
   (kamera yoki skaner qurilmasi), tovarini tanlash, ro'yxat; bitta tugma bilan hammasi 1C'dagi tovar shtrix kodlariga.

@@ -161,15 +161,26 @@ class MainActivity : AppCompatActivity() {
         if (i?.action == UsbManager.ACTION_USB_DEVICE_ATTACHED) PrinterHub.nudge()
     }
 
+    /**
+     * v1.14: BottomNavigationView 5 tadan ortiq bandni qabul qilmaydi (6 ta bo'lsa ilova ochilmay yiqiladi). Shuning uchun
+     * 5-o'rin almashtiriladi: printer bo'limi yoqilgan bo'lsa "Printer", aks holda "Sozlamalar".
+     */
     fun updatePrinterTab() {
         val printer = Locator.prefs.printerSection
-        binding.bottomNav.menu.findItem(R.id.nav_printer).isVisible = printer
-        binding.bottomNav.menu.findItem(R.id.nav_settings).isVisible = !printer
+        val menu = binding.bottomNav.menu
+        val want = if (printer) R.id.nav_printer else R.id.nav_settings
+        if (menu.findItem(want) != null) return
+        val drop = if (printer) R.id.nav_settings else R.id.nav_printer
+        val wasSelected = binding.bottomNav.selectedItemId == drop
+        menu.removeItem(drop)
+        menu.add(android.view.Menu.NONE, want, android.view.Menu.NONE, if (printer) R.string.nav_printer else R.string.nav_settings)
+            .setIcon(if (printer) R.drawable.ic_print else R.drawable.ic_settings)
+        if (wasSelected) binding.bottomNav.selectedItemId = R.id.nav_home
     }
 
     /** v3.9: Sozlamalar — pastki menyuda bo'lsa o'sha, bo'lmasa (printer bo'limi yoqilgan) ustidan ochiladi. */
     fun openSettings() {
-        if (binding.bottomNav.menu.findItem(R.id.nav_settings).isVisible) openTab(R.id.nav_settings) else push(SettingsFragment())
+        if (binding.bottomNav.menu.findItem(R.id.nav_settings) != null) openTab(R.id.nav_settings) else push(SettingsFragment())
     }
 
     fun openTab(id: Int) { binding.bottomNav.selectedItemId = id }

@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 3.12 (versionCode 24) + Savdo Mijoz 1.14 (versionCode 15), 2026-11-01
+# Holat — Savdo Agent / Savdo Admin 3.12 (versionCode 24) + Savdo Mijoz 1.15 (versionCode 16), 2026-11-01
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,11 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## Mijoz 1.15
+| Narsa | Holat |
+|---|---|
+| Ilova ochilishida yiqilish (pastki menyu 6 band) tuzatildi — 5 band, 5-o'rin almashadi | VERIFIED (sabab aniqlandi, kompilyatsiya ✓, tekshiruv qoidasi) / telefonda ochilishi IMPLEMENTED-UNVERIFIED |
 
 ## v3.12 — Shtrix kod → 1C, tez yozish, Boshqaruv'da hamma 1C yozuvlari, ikonkalar
 | Narsa | Holat |
