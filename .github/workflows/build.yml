@@ -3,11 +3,14 @@
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
 #   2) builds three APKs - Agent, Admin, Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
 #   3) runs unit tests, lint, the PC script tests and the iPhone (web) agent tests; reports go to the "reports" artifact,
-#   4) publishes the iPhone agent (web/agent) to Cloudflare Pages (free, works with a private repo).
+#   4) publishes the iPhone agent (web/agent) to Cloudflare Pages (free, works with a private repo),
+#      and (v4.0) the new APKs + version.json to a hidden folder there - the apps update themselves.
 #      Without the CLOUDFLARE_* secrets this job is skipped (green) - APKs are not affected.
+#   5) (v4.0) "smoke": installs the three APKs on an Android emulator and opens each one - a crash on start is reported.
 # Secrets (Settings > Secrets and variables > Actions), optional:
 #   SIGNING_KEYSTORE_B64, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD
 #   CLOUDFLARE_API_TOKEN (permission: Account > Cloudflare Pages > Edit), CLOUDFLARE_ACCOUNT_ID
+#   SHOP_CODE (v4.0, Admin > Boshqaruv > Qurilmalar > "Do'kon kodi"): Agent/Mijoz work without codes and update themselves
 # The keystore is never committed: it is written to the runner temp folder only for the build.
 name: Android build
 
@@ -19,6 +22,9 @@ on:
 permissions:
   contents: write
 
+env:
+  CF_PROJECT: zafar-savdo-agent
+
 concurrency:
   group: android-build-${{ github.ref }}
   cancel-in-progress: true
@@ -27,6 +33,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      tag: ${{ steps.sign.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -128,8 +136,38 @@ jobs:
             echo "tag=CI-ONLY" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Shop code and update address (v4.0)
+        id: shop
+        shell: bash
+        env:
+          SHOP_CODE: ${{ secrets.SHOP_CODE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SHOP_CODE:-}" ]; then
+            echo "::notice::SHOP_CODE secret is empty - apps will ask for a link code and will not update themselves"
+            echo "dir=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          DIR=$(python3 - <<'PY'
+          import base64, hashlib, os, re
+          code = os.environ["SHOP_CODE"].strip()
+          m = re.search(r"IMSHOP1:([A-Za-z0-9_-]+)", code)
+          if not m:
+              print("")
+          else:
+              b = m.group(1)
+              parts = base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)).decode("utf-8").split("\n")
+              print(hashlib.sha256((parts[2].strip() + "|upd").encode("utf-8")).hexdigest()[:24] if len(parts) >= 3 else "")
+          PY
+          )
+          if [ -z "$DIR" ]; then echo "::warning::SHOP_CODE is not valid (copy it again from Admin > Qurilmalar)"; echo "dir=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "UPDATE_URL=https://${CF_PROJECT}.pages.dev/u/$DIR/" >> "$GITHUB_ENV"
+
       - name: Build APKs
         shell: bash
+        env:
+          SHOP_CODE: ${{ secrets.SHOP_CODE }}
         run: ./gradlew --no-daemon --stacktrace :app:assembleAgentDebug :app:assembleAdminDebug :mijoz:assembleDebug
 
       - name: Collect APKs
@@ -143,6 +181,42 @@ jobs:
           cp app/build/outputs/apk/admin/debug/*.apk "out/SavdoAdmin-$AV-${{ steps.sign.outputs.tag }}.apk"
           cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-$MV-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
+
+      - name: Prepare self-update files (v4.0)
+        if: steps.sign.outputs.tag == 'OWN-KEY' && steps.shop.outputs.dir != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p upd
+          AVC=$(grep -m1 'versionCode = ' app/build.gradle.kts | sed 's/[^0-9]//g')
+          AV=$(grep -m1 versionName app/build.gradle.kts | sed 's/[^0-9.]//g')
+          MVC=$(grep -m1 'versionCode = ' mijoz/build.gradle.kts | sed 's/[^0-9]//g')
+          MV=$(grep -m1 versionName mijoz/build.gradle.kts | sed 's/[^0-9.]//g')
+          cp out/SavdoAgent-*.apk upd/agent.apk
+          cp out/SavdoAdmin-*.apk upd/admin.apk
+          cp out/SavdoMijoz-*.apk upd/mijoz.apk
+          for f in upd/*.apk; do
+            if [ "$(stat -c %s "$f")" -gt 26000000 ]; then echo "::warning::$f is larger than 25 MB (Cloudflare limit) - not published"; rm -f "$f"; fi
+          done
+          python3 - "$AVC" "$AV" "$MVC" "$MV" <<'PY'
+          import json, os, sys
+          avc, av, mvc, mv = sys.argv[1:5]
+          out = {}
+          for key, vc, v in (("agent", avc, av), ("admin", avc, av), ("mijoz", mvc, mv)):
+              f = "upd/%s.apk" % key
+              if os.path.exists(f):
+                  out[key] = {"vc": int(vc), "v": v, "apk": "%s.apk" % key, "size": os.path.getsize(f)}
+          json.dump(out, open("upd/version.json", "w"))
+          print(out)
+          PY
+
+      - name: Upload self-update files
+        if: steps.sign.outputs.tag == 'OWN-KEY' && steps.shop.outputs.dir != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: update
+          path: upd
+          retention-days: 7
 
       - name: Upload iPhone agent (web)
         uses: actions/upload-artifact@v6
@@ -246,6 +320,32 @@ jobs:
           name: web-agent
           path: site
 
+      - name: Self-update folder (v4.0)
+        if: steps.chk.outputs.ok == 'true'
+        id: upd
+        shell: bash
+        env:
+          SHOP_CODE: ${{ secrets.SHOP_CODE }}
+        run: |
+          DIR=$(python3 - <<'PY'
+          import base64, hashlib, os, re
+          m = re.search(r"IMSHOP1:([A-Za-z0-9_-]+)", os.environ.get("SHOP_CODE", ""))
+          if m:
+              b = m.group(1)
+              p = base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)).decode("utf-8").split("\n")
+              print(hashlib.sha256((p[2].strip() + "|upd").encode("utf-8")).hexdigest()[:24] if len(p) >= 3 else "")
+          PY
+          )
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Download self-update files
+        if: steps.chk.outputs.ok == 'true' && steps.upd.outputs.dir != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: update
+          path: site/u/${{ steps.upd.outputs.dir }}
+
       - name: Create Cloudflare Pages project (first run only)
         if: steps.chk.outputs.ok == 'true'
         continue-on-error: true
@@ -259,3 +359,61 @@ jobs:
           rm -rf site/test
           npx --yes wrangler@3.90.0 pages deploy site --project-name="$CF_PROJECT" --branch=main --commit-dirty=true
           echo "::notice::iPhone agent: https://$CF_PROJECT.pages.dev (if the name was taken, see the Cloudflare dashboard)"
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      - name: Download APKs
+        uses: actions/download-artifact@v7
+        with:
+          name: apk-${{ needs.build.outputs.tag }}
+          path: apk
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke script
+        shell: bash
+        run: |
+          cat > smoke.sh <<'EOS'
+          fail=0
+          for a in apk/*.apk; do adb install -r "$a" || fail=1; done
+          for p in com.ibrohimjon.imsoft_dokon_som_val com.ibrohimjon.imsoft_dokon_som_val.admin com.ibrohimjon.imsoft_mijoz; do
+            adb logcat -b crash -c || true
+            adb shell monkey -p "$p" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+            sleep 15
+            if adb logcat -b crash -d | grep -q "$p"; then
+              echo "::error::$p crashed on start"
+              adb logcat -b crash -d | tail -80 | tee "crash_$p.txt"
+              fail=1
+            else
+              echo "$p opened OK"
+            fi
+            adb shell am force-stop "$p" || true
+          done
+          exit $fail
+          EOS
+
+      - name: Open apps on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          disable-animations: true
+          script: bash smoke.sh
+
+      - name: Upload crash logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: smoke-crash
+          path: crash_*.txt
+          if-no-files-found: ignore
+          retention-days: 7
