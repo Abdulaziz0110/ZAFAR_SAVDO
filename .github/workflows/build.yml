@@ -28,14 +28,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Sync sources from ZIP
         id: sync
         shell: bash
         run: |
           set -euo pipefail
-          ZIP=$(ls -t *.zip 2>/dev/null | head -n 1 || true)
+          # Pick the ZIP that was committed LAST (file dates after checkout are all equal, so "ls -t" is not reliable)
+          ZIP=""
+          BEST=-1
+          for z in *.zip; do
+            [ -f "$z" ] || continue
+            T=$(git log -1 --format=%ct -- "$z" 2>/dev/null || echo 0)
+            [ -z "$T" ] && T=0
+            echo "found: $z (commit time $T)"
+            if [ "$T" -gt "$BEST" ]; then BEST=$T; ZIP="$z"; fi
+          done
           if [ -z "$ZIP" ]; then
             echo "No ZIP in repo root - building current sources"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -57,7 +66,13 @@ jobs:
           # Copy new sources (never overwrite .git / .github from the ZIP)
           (cd "$SRC" && tar --exclude='./.git' --exclude='./.github' -cf - .) | tar -xf -
           rm -rf "$TMP"
+          # Old ZIPs are removed so the next build can never pick an old one
+          for z in *.zip; do
+            [ -f "$z" ] && [ "$z" != "$ZIP" ] && git rm -q -f "$z" || true
+          done
           chmod +x gradlew
+          echo "App version: $(grep -m1 versionName app/build.gradle.kts)"
+          echo "Mijoz version: $(grep -m1 versionName mijoz/build.gradle.kts)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
@@ -119,9 +134,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          cp app/build/outputs/apk/agent/debug/*.apk "out/SavdoAgent-${{ steps.sign.outputs.tag }}.apk"
-          cp app/build/outputs/apk/admin/debug/*.apk "out/SavdoAdmin-${{ steps.sign.outputs.tag }}.apk"
-          cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-${{ steps.sign.outputs.tag }}.apk"
+          AV=$(grep -m1 versionName app/build.gradle.kts | sed 's/[^0-9.]//g')
+          MV=$(grep -m1 versionName mijoz/build.gradle.kts | sed 's/[^0-9.]//g')
+          cp app/build/outputs/apk/agent/debug/*.apk "out/SavdoAgent-$AV-${{ steps.sign.outputs.tag }}.apk"
+          cp app/build/outputs/apk/admin/debug/*.apk "out/SavdoAdmin-$AV-${{ steps.sign.outputs.tag }}.apk"
+          cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-$MV-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
 
       - name: Upload APKs
