@@ -2,7 +2,9 @@
 # Repo root: upload IMSOFT_DOKON-project.zip and commit. This workflow:
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
 #   2) builds three APKs - Agent, Admin, Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
-#   3) runs unit tests, lint and the PC script tests; reports go to the "reports" artifact.
+#   3) runs unit tests, lint, the PC script tests and the iPhone (web) agent tests; reports go to the "reports" artifact,
+#   4) publishes the iPhone agent (web/agent) to GitHub Pages (Settings > Pages > Source: GitHub Actions).
+#      If Pages is not available (private repo on a free plan) only that last job fails - APKs are not affected.
 # Secrets (Settings > Secrets and variables > Actions), optional:
 #   SIGNING_KEYSTORE_B64, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD
 # The keystore is never committed: it is written to the runner temp folder only for the build.
@@ -141,6 +143,11 @@ jobs:
           cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-$MV-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
 
+      - name: Upload iPhone agent (web) for Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/agent
+
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
@@ -169,7 +176,14 @@ jobs:
           python3 pc/test_onec_export.py
           python3 pc/test_ornatish.py
           python3 pc/test_onec_data.py
+          python3 pc/test_onec_scale.py
           if python3 -c "import PIL" 2>/dev/null; then python3 pc/test_label_printer.py; else pip install -q pillow && python3 pc/test_label_printer.py; fi
+
+      - name: iPhone agent (web) tests
+        id: webtests
+        continue-on-error: true
+        shell: bash
+        run: node web/agent/test/core.test.js
 
       - name: Remove signing files
         if: always()
@@ -196,6 +210,22 @@ jobs:
           echo "Unit tests: ${{ steps.tests.outcome }}"
           echo "Lint: ${{ steps.lint.outcome }}"
           echo "PC tests: ${{ steps.pctests.outcome }}"
-          if [ "${{ steps.tests.outcome }}" != "success" ] || [ "${{ steps.pctests.outcome }}" != "success" ]; then
+          echo "Web agent tests: ${{ steps.webtests.outcome }}"
+          if [ "${{ steps.tests.outcome }}" != "success" ] || [ "${{ steps.pctests.outcome }}" != "success" ] || [ "${{ steps.webtests.outcome }}" != "success" ]; then
             echo "::warning::Tests failed - see the reports artifact"
           fi
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Publish iPhone agent to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
