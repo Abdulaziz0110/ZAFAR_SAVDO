@@ -47,6 +47,8 @@ class RelayHost(
         suspend fun mirrorPayment(storeId: String, cash: Double, transfer: Double, click: Double, note: String, key: String) = Unit
         /** v3.2: agent tovarga yangi shtrix kod bog'ladi — Admin 1C'ga yozish navbatiga qo'yadi. */
         suspend fun barcode(productId: String, name: String, code: String): Boolean = false
+        /** v3.10: 1- va 2-narx (so'm, 1C'dan) — iPhone (veb) agentlar uchun: tovar id -> [1-narx, 2-narx]. */
+        fun level12(productIds: List<String>): Map<String, List<Double>> = emptyMap()
     }
 
     class Stats(val at: Long = 0L, val requests: Int = 0, val written: Int = 0, val labels: Int = 0, val error: String = "", val catalogAt: Long = 0L)
@@ -59,6 +61,7 @@ class RelayHost(
     private val mutex = Mutex()
     @Volatile private var catalogAt = 0L
     @Volatile private var catalogHash = 0
+    @Volatile private var levelHash = 0
     @Volatile private var codesSent = 0L
     @Volatile private var cleanedAt = 0L
 
@@ -212,6 +215,12 @@ class RelayHost(
         if (hash == catalogHash) io { db.update(cfg.path("cat"), linkedMapOf("at" to at)) }
         else io { db.update(cfg.path("cat"), linkedMapOf("at" to at, "b" to blob)) }
         catalogHash = hash
+        // v3.10: 1/2-narx (Android agent o'zi kompyuter kodlaridan hisoblaydi; veb-agent shu yerdan oladi)
+        runCatching {
+            val l12 = hooks.level12(snap.products.map { it.id })
+            val q = withContext(Dispatchers.Default) { RelayCodec.pack(uz.imsoft.shared.Json.write(l12)) }
+            if (q.hashCode() != levelHash) { io { db.update(cfg.path("cat"), linkedMapOf("q" to q)) }; levelHash = q.hashCode() }
+        }
         catalogAt = at
     }
 

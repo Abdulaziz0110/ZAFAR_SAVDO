@@ -1,7 +1,7 @@
-IMSOFT - kompyuter uchun (5 ta fayl)
+IMSOFT - kompyuter uchun (6 ta fayl)
 
-1. Shu 5 ta faylni D:\imsoft\ papkasiga qo'ying (eskilarini almashtiring):
-   ORNATISH.bat, ornatish.py, onec_export.py, onec_data.py, onec_write.py
+1. Shu 6 ta faylni D:\imsoft\ papkasiga qo'ying (eskilarini almashtiring):
+   ORNATISH.bat, ornatish.py, onec_export.py, onec_data.py, onec_write.py, onec_scale.py
 2. ORNATISH.bat ni ikki marta bosing. Administrator so'raydi - "Da" ni bosing.
 3. Oynadagi savollarga javob bering:
    - printer o'zi topiladi va telefon uchun ulashiladi, sinov yorlig'i chiqadi;
@@ -20,5 +20,10 @@ Yangi (v3.2):
  - 1C'ga yozishni o'chirish: onec.ini ga qo'shing:
      [write]
      enabled = 0
+
+Yangi (v3.10):
+ - Admin: Boshqaruv > Taroziga yuborish. 1C'dagi "Taroziga yuklash" bilan aynan bir xil: tovarlar (PLU va 1-narxi bor,
+   taroziga biriktirilgan) C:\ProgramData\rt_scale.txt ga yoziladi va C:\ProgramData\ScaleDrv\RLS1000C.exe ishga
+   tushadi. Tarozi IP manzillari 1C'dan (Весы > ОбщиеВесы) olinadi. 1C'ga hech narsa yozilmaydi.
 
 Hammasi shu. Kompyuter yoqilganda kerakli narsa o'zi ishga tushadi. Qayta sozlash: ORNATISH.bat ni yana oching.

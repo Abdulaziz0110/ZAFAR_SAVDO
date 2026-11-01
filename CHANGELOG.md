@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 3.10 (versionCode 22) + iPhone agent 1.0 (veb), Savdo Mijoz 1.13 o'zgarmagan — 2026-11-01
+* **iPhone uchun agent** (web/agent, PWA — Safari ▸ "Bosh ekranga qo'shish"): Android agentning "Admin orqali" rejimi bilan
+  bir xil — ulanish kodi, telefon+parol (parol yozilmaydi, PBKDF2 isbot), katalog, 4 narx (1/2-narx Admin'dan), so'm/$,
+  savdo va qaytarish, savatcha, chegirma, naqd/karta, printer tanlash, to'lov (naqd/o'tkazma/click), qarzni yangilash,
+  server hisoboti, 1C tarixi (Admin yuborgani), yuborilganlar holati. Internetsiz: katalog, tarix va navbat telefonda;
+  savdo navbatda kutib, internet kelganda yuboriladi (kalit — oid, dublikat bo'lmaydi). Savdo cheki ko'zgusi Mijozga boradi.
+  Server matnlari Android protokol fixture'lari bilan aynan bir xil (web/agent/test/core.test.js); E2E test — soxta
+  Firebase va Admin bilan (web/agent/test/e2e.js).
+* Admin: katalog bilan birga 1/2-narx (cat/q) joylanadi — veb-agent uchun.
+* **Taroziga yuborish** (Admin ▸ Boshqaruv ▸ Tovarlar): 1C'dagi "Taroziga yuklash" (RONGTA) bilan aynan bir xil — kompyuter
+  1C'dan taroziga biriktirilgan tovarlarni (PLU va 1-narxi bor) o'qiydi, C:\ProgramData\rt_scale.txt yozadi va
+  RLS1000C.exe ni ishga tushiradi; "Narxlarni yuborish" (qoldig'i borlar) yoki "Tozalab, hammasini yuborish". Natija
+  Admin'da ko'rinadi. Yangi kompyuter fayli: pc/onec_scale.py (+ testlari).
+* Build: veb-agent testlari va GitHub Pages'ga joylash bosqichi.
+
 ## 3.9 (versionCode 21) + Savdo Mijoz 1.13 (versionCode 14): Mijozda agentdagidek savdo, internetsiz ishlash — 2026-11-01
 * **Mijoz: "Savdo" bo'limi** (pastki menyuda) — agentdagi savdo ekrani bilan bir xil: mijoz tanlash (yoki naqd), 4 narx
   (1, 2, Naqd, Optom — bizning narxlar), qidiruv, har tovarda "−  miqdor  +", pastda jami va "Savatcha". Savatcha:

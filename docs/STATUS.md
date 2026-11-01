@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 3.9 (versionCode 21) + Savdo Mijoz 1.13 (versionCode 14), 2026-11-01
+# Holat — Savdo Agent / Savdo Admin 3.10 (versionCode 22) + Savdo Mijoz 1.13 (versionCode 14), 2026-11-01
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,17 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## v3.10 — iPhone agent (veb) va tarozi
+| Narsa | Holat |
+|---|---|
+| Veb-agent server matnlari (tur 1, 4, 5) Android fixture'lari bilan bir xil | VERIFIED (`web/agent/test/core.test.js`, 7 test) |
+| Kirish isboti va oid Kotlin bilan bir xil | VERIFIED (`WebAgentParityTest` + core.test.js) |
+| Veb-agent: ulanish, kirish, katalog, 1-narx, savdo, qarz, to'lov, 1C tarixi, hisobot, internetsiz navbat | VERIFIED soxta Firebase/Admin bilan Chromium'da (`web/agent/test/e2e.js`) / haqiqiy iPhone Safari'da IMPLEMENTED-UNVERIFIED |
+| GitHub Pages'ga joylash | IMPLEMENTED-UNVERIFIED (repo sozlamasiga bog'liq) |
+| Admin: 1/2-narx cat/q | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓) |
+| Tarozi: fayl formati 1C bilan bir xil, so'rov/natija | VERIFIED (`pc/test_onec_scale.py`, 5 test) / haqiqiy RONGTA tarozida IMPLEMENTED-UNVERIFIED |
+| Admin "Taroziga yuborish" ekrani | IMPLEMENTED-UNVERIFIED (kompilyatsiya ✓) |
 
 ## v3.9 / Mijoz 1.13 — Mijozda savdo, internetsiz
 | Narsa | Holat |

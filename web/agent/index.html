@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Savdo Agent">
+<meta name="theme-color" content="#111518">
+<title>Savdo Agent</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root {
+  --primary: #006A60; --on-primary: #fff; --pc: #B3EEE4; --on-pc: #00201C;
+  --sc: #CCE8E2; --on-sc: #05201C; --bg: #F7FAF8; --surface: #fff; --sv: #DAE5E2; --on: #191C1B; --muted: #5B6563;
+  --line: #d3dcda; --err: #BA1A1A; --err-c: #FFDAD6; --on-err-c: #410002; --ok: #2E7D32; --warn: #7B5800;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #53DBCA; --on-primary: #003732; --pc: #005048; --on-pc: #74F8E6;
+    --sc: #334B47; --on-sc: #CCE8E2; --bg: #111518; --surface: #191d1f; --sv: #3F4947; --on: #E0E3E1; --muted: #a9b4b1;
+    --line: #2c3533; --err: #FFB4AB; --err-c: #93000A; --on-err-c: #FFDAD6; --ok: #8fd694; --warn: #F0BF61;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--on); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+#app { max-width: 720px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+header.bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; min-height: 56px; }
+header.bar h1 { font-size: 22px; font-weight: 500; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn { border: 0; background: none; color: var(--on); font-size: 22px; width: 44px; height: 44px; border-radius: 22px; }
+.icon-btn:active { background: var(--sv); }
+main { flex: 1; padding: 0 16px 16px; }
+.card { background: var(--surface); border-radius: 16px; padding: 14px 16px; margin: 10px 0; }
+.card.primary { background: var(--pc); color: var(--on-pc); }
+.card.outlined { background: none; border: 1px solid var(--line); }
+.label { font-size: 14px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+.card.primary .label { color: var(--on-pc); }
+.big { font-size: 26px; font-weight: 700; }
+.muted { color: var(--muted); font-size: 13px; }
+.err { color: var(--err); font-size: 14px; }
+.banner { background: var(--err-c); color: var(--on-err-c); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border: 0; border-radius: 26px;
+  background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600; margin: 10px 0; padding: 0 16px; }
+.btn.tonal { background: var(--sc); color: var(--on-sc); }
+.btn.outline { background: none; color: var(--primary); border: 1px solid var(--line); }
+.btn.small { min-height: 40px; font-size: 15px; width: auto; display: inline-flex; margin: 4px 0; }
+.btn:disabled { opacity: .45; }
+.btn:active { filter: brightness(.92); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+.tile { background: var(--sc); color: var(--on-sc); border: 0; border-radius: 16px; height: 84px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px; text-align: center; }
+.tile span.i { font-size: 24px; }
+input, textarea, select { width: 100%; font: inherit; color: var(--on); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px; margin: 6px 0; }
+textarea { min-height: 90px; }
+input:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; margin: 6px 0; }
+.seg button { flex: 1; border: 0; background: none; color: var(--on); min-height: 40px; font-size: 14px; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--sc); color: var(--on-sc); font-weight: 700; }
+.row2 { display: flex; gap: 8px; }
+.row2 > * { flex: 1; }
+.store { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 0; }
+.store .t { font-size: 17px; font-weight: 600; }
+.list .item { display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.list .item.in { background: color-mix(in srgb, var(--sc) 55%, transparent); margin: 0 -16px; padding: 8px 16px; }
+.list .item .n { flex: 1; min-width: 0; }
+.list .item .n .t { font-size: 16px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.price { color: var(--primary); font-weight: 700; font-size: 16px; }
+.step { display: flex; align-items: center; gap: 2px; }
+.step button { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--line); background: none; color: var(--on); font-size: 22px; }
+.step button.plus { background: var(--sc); color: var(--on-sc); border: 0; width: 48px; height: 48px; }
+.step .q { min-width: 44px; text-align: center; font-weight: 700; font-size: 17px; }
+.sticky { position: sticky; top: 0; background: var(--bg); z-index: 2; padding-bottom: 4px; }
+.bottom { position: sticky; bottom: 0; background: var(--sv); display: flex; align-items: center; gap: 12px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+.bottom .sum { flex: 1; }
+.bottom .sum .big { font-size: 22px; }
+.bottom .btn { width: auto; margin: 0; }
+.day { font-size: 14px; color: var(--primary); font-weight: 600; margin: 14px 0 4px; }
+.doc { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.doc .k { width: 40px; height: 40px; border-radius: 20px; background: var(--pc); color: var(--on-pc); display: flex; align-items: center; justify-content: center; flex: none; }
+.doc .k.pay { background: var(--sc); color: var(--on-sc); }
+.doc .k.ret { background: #FFDEA6; color: #271900; }
+.doc .m { flex: 1; min-width: 0; }
+.doc .a { font-weight: 700; white-space: nowrap; }
+.chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: var(--sv); }
+.chip.ok { background: color-mix(in srgb, var(--ok) 25%, transparent); }
+.chip.err { background: var(--err-c); color: var(--on-err-c); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--bg); width: 100%; max-width: 720px; max-height: 88vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+.sheet .scroll { overflow: auto; flex: 1; }
+.sheet h2 { margin: 4px 0 8px; font-size: 19px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom)); background: #323232; color: #fff;
+  padding: 12px 18px; border-radius: 10px; z-index: 30; max-width: 90%; font-size: 15px; }
+iframe.rep { width: 100%; height: 70vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.sp { display: inline-block; width: 18px; height: 18px; border: 3px solid var(--sv); border-top-color: var(--primary); border-radius: 50%; animation: s 1s linear infinite; vertical-align: middle; }
+@keyframes s { to { transform: rotate(360deg); } }
+.tot { display: flex; justify-content: space-between; padding: 4px 0; }
+.tot.b { font-weight: 700; font-size: 18px; }
+</style>
+</head>
+<body>
+<div id="app"><main><p class="muted" style="margin-top:40px;text-align:center">Yuklanmoqda…</p></main></div>
+<noscript>Ilova ishlashi uchun JavaScript yoqilgan bo'lishi kerak.</noscript>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

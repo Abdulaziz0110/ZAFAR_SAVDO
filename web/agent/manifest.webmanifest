@@ -1,0 +1,16 @@
+{
+  "name": "Savdo Agent",
+  "short_name": "Savdo Agent",
+  "description": "IMSOFT do'kon agenti: savdo, to'lov, qarz, 1C tarixi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111518",
+  "theme_color": "#111518",
+  "lang": "uz",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -137,6 +137,32 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         _state.value = _state.value.copy(requestedAt = System.currentTimeMillis(), requestedKind = kind)
     }
 
+    // ---------------- v3.10: tarozi ----------------
+
+    /** Tarozi natijasi (kompyuter yozadi). [req] — qaysi so'rovga javob (so'rov vaqti). */
+    data class ScaleResult(val at: Long, val req: Long, val ok: Boolean, val text: String, val n: Int)
+
+    /**
+     * Taroziga narx va PLU: kompyuter 1C'dagi "Taroziga yuklash" bilan aynan bir xil ishni qiladi (RONGTA dasturi).
+     * [clear] — tarozini tozalab hammasini yuborish; aks holda faqat qoldig'i borlar. @return so'rov vaqti (server).
+     */
+    suspend fun requestScale(clear: Boolean): Long {
+        check(ready) { "cloud" }
+        return withContext(Dispatchers.IO) {
+            val db = cloud()
+            db.put("p/$inbox/scale", linkedMapOf("m" to if (clear) "clear" else "stock", "at" to CloudDb.SERVER_TIME))
+            (db.get("p/$inbox/scale/at") as? Number)?.toLong() ?: System.currentTimeMillis()
+        }
+    }
+
+    suspend fun scaleResult(): ScaleResult? {
+        if (!ready) return null
+        @Suppress("UNCHECKED_CAST")
+        val m = withContext(Dispatchers.IO) { runCatching { cloud().get("p/$inbox/scale_res") as? Map<String, Any?> }.getOrNull() } ?: return null
+        val o = JObj(m)
+        return ScaleResult(o.long("at"), o.long("req"), o.bool("ok"), o.str("text"), o.long("n").toInt())
+    }
+
     // ---------------- 1C'ga yozish ----------------
 
     /** Egasi tasdiqlagan so'rovni navbatga qo'yadi. Internet bo'lmasa — xato (so'rov yo'qolmaydi, "Qayta yuborish" mumkin). */

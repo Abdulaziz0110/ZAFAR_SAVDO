@@ -1313,6 +1313,14 @@ def loop(cfg):
                 st = load_state()
                 st["__dreq__"] = at
                 save_state(st)
+        # v3.10: taroziga narx va PLU (Admin so'rovi; 1C'dagi "ВыгрузкаТоваровНаВесы" bilan bir xil)
+        try:
+            import onec_scale
+            msg = onec_scale.tick(cloud, onec, load_state(), save_state)
+            if msg:
+                safe_status(cloud, msg, msg.startswith("Taroziga"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("tarozi so'rovi: %s", e)
         # 1C'ga yozish navbati (Admin tasdiqlagan)
         try:
             done, errs = writer.run()

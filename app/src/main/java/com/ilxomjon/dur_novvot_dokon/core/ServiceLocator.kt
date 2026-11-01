@@ -265,6 +265,15 @@ object ServiceLocator {
                     appScope.launch(Dispatchers.IO) { afterDealSent(sale.order.storeId, 0L) }
                 }
                 override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
+                override fun level12(productIds: List<String>): Map<String, List<Double>> {
+                    val out = LinkedHashMap<String, List<Double>>()
+                    for (id in productIds) {
+                        val a = labels.priceForLevel(id, 1) ?: 0.0
+                        val b = labels.priceForLevel(id, 2) ?: 0.0
+                        if (a > 0 || b > 0) out[id] = listOf(a, b)
+                    }
+                    return out
+                }
                 override suspend fun mirrorPayment(storeId: String, cash: Double, transfer: Double, click: Double, note: String, key: String) {
                     val st = catalog.storeById(storeId)
                     val p = com.ilxomjon.dur_novvot_dokon.domain.SentPayment(0, System.currentTimeMillis(), storeId, st?.name.orEmpty(), cash, transfer, click, note)

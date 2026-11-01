@@ -1158,6 +1158,15 @@ STRINGS.update({
  'ah_agent_wait': "Admin hali yubormagan: Admin ilovasi yangi versiyada, ochiq va Tailscale yoqiq bo'lishi kerak",
  'ah_agent_empty': "1C tarixi hali kelmagan. Yuqoridagi holat qatorida sababi yozilgan",
  'ah_agent_syncing': 'Yangilanmoqda…',
+ # v3.10: tarozi
+ 'sc_title': 'Taroziga yuborish', 'sc_sub': "Narx va PLU — 1C'dagi \"Taroziga yuklash\" kabi",
+ 'sc_hint': "Do'kon kompyuteri 1C'dan taroziga biriktirilgan tovarlarni (PLU va 1-narxi bor) oladi va tarozi dasturi orqali yuboradi — 1C'dagi tugma bilan aynan bir xil. Kompyuter yoqiq va dastur ishlab turishi kerak.",
+ 'sc_stock': 'Narxlarni yuborish', 'sc_stock_hint': "Faqat qoldig'i bor tovarlar. Tarozidagi boshqa tovarlar o'chirilmaydi.",
+ 'sc_clear': 'Tozalab, hammasini yuborish', 'sc_clear_hint': "Tarozi tozalanadi va taroziga biriktirilgan hamma tovar qaytadan yuklanadi.",
+ 'sc_clear_confirm': "Tarozidagi hamma tovar o'chiriladi va 1C'dagi ro'yxat qaytadan yuklanadi. Davom etasizmi?",
+ 'sc_result': 'Natija', 'sc_none': "Hali yuborilmagan", 'sc_waiting': "Kompyuterga yuborildi, javob kutilmoqda (30 soniyagacha)…",
+ 'sc_sent': 'Kompyuterga yuborildi', 'sc_ok': '%1$s: %2$s', 'sc_fail': 'Xato (%1$s): %2$s',
+ 'sc_timeout': "Kompyuter 3 daqiqada javob bermadi. Boshqaruv ▸ Kompyuter (1C) holatini tekshiring.",
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

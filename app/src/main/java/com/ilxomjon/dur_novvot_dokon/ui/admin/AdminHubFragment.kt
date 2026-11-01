@@ -75,6 +75,8 @@ class AdminHubFragment : CodeFragment() {
         val (card4, col4) = Ui.card(ctx)
         col4.addView(Ui.item(ctx, getString(R.string.ad_labels), getString(R.string.ad_labels_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) })
         col4.addView(Ui.divider(ctx))
+        col4.addView(Ui.item(ctx, getString(R.string.sc_title), getString(R.string.sc_sub)) { navigator().push(ScaleFragment()) })
+        col4.addView(Ui.divider(ctx))
         col4.addView(Ui.item(ctx, getString(R.string.ad_barcodes), getString(R.string.ad_barcodes_sub)) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment()) })
         c.addView(card4)
 
