@@ -272,7 +272,8 @@ object ServiceLocator {
                     runCatching {
                         val d = adminHistory.data.value
                         val cfg = com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(uz.imsoft.shared.CloudDb.normalizeUrl(shareStore.dbUrl), shareStore.agentKey)
-                        historyShare.publish(cfg.takeIf { it.isValid }, shareStore.secret, d.entries, d.version, d.loaded)
+                        val pend = uz.imsoft.shared.report.PendingMerge.pending(d.entries, localDocs.value, app.getString(R.string.pending_1c))
+                        historyShare.publish(cfg.takeIf { it.isValid }, shareStore.secret, d.entries, d.version * 65_536 + (pend.hashCode() and 0xFFFF), d.loaded, pend)
                     }
                 }
             }

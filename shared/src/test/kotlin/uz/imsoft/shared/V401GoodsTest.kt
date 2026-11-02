@@ -108,4 +108,13 @@ class V401GoodsTest {
         assertEquals(listOf("Mayiz"), idle.map { it.product })
         assertEquals(2, idle[0].count)
     }
+
+    @Test fun pendingOnlyUnmatched() {
+        val t = PendingMerge.millisOf(20261102100000L)
+        val local = PendingMerge.Local("o1", t, EntryKind.SALE, "s1", "Naqt", listOf(PendingMerge.Line("Pista", 1.0, 200.0)), 200.0)
+        val p = PendingMerge.pending(emptyList(), listOf(local), "1C'ga ketmoqda", t + 60_000L)
+        assertEquals(listOf("Pista"), p.map { it.product })
+        val inDb = listOf(LedgerEntry(20261102100100L, EntryKind.SALE, uz.imsoft.shared.report.LedgerOwner.tag("1C №5", "s1", "Naqt"), "Pista", 1.0, mapOf(Col.SUM to Money2(som = 200.0))))
+        assertTrue(PendingMerge.pending(inDb, listOf(local), "x", t + 60_000L).isEmpty())
+    }
 }

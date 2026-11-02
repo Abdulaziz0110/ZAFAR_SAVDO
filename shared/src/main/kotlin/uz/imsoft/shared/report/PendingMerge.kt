@@ -86,8 +86,15 @@ object PendingMerge {
 
     /** 1C yozuvlari + hali 1C'ga yetmagan telefon yozuvlari ([label] — "1C'ga ketmoqda"). */
     fun merge(entries: List<LedgerEntry>, locals: List<Local>, label: String, now: Long = System.currentTimeMillis()): List<LedgerEntry> {
+        val extra = pending(entries, locals, label, now)
+        if (extra.isEmpty()) return entries
+        return (entries + extra).sortedBy { it.stamp }
+    }
+
+    /** v4.0.2: faqat hali 1C'ga yetmagan telefon yozuvlari (Admin ularni agentlarga ham yuboradi). */
+    fun pending(entries: List<LedgerEntry>, locals: List<Local>, label: String, now: Long = System.currentTimeMillis()): List<LedgerEntry> {
         val add = unmatched(entries, locals, now)
-        if (add.isEmpty()) return entries
+        if (add.isEmpty()) return emptyList()
         val extra = ArrayList<LedgerEntry>()
         for (l in add) {
             val stamp = stampOf(l.at)
@@ -100,6 +107,6 @@ object PendingMerge {
                 for (ln in l.lines) extra += LedgerEntry(stamp, l.kind, kt, ln.name, ln.qty, mapOf(Col.PRICE to m(ln.price), col to m(ln.qty * ln.price)))
             }
         }
-        return (entries + extra).sortedBy { it.stamp }
+        return extra.sortedBy { it.stamp }
     }
 }

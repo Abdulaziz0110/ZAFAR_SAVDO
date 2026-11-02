@@ -37,12 +37,14 @@ class HistoryShare(private val context: Context) {
         runCatching { JObj.parse(text).map.mapValues { it.value?.toString().orEmpty() } }.getOrDefault(emptyMap())
 
     /** @return yuborilgan bo'laklar soni (o'zgarmagan bo'lsa 0). */
-    suspend fun publish(cfg: RelayCodec.Config?, secret: String, entries: List<LedgerEntry>, version: Long, loaded: Boolean): Int = pubLock.withLock {
+    suspend fun publish(cfg: RelayCodec.Config?, secret: String, entries: List<LedgerEntry>, version: Long, loaded: Boolean, pending: List<LedgerEntry> = emptyList()): Int = pubLock.withLock {
         if (cfg == null || secret.isBlank() || !loaded || version < 0) return@withLock 0
         val now = System.currentTimeMillis()
-        if (version == pubVersion || now - pubAt < 60_000L) return@withLock 0
+        // v4.0.2: 20 soniyada ko'pi bilan bir (Admin'dagi savdo agentlarda tez ko'rinsin); faqat o'zgargan bo'lak yuboriladi
+        if (version == pubVersion || now - pubAt < 20_000L) return@withLock 0
         val parts = withContext(Dispatchers.Default) {
-            HistoryPack.split(entries).mapValues { (_, l) -> HistoryPack.json(l).let { j -> HistoryPack.hash(j) to j } }
+            // v4.0.2: Admin telefonida qilingan, hali 1C'ga yetmagan savdo/to'lov — alohida "pending" bo'lagi (1C'dan kelgach yo'qoladi)
+            (HistoryPack.split(entries) + (PENDING to pending)).mapValues { (_, l) -> HistoryPack.json(l).let { j -> HistoryPack.hash(j) to j } }
         }
         val old = readMap(pub.getString("h", "").orEmpty())
         val hashes = parts.mapValues { it.value.first }
@@ -69,6 +71,8 @@ class HistoryShare(private val context: Context) {
 
     data class AgentState(
         val entries: List<LedgerEntry> = emptyList(),
+        /** v4.0.2: Admin'da qilingan, hali 1C'ga yetmagan yozuvlar ("1C'ga ketmoqda"). Statistikaga kirmaydi. */
+        val pending: List<LedgerEntry> = emptyList(),
         val version: Long = 0L,
         val loaded: Boolean = false,
         val status: String = "",
@@ -99,10 +103,11 @@ class HistoryShare(private val context: Context) {
     }
 
     private suspend fun agPublish(status: String) {
-        val snapshot = parts.values.toList()
+        val snapshot = parts.filterKeys { it != PENDING }.values.toList()
+        val pend = parts[PENDING].orEmpty()
         val all = withContext(Dispatchers.Default) { snapshot.flatten().sortedBy { it.stamp } }
         agVersion++
-        _agent.value = AgentState(all, agVersion, true, status)
+        _agent.value = AgentState(all, pend, agVersion, true, status)
     }
 
     private fun statusFor(cfg: RelayCodec.Config?, err: String): String {
@@ -123,7 +128,7 @@ class HistoryShare(private val context: Context) {
         agLoad()
         if (cfg == null) { _agent.value = _agent.value.copy(status = statusFor(null, "")); return@withLock }
         val now = System.currentTimeMillis()
-        if (!force && now - lastSync < 2 * 60_000L) return@withLock
+        if (!force && now - lastSync < 30_000L) return@withLock
         lastSync = now
         try {
             val db = CloudDb(cfg.dbUrl)
@@ -167,5 +172,10 @@ class HistoryShare(private val context: Context) {
         } catch (e: Exception) {
             _agent.value = _agent.value.copy(status = statusFor(cfg, (e.message ?: e.javaClass.simpleName).take(120)), loaded = true)
         }
+    }
+
+    companion object {
+        /** Agentlarga: Admin telefonidagi hali 1C'ga yetmagan yozuvlar bo'lagi. */
+        const val PENDING = "pending"
     }
 }

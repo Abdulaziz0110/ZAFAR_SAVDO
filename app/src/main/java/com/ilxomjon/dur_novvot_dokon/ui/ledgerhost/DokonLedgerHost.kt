@@ -18,6 +18,7 @@ import com.ilxomjon.dur_novvot_dokon.ui.ledger.RepeatLine
 import com.ilxomjon.dur_novvot_dokon.ui.ledger.RepeatPlan
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -58,7 +59,12 @@ object DokonLedgerHost : LedgerHost {
         }
 
     override val ledgerData: StateFlow<LedgerData> by lazy {
-        val base = dbData
+        // v4.0.2 Agent: Admin telefonida qilingan, hali 1C'ga yetmagan savdolar ham (Admin yuboradi)
+        val adminPending: kotlinx.coroutines.flow.Flow<List<uz.imsoft.shared.report.LedgerEntry>> =
+            if (admin) kotlinx.coroutines.flow.flowOf(emptyList()) else ServiceLocator.historyShare.agent.map { it.pending }
+        val base = kotlinx.coroutines.flow.combine(dbData, adminPending.distinctUntilChanged()) { d, p ->
+            if (p.isEmpty()) d else LedgerData((d.entries + p).sortedBy { it.stamp }, d.clientName, d.version * 4096 + (p.hashCode() and 0xFFF), d.loaded)
+        }
         // v4.0 "Yagona ro'yxat": telefonda qilingan savdo/to'lov 1C'dan kelguncha tepada ("1C'ga ketmoqda")
         val label = ServiceLocator.context.getString(R.string.pending_1c)
         kotlinx.coroutines.flow.combine(base, ServiceLocator.localDocs) { d, locals ->
@@ -71,7 +77,7 @@ object DokonLedgerHost : LedgerHost {
         ServiceLocator.appScope.launch {
             while (true) {
                 runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, false) }
-                kotlinx.coroutines.delay(60_000L)
+                kotlinx.coroutines.delay(30_000L)
             }
         }
     }

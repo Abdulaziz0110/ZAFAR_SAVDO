@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 4.0.1 (versionCode 26) + Savdo Mijoz 2.0.1 (versionCode 18), 2026-11-02
+# Holat — Savdo Agent / Savdo Admin 4.0.2 (versionCode 27) + Savdo Mijoz 2.0.1 (versionCode 18), 2026-11-02
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,12 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## 4.0.2 — Admin'dagi savdo agentlarda darhol
+| Narsa | Holat |
+|---|---|
+| Admin telefonida qilingan, hali 1C'ga yetmagan savdo/to'lov agentlarga "1C'ga ketmoqda" bilan boradi, 1C'dan kelgach almashadi | VERIFIED (PendingMerge testi) / telefonda IMPLEMENTED-UNVERIFIED |
+| Admin tarixni 20 soniyada, agent 30 soniyada yangilaydi; agentda "Yangilash" tarixni ham darhol oladi | IMPLEMENTED-UNVERIFIED |
 
 ## 4.0.1 — Mijozda olingan tovarlar, statistika bazadan va kengroq
 | Narsa | Holat |

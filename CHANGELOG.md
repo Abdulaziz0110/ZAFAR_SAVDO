@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.0.2 (versionCode 27) — 2026-11-02
+* Admin telefonida qilingan savdo agentlarda ham darhol ko'rinadi ("1C'ga ketmoqda", 1C'dan kelgach almashadi).
+* Agent tarixi tezroq yangilanadi; "Yangilash" tugmasi tarixni ham oladi.
+
 ## 4.0.1 (versionCode 26), Savdo Mijoz 2.0.1 (versionCode 18) — 2026-11-02
 * Mijoz: tarixda har savdoning tovarlari ko'rinadi, Narxlar ro'yxati to'ladi (1C hujjatlaridan, kompyuter orqali).
 * Statistika, Boss ekrani va kechki hisobot faqat 1C bazasidagi savdolardan.
