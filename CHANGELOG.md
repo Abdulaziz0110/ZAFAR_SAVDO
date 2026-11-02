@@ -11,6 +11,7 @@
 * **Statistika** uchala ilovada: kun/hafta/oy/yil grafiklari, foyda, eng ko'p sotilgan tovarlar, narx o'zgarishlari.
 * **Kelgan narx** — oxirgi kirim narxi; 4-narx taklifi (kelgan + 2 000). Dollar kursi telefondan.
 * **Mijoz**: sodda savdo (nasiyasiz), "Olgan tovarlarim", filial printeri o'zi yoqiladi.
+* Build tuzatildi: Mijoz build skriptida `java.util.Base64` (Gradle'da `java` boshqa narsa) — import qilindi.
 * **Sozlamalar** qaytadan; tugma yozuvlari tuzatildi (4 narx, "Do…"); xato hisoboti Admin'ga o'zi keladi; build'da emulyator tekshiruvi.
 
 ## Savdo Mijoz 1.15 (versionCode 16) — 2026-11-01

@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -93,8 +94,8 @@ fun devCode(shop: String): String {
     val i = shop.indexOf("IMSHOP1:")
     if (i < 0) return ""
     val body = shop.substring(i + 8).takeWhile { it.isLetterOrDigit() || it == '-' || it == '_' }
-    val parts = runCatching { String(java.util.Base64.getUrlDecoder().decode(body.padEnd((body.length + 3) / 4 * 4, '=')), Charsets.UTF_8).split("\n") }.getOrNull() ?: return ""
+    val parts = runCatching { String(Base64.getUrlDecoder().decode(body.padEnd((body.length + 3) / 4 * 4, '=')), Charsets.UTF_8).split("\n") }.getOrNull() ?: return ""
     if (parts.size < 3) return ""
     val dev = parts[0].trim() + "\n" + parts[2].trim()
-    return "IMSDEV1:" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(dev.toByteArray(Charsets.UTF_8))
+    return "IMSDEV1:" + Base64.getUrlEncoder().withoutPadding().encodeToString(dev.toByteArray(Charsets.UTF_8))
 }
