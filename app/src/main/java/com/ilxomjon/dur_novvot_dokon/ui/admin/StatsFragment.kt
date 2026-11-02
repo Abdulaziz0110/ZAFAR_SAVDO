@@ -31,7 +31,7 @@ class StatsFragment : CodeFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         launchOnStarted {
-            DokonLedgerHost.ledgerData.collect { d ->
+            DokonLedgerHost.dbData.collect { d ->
                 val rate = ServiceLocator.catalog.state.value.rate
                 panel.setData(d.entries, rate, costByName(rate))
             }
@@ -44,7 +44,21 @@ class StatsFragment : CodeFragment() {
             listOf(f.getString(R.string.stt_sales), f.getString(R.string.stt_payments), f.getString(R.string.stt_returns), f.getString(R.string.stt_profit)),
             f.getString(R.string.stt_selected), f.getString(R.string.stt_total), f.getString(R.string.stt_top), f.getString(R.string.stt_prices),
             f.getString(R.string.stt_empty), f.getString(R.string.stt_change), { Stamp.formatDateTime(it) },
+            StatsPanel.More(
+                f.getString(R.string.stt_kpi_for), f.getString(R.string.stt_k_sales), f.getString(R.string.stt_k_profit), f.getString(R.string.stt_k_docs),
+                f.getString(R.string.stt_k_avg), f.getString(R.string.stt_k_clients), f.getString(R.string.stt_k_pay),
+                f.getString(R.string.stt_share_clients), f.getString(R.string.stt_share_goods), f.getString(R.string.stt_other),
+                f.getString(R.string.stt_fast), f.getString(R.string.stt_fast_sub),
+                f.getString(R.string.stt_weekdays), weekdays(f), f.getString(R.string.stt_best_day),
+                f.getString(R.string.stt_hours), f.getString(R.string.stt_best_hour),
+                f.getString(R.string.stt_idle), f.getString(R.string.stt_idle_sub),
+                f.getString(R.string.stt_no_goods),
+            ),
         )
+
+        fun weekdays(f: androidx.fragment.app.Fragment) = listOf(
+            R.string.stt_wd_1, R.string.stt_wd_2, R.string.stt_wd_3, R.string.stt_wd_4, R.string.stt_wd_5, R.string.stt_wd_6, R.string.stt_wd_7,
+        ).map { f.getString(it) }
 
         /** Tovar nomi -> kelgan narx (so'm): oxirgi kirim, bo'lmasa serverdagi. Foyda shu bilan. */
         fun costByName(rate: Double): (String) -> Double? {

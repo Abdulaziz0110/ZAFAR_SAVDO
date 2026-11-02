@@ -128,4 +128,139 @@ object Stats {
         }
         return out.sortedByDescending { it.third }.take(limit)
     }
+
+    // ---------------- v4.0.1: ko'proq statistika ----------------
+
+    data class Kpi(
+        val sales: Double, val profit: Double, val payments: Double, val returns: Double,
+        val docs: Int, val avg: Double, val clients: Int, val hasProfit: Boolean, val goodsLines: Int,
+    )
+
+    private fun owner(e: LedgerEntry): String = LedgerOwner.of(e.kindText)?.second?.trim().orEmpty()
+
+    /** Asosiy ko'rsatkichlar: savdo, foyda, to'lov, qaytarish, hujjatlar (cheklar), o'rtacha chek, mijozlar soni. */
+    fun kpi(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double, cost: (String) -> Double? = { null }): Kpi {
+        var s = 0.0; var p = 0.0; var r = 0.0; var pr = 0.0; var withCost = false; var lines = 0
+        val docs = HashSet<String>()
+        val clients = HashSet<String>()
+        for (e in entries) {
+            if (e.stamp < fromStamp || e.stamp >= toStamp) continue
+            s += saleOf(e, rate); p += paymentOf(e, rate); r += returnOf(e, rate)
+            if (e.kind == EntryKind.SALE) {
+                docs += "${e.stamp}|${LedgerOwner.plain(e.kindText)}|${owner(e)}"
+                owner(e).takeIf { it.isNotEmpty() }?.let { clients += it.lowercase() }
+                if (e.product.isNotBlank()) {
+                    lines++
+                    if (e.qty != 0.0 && cost(e.product) != null) { withCost = true; pr += profitOf(e, rate, cost) }
+                }
+            }
+        }
+        return Kpi(s, pr, p, r, docs.size, if (docs.isEmpty()) 0.0 else s / docs.size, clients.size, withCost, lines)
+    }
+
+    /**
+     * Tez sotilayotgan tovarlar: davrda nechta KUNDA sotilgani (tezligi), kuniga o'rtacha miqdor va oldingi teng davrga
+     * nisbatan o'zgarish (%). Avval eng ko'p kunlarda sotilganlar.
+     */
+    data class Fast(val product: String, val qty: Double, val sum: Double, val days: Int, val perDay: Double, val trend: Double?, val lastStamp: Long)
+
+    fun fast(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double, limit: Int = 10): List<Fast> {
+        val fromMs = PendingMerge.millisOf(fromStamp)
+        val toMs = PendingMerge.millisOf(toStamp)
+        val spanDays = ((toMs - fromMs) / 86_400_000L).coerceAtLeast(1L)
+        val prevFrom = PendingMerge.stampOf(fromMs - (toMs - fromMs))
+        class Acc { var q = 0.0; var s = 0.0; val days = HashSet<Long>(); var prevQ = 0.0; var last = 0L }
+        val m = HashMap<String, Acc>()
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.product.isBlank()) continue
+            if (e.stamp >= toStamp || e.stamp < prevFrom) continue
+            val a = m.getOrPut(e.product) { Acc() }
+            if (e.stamp >= fromStamp) {
+                a.q += kotlin.math.abs(e.qty); a.s += saleOf(e, rate); a.days += e.day
+                if (e.stamp > a.last) a.last = e.stamp
+            } else a.prevQ += kotlin.math.abs(e.qty)
+        }
+        return m.entries.filter { it.value.days.isNotEmpty() }.map { (k, a) ->
+            val trend = if (a.prevQ > 0) (a.q - a.prevQ) / a.prevQ * 100.0 else null
+            Fast(k, a.q, a.s, a.days.size, a.q / spanDays, trend, a.last)
+        }.sortedWith(compareByDescending<Fast> { it.days }.thenByDescending { it.sum }).take(limit)
+    }
+
+    /** Ulush (doiraviy grafik uchun): eng kattalari va qolgani bitta ("" nomli) bo'lak. */
+    data class Slice(val label: String, val value: Double)
+
+    private fun slices(m: Map<String, Double>, limit: Int): List<Slice> {
+        val sorted = m.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+        val out = sorted.take(limit).map { Slice(it.key, it.value) }.toMutableList()
+        val rest = sorted.drop(limit).sumOf { it.value }
+        if (rest > 0) out += Slice("", rest)
+        return out
+    }
+
+    /** Mijozlar ulushi (savdo summasi bo'yicha). Mijoz nomi yozuvda bo'lmasa — bo'sh ro'yxat. */
+    fun byClient(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double, limit: Int = 5): List<Slice> {
+        val m = HashMap<String, Double>()
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.stamp < fromStamp || e.stamp >= toStamp) continue
+            val o = owner(e)
+            if (o.isEmpty()) continue
+            m[o] = (m[o] ?: 0.0) + saleOf(e, rate)
+        }
+        return if (m.size < 2) emptyList() else slices(m, limit)
+    }
+
+    /** Tovarlar ulushi (savdo summasi bo'yicha). */
+    fun byGoods(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double, limit: Int = 5): List<Slice> {
+        val m = HashMap<String, Double>()
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.product.isBlank() || e.stamp < fromStamp || e.stamp >= toStamp) continue
+            m[e.product] = (m[e.product] ?: 0.0) + saleOf(e, rate)
+        }
+        return if (m.size < 2) emptyList() else slices(m, limit)
+    }
+
+    /** Hafta kunlari bo'yicha savdo (0 — dushanba … 6 — yakshanba). */
+    fun weekdays(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double): DoubleArray {
+        val out = DoubleArray(7)
+        val c = Calendar.getInstance()
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.stamp < fromStamp || e.stamp >= toStamp) continue
+            c.timeInMillis = PendingMerge.millisOf(e.stamp)
+            out[(c.get(Calendar.DAY_OF_WEEK) + 5) % 7] += saleOf(e, rate)
+        }
+        return out
+    }
+
+    /** Kun soatlari bo'yicha savdo (faqat vaqti ma'lum yozuvlar). Hammasi 0 bo'lsa — vaqt yo'q. */
+    fun hours(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double): DoubleArray {
+        val out = DoubleArray(24)
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.stamp < fromStamp || e.stamp >= toStamp) continue
+            val hms = e.stamp % 1_000_000
+            if (hms == 0L) continue
+            out[(hms / 10_000).toInt().coerceIn(0, 23)] += saleOf(e, rate)
+        }
+        return out
+    }
+
+    /** To'xtab qolgan tovarlar: oxirgi yilda sotilgan, lekin [idleDays] kundan beri sotilmagan (oldin ko'p sotilgani birinchi). */
+    data class Idle(val product: String, val lastStamp: Long, val days: Int, val count: Int)
+
+    fun idle(entries: List<LedgerEntry>, nowMs: Long, idleDays: Int = 14, limit: Int = 10): List<Idle> {
+        val yearAgo = PendingMerge.stampOf(nowMs - 365L * 86_400_000L)
+        val last = HashMap<String, Long>()
+        val days = HashMap<String, HashSet<Long>>()
+        for (e in entries) {
+            if (e.kind != EntryKind.SALE || e.product.isBlank() || e.stamp < yearAgo) continue
+            if ((last[e.product] ?: 0L) < e.stamp) last[e.product] = e.stamp
+            days.getOrPut(e.product) { HashSet() } += e.day
+        }
+        val out = ArrayList<Idle>()
+        for ((p, st) in last) {
+            val d = ((nowMs - PendingMerge.millisOf(st)) / 86_400_000L).toInt()
+            val n = days[p]?.size ?: 0
+            if (d >= idleDays && n >= 2) out += Idle(p, st, d, n)
+        }
+        return out.sortedWith(compareByDescending<Idle> { it.count }.thenBy { it.days }).take(limit)
+    }
 }

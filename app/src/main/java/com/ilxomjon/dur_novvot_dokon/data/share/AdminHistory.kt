@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import uz.imsoft.shared.onec.OneCLedger
 import uz.imsoft.shared.onec.OneCSales
-import uz.imsoft.shared.pos.Pos
 import uz.imsoft.shared.report.LedgerEntry
 import uz.imsoft.shared.report.LedgerMerge
 import uz.imsoft.shared.report.LedgerOwner
@@ -62,11 +61,10 @@ class AdminHistory(
         val out = ArrayList<LedgerEntry>(h.entries.size + (sales?.docs?.size ?: 0) * 4)
         // v3.8: server (akt sverki) savdo/qaytarishni tovarlarsiz beradi — kompyuter shu vaqtni qamragan bo'lsa, savdo va
         // qaytarish kompyuterdan (tovarlari bilan), to'lovlar serverdan. Kompyuter qamramagan vaqt — hammasi serverdan.
-        val pcFrom = sales?.from?.takeIf { it > 0 } ?: Long.MAX_VALUE
-        val pcTo = sales?.let { minOf(if (it.to % 1_000_000 == 0L) it.to + 235959 else it.to, Pos.stampOf(it.at - 5 * 60_000L)) } ?: Long.MIN_VALUE
+        val cov = sales?.let { OneCLedger.covered(it, System.currentTimeMillis()) }
         for (e in h.entries) {
             val goods = e.kind == uz.imsoft.shared.report.EntryKind.SALE || e.kind == uz.imsoft.shared.report.EntryKind.RETURN
-            if (goods && e.stamp in pcFrom..pcTo) continue
+            if (goods && cov != null && e.stamp in cov.first..cov.second) continue
             out += e
         }
         if (sales != null) {

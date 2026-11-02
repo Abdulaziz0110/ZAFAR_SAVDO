@@ -1264,11 +1264,21 @@ STRINGS.update({
 
 STRINGS.update({
  # v4.0: statistika
- 'stt_title': 'Statistika', 'stt_hint': "1C'dagi barcha savdo va to'lovlar bo'yicha (telefonda qilingan, hali 1C'ga yetmaganlari ham). Ustunni bosing — qiymati ko'rinadi.",
+ 'stt_title': 'Statistika', 'stt_hint': "1C bazasidagi savdo va to'lovlar bo'yicha (kompyuterdan kelgan; telefonda qilingan, hali 1C'ga yetmagan savdo qo'shilmaydi). Ustunni bosing — o'sha kun ko'rsatkichlari chiqadi.",
  'stt_day': 'Kun', 'stt_week': 'Hafta', 'stt_month': 'Oy', 'stt_year': 'Yil',
  'stt_sales': 'Savdo', 'stt_payments': "To'lov", 'stt_returns': 'Qaytarish', 'stt_profit': 'Foyda',
  'stt_selected': '%1$s: %2$s', 'stt_total': '%1$s bo\'yicha, grafikdagi jami: %2$s',
  'stt_top': "Eng ko'p sotilgan tovarlar", 'stt_prices': "Narxi o'zgargan tovarlar", 'stt_empty': "Bu davrda savdo yo'q", 'stt_change': '%1$s → %2$s',
+ # v4.0.1: ko'proq statistika
+ 'stt_kpi_for': 'Tanlangan: %1$s', 'stt_k_sales': 'Savdo', 'stt_k_profit': 'Foyda', 'stt_k_docs': 'Cheklar soni',
+ 'stt_k_avg': "O'rtacha chek", 'stt_k_clients': 'Mijozlar', 'stt_k_pay': "To'lovlar",
+ 'stt_share_clients': 'Mijozlar ulushi', 'stt_share_goods': 'Tovarlar ulushi', 'stt_other': 'Boshqalar',
+ 'stt_fast': 'Tez sotilayotgan tovarlar', 'stt_fast_sub': '%1$d kunda sotildi · kuniga ~%2$s',
+ 'stt_weekdays': "Hafta kunlari bo'yicha", 'stt_best_day': "Eng ko'p savdo: %1$s",
+ 'stt_wd_1': 'Du', 'stt_wd_2': 'Se', 'stt_wd_3': 'Ch', 'stt_wd_4': 'Pa', 'stt_wd_5': 'Ju', 'stt_wd_6': 'Sh', 'stt_wd_7': 'Ya',
+ 'stt_hours': "Kun soatlari bo'yicha", 'stt_best_hour': 'Eng gavjum vaqt: %1$s:00–%2$s:00',
+ 'stt_idle': "To'xtab qolgan tovarlar", 'stt_idle_sub': '%1$d kundan beri sotilmayapti · oldin %2$d kunda sotilgan',
+ 'stt_no_goods': "Savdolarning tovar qatorlari hali kelmagan — kompyuter dasturi ishlab turganini tekshiring (1C savdolari tovarlari bilan keladi).",
  # v4.0: Boss
  'boss_title': 'Boss', 'boss_card_sub': "Bugungi savdo, foyda, qarzlar, agentlar, tizim holati",
  'boss_line': 'Bugun: %1$s · foyda %2$s · tushum %3$s',

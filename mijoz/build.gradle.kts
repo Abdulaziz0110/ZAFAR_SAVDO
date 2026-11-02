@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_mijoz"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "2.0"
+        versionCode = 18
+        versionName = "2.0.1"
         // v4.0: kalitsiz ishlash — do'kon kodidan faqat baza manzili va qurilmalar kaliti (agentlar kaliti Mijozga bormaydi)
         buildConfigField("String", "DEV_CODE", "\"" + devCode(envCode("SHOP_CODE")) + "\"")
         buildConfigField("String", "UPDATE_URL", "\"" + envCode("UPDATE_URL") + "\"")

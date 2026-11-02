@@ -117,7 +117,7 @@ class HomeFragment : Fragment() {
             (lp0 as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
         })
         launchOnStarted {
-            com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.ledgerData.collect { d ->
+            com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.collect { d ->
                 val rate = ServiceLocator.catalog.state.value.rate
                 val now = System.currentTimeMillis()
                 val c0 = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0) }.timeInMillis

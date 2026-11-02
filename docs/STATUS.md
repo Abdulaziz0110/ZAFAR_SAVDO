@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 4.0 (versionCode 25) + Savdo Mijoz 2.0 (versionCode 17), 2026-11-02
+# Holat — Savdo Agent / Savdo Admin 4.0.1 (versionCode 26) + Savdo Mijoz 2.0.1 (versionCode 18), 2026-11-02
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -18,6 +18,15 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## 4.0.1 — Mijozda olingan tovarlar, statistika bazadan va kengroq
+| Narsa | Holat |
+|---|---|
+| Mijoz tarixida savdoning tovarlari va Narxlar ro'yxati: kartochkadagi tovarsiz savdo o'rniga 1C hujjati (kompyuterdan, tovarlari bilan) | VERIFIED (V401GoodsTest) / telefonda IMPLEMENTED-UNVERIFIED |
+| Yangi 1C savdolari kelganda Mijoz ma'lumoti qayta yuboriladi | IMPLEMENTED-UNVERIFIED |
+| Statistika, Boss va kechki hisobot — faqat 1C bazasidagi yozuvlardan (telefondagi, 1C'ga yetmaganlar qo'shilmaydi) | IMPLEMENTED-UNVERIFIED |
+| Ko'rsatkichlar (savdo, foyda, cheklar, o'rtacha chek, mijozlar, to'lov), mijozlar/tovarlar ulushi (halqa grafik), tez sotilayotgan (o'sish %), hafta kunlari, soatlar, to'xtab qolgan tovarlar | VERIFIED (mantiq testlari) / ko'rinishi IMPLEMENTED-UNVERIFIED |
+| Mijoz build skripti (java.util.Base64 importi) | VERIFIED (GitHub build xatosi tuzatildi) |
 
 ## 4.0 — kalitsiz ishlash, o'zi yangilanish, yagona ro'yxat, Boss, statistika
 | Narsa | Holat |

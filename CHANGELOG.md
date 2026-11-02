@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 4.0.1 (versionCode 26), Savdo Mijoz 2.0.1 (versionCode 18) — 2026-11-02
+* Mijoz: tarixda har savdoning tovarlari ko'rinadi, Narxlar ro'yxati to'ladi (1C hujjatlaridan, kompyuter orqali).
+* Statistika, Boss ekrani va kechki hisobot faqat 1C bazasidagi savdolardan.
+* Statistika kengaydi: rangli ko'rsatkichlar, mijozlar/tovarlar ulushi (halqa grafik), tez sotilayotgan tovarlar (o'sish/pasayish %),
+  hafta kunlari va soatlar bo'yicha, to'xtab qolgan tovarlar; grafiklar rangli.
+
 ## 4.0 (versionCode 25), Savdo Mijoz 2.0 (versionCode 17) — 2026-11-02
 * **Kalitsiz ishlash**: Agent va Mijoz ochilishi bilan Admin ▸ Qurilmalar'ga tushadi; Admin kimligini belgilaydi yoki bloklaydi.
   GitHub'ga bir marta SHOP_CODE qo'yiladi. iPhone uchun — bitta havola.

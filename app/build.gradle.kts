@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 25
-        versionName = "4.0"
+        versionCode = 26
+        versionName = "4.0.1"
 
         // v4.0: kalitsiz ishlash va o'zi yangilanish — GitHub secret SHOP_CODE (Admin ▸ Qurilmalar) va build skripti beradi.
         // Bo'sh bo'lsa ilova eskicha ishlaydi (ulanish kodi so'raladi, yangilanish tekshirilmaydi).

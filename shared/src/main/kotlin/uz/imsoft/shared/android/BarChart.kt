@@ -18,6 +18,13 @@ class BarChart(context: Context) : View(context) {
         set(v) { field = v; selected = v.lastIndex; invalidate() }
     var format: (Double) -> String = { "%.0f".format(it) }
     var onSelect: ((Int) -> Unit)? = null
+    /** v4.0.1: ustunlar rangi (null — mavzu rangi). [colorOf] berilsa har ustun o'z rangida. */
+    var color: Int? = null
+        set(v) { field = v; invalidate() }
+    var colorOf: ((Int) -> Int)? = null
+    /** Kichik grafik (hafta kunlari, soatlar): balandligi kamroq, tanlangan qiymat tepada yozilmaydi. */
+    var compact = false
+        set(v) { field = v; requestLayout() }
     private var selected = -1
 
     private val dp = resources.displayMetrics.density
@@ -34,7 +41,7 @@ class BarChart(context: Context) : View(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
-        setMeasuredDimension(w, resolveSize((180 * dp).toInt(), heightMeasureSpec))
+        setMeasuredDimension(w, resolveSize(((if (compact) 120 else 180) * dp).toInt(), heightMeasureSpec))
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -48,7 +55,7 @@ class BarChart(context: Context) : View(context) {
         text.color = onVar
         value.color = on
         grid.color = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutlineVariant)
-        val top = 26 * dp
+        val top = (if (compact) 8 else 26) * dp
         val bottom = height - 20 * dp
         val w = width.toFloat()
         val max = bars.maxOf { it.second }.coerceAtLeast(1.0)
@@ -58,13 +65,18 @@ class BarChart(context: Context) : View(context) {
         bars.forEachIndexed { i, (label, v) ->
             val cx = slot * i + slot / 2
             val h = ((v / max) * (bottom - top)).toFloat().coerceAtLeast(if (v > 0) 2 * dp else 0f)
-            bar.color = if (i == selected) primary else soft
+            val own = colorOf?.invoke(i) ?: color
+            bar.color = when {
+                own != null -> if (compact || i == selected || selected < 0) own else ChartColors.alpha(own, 0.55f)
+                i == selected -> primary
+                else -> soft
+            }
             rect.set(cx - bw / 2, bottom - h, cx + bw / 2, bottom)
             canvas.drawRoundRect(rect, 4 * dp, 4 * dp, bar)
             // Yorliqlar ko'p bo'lsa — har ikkinchisi
             if (n <= 12 || i % 2 == (n - 1) % 2) canvas.drawText(label, cx, height - 5 * dp, text)
         }
-        if (selected in bars.indices) {
+        if (selected in bars.indices && !compact) {
             val cx = (slot * selected + slot / 2).coerceIn(40 * dp, w - 40 * dp)
             canvas.drawText(format(bars[selected].second), cx, 16 * dp, value)
         }

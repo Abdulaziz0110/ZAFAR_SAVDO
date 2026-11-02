@@ -189,6 +189,34 @@ object OneCSalesArchive {
 object OneCLedger {
     fun isClientDoc(kind: String) = kind == OneCDoc.SALE || kind == OneCDoc.SALE_MOBILE || kind == OneCDoc.RETAIL || kind == OneCDoc.CLIENT_RETURN
 
+    /**
+     * v4.0.1: server kartochkasi (akt sverki) savdo/qaytarishni TOVARSIZ beradi. Kompyuter (1C) qamragan vaqtda savdo va
+     * qaytarish 1C hujjatlaridan (tovarlari bilan) olinadi, to'lovlar va qamralmagan vaqt — kartochkadan.
+     * [mine] — hujjat shu mijozniki-mi. Admin "1C tarixi" va 2-ilova (Mijoz) tarixi bir xil qoidada.
+     */
+    fun withGoods(entries: List<uz.imsoft.shared.report.LedgerEntry>, sales: OneCSales?, nowMs: Long, mine: (OneCDoc) -> Boolean): List<uz.imsoft.shared.report.LedgerEntry> {
+        if (sales == null || sales.docs.isEmpty()) return entries
+        val (from, to) = covered(sales, nowMs) ?: return entries
+        val out = ArrayList<uz.imsoft.shared.report.LedgerEntry>(entries.size + 16)
+        for (e in entries) {
+            val goods = e.kind == uz.imsoft.shared.report.EntryKind.SALE || e.kind == uz.imsoft.shared.report.EntryKind.RETURN
+            if (goods && e.stamp in from..to) continue
+            out += e
+        }
+        for (d in sales.docs) if (isClientDoc(d.kind) && d.stamp in from..to && mine(d)) out += entries(d)
+        out.sortBy { it.stamp }
+        return out
+    }
+
+    /** Kompyuter qamragan vaqt (yyyyMMddHHmmss): davr boshi .. min(davr oxiri, yuborilgan payt − 5 daqiqa). */
+    fun covered(sales: OneCSales, nowMs: Long): Pair<Long, Long>? {
+        val from = sales.from.takeIf { it > 0 } ?: return null
+        val end = if (sales.to % 1_000_000 == 0L) sales.to + 235959 else sales.to
+        val at = if (sales.at > 0) sales.at else nowMs
+        val to = minOf(end, uz.imsoft.shared.report.PendingMerge.stampOf(at - 5 * 60_000L))
+        return if (to >= from) from to to else null
+    }
+
     fun entries(d: OneCDoc): List<uz.imsoft.shared.report.LedgerEntry> {
         if (!isClientDoc(d.kind)) return emptyList()
         val ret = d.kind == OneCDoc.CLIENT_RETURN

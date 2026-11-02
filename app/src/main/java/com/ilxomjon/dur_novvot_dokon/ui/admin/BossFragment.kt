@@ -53,7 +53,7 @@ class BossFragment : CodeFragment() {
                 delay(30_000)
             }
         }
-        launchOnStarted { DokonLedgerHost.ledgerData.collect { render() } }
+        launchOnStarted { DokonLedgerHost.dbData.collect { render() } }
         launchUi { runCatching { ServiceLocator.deviceAdmin.refresh() }; render() }
     }
 
@@ -65,7 +65,7 @@ class BossFragment : CodeFragment() {
     private fun render() {
         if (!::today.isInitialized) return
         val rate = ServiceLocator.catalog.state.value.rate
-        val entries = DokonLedgerHost.ledgerData.value.entries
+        val entries = DokonLedgerHost.dbData.value.entries
         val cost = StatsFragment.costByName(rate)
         val now = System.currentTimeMillis()
         val day0 = PendingMerge.stampOf(startOfDay(now))

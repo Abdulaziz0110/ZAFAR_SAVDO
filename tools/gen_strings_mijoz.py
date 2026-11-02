@@ -352,6 +352,17 @@ STRINGS.update({
  'stt_bought': 'Bizdan olganlaringiz', 'stt_bought_hint': "Olingan tovarlar va to'lovlar. \"Yil\" tanlansa — boshidan beri.",
  'stt_bought_m': 'Olingan tovar', 'stt_bought_top': "Olgan tovarlarim (eng ko'pi tepada)",
  'stt_own': "O'z savdolaringiz", 'stt_own_m': 'Savdo', 'stt_own_top': "Eng ko'p sotgan tovarlaringiz",
+ # v4.0.1: ko'proq statistika
+ 'stt_kpi_for': 'Tanlangan: %1$s', 'stt_k_bought': 'Olingan', 'stt_k_buys': 'Xaridlar soni', 'stt_k_buy_avg': "O'rtacha xarid",
+ 'stt_k_pay': "To'lovlar", 'stt_k_sales': 'Savdo', 'stt_k_docs': 'Cheklar soni', 'stt_k_avg': "O'rtacha chek",
+ 'stt_share_bought': 'Olgan tovarlarim ulushi', 'stt_share_own': 'Sotgan tovarlarim ulushi', 'stt_other': 'Boshqalar',
+ 'stt_fast_bought': 'Tez-tez olinadigan tovarlar', 'stt_fast_bought_sub': '%1$d kunda olindi · kuniga ~%2$s',
+ 'stt_fast_own': 'Tez sotilayotgan tovarlaringiz', 'stt_fast_own_sub': '%1$d kunda sotildi · kuniga ~%2$s',
+ 'stt_weekdays': "Hafta kunlari bo'yicha", 'stt_best_day': "Eng ko'p: %1$s",
+ 'stt_wd_1': 'Du', 'stt_wd_2': 'Se', 'stt_wd_3': 'Ch', 'stt_wd_4': 'Pa', 'stt_wd_5': 'Ju', 'stt_wd_6': 'Sh', 'stt_wd_7': 'Ya',
+ 'stt_hours': "Kun soatlari bo'yicha", 'stt_best_hour': 'Eng gavjum vaqt: %1$s:00–%2$s:00',
+ 'stt_idle': "To'xtab qolgan tovarlaringiz", 'stt_idle_sub': '%1$d kundan beri sotilmayapti · oldin %2$d kunda sotilgan',
+ 'stt_no_goods': "Tovarlar ro'yxati hali kelmagan — do'kon ma'lumotni yangilashini kuting.",
 })
 
 if __name__ == '__main__':

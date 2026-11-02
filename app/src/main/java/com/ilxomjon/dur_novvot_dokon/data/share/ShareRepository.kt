@@ -139,6 +139,8 @@ class ShareRepository(
     var codesHook: (suspend (ByteArray) -> Unit)? = null
     /** v2.7: tovar id -> tarozi PLU (2-ilovada ko'rsatiladi). */
     var pluOf: (String) -> String? = { null }
+    /** v4.0.1 (Admin): kompyuterdan kelgan 1C savdolari (tovarlari bilan) — 2-ilova tarixi va Narxlar shulardan to'ladi. */
+    var salesOf: () -> uz.imsoft.shared.onec.OneCSales? = { null }
     /** v2.6: 1-ilova savdolari -> 2-ilova (tarix va chek). */
     val mirror = SaleMirror(context, store)
     /** v3.6 Admin: barcha mijozlarning 1C tarixi (serverdan, 1 yil). 2-ilova mijozlari kitobi shu orqali to'ladi. */
@@ -677,9 +679,13 @@ class ShareRepository(
         val items = ArrayList<PriceItem>()
         // v3.5: mijoz olgan tovarlar — 1C tarixi + 1-ilova savdolari + oldin ko'rilganlar (eslab qolinadi). Tarix qisqa yoki
         // bo'sh bo'lsa ham (masalan yangi Admin telefonida) Narxlar ro'yxati yo'qolmaydi.
-        val mirrorEntries = mirror.entriesFor(c.id, b.entries, b.coverage)
+        // v4.0.1: kartochkadagi tovarsiz savdolar o'rniga 1C hujjatlari (tovarlari bilan) — 2-ilovada nima olingani ko'rinadi
+        val storeName = cat.stores.firstOrNull { it.id == c.storeId }?.name
+        val keys = setOfNotNull(LedgerMerge.nameKey(c.name), storeName?.let { LedgerMerge.nameKey(it) }).filter { it.isNotEmpty() }.toSet()
+        val base = if (keys.isEmpty()) b.entries else uz.imsoft.shared.onec.OneCLedger.withGoods(b.entries, salesOf(), System.currentTimeMillis()) { d -> LedgerMerge.nameKey(d.party) in keys }
+        val mirrorEntries = mirror.entriesFor(c.id, base, b.coverage)
         val names = LinkedHashSet<String>()
-        for (e in b.entries + mirrorEntries) {
+        for (e in base + mirrorEntries) {
             if (e.product.isBlank() || (e.kind != EntryKind.SALE && e.kind != EntryKind.RETURN)) continue
             names += e.product
         }
@@ -701,7 +707,7 @@ class ShareRepository(
         val features = if (store.acceptOrders && store.rulesVersion >= 2 && c.kind == "c") setOf(ClientSnapshot.FEATURE_ORDERS) else emptySet()
         return ClientSnapshot(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
-            items.sortedBy { it.name.lowercase() }, (b.entries + mirror.entriesFor(c.id, b.entries, b.coverage)).let { l -> editHook?.invoke(c.id, l) ?: l }, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
+            items.sortedBy { it.name.lowercase() }, (base + mirrorEntries).let { l -> editHook?.invoke(c.id, l) ?: l }, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
             features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
             receiptStyle = store.receiptStyle, receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
         )

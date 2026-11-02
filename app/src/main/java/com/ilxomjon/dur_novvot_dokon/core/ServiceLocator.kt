@@ -156,7 +156,7 @@ object ServiceLocator {
         val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(cal.time)
         val p = app.getSharedPreferences("evening", Context.MODE_PRIVATE)
         if (p.getString("day", "") == day) return
-        val d = com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.ledgerData.value
+        val d = com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.value
         if (!d.loaded) return
         val rate = catalog.state.value.rate
         val from = (day + "000000").toLong()
@@ -250,7 +250,9 @@ object ServiceLocator {
             s.pluOf = { id -> labels.pluFor(id) }
             // v3.2: 1C savdolar/ta'minotchilar, ish vaqti, mijoz so'rovlari (faqat Admin)
             s.workHours = { appPrefs.workHours }
-            s.dataHook = { kind, bytes -> onec.onData(kind, bytes) }
+            // v4.0.1: yangi 1C savdolari kelganda 2-ilova mijozlari qayta yuboriladi (tarixda tovarlar, Narxlar ro'yxati)
+            s.dataHook = { kind, bytes -> onec.onData(kind, bytes).also { ok -> if (ok && kind == "sales" && AppRole.isAdmin) s.markDirty() } }
+            s.salesOf = { if (AppRole.isAdmin) onec.state.value.sales else null }
             if (AppRole.isAdmin) {
                 s.editHook = { id, entries -> clientRequests.apply(id, entries) }
                 s.extraTick = {

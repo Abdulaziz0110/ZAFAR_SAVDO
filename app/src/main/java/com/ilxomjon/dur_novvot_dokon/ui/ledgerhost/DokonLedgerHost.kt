@@ -42,8 +42,11 @@ object DokonLedgerHost : LedgerHost {
     /** v3.6: Admin — barcha mijozlarning 1C tarixi (serverdan, 1 yil); Agent — 2-ilova uchun tanlangan mijoz. */
     private val admin: Boolean get() = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
 
-    override val ledgerData: StateFlow<LedgerData> by lazy {
-        val base = if (admin) {
+    /** v4.0.1: faqat 1C bazasidagi yozuvlar (telefonda qilingan, hali 1C'ga yetmaganlarsiz) — statistika shundan. */
+    val dbData: StateFlow<LedgerData> by lazy { baseFlow().stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, LedgerData(emptyList(), "", -1L, false)) }
+
+    private fun baseFlow(): kotlinx.coroutines.flow.Flow<LedgerData> =
+        if (admin) {
             ServiceLocator.adminHistory.data.map { LedgerData(it.entries, "", it.version, it.loaded) }
         } else {
             // v3.7 Agent: Admin yuborgan "1C tarixi" (barcha savdolar, 1 yil); bo'lmasa — avvalgidek tanlangan mijoz
@@ -53,6 +56,9 @@ object DokonLedgerHost : LedgerHost {
                 else LedgerData(l.entries, l.clientName, l.version * 2, l.loaded)
             }
         }
+
+    override val ledgerData: StateFlow<LedgerData> by lazy {
+        val base = dbData
         // v4.0 "Yagona ro'yxat": telefonda qilingan savdo/to'lov 1C'dan kelguncha tepada ("1C'ga ketmoqda")
         val label = ServiceLocator.context.getString(R.string.pending_1c)
         kotlinx.coroutines.flow.combine(base, ServiceLocator.localDocs) { d, locals ->
