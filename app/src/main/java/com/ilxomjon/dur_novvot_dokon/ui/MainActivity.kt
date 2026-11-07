@@ -173,9 +173,27 @@ class MainActivity : AppCompatActivity(), Navigator {
         if (storeId == null && action.isEmpty()) return
         i.removeExtra(QuickWidget.EXTRA_STORE)
         i.removeExtra(QuickWidget.EXTRA_ACTION)
+        // v5.0.4: vidjetdagi 6 tugmaning har biri — shu amallardan biri (Sozlamalar ▸ Vidjet)
         when (action) {
             QuickWidget.ACT_PAYMENT -> { openTab(R.id.nav_payment); return }
             QuickWidget.ACT_SCAN -> { openTab(R.id.nav_sale); push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment()); return }
+            "history" -> { openTab(R.id.nav_history); return }
+            "report" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment()); return }
+            "dayend" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.report.DayEndFragment()); return }
+            "queue" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.outbox.OutboxFragment()); return }
+            "barcodes" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); return }
+            "return" -> {
+                openTab(R.id.nav_sale)
+                ServiceLocator.draft.setMode(com.ilxomjon.dur_novvot_dokon.domain.DealMode.RETURN)
+                return
+            }
+            "stats" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); return }
+            "clients" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.ClientsStatsFragment()); return }
+            "boss" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment()); return }
+            "admin" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment()); return }
+            "labels" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()); return }
+            "scale" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment()); return }
+            "rate" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.RateFragment()); return }
         }
         val draft = ServiceLocator.draft
         val st = storeId?.let { ServiceLocator.catalog.storeById(it) }
@@ -344,20 +362,16 @@ class MainActivity : AppCompatActivity(), Navigator {
         R.id.nav_sale -> SaleFragment()
         R.id.nav_payment -> PaymentFragment()
         R.id.nav_history -> HistoryFragment()
-        // v5.0: oxirgi bo'lim — Admin'da Boshqaruv, agentda Sozlamalar
-        else -> if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
-            com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment().asRootTab()
-        } else {
-            com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment().asRootTab()
-        }
+        // v5.0.3: oxirgi bo'lim ikkala rolda ham Sozlamalar. Boshqaruv/Boss/Statistika — bosh sahifadagi menyuda
+        // (bir ish ikki joyda turmasin).
+        else -> com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment().asRootTab()
     }
 
-    /** Oxirgi bo'limning nomi va ikonkasi rolga qarab. */
+    /** Oxirgi bo'lim — Sozlamalar (ikkala rolda ham). */
     private fun applyRoleToNav() {
-        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
         binding.bottomNav.menu.findItem(R.id.nav_last)?.apply {
-            setTitle(if (admin) R.string.nav_manage else R.string.nav_settings)
-            setIcon(if (admin) R.drawable.ic_tune else R.drawable.ic_settings)
+            setTitle(R.string.nav_settings)
+            setIcon(R.drawable.ic_settings)
         }
     }
 

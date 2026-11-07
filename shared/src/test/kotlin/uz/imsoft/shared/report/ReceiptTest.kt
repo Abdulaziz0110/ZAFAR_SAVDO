@@ -33,11 +33,20 @@ class ReceiptTest {
         assertEquals("29.10.26", r.date)
         assertEquals("Dadaxon Aka", r.clientName)
         assertEquals("", r.banner)
+        // v5.0.2: chek matni 1C "Чек1" maketidagidek
         val text = ReceiptBuilder.toText(r)
-        assertTrue(text.contains("1) Pista Dolana (D)"))
-        assertTrue(text.contains("40 x 182 000 = 7 280 000"))
-        assertTrue(text.contains("Tel: +998936474646"))
-        assertTrue(text.contains("1C hisobotidan nusxa"))
+        assertTrue(text.contains("Vaqt: 16:16:19"))
+        assertTrue(text.contains("Sana: 29.10.26"))
+        assertTrue(text.contains("Mijoz: Dadaxon Aka"))
+        assertTrue(text.contains("Agent: Dokon"))
+        assertTrue(text.contains("1 || Pista Dolana (D)"))
+        assertTrue(text.contains("40 \u0445 182 000 = 7 280 000"))
+        assertTrue(text.contains("Summa Sum: 7 580 000"))
+        assertTrue(text.contains("Chegirma Sum: 5 000"))
+        assertTrue(text.contains("Tel : +998936474646"))
+        // Qo'shimcha yozuvlar chekka tushmaydi
+        assertTrue(!text.contains("1C hisobotidan nusxa"))
+        assertTrue(!text.contains("ZAFAR QURUQ MEVALARI"))
         val html = ReceiptBuilder.toHtml(r)
         assertTrue(html.contains("Bodom &lt;M&gt; &amp; Co"))
     }
@@ -51,7 +60,12 @@ class ReceiptTest {
         assertTrue(r.totals.single().bold)
         assertEquals("Summa", r.totals.single().label)
         assertEquals("281 600", r.totals.single().value)
-        assertTrue(ReceiptBuilder.toHtml(r).contains("QAYTIB OLISH !!!"))
+        // Chek 1C maketida: qaytarish banneri yo'q, maketdagi qatorlar bor
+        val text = ReceiptBuilder.toText(r)
+        assertTrue(text.contains("1 || Keshu 160"))
+        assertTrue(text.contains("1,76 \u0445 160 000 = 281 600"))
+        assertTrue(text.contains("Qarz qoldig'i (Val):"))
+        assertTrue(ReceiptBuilder.toHtml(r).contains("281 600"))
     }
 
     @Test fun numFmt() {

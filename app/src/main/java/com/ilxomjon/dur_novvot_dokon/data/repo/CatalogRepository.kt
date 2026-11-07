@@ -53,8 +53,10 @@ class CatalogRepository(
         val products = dao.products()
         val groups = dao.groups()
         val stores = dao.stores()
-        val rate = dao.rate()
-        val rateText = dao.rateText()
+        // v5.0.3: kurs 1C'dan EMAS — mahalliy (internetdagi bozor kursi yoki qo'lda yozilgani).
+        // Mahalliy kurs hali yo'q bo'lsa, ilova ishlamay qolmasin uchun serverdagi kurs ishlatiladi.
+        val rate = prefs.localRate.takeIf { it > 0 } ?: dao.rate()
+        val rateText = if (prefs.localRate > 0) uz.imsoft.shared.receipt.NumFmt.som(prefs.localRate) else dao.rateText()
         val agent = dao.agent()
         _state.update {
             it.copy(

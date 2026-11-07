@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- v5.0.3: uch nuqta — ikonkali menyu (statistika, savdolarim, hisobot, to'lov, sozlamalar). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_settings"
-        android:icon="@drawable/ic_settings"
-        android:title="@string/nav_settings"
+        android:id="@+id/action_menu"
+        android:icon="@drawable/ic_more_vert"
+        android:title="@string/menu_more"
         app:showAsAction="always" />
 </menu>

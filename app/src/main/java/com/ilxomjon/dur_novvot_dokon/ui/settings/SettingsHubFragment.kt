@@ -22,6 +22,8 @@ class SettingsHubFragment : CodeFragment() {
     override fun build(inflater: LayoutInflater): View {
         val p = page(R.string.settings_title)
         val c = p.content
+        // v5.0.3: keng ekranda 3 ustun, aks holda 2
+        val columns = if (resources.configuration.screenWidthDp >= 420) 3 else 2
         val prefs = ServiceLocator.appPrefs
         val admin = AppRole.isAdmin
 
@@ -74,6 +76,9 @@ class SettingsHubFragment : CodeFragment() {
         work += Ui.Tile(getString(R.string.sg_fav), R.drawable.ic_store, getString(R.string.sg_h_fav)) {
             navigator().push(SettingsFragment())
         }
+        work += Ui.Tile(getString(R.string.wgs_title), R.drawable.ic_widgets, getString(R.string.wgs_hint)) {
+            navigator().push(WidgetFragment())
+        }
         work += Ui.Tile(getString(R.string.sg_extras), R.drawable.ic_tune, getString(R.string.sg_h_extras)) {
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.extras.ExtrasFragment())
         }
@@ -85,7 +90,7 @@ class SettingsHubFragment : CodeFragment() {
                 navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment())
             }
         }
-        c.addView(Ui.tiles(ctx, work, onHelp = ::help))
+        c.addView(Ui.tiles(ctx, work, columns, onHelp = ::help))
 
         // Ulanish va yordam
         c.addView(Ui.section(ctx, getString(R.string.sg_help)))
@@ -102,7 +107,7 @@ class SettingsHubFragment : CodeFragment() {
         help += Ui.Tile(getString(R.string.pf_title), R.drawable.ic_person, getString(R.string.sg_h_profile)) {
             navigator().push(ProfileFragment())
         }
-        c.addView(Ui.tiles(ctx, help, onHelp = ::help))
+        c.addView(Ui.tiles(ctx, help, columns, onHelp = ::help))
 
         c.addView(Ui.hint(ctx, getString(R.string.sg_long_press), 12))
         return p.root

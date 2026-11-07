@@ -140,6 +140,11 @@ class SettingsFragment : Fragment() {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.ReceiptExtrasFragment())
         })
         col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
+        // v5.0.4: bosh ekrandagi vidjetning 6 ta tugmasi
+        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.wgs_title), getString(R.string.wgs_sub), icon = R.drawable.ic_widgets) {
+            (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.WidgetFragment())
+        })
+        col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
         val first = top(b.tgAuto)
         column.addView(card, if (first != null) column.indexOfChild(first) else column.indexOfChild(b.tvAbout))
         val advanced = listOfNotNull(top(b.tgScale), top(b.tgFont), top(b.swFuzzy), top(b.tgSkip)).distinct()

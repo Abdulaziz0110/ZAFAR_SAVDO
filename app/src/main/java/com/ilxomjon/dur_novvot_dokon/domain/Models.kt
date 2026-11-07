@@ -134,6 +134,9 @@ data class SentOrder(
     val pending: Boolean = false,
     /** Navbat qatori (kvitansiya kodi va holat uchun). 0 - eski yozuv. */
     val outboxId: Long = 0,
+    /** v5.0.2: chekda 1C'dagidek "Naqd" va "Plastik" alohida (yig'indisi [paid]). */
+    val cash: Double = 0.0,
+    val card: Double = 0.0,
 )
 
 data class SentLine(val name: String, val qty: Double, val price: Double, val productId: String = "")

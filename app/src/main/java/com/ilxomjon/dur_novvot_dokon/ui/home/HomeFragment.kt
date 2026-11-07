@@ -41,10 +41,8 @@ class HomeFragment : Fragment() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_sync -> { vm.sync(); true }
-                R.id.action_boss -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment()); true }
-                R.id.action_stats -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); true }
                 R.id.action_barcodes -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); true }
-                R.id.action_profile -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.ProfileFragment()); true }
+                R.id.action_menu -> { openMenu(); true }
                 else -> false
             }
         }
@@ -57,16 +55,8 @@ class HomeFragment : Fragment() {
             startDeal(DealMode.SALE)
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment())
         }
-        binding.cardReturn.setOnClickListener { startDeal(DealMode.RETURN) }
-        // v5.0: "To'lov" pastki bo'limda bor — bosh sahifadan olib tashlandi (takrorlanmasin)
-        binding.cardPayment.show(false)
-        binding.cardReport.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment()) }
-        // Yorliqlar — Admin ishi (Boshqaruv ▸ Tovarlar)
-        binding.cardLabels.show(com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin)
-        binding.cardLabels.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) }
-        // v5.0: Boss va statistika — faqat Admin menyusida
-        binding.toolbar.menu.findItem(R.id.action_boss)?.isVisible = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
-        binding.toolbar.menu.findItem(R.id.action_stats)?.isVisible = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        bindSlot(binding.btnSlot3, 3)
+        bindSlot(binding.btnSlot4, 4)
         // Ism va telefon "Men" ekranida (bosh sahifada ish qoladi)
         binding.tvGreeting.show(false)
         binding.tvPhone.show(false)
@@ -94,7 +84,6 @@ class HomeFragment : Fragment() {
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HOME)
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
         addCartsCard()
-        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) addAdminCard()
 
         launchOnStarted { vm.state.collect { render(it) } }
         launchOnStarted {
@@ -109,56 +98,76 @@ class HomeFragment : Fragment() {
         }
     }
 
-    /** v3.2 Admin: "Boshqaruv" kartasi (1C, ta'minotchilar, mijoz so'rovlari, kompyuter) — Savdo kartasi ustida. */
-    private fun addAdminCard() {
-        val parent = binding.cardSale.parent as? android.view.ViewGroup ?: return
-        if (parent.findViewWithTag<View>("admin_card") != null) return
-        val ctx = requireContext()
-        // v4.0 "Boss": bugungi savdo, foyda, tushum va tizim holati — bir bosishda batafsil
-        val (bossCard, bossCol) = uz.imsoft.shared.android.Ui.card(ctx, 0)
-        bossCard.tag = "boss_card"
-        val bossItem = uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.boss_title), getString(R.string.boss_card_sub), icon = R.drawable.ic_trending, tone = 1) {
-            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment())
+    // ---------------- tepadagi 4 ta tugma va menyu ----------------
+
+    /** Bosh sahifadagi tanlanadigan amal. */
+    private class Slot(val key: String, val title: String, val icon: Int, val admin: Boolean, val go: () -> Unit)
+
+    private fun slots(): List<Slot> {
+        fun go(f: () -> androidx.fragment.app.Fragment): () -> Unit = { navigator().push(f()) }
+        return listOf(
+            Slot("return", getString(R.string.home_return), R.drawable.ic_return, false) { startDeal(DealMode.RETURN) },
+            Slot("payment", getString(R.string.home_payment), R.drawable.ic_payment, false) { navigator().openTab(R.id.nav_payment) },
+            Slot("report", getString(R.string.home_report), R.drawable.ic_report, false, go { com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment() }),
+            Slot("dayend", getString(R.string.dayend_title), R.drawable.ic_report, false, go { DayEndFragment() }),
+            Slot("barcodes", getString(R.string.bb_title), R.drawable.ic_barcode, false, go { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment() }),
+            Slot("queue", getString(R.string.queue_title), R.drawable.ic_sync, false, go { OutboxFragment() }),
+            Slot("labels", getString(R.string.home_labels), R.drawable.ic_label, true, go { com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment() }),
+            Slot("scale", getString(R.string.sc_title), R.drawable.ic_scale, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment() }),
+            Slot("priceset", getString(R.string.ps_title), R.drawable.ic_calculate, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PriceSetFragment() }),
+            Slot("rate", getString(R.string.rt_title), R.drawable.ic_currency, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.RateFragment() }),
+            Slot("boss", getString(R.string.boss_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment() }),
+            Slot("stats", getString(R.string.stt_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment() }),
+            Slot("admin", getString(R.string.ad_title), R.drawable.ic_tune, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment() }),
+            Slot("onecsales", getString(R.string.ad_sales), R.drawable.ic_receipt, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.OneCSalesFragment() }),
+        ).filter { com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin || !it.admin }
+    }
+
+    /** 3- va 4-tugma: bosilsa ishlaydi, uzoq bosilsa boshqa amal tanlanadi. */
+    private fun bindSlot(btn: com.google.android.material.button.MaterialButton, no: Int) {
+        val prefs = ServiceLocator.appPrefs
+        val list = slots()
+        val key = if (no == 3) prefs.homeSlot3 else prefs.homeSlot4
+        val slot = list.firstOrNull { it.key == key } ?: list.first()
+        btn.text = slot.title
+        btn.setIconResource(slot.icon)
+        btn.setOnClickListener { slot.go() }
+        btn.setOnLongClickListener {
+            uz.imsoft.shared.android.Ui.menuSheet(
+                requireContext(), getString(R.string.home_pick_action),
+                list.map { s ->
+                    uz.imsoft.shared.android.Ui.MenuRow(s.title, "", s.icon, if (s.key == key) 1 else 0) {
+                        if (no == 3) prefs.homeSlot3 = s.key else prefs.homeSlot4 = s.key
+                        if (_binding != null) bindSlot(btn, no)
+                    }
+                },
+            )
+            true
         }
-        bossCol.addView(bossItem)
-        val bossLine = uz.imsoft.shared.android.Ui.title(ctx, "", 4)
-        bossCol.addView(bossLine)
-        val lp0 = binding.cardSale.layoutParams
-        parent.addView(bossCard, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp0.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            (lp0 as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
-        })
-        launchOnStarted {
-            com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.collect { d ->
-                val rate = ServiceLocator.catalog.state.value.rate
-                val now = System.currentTimeMillis()
-                val c0 = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0) }.timeInMillis
-                val t = uz.imsoft.shared.report.Stats.totals(d.entries, uz.imsoft.shared.report.PendingMerge.stampOf(c0), uz.imsoft.shared.report.PendingMerge.stampOf(now + 60_000L), rate,
-                    com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment.costByName(rate))
-                bossLine.text = getString(R.string.boss_line, ctx.money(t.sales, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM),
-                    ctx.money(t.profit, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM), ctx.money(t.payments, com.ilxomjon.dur_novvot_dokon.domain.Currency.SOM))
+    }
+
+    /** Uch nuqta: Boshqaruv, Boss, Statistika, Profil, Sozlamalar — ikonkalari bilan. */
+    private fun openMenu() {
+        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        val rows = ArrayList<uz.imsoft.shared.android.Ui.MenuRow>()
+        if (admin) {
+            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.ad_title), getString(R.string.ad_card_sub), R.drawable.ic_tune, 1) {
+                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment())
+            }
+            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.boss_title), getString(R.string.boss_card_sub), R.drawable.ic_trending, 1) {
+                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment())
+            }
+            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.stt_title), getString(R.string.sg_stats_sub), R.drawable.ic_trending) {
+                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment())
             }
         }
-        val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
-        card.tag = "admin_card"
-        val badge = uz.imsoft.shared.android.Ui.hint(ctx, "", 0)
-        col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.ad_title), getString(R.string.ad_card_sub), icon = R.drawable.ic_tune, tone = 1) {
-            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment())
-        })
-        col.addView(badge)
-        val lp = binding.cardSale.layoutParams
-        parent.addView(card, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            (lp as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
-        })
-        launchOnStarted {
-            kotlinx.coroutines.flow.combine(ServiceLocator.clientRequests.state, ServiceLocator.onec.state) { r, o -> r.newCount to o.writes.count { it.result == null } }
-                .collect { (req, wr) ->
-                    val parts = ArrayList<String>()
-                    if (req > 0) parts += getString(R.string.ad_requests_new, req)
-                    if (wr > 0) parts += getString(R.string.ad_writes_wait, wr)
-                    badge.text = parts.joinToString(" · ")
-                    badge.show(parts.isNotEmpty())
-                }
+        rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.menu_settings), "", R.drawable.ic_settings) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment())
         }
+        rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.pf_title), "", R.drawable.ic_person) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.ProfileFragment())
+        }
+        uz.imsoft.shared.android.Ui.menuSheet(requireContext(), "", rows)
     }
 
     override fun onResume() {

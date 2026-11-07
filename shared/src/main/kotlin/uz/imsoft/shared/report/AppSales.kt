@@ -23,6 +23,9 @@ data class AppSale(
     val debtBefore: Double? = null,
     /** Savdoda to'langan summa (savdo valyutasida). */
     val paid: Double = 0.0,
+    /** v5.0.2: chekda 1C'dagidek "Naqd" va "Plastik" alohida ko'rinishi uchun. */
+    val cash: Double = 0.0,
+    val card: Double = 0.0,
     /** v3.2: bu savdo emas, to'lov ([paid] — summa, [lines] bo'sh, [note] — izoh). */
     val payment: Boolean = false,
     val note: String = "",
@@ -103,7 +106,7 @@ data class AppSale(
         fun toJson(s: AppSale): Map<String, Any?> = linkedMapOf(
             "id" to s.id, "at" to s.at, "st" to s.stamp, "r" to s.isReturn, "u" to s.usd, "d" to s.discount, "c" to s.code,
             "l" to s.lines.map { listOf(it.name, it.qty, it.price) },
-            "db" to s.debtBefore, "pd" to s.paid, "py" to s.payment, "n" to s.note,
+            "db" to s.debtBefore, "pd" to s.paid, "ch" to s.cash, "cd" to s.card, "py" to s.payment, "n" to s.note,
         )
 
         fun fromJson(o: JObj): AppSale? {
@@ -120,7 +123,7 @@ data class AppSale(
             if (lines.isEmpty() && !payment) return null
             if (payment && o.num("pd") <= 0.0) return null
             val debt = (o.map["db"] as? Number)?.toDouble()
-            return AppSale(id, o.long("at"), o.long("st"), o.bool("r"), o.bool("u"), lines, o.num("d"), o.str("c"), debt, o.num("pd"), payment, o.str("n"))
+            return AppSale(id, o.long("at"), o.long("st"), o.bool("r"), o.bool("u"), lines, o.num("d"), o.str("c"), debt, o.num("pd"), o.num("ch"), o.num("cd"), payment, o.str("n"))
         }
     }
 }

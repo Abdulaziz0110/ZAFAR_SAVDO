@@ -263,4 +263,63 @@ object Stats {
         }
         return out.sortedWith(compareByDescending<Idle> { it.count }.thenBy { it.days }).take(limit)
     }
+
+    // ---------------- v5.0.3: mijoz kesimi ----------------
+
+    /** Bitta mijozning davr ichidagi ko'rsatkichlari. */
+    data class Client(
+        val storeId: String, val name: String, val sales: Double, val profit: Double, val payments: Double,
+        val returns: Double, val docs: Int, val goods: Int, val lastStamp: Long,
+    ) {
+        /** O'rtacha chek. */
+        val avg: Double get() = if (docs > 0) sales / docs else 0.0
+
+        /** Foyda ulushi (%) — kelgan narx ma'lum bo'lgan tovarlar bo'yicha. */
+        val margin: Double get() = if (sales > 0) profit / sales * 100.0 else 0.0
+    }
+
+    /** Mijozlar bo'yicha jamlanma (savdo bo'yicha kamayish tartibida). Nomsiz yozuvlar hisobga olinmaydi. */
+    fun clients(entries: List<LedgerEntry>, fromStamp: Long, toStamp: Long, rate: Double, cost: (String) -> Double? = { null }): List<Client> {
+        class Acc {
+            var storeId = ""
+            var name = ""
+            var sales = 0.0; var profit = 0.0; var pay = 0.0; var ret = 0.0; var goods = 0; var last = 0L
+            val docs = HashSet<String>()
+        }
+        val m = LinkedHashMap<String, Acc>()
+        for (e in entries) {
+            if (e.stamp < fromStamp || e.stamp >= toStamp) continue
+            val o = LedgerOwner.of(e.kindText) ?: continue
+            val name = o.second.trim()
+            if (name.isEmpty()) continue
+            val a = m.getOrPut(name.lowercase()) { Acc().also { it.storeId = o.first; it.name = name } }
+            a.sales += saleOf(e, rate); a.pay += paymentOf(e, rate); a.ret += returnOf(e, rate)
+            a.profit += profitOf(e, rate, cost)
+            if (e.kind == EntryKind.SALE) {
+                a.docs += "${e.stamp}|${LedgerOwner.plain(e.kindText)}"
+                if (e.product.isNotBlank()) a.goods++
+            }
+            if (e.stamp > a.last) a.last = e.stamp
+        }
+        return m.values.map { Client(it.storeId, it.name, it.sales, it.profit, it.pay, it.ret, it.docs.size, it.goods, it.last) }
+            .sortedByDescending { it.sales }
+    }
+
+    /** Mijoz filtri: hammasi / faqat shu mijoz / shu mijozdan boshqalar. */
+    enum class Who { ALL, ONLY, WITHOUT }
+
+    /**
+     * Yozuvlarni mijoz bo'yicha ajratadi. [key] — mijoz nomi (katta-kichik harf farqi yo'q) yoki do'kon id.
+     * [Who.ALL] da yoki [key] bo'sh bo'lsa ro'yxat o'zgarmaydi.
+     */
+    fun only(entries: List<LedgerEntry>, key: String, who: Who): List<LedgerEntry> {
+        if (who == Who.ALL || key.isBlank()) return entries
+        val k = key.trim().lowercase()
+        return entries.filter { e ->
+            val o = LedgerOwner.of(e.kindText)
+            val hit = o != null && (o.second.trim().lowercase() == k || o.first == key)
+            if (who == Who.ONLY) hit else !hit
+        }
+    }
+
 }

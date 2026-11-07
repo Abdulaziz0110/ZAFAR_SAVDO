@@ -62,6 +62,16 @@ class MijozPrefs(context: Context) {
         set(v) = p.edit().putFloat("ui_scale", v).apply()
     var fontScale: Float get() = p.getFloat("font_scale", 0.9f); set(v) = p.edit().putFloat("font_scale", v).apply()
     /** Narxlar: "cash" (Naqd) / "wholesale" (Optom). */
+    /** v5.0.4: vidjetdagi 6 ta tugma amallari. */
+    var widgetSlots: List<String>
+        get() = s("widget_slots").split("|").filter { it.isNotEmpty() }
+            .ifEmpty { uz.imsoft.mijoz.ui.extra.MijozWidget.DEFAULTS }
+        set(v) = put("widget_slots", v.joinToString("|"))
+
+    /** v5.0.3: bosh sahifadagi 3- va 4-tugma (foydalanuvchi tanlaydi). */
+    var homeSlot3: String get() = s("home_slot3", "stats"); set(v) = put("home_slot3", v)
+    var homeSlot4: String get() = s("home_slot4", "history"); set(v) = put("home_slot4", v)
+
     var priceType: String get() = s("price_type", "wholesale"); set(v) = put("price_type", v)
 
     /** v3.1: 1..4-narx ("cash" = 3, "wholesale" = 4, "1"/"2"). */

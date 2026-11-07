@@ -100,23 +100,32 @@ class AdminHubFragment : CodeFragment() {
         )
     }
 
+    /**
+     * v5.0.3: har bo'lim plitka panjarasi (ekran keng bo'lsa 3 ustun, aks holda 2). Plitka uzoq bosilsa
+     * to'liq izoh chiqadi. 1C savdolari va yozuvlar holati bo'lim ostida bir qatorda turadi.
+     */
     private fun render() {
         listBox.removeAllViews()
+        tvSales = null
+        tvWrites = null
         val q = uz.imsoft.shared.Fold.key(query)
+        val columns = if (resources.configuration.screenWidthDp >= 420) 3 else 2
         var shown = 0
         for ((title, acts) in sections()) {
             val list = if (q.isEmpty()) acts else acts.filter { uz.imsoft.shared.Fold.key(it.title + " " + it.sub).contains(q) }
             if (list.isEmpty()) continue
             shown += list.size
             listBox.addView(Ui.section(ctx, getString(title)))
-            val (card, col) = Ui.card(ctx)
-            list.forEachIndexed { i, a ->
-                if (i > 0) col.addView(Ui.divider(ctx))
-                col.addView(Ui.item(ctx, a.title, a.sub, icon = a.icon, tone = a.tone) { a.go() })
-                if (q.isEmpty() && a.title == getString(R.string.ad_sales)) tvSales = Ui.hint(ctx, "", 0).also { col.addView(it) }
-                if (q.isEmpty() && a.title == getString(R.string.ad_writes)) tvWrites = Ui.hint(ctx, "", 0).also { col.addView(it) }
+            listBox.addView(
+                Ui.tiles(ctx, list.map { a -> Ui.Tile(a.title, a.icon, a.sub, a.tone) { a.go() } }, columns, 4) { t ->
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+                        .setTitle(t.title.toString()).setMessage(t.help).setPositiveButton(R.string.close, null).show()
+                },
+            )
+            if (q.isEmpty() && title == R.string.ad_sec_1c) {
+                tvSales = Ui.hint(ctx, "", 0).also { listBox.addView(it) }
+                tvWrites = Ui.hint(ctx, "", 0).also { listBox.addView(it) }
             }
-            listBox.addView(card)
         }
         if (shown == 0) listBox.addView(Ui.hint(ctx, getString(R.string.ad_search_none), 16))
         updateInfo()

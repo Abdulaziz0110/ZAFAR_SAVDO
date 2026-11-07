@@ -57,53 +57,22 @@ class ReceiptStyleFragment : Fragment() {
         b.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.action_reset) {
                 MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.rs_reset).setMessage(R.string.rs_reset_msg)
-                    .setPositiveButton(R.string.ok) { _, _ -> apply(ReceiptStyle.STANDARD.copy(sub = style.sub, thanks = style.thanks)) }
+                    .setPositiveButton(R.string.ok) { _, _ -> apply(ReceiptStyle.STANDARD) }
                     .setNegativeButton(R.string.cancel, null).show()
                 true
             } else false
         }
         style = repo.receiptStyle
         val st = ServiceLocator.shareStore
-        b.edtHeader.setText(st.receiptHeader)
-        b.edtSub.setText(style.sub)
         b.edtStaff.setText(st.receiptStaff)
         b.edtFooter.setText(st.receiptFooter)
-        b.edtThanks.setText(style.thanks)
         fill()
 
-        b.tgPreset.addOnButtonCheckedListener { _, id, checked ->
-            if (!checked || filling) return@addOnButtonCheckedListener
-            val p = when (id) {
-                R.id.btnPreset1c -> ReceiptStyle.ONEC
-                R.id.btnPresetCompact -> ReceiptStyle.COMPACT
-                else -> ReceiptStyle.STANDARD
-            }
-            apply(p.copy(sub = style.sub, thanks = style.thanks))
-        }
         b.tgPaper.addOnButtonCheckedListener { _, id, checked -> if (checked && !filling) change { it.copy(paper = if (id == R.id.btnPaper58) 58 else 80) } }
-        b.tgFont.addOnButtonCheckedListener { _, id, checked -> if (checked && !filling) change { it.copy(arial = id == R.id.btnFontArial) } }
-        sw(b.swBold) { s, v -> s.copy(bold = v) }
-        sw(b.swHeaderSerif) { s, v -> s.copy(headerSerif = v) }
         sw(b.swLogo) { s, v -> s.copy(logo = v) }
-        sw(b.swStaff) { s, v -> s.copy(staff = v) }
-        sw(b.swNumber) { s, v -> s.copy(number = v) }
-        sw(b.swTime) { s, v -> s.copy(time = v) }
-        sw(b.swDate) { s, v -> s.copy(date = v) }
-        sw(b.swClient) { s, v -> s.copy(client = v) }
-        sw(b.swBefore) { s, v -> s.copy(before = v) }
-        sw(b.swLineNo) { s, v -> s.copy(lineNo = v) }
-        sw(b.swFrame) { s, v -> s.copy(frame = v) }
-        sw(b.swAfter) { s, v -> s.copy(after = v) }
-        sw(b.swFooter) { s, v -> s.copy(footer = v) }
-        sw(b.swNotes) { s, v -> s.copy(notes = v) }
-        slider(b.sText) { s, v -> s.copy(text = v) }
-        slider(b.sHeader) { s, v -> s.copy(header = v) }
         slider(b.sLogoWidth) { s, v -> s.copy(logoWidth = v) }
         slider(b.sDark) { s, v -> s.copy(dark = v) }
         slider(b.sFeed) { s, v -> s.copy(feed = v) }
-        text(b.edtSub) { s, v -> s.copy(sub = v) }
-        text(b.edtThanks) { s, v -> s.copy(thanks = v) }
-        b.edtHeader.onTextChanged { if (!filling) schedule(saveTexts = true) }
         b.edtStaff.onTextChanged { if (!filling) schedule(saveTexts = true) }
         b.edtFooter.onTextChanged { if (!filling) schedule(saveTexts = true) }
 
@@ -127,31 +96,8 @@ class ReceiptStyleFragment : Fragment() {
     private fun fill() {
         filling = true
         val s = style
-        b.tgPreset.clearChecked()
-        when (s.copy(sub = "", thanks = "")) {
-            ReceiptStyle.STANDARD -> b.tgPreset.check(R.id.btnPresetStd)
-            ReceiptStyle.ONEC -> b.tgPreset.check(R.id.btnPreset1c)
-            ReceiptStyle.COMPACT -> b.tgPreset.check(R.id.btnPresetCompact)
-            else -> Unit
-        }
         b.tgPaper.check(if (s.paper == 58) R.id.btnPaper58 else R.id.btnPaper80)
-        b.tgFont.check(if (s.arial) R.id.btnFontArial else R.id.btnFontSystem)
-        b.swBold.isChecked = s.bold
-        b.swHeaderSerif.isChecked = s.headerSerif
         b.swLogo.isChecked = s.logo
-        b.swStaff.isChecked = s.staff
-        b.swNumber.isChecked = s.number
-        b.swTime.isChecked = s.time
-        b.swDate.isChecked = s.date
-        b.swClient.isChecked = s.client
-        b.swBefore.isChecked = s.before
-        b.swLineNo.isChecked = s.lineNo
-        b.swFrame.isChecked = s.frame
-        b.swAfter.isChecked = s.after
-        b.swFooter.isChecked = s.footer
-        b.swNotes.isChecked = s.notes
-        b.sText.value = (s.text / 5 * 5).toFloat()
-        b.sHeader.value = (s.header / 10 * 10).toFloat().coerceIn(50f, 180f)
         b.sLogoWidth.value = (s.logoWidth / 5 * 5).toFloat()
         b.sDark.value = (s.dark / 10 * 10).toFloat().coerceIn(100f, 220f)
         b.sFeed.value = (s.feed / 2 * 2).toFloat()
@@ -161,8 +107,6 @@ class ReceiptStyleFragment : Fragment() {
 
     private fun labels() {
         val s = style
-        b.tvText.text = getString(R.string.rs_text_size, s.text)
-        b.tvHeaderSize.text = getString(R.string.rs_header_size, s.header)
         b.tvLogoWidth.text = getString(R.string.rs_logo_width, s.logoWidth)
         b.tvDark.text = getString(R.string.rs_dark, (s.dark - 100) / 10 + 1)
         b.tvFeed.text = getString(R.string.rs_feed, s.feed)
@@ -176,16 +120,6 @@ class ReceiptStyleFragment : Fragment() {
 
     private fun change(f: (ReceiptStyle) -> ReceiptStyle) {
         style = f(style).normalized()
-        // Andoza belgisi qo'lda o'zgartirilganda olib tashlanadi
-        filling = true
-        b.tgPreset.clearChecked()
-        when (style.copy(sub = "", thanks = "")) {
-            ReceiptStyle.STANDARD -> b.tgPreset.check(R.id.btnPresetStd)
-            ReceiptStyle.ONEC -> b.tgPreset.check(R.id.btnPreset1c)
-            ReceiptStyle.COMPACT -> b.tgPreset.check(R.id.btnPresetCompact)
-            else -> Unit
-        }
-        filling = false
         labels()
         schedule()
     }
@@ -201,7 +135,6 @@ class ReceiptStyleFragment : Fragment() {
 
     private fun saveTexts() {
         val bb = _b ?: return
-        repo.setReceiptHeader(bb.edtHeader.text?.toString().orEmpty())
         repo.setReceiptStaff(bb.edtStaff.text?.toString().orEmpty())
         repo.setReceiptFooter(bb.edtFooter.text?.toString().orEmpty())
     }

@@ -35,6 +35,100 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- v5.0.3: eng tepada 4 ta katta ikonkali tugma (2 qator). 3- va 4-sini foydalanuvchi tanlaydi
+                 (uzoq bosiladi) — tarozi, narx yorliqlari, qaytarish, to'lov, hisobot va hokazo. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/cardSale"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:maxLines="2"
+                    android:minHeight="78dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:text="@string/home_new_sale"
+                    android:textSize="15sp"
+                    app:cornerRadius="26dp"
+                    app:icon="@drawable/ic_cart"
+                    app:iconGravity="top"
+                    app:iconPadding="2dp"
+                    app:iconSize="26dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/cardScan"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:maxLines="2"
+                    android:minHeight="78dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:text="@string/home_scan_sale"
+                    android:textSize="15sp"
+                    app:cornerRadius="26dp"
+                    app:icon="@drawable/ic_scan"
+                    app:iconGravity="top"
+                    app:iconPadding="2dp"
+                    app:iconSize="26dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSlot3"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:maxLines="2"
+                    android:minHeight="78dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textSize="15sp"
+                    app:cornerRadius="26dp"
+                    app:iconGravity="top"
+                    app:iconPadding="2dp"
+                    app:iconSize="26dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSlot4"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:maxLines="2"
+                    android:minHeight="78dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textSize="15sp"
+                    app:cornerRadius="26dp"
+                    app:iconGravity="top"
+                    app:iconPadding="2dp"
+                    app:iconSize="26dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvSlotHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="@string/home_pick_hint"
+                android:textAppearance="@style/TextAppearance.App.ItemSub" />
+
             <!-- Salomlashish, kurs, yangilangan vaqt -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardWelcome"
@@ -249,184 +343,6 @@
                         android:maxLines="2" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <!-- Asosiy amal -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/cardSale"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/home_new_sale"
-                android:textSize="17sp"
-                app:icon="@drawable/ic_cart"
-                app:iconGravity="textStart"
-                app:iconSize="24dp"
-                android:minHeight="60dp"
-                android:maxLines="2" />
-
-            <!-- v2.6: shtrix kod bilan savdo — asosiy amal (Yangi savdo bilan bir xil) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/cardScan"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/home_scan_sale"
-                android:textSize="17sp"
-                app:icon="@drawable/ic_scan"
-                app:iconGravity="textStart"
-                app:iconSize="24dp"
-                android:minHeight="60dp"
-                android:maxLines="2" />
-
-            <!-- Boshqa amallar: bir qatorda 4 ta ixcham plitka -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardReturn"
-                    style="@style/Widget.App.Card.Action"
-                    android:layout_width="0dp"
-                    android:layout_height="84dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="6dp">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_return"
-                            app:tint="?attr/colorOnSecondaryContainer" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:gravity="center"
-                            android:maxLines="2"
-                            android:text="@string/home_return"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorOnSecondaryContainer" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardPayment"
-                    style="@style/Widget.App.Card.Action"
-                    android:layout_width="0dp"
-                    android:layout_height="84dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="6dp">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_payment"
-                            app:tint="?attr/colorOnSecondaryContainer" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:gravity="center"
-                            android:maxLines="2"
-                            android:text="@string/home_payment_short"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorOnSecondaryContainer" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardReport"
-                    style="@style/Widget.App.Card.Action"
-                    android:layout_width="0dp"
-                    android:layout_height="84dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="6dp">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_report"
-                            app:tint="?attr/colorOnSecondaryContainer" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:gravity="center"
-                            android:maxLines="2"
-                            android:text="@string/home_report"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorOnSecondaryContainer" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardLabels"
-                    style="@style/Widget.App.Card.Action"
-                    android:layout_width="0dp"
-                    android:layout_height="84dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="6dp">
-
-                        <ImageView
-                            android:layout_width="26dp"
-                            android:layout_height="26dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_label"
-                            app:tint="?attr/colorOnSecondaryContainer" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:gravity="center"
-                            android:maxLines="2"
-                            android:text="@string/home_labels"
-                            android:textAppearance="?attr/textAppearanceLabelLarge"
-                            android:textColor="?attr/colorOnSecondaryContainer" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
 
             <!-- 1C tarixi (mijoz ilovasi sozlangan bo'lsa) -->
             <com.google.android.material.card.MaterialCardView

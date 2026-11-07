@@ -98,7 +98,25 @@ object ServiceLocator {
                 if (shareStore.isConfigured) ShareWorker.schedule(app)
             }
             runCatching { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.onAppStart(app) }
+            // v5.0.3: dollar kursi internetdagi bozor kursidan (1C'ga qaralmaydi). Qo'lda yozilgani almashtirilmaydi.
+            appScope.launch(Dispatchers.IO) { runCatching { refreshRate() } }
         }
+    }
+
+    /**
+     * Kursni internetdan yangilash: kuniga bir marta, faqat qo'lda yozilmagan bo'lsa.
+     * Bozorga yaqin (bank) kursi birinchi, bo'lmasa javob bergan birinchi manba.
+     */
+    suspend fun refreshRate() {
+        val p = appPrefs
+        if (p.localRateManual) return
+        if (p.localRate > 0 && System.currentTimeMillis() - p.localRateAt < 12 * 3_600_000L) return
+        val list = rateOnline.load()
+        val market = list.firstOrNull { q -> uz.imsoft.shared.android.RateOnline.SOURCES.firstOrNull { it.title == q.source }?.market == true }
+        val v = (market ?: list.firstOrNull())?.value ?: return
+        if (v < 1000 || v > 1_000_000) return
+        p.localRate = v
+        runCatching { catalog.load() }
     }
 
     /** WorkManager jarayonni o'zi ishga tushirganda ham hammasi tayyor bo'lsin. */

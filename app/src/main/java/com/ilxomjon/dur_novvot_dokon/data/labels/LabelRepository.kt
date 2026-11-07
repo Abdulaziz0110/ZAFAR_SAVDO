@@ -458,7 +458,7 @@ class LabelRepository(
         return LabelBatch(kind, out, skipped, w, h)
     }
 
-    fun render(b: LabelBatch, d: LabelData) = LabelBitmap.render(d, b.kind, b.wPx, b.hPx)
+    fun render(b: LabelBatch, d: LabelData) = LabelBitmap.render(d, b.kind, b.wPx, b.hPx, _state.value.dpi)
 
     suspend fun print(b: LabelBatch, only: List<LabelData> = b.labels): LabelPrinterClient.Sent {
         if (_state.value.lpd) return printLpd(b, only)

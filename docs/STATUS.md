@@ -1,10 +1,58 @@
-# Holat — Savdo Agent / Savdo Admin 5.0 (versionCode 29) + Savdo Mijoz 5.0 (versionCode 19), 2026-11-07
+# Holat — Savdo Agent / Savdo Admin 5.0.4 (versionCode 33) + Savdo Mijoz 5.0.4 (versionCode 21), 2026-11-07
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.0.4 — vidjet
+| Narsa | Holat |
+|---|---|
+| Vidjet uchchala ilovada (Agent, Admin, Mijoz) | VERIFIED (kompilyatsiya, manifest va resurslar) / telefonda IMPLEMENTED-UNVERIFIED |
+| 6 ta ikonkali tugma (2 qator x 3 ta), 4x2 katak | VERIFIED (maket) |
+| Har tugmaning amali ilovadan tanlanadi (Sozlamalar ▸ Vidjet), tanlov saqlanadi | VERIFIED (kompilyatsiya) |
+| Tez do'kon tugmasi: bosilishi bilan shu do'kon bilan savdo (Agent/Admin) | IMPLEMENTED-UNVERIFIED |
+| Ko'rinish: mavzuning yuza rangi, chegara, 22dp burchak; ranglar kodda beriladi (vidjetda mavzu atributlari ishlamaydi) | VERIFIED |
+| Mijoz vidjeti tepasida ism va qarz | IMPLEMENTED-UNVERIFIED |
+| Vidjet o'lchamini o'zgartirganda tugmalar soni o'zgarishi (responsive) | NOT-IMPLEMENTED (6 ta tugma doim) |
+
+## 5.0.3 — bosh sahifa, menyu, kurs va statistika
+| Narsa | Holat |
+|---|---|
+| Shtrix kod ikonkasi yana tepada | VERIFIED |
+| Bosh sahifada 4 ta katta ikonkali tugma (2 qator, yumaloq burchak, eng tepada); 3- va 4-si uzoq bosib tanlanadi va saqlanadi | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| Boss va Boshqaruv faqat menyuda; uch nuqta — ikonkali ro'yxat (Android menyusi ikonka ko'rsatmaydi) | VERIFIED |
+| Pastdagi 5-bo'lim ikkala rolda ham Sozlamalar (Boshqaruv takrorlanmasin) | VERIFIED |
+| Boshqaruv va Sozlamalar plitkali: 2 ustun, keng ekranda 3; uzoq bosilsa izoh | VERIFIED |
+| Dollar kursi faqat mahalliy: internetdagi bozor kursi kuniga bir marta olinadi, hamma hisob shundan; 1C kursiga qaralmaydi | VERIFIED (kompilyatsiya, `RateQuoteTest`) / internetda IMPLEMENTED-UNVERIFIED |
+| Qo'lda yozilgan kurs internetdan almashtirilmaydi (o'chirib-yoqiladigan sozlama) | VERIFIED |
+| Statistika mijoz filtri: Hammasi / Faqat shu / Shusiz — hamma statistika ekranida bir xil | VERIFIED (`StatsClientsTest`) |
+| Mijozlar statistikasi: savdo, foyda va ulushi, chek soni, o'rtacha chek, ulush (halqa), oxirgi savdo; mijoz bosilsa to'liq statistikasi | VERIFIED (`Stats.clients` testlari) / ekran IMPLEMENTED-UNVERIFIED |
+| Boss: "Oy boshidan" va "Mijozlar" bo'limlari | IMPLEMENTED-UNVERIFIED |
+| Statistika faqat savdo yozuvlari va oxirgi kirim narxlaridan | VERIFIED (`costByName`, `Stats.profitOf`) |
+| Mijoz ilovasida: o'z xaridlari bo'yicha soatlar va "oldin olinardi, endi yo'q"; bosh sahifa tugmalari va ikonkali menyu | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| Mijoz ilovasida mijozlar kesimi (u bitta mijoz — o'zi) | NOT-IMPLEMENTED (kerak emas) |
+
+## 5.0.2 — yorliq va chek 1C bilan bir xil
+| Narsa | Holat |
+|---|---|
+| PLU yorlig'i: nom Arial 16 qalin, narx Arial 26 qalin, kod Arial 20 qalin (1C "PLU Narx" shaklidagi aynan o'lchamlar, pt -> printer nuqtasi) | VERIFIED (kod + o'lchamlar shakldan olindi) / qog'ozda IMPLEMENTED-UNVERIFIED |
+| Harflarni sun'iy qalinlashtirish olib tashlandi (harflar bo'rtib chiqardi) | VERIFIED |
+| Shtrixli yorliq: nom Arial 16 qalin, narx Arial 20 qalin (1C "Shtrix chek" shaklidan) | IMPLEMENTED-UNVERIFIED |
+| Chek 1C "Чек1" maketining aynan o'zi: Vaqt/Sana, Mijoz (raqam), Mijoz, Agent, Qarz qoldig'i (So'm/Val), ramkali tovar qatorlari, Summa, Chegirma, To'lov (Naqd/Plastik/Val), Qarz qoldig'i, Tel | VERIFIED (`ChekTest`, `ReceiptTest`) / printerda IMPLEMENTED-UNVERIFIED |
+| Chekdagi qo'shimchalar olib tashlandi: do'kon nomi sarlavhasi, "Xodim/Chek №", "QAYTIB OLISH" banneri, rahmat yozuvi, kichik izohlar | VERIFIED (test: chekda yo'q) |
+| Naqd va plastik chekda alohida (savdoda kiritilganidek) | VERIFIED (`ChekTest.saleChek`) |
+| Chek ko'rinishi ekranida ishlamay qolgan tugmalar olib tashlandi (logo, Agent, telefon, qog'oz eni, qoralik, bo'sh joy qoldi) | VERIFIED (kompilyatsiya, 28 ta keraksiz matn o'chirildi) |
+| Chek yozuvlari lotin (maketning "UZB" tili). 1C kirillda chop etsa — `Chek.Labels.CYRILLIC` bitta joyda almashtiriladi | IMPLEMENTED-UNVERIFIED |
+| 1C tarixidan chop etilgan chekda naqd/plastik taqsimoti 0 (1C hisobotida bu ma'lumot yo'q) | NOT-IMPLEMENTED (ataylab) |
+
+## 5.0.1 — savdo ro'yxati tuzatildi
+| Narsa | Holat |
+|---|---|
+| Savdo ro'yxatida har doim hamma tovar (`SaleViewModel` do'kon tanlanganda `ListFilter.Suggested`ga o'tmaydi) | VERIFIED (kompilyatsiya + 228 test) |
+| Taklif ma'lumotini kerak bo'lganda ko'rish: tepadagi "Mijoz odatda oladigan tovarlar: N ta" bosilsa izohlar ro'yxati va "Hammasini qo'shish" | IMPLEMENTED-UNVERIFIED (telefonda ko'rish kerak) |
+| Taklif miqdori ("+" bosilganda odatiy miqdor) va miqdor oynasidagi tarix o'zgarmadi | VERIFIED |
 
 ## 5.0 — 24 ta yaxshilash (Admin / Agent / Mijoz)
 Raqamlar — sizning ro'yxatingiz tartibida.

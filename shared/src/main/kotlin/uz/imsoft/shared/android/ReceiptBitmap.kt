@@ -29,6 +29,8 @@ object ReceiptBitmap {
 
     fun render(r0: Receipt, style: ReceiptStyle = ReceiptStyle.STANDARD, logo: Bitmap? = null): Bitmap {
         val st = style.normalized()
+        // v5.0.2: 1C cheki — maketdagi ko'rinish (qog'oz eni, qoralik va oxiridagi bo'sh joy sozlamadan)
+        r0.chek?.let { return renderChek(it, st.width, if (st.logo) logo else null, st.dark, st.feed) }
         val r = st.apply(r0)
         val width = st.width
         val k = width / 576f
@@ -164,6 +166,123 @@ object ReceiptBitmap {
         gap(18f)
         // 203 dpi: 1 mm = 8 nuqta
         if (st.feed > 0) ops += Op(st.feed * 8f) { _, _ -> }
+
+        val height = ops.sumOf { it.h.toDouble() }.toInt().coerceAtLeast(10)
+        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawColor(Color.WHITE)
+        var y = 0f
+        for (op in ops) { op.draw(c, y); y += op.h }
+        return bmp
+    }
+
+    /**
+     * 1C chekining aynan o'zi (Документы.Реализация maketi "Чек1"). Shriftlar va tartib maketdan olingan:
+     * Vaqt/Sana Arial 9, "Mijoz:" Arial 11 va qiymati Arial 14, Agent Arial 11, qarz qoldig'i 9/10,
+     * tovar qatorlari Arial 9 ramkada, Summa 9/11, Chegirma va To'lov 10/11, pastda Tel Arial 12 markazda.
+     * Hamma matn Arial qalin (maketdagidek), hech qanday qo'shimcha yozuv yo'q.
+     */
+    fun renderChek(chek: uz.imsoft.shared.receipt.Chek, width: Int = 576, logo: Bitmap? = null, dark: Int = 140, feedMm: Int = 0): Bitmap {
+        val k = width / 576f
+        // 1C punkti 203 dpi printer nuqtasiga: 9pt -> 25 nuqta (80 mm qog'oz = 576 nuqta)
+        fun pt(p: Float) = p * 203f / 72f * k
+        val pad = 10 * k
+        val inner = (width - 2 * pad).toInt()
+        val bold: Typeface = PrintFonts.bold ?: Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        fun paint(points: Float) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = pt(points)
+            typeface = bold
+        }
+        val p9 = paint(9f)
+        val p10 = paint(10f)
+        val p11 = paint(11f)
+        val p12 = paint(12f)
+        val p14 = paint(14f)
+        val line = Paint().apply { color = Color.BLACK; strokeWidth = 2.5f * k; style = Paint.Style.STROKE }
+
+        class Op(val h: Float, val draw: (Canvas, Float) -> Unit)
+        val ops = ArrayList<Op>()
+        fun gap(dots: Float) { ops += Op(dots * k) { _, _ -> } }
+        fun sl(text: String, p: TextPaint, w: Int, align: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL): StaticLayout =
+            StaticLayout.Builder.obtain(text, 0, text.length, p, w.coerceAtLeast(10)).setAlignment(align).setIncludePad(false).build()
+        /** Chapda yorliq, o'ngda qiymat — maketdagi "yorliq ... qiymat" qatorlari. */
+        fun pair(label: String, value: String, pl: TextPaint, pv: TextPaint, after: Float = 3f, indent: Float = 0f) {
+            val vw = pv.measureText(value)
+            val lw = (inner - indent * k - vw - 10 * k).toInt().coerceAtLeast((inner * 0.3f).toInt())
+            val l = sl(label, pl, lw)
+            val h = maxOf(l.height.toFloat(), pv.fontSpacing)
+            ops += Op(h + after * k) { c, y ->
+                c.save(); c.translate(pad + indent * k, y + (h - l.height) / 2); l.draw(c); c.restore()
+                c.drawText(value, width - pad - vw, y + (h - pv.fontSpacing) / 2 - pv.ascent(), pv)
+            }
+        }
+        /** "Summa   Sum:   4 680 000" — uch ustunli qator. */
+        fun triple(left: String, mid: String, value: String, pl: TextPaint, pm: TextPaint, pv: TextPaint, after: Float = 3f) {
+            val vw = pv.measureText(value)
+            val mw = pm.measureText(mid)
+            val h = maxOf(pl.fontSpacing, pm.fontSpacing, pv.fontSpacing)
+            ops += Op(h + after * k) { c, y ->
+                val base = y + (h - pv.fontSpacing) / 2 - pv.ascent()
+                if (left.isNotEmpty()) c.drawText(left, pad, y + (h - pl.fontSpacing) / 2 - pl.ascent(), pl)
+                c.drawText(mid, width - pad - vw - 16 * k - mw, y + (h - pm.fontSpacing) / 2 - pm.ascent(), pm)
+                c.drawText(value, width - pad - vw, base, pv)
+            }
+        }
+        fun rule(after: Float = 4f) { ops += Op((4 + after) * k) { c, y -> c.drawLine(pad, y + 2 * k, width - pad, y + 2 * k, line) } }
+
+        gap(6f)
+        if (logo != null && logo.width > 0 && logo.height > 0) {
+            val lb = logoFor(logo, (width * 0.6f).toInt(), dark)
+            ops += Op(lb.height + 10 * k) { c, y -> c.drawBitmap(lb, ((width - lb.width) / 2).toFloat(), y, null) }
+        }
+        val l = chek.labels
+        // Вакт (chapda) va Сана (o'ngda) — bitta qator
+        run {
+            val left = l.time + " " + chek.time
+            val right = l.date + " " + chek.date
+            ops += Op(p9.fontSpacing + 4 * k) { c, y ->
+                val base = y - p9.ascent()
+                c.drawText(left, pad, base, p9)
+                c.drawText(right, width - pad - p9.measureText(right), base, p9)
+            }
+        }
+        if (chek.number.isNotEmpty()) pair(l.number, chek.number, p11, p14, 2f)
+        if (chek.client.isNotEmpty()) pair(l.client, chek.client, p11, p14, 2f)
+        if (chek.agent.isNotEmpty()) pair(l.agent, chek.agent, p11, p11, 6f) else gap(4f)
+        pair(l.debtSom, chek.debtSom, p9, p10, 2f)
+        pair(l.debtUsd, chek.debtUsd, p9, p10, 6f)
+        // Tovarlar — maketda har qator ramkada (chap/o'ng chegara, tepada va pastda chiziq)
+        val cell = 8 * k
+        for (x in chek.lines) {
+            val nl = sl(x.title, p9, (inner - 2 * cell).toInt())
+            val fl = sl(x.calc, p9, (inner - 2 * cell).toInt(), Layout.Alignment.ALIGN_OPPOSITE)
+            val h = cell * 0.6f + nl.height + 2 * k + fl.height + cell * 0.6f
+            ops += Op(h) { c, y ->
+                c.drawRect(pad, y, width - pad, y + h, line)
+                c.save(); c.translate(pad + cell, y + cell * 0.6f); nl.draw(c); c.restore()
+                c.save(); c.translate(pad + cell, y + cell * 0.6f + nl.height + 2 * k); fl.draw(c); c.restore()
+            }
+        }
+        gap(10f)
+        rule(6f)
+        triple(l.sum, l.som, chek.sumSom, p9, p9, p11)
+        triple("", l.usd, chek.sumUsd, p9, p9, p11, 6f)
+        rule(6f)
+        triple(l.discount, l.som, chek.discountSom, p10, p11, p11)
+        triple("", l.usd, chek.discountUsd, p10, p11, p11, 6f)
+        triple(l.payment, l.cash, chek.cash, p10, p11, p11)
+        triple("", l.card, chek.card, p10, p11, p11)
+        triple("", l.paidUsd, chek.paidUsd, p10, p11, p11, 6f)
+        pair(l.endSom, chek.endSom, p10, p11, 2f)
+        pair(l.endUsd, chek.endUsd, p10, p11, 8f)
+        if (chek.phone.isNotEmpty()) {
+            val t = l.phone + " " + chek.phone
+            val tl = sl(t, p12, inner, Layout.Alignment.ALIGN_CENTER)
+            ops += Op(tl.height + 6 * k) { c, y -> c.save(); c.translate(pad, y); tl.draw(c); c.restore() }
+        }
+        gap(18f)
+        if (feedMm > 0) ops += Op(feedMm * 8f) { _, _ -> }
 
         val height = ops.sumOf { it.h.toDouble() }.toInt().coerceAtLeast(10)
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

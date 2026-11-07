@@ -89,6 +89,33 @@ class AppPrefs(context: Context) {
     var fLayoutFix: Boolean get() = flag("f_layout_fix"); set(v) = setFlag("f_layout_fix", v)
     /** Qidiruvsiz ro'yxat tartibi: "server" / "name" / "popular". */
     var productSort: String get() = str("product_sort", "server"); set(v) = setStr("product_sort", v)
+    /**
+     * v5.0.3: dollar kursi — mahalliy (internetdagi bozor kursi yoki qo'lda yozilgani). 1C'dagi kursga qaralmaydi.
+     * 0 bo'lsa kurs hali ma'lum emas.
+     */
+    var localRate: Double
+        get() = prefs.getFloat("local_rate", 0f).toDouble()
+        set(v) = prefs.edit().putFloat("local_rate", v.toFloat()).putLong("local_rate_at", System.currentTimeMillis()).apply()
+
+    /** Kurs oxirgi marta qachon yangilangani (ms, 0 — hech qachon). */
+    val localRateAt: Long get() = prefs.getLong("local_rate_at", 0L)
+
+    /** Kurs qo'lda yozilgan bo'lsa — internetdan o'zi almashtirilmaydi. */
+    var localRateManual: Boolean get() = prefs.getBoolean("local_rate_manual", false); set(v) = setFlag("local_rate_manual", v)
+
+    /** v5.0.3: statistikada ajratilgan mijoz (nomi) va rejim: "all" / "only" / "without". */
+    var statsClient: String get() = str("stats_client", ""); set(v) = setStr("stats_client", v)
+    var statsWho: String get() = str("stats_who", "all"); set(v) = setStr("stats_who", v)
+
+    /** v5.0.4: vidjetdagi 6 ta tugma amallari (kalitlar, tartib bilan). */
+    var widgetSlots: List<String>
+        get() = str("widget_slots", "").split("|").filter { it.isNotEmpty() }
+            .ifEmpty { com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget.DEFAULTS }
+        set(v) = setStr("widget_slots", v.joinToString("|"))
+
+    /** v5.0.3: bosh sahifadagi 3- va 4-tugma (foydalanuvchi tanlaydi). */
+    var homeSlot3: String get() = str("home_slot3", "return"); set(v) = setStr("home_slot3", v)
+    var homeSlot4: String get() = str("home_slot4", "report"); set(v) = setStr("home_slot4", v)
     /** "+" bosilganda: "plus" — darhol qo'shish, "ask" — miqdor oynasi. */
     var addMode: String get() = str("add_mode", "plus"); set(v) = setStr("add_mode", v)
     var fHaptics: Boolean get() = flag("f_haptics"); set(v) = setFlag("f_haptics", v)

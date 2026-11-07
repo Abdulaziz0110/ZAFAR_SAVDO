@@ -48,19 +48,67 @@ class HomeFragment : Fragment() {
         // v3.9: o'z savdosi (agentdagidek) — savdo ekrani, mijozlar, kassa tarixi/hisoboti; bizga to'lov kiritish
         val main = { activity as? MainActivity }
         b.btnNewSale.setOnClickListener { main()?.openTab(R.id.nav_sale) }
-        // v4.0: statistika va "olgan tovarlarim" (nasiya mijozlari o'rniga — sodda)
-        b.tileClients.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.StatsFragment()) }
-        b.tileHistory.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_HISTORY)) }
-        b.tileReport.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_REPORT)) }
-        b.tilePay.setOnClickListener { main()?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) }
+        b.btnSlot2.setOnClickListener { main()?.openTab(R.id.nav_prices) }
+        bindSlot(b.btnSlot3, 3)
+        bindSlot(b.btnSlot4, 4)
         b.toolbar.inflateMenu(R.menu.home_menu)
-        b.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.action_settings) { main()?.openSettings(); true } else false }
+        b.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.action_menu) { openMenu(); true } else false }
         launchOnStarted { Locator.data.state.collect { render(it) } }
         launchOnStarted { Locator.pos.state.collect { renderToday() } }
         launchOnStarted {
             // Internet holati: yo'q bo'lsa — oxirgi saqlangan ma'lumot vaqti bilan ogohlantirish (ilova ishlayveradi)
             while (true) { renderOffline(); kotlinx.coroutines.delay(10_000L) }
         }
+    }
+
+    // ---------------- v5.0.3: tepadagi tanlanadigan tugmalar va ikonkali menyu ----------------
+
+    private class Slot(val key: String, val title: String, val icon: Int, val go: () -> Unit)
+
+    private fun slots(): List<Slot> {
+        val main = { activity as? MainActivity }
+        return listOf(
+            Slot("stats", getString(R.string.ms_tile_stats), R.drawable.ic_trending) { main()?.push(uz.imsoft.mijoz.ui.extra.StatsFragment()) },
+            Slot("history", getString(R.string.ms_tile_history), R.drawable.ic_history) {
+                main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_HISTORY))
+            },
+            Slot("report", getString(R.string.ms_tile_report), R.drawable.ic_report) {
+                main()?.push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_REPORT))
+            },
+            Slot("pay", getString(R.string.ms_tile_pay), R.drawable.ic_wallet) { main()?.push(uz.imsoft.mijoz.ui.extra.RequestsFragment()) },
+            Slot("mysales", getString(R.string.nav_report), R.drawable.ic_person) { main()?.openTab(R.id.nav_report) },
+            Slot("settings", getString(R.string.nav_settings), R.drawable.ic_settings) { main()?.openSettings() },
+        )
+    }
+
+    /** Bosilsa ishlaydi, uzoq bosilsa boshqa amal tanlanadi. */
+    private fun bindSlot(btn: com.google.android.material.button.MaterialButton, no: Int) {
+        val prefs = Locator.prefs
+        val list = slots()
+        val key = if (no == 3) prefs.homeSlot3 else prefs.homeSlot4
+        val slot = list.firstOrNull { it.key == key } ?: list.first()
+        btn.text = slot.title
+        btn.setIconResource(slot.icon)
+        btn.setOnClickListener { slot.go() }
+        btn.setOnLongClickListener {
+            uz.imsoft.shared.android.Ui.menuSheet(
+                requireContext(), getString(R.string.home_pick_action),
+                list.map { sl ->
+                    uz.imsoft.shared.android.Ui.MenuRow(sl.title, "", sl.icon, if (sl.key == key) 1 else 0) {
+                        if (no == 3) prefs.homeSlot3 = sl.key else prefs.homeSlot4 = sl.key
+                        if (view != null) bindSlot(btn, no)
+                    }
+                },
+            )
+            true
+        }
+    }
+
+    private fun openMenu() {
+        uz.imsoft.shared.android.Ui.menuSheet(
+            requireContext(), "",
+            slots().map { sl -> uz.imsoft.shared.android.Ui.MenuRow(sl.title, "", sl.icon) { sl.go() } },
+        )
     }
 
     private var pollJob: kotlinx.coroutines.Job? = null
@@ -99,7 +147,6 @@ class HomeFragment : Fragment() {
         bb.btnRefresh.isEnabled = !s.loading && s.linked
         bb.cardLink.show(s.loaded && !s.linked)
         bb.btnOrder.show(s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true)
-        bb.tilePay.show(s.linked)
         renderOffline()
         val snap = s.snapshot
         bb.toolbar.title = snap?.clientName?.ifEmpty { null } ?: Locator.prefs.link?.clientName?.ifEmpty { null } ?: getString(R.string.app_name)

@@ -23,6 +23,8 @@ import uz.imsoft.shared.report.Stats
  */
 class BossFragment : CodeFragment() {
     private lateinit var today: LinearLayout
+    private lateinit var month: LinearLayout
+    private lateinit var best: LinearLayout
     private lateinit var debts: LinearLayout
     private lateinit var agents: LinearLayout
     private lateinit var system: LinearLayout
@@ -37,8 +39,18 @@ class BossFragment : CodeFragment() {
             c.addView(card)
             return col
         }
+        // v5.0.3: hamma ko'rsatkichni tanlangan mijozsiz ham ko'rish mumkin
+        c.addView(StatsFilter.view(ctx, { clientNames() }) { render() })
         today = block(R.string.boss_today)
-        c.addView(Ui.button(ctx, getString(R.string.stt_title), outlined = true, icon = R.drawable.ic_trending) { navigator().push(StatsFragment()) })
+        month = block(R.string.boss_month)
+        best = block(R.string.stt_sec_clients)
+        c.addView(
+            Ui.buttonRow(
+                ctx,
+                Ui.button(ctx, getString(R.string.stt_title), outlined = true, icon = R.drawable.ic_trending) { navigator().push(StatsFragment()) },
+                Ui.button(ctx, getString(R.string.stc_title), outlined = true, icon = R.drawable.ic_groups) { navigator().push(ClientsStatsFragment()) },
+            ),
+        )
         debts = block(R.string.boss_debts)
         agents = block(R.string.boss_agents)
         system = block(R.string.boss_system)
@@ -65,7 +77,7 @@ class BossFragment : CodeFragment() {
     private fun render() {
         if (!::today.isInitialized) return
         val rate = ServiceLocator.catalog.state.value.rate
-        val entries = DokonLedgerHost.dbData.value.entries
+        val entries = StatsFilter.apply(DokonLedgerHost.dbData.value.entries)
         val cost = StatsFragment.costByName(rate)
         val now = System.currentTimeMillis()
         val day0 = PendingMerge.stampOf(startOfDay(now))
@@ -83,6 +95,31 @@ class BossFragment : CodeFragment() {
         if (chart.parent == null) today.addView(chart, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 8) })
         else { (chart.parent as? LinearLayout)?.removeView(chart); today.addView(chart) }
         chart.bars = s.map { it.label to it.sales }
+
+        // Oy boshidan: savdo, foyda va foyda ulushi
+        val m0 = PendingMerge.stampOf(startOfMonth(now))
+        val m = Stats.kpi(entries, m0, day1, rate, cost)
+        month.removeAllViews()
+        row(month, getString(R.string.stt_sales), getString(R.string.boss_month_sub, m.docs, m.clients), som(m.sales), R.drawable.ic_receipt, 1)
+        if (m.hasProfit) {
+            val pct = if (m.sales > 0) Math.round(m.profit / m.sales * 100).toInt() else 0
+            row(month, getString(R.string.stt_profit), getString(R.string.stc_margin, som(m.profit), pct), som(m.profit), R.drawable.ic_trending, if (m.profit < 0) 3 else 0)
+        }
+        row(month, getString(R.string.boss_income), "", som(m.payments), R.drawable.ic_wallet)
+        if (m.returns > 0) row(month, getString(R.string.stt_returns), "", som(m.returns), R.drawable.ic_assignment_return, 2)
+        row(month, getString(R.string.stt_k_avg), "", som(m.avg), R.drawable.ic_calculate)
+
+        // Eng yaxshi mijozlar (oy boshidan)
+        best.removeAllViews()
+        val cl = Stats.clients(entries, m0, day1, rate, cost)
+        val totalSales = cl.sumOf { it.sales }
+        if (cl.isEmpty()) best.addView(Ui.hint(ctx, getString(R.string.stc_none), 0))
+        cl.take(5).forEachIndexed { i, x ->
+            val share = if (totalSales > 0) Math.round(x.sales / totalSales * 100).toInt() else 0
+            row(best, x.name, getString(R.string.stc_row, x.docs, som(x.avg)) + " \u00b7 " + getString(R.string.stc_share, share), som(x.sales), R.drawable.ic_person, if (i == 0) 1 else 0) {
+                navigator().push(StatsFragment.of(x.name))
+            }
+        }
 
         // Qarzlar (serverdan, oxirgi yangilangan)
         debts.removeAllViews()
@@ -136,6 +173,17 @@ class BossFragment : CodeFragment() {
         val bad = w.count { it.result?.ok == false }
         row(system, getString(R.string.ad_writes), getString(R.string.ad_writes_st, wait, bad), "", R.drawable.ic_sync_alt, if (bad > 0) 3 else 0) { navigator().push(WritesFragment()) }
     }
+
+    private fun clientNames(): List<String> {
+        val rate = ServiceLocator.catalog.state.value.rate
+        return Stats.clients(DokonLedgerHost.dbData.value.entries, 0L, Long.MAX_VALUE, rate).map { it.name }.take(60)
+    }
+
+    private fun startOfMonth(ms: Long): Long = java.util.Calendar.getInstance().apply {
+        timeInMillis = ms
+        set(java.util.Calendar.DAY_OF_MONTH, 1)
+        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
 
     private fun startOfDay(ms: Long): Long = java.util.Calendar.getInstance().apply {
         timeInMillis = ms; set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)

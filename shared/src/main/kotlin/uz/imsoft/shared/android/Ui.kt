@@ -244,6 +244,32 @@ object Ui {
         return row
     }
 
+    /** Ikonkali menyu qatori ([menuSheet] uchun). */
+    class MenuRow(val title: CharSequence, val sub: CharSequence = "", val icon: Int = 0, val tone: Int = 0, val onClick: () -> Unit)
+
+    /**
+     * Pastdan chiqadigan ikonkali menyu. Android'ning o'z menyusi ikonkalarni ko'rsatmaydi, shuning uchun
+     * uch nuqta shu ro'yxatni ochadi.
+     */
+    fun menuSheet(ctx: Context, title: CharSequence, rows: List<MenuRow>) {
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, 8), dp(ctx, 8), dp(ctx, 8), dp(ctx, 20))
+        }
+        val d = com.google.android.material.bottomsheet.BottomSheetDialog(ctx)
+        if (title.isNotEmpty()) col.addView(section(ctx, title).apply { setPadding(dp(ctx, 12), 0, 0, 0) })
+        for (r in rows) {
+            col.addView(
+                item(ctx, r.title, r.sub, icon = r.icon, tone = r.tone) {
+                    d.dismiss()
+                    r.onClick()
+                },
+            )
+        }
+        d.setContentView(col)
+        d.show()
+    }
+
     fun divider(ctx: Context): View = View(ctx).apply {
         setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutlineVariant))
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, dp(ctx, 1) / 2))

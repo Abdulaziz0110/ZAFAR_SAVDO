@@ -72,6 +72,7 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
                 id = saleId ?: "o$outboxId", at = sent.sentAt, stamp = stampOf(sent.sentAt), isReturn = sent.mode == DealMode.RETURN,
                 usd = sent.currency == Currency.USD, lines = sent.lines.map { AppSale.Line(it.name, it.qty, it.price) },
                 discount = sent.discount, code = code, debtBefore = debtBefore, paid = sent.paid,
+                cash = sent.cash, card = sent.card,
             )
             val list = (sales(c.id).filter { it.id != s.id } + s).takeLast(AppSale.KEEP)
             writeAtomic(salesFile(c.id), Json.write(list.map { AppSale.toJson(it) }))
@@ -196,6 +197,11 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
             clientLabel = ctx.getString(R.string.lg_client), clientName = clientName, info = info, date = date,
             before = before, banner = if (s.isReturn) ctx.getString(R.string.lg_rc_return) else "", after = after,
             footer = store.receiptFooter.split('\n').map { it.trim() }.filter { it.isNotEmpty() }, infoKeys = keys,
+            // v5.0.2: chek 1C "Чек1" maketidagidek chiqadi
+            chek = uz.imsoft.shared.receipt.Chek.ofSale(
+                s, s.code, clientName, store.receiptStaff,
+                uz.imsoft.shared.receipt.Chek.phoneOf(store.receiptFooter.split('\n')),
+            ),
         )
     }
 

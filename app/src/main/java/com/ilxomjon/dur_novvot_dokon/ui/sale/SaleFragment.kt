@@ -30,6 +30,10 @@ import uz.imsoft.shared.android.Ui
  * v5.0 Savdo: eng tepada qidiruv va shtrix kod, tagida darhol tovarlar. Do'kon, narx turi, valyuta, savdo/qaytarish va
  * kelgan narx — "Sozlash" oynasida (ikonka yoki tepadagi yozuvni bosib). Oyna yopilgach kursor qidiruvga o'tadi.
  * Savdo pauza qilinmaydi — bosh sahifadan yangi savdo boshlanadi, boshlangani "Ochiq savdolar"da turadi.
+ *
+ * v5.0.1: ro'yxatda HAR DOIM hamma tovar turadi (taklif ro'yxatiga o'zi o'tib ketmaydi). Taklif ma'lumoti
+ * kerak bo'lganda ko'riladi — tepadagi "Mijoz odatda oladigan tovarlar: N ta" yozuvini bosilsa, nima, qancha
+ * va nega taklif qilinayotgani ro'yxat bo'lib chiqadi; shu oynadan hammasini birdan qo'shish ham mumkin.
  */
 class SaleFragment : Fragment() {
     private var _binding: FragmentSaleBinding? = null
@@ -42,6 +46,10 @@ class SaleFragment : Fragment() {
     private var rendering = false
     private var autoPicked = false
     private var setupOpen = false
+    /** Oxirgi takliflar (tepadagi yozuv va "nega" oynasi uchun). */
+    private var lastSuggest: List<com.ilxomjon.dur_novvot_dokon.domain.Suggestion> = emptyList()
+    /** Tepadagi kichik yozuv hozir taklif haqidami (bosilsa oyna chiqadi) yoki kurs ogohlantirishimi. */
+    private var warnIsSuggest = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSaleBinding.inflate(inflater, container, false)
@@ -109,6 +117,8 @@ class SaleFragment : Fragment() {
             } else false
         }
         binding.btnCart.setOnClickListener { vm.tap(); navigator().push(CartFragment()) }
+        // Taklifni faqat kerak bo'lganda ko'rish: tepadagi yozuvni bosish
+        binding.tvWarning.setOnClickListener { if (warnIsSuggest) showSuggestions() }
         binding.btnSmart.setOnClickListener { onSmart() }
 
         launchOnStarted { vm.list.collect { lastList = it; renderList(it) } }
@@ -116,6 +126,7 @@ class SaleFragment : Fragment() {
         launchOnStarted { vm.pricing.collect { adapter.setPricing(it, vm.showCost.value) } }
         launchOnStarted { vm.showCost.collect { on -> adapter.setPricing(vm.pricing.value, on) } }
         launchOnStarted { vm.suggestedQty.collect { adapter.setSuggested(it) } }
+        launchOnStarted { vm.suggestionList.collect { lastSuggest = it; renderInfoLine() } }
         launchOnStarted { vm.smart.collect { renderSmart(it) } }
         launchOnStarted { vm.favorites.collect { updateEmpty() } }
         launchOnStarted {
@@ -307,6 +318,49 @@ class SaleFragment : Fragment() {
         }
     }
 
+    /**
+     * Tepadagi bitta kichik qator: avval kurs ogohlantirishi (muhimroq), bo'lmasa — taklif soni (bosiladi).
+     * Ro'yxatning o'zi hech qachon filtrlanmaydi.
+     */
+    private fun renderInfoLine() {
+        val b = _binding ?: return
+        val noRate = lastList.hasProducts && vm.pricing.value.rate <= 0.0
+        val byId = ServiceLocator.catalog.state.value.productsById
+        val n = if (lastDraft.store == null) 0 else lastSuggest.count { byId.containsKey(it.productId) }
+        warnIsSuggest = !noRate && n > 0
+        when {
+            noRate -> {
+                b.tvWarning.setText(R.string.rate_missing_warning)
+                b.tvWarning.setTextColor(com.google.android.material.color.MaterialColors.getColor(b.tvWarning, com.google.android.material.R.attr.colorError))
+                b.tvWarning.show(true)
+            }
+            n > 0 -> {
+                b.tvWarning.text = getString(R.string.sale_suggest_bar, n)
+                b.tvWarning.setTextColor(com.google.android.material.color.MaterialColors.getColor(b.tvWarning, com.google.android.material.R.attr.colorTertiary))
+                b.tvWarning.show(true)
+            }
+            else -> b.tvWarning.show(false)
+        }
+        b.tvWarning.isClickable = warnIsSuggest
+    }
+
+    /** "Nega taklif qilinyapti": tovar nomi + izoh (qancha, qanchada bir, oxirgisi qachon). */
+    private fun showSuggestions() {
+        val ctx = requireContext()
+        val byId = ServiceLocator.catalog.state.value.productsById
+        val rows = lastSuggest.mapNotNull { s ->
+            val p = byId[s.productId] ?: return@mapNotNull null
+            p.name + "\n" + SuggestText.of(ctx, s)
+        }
+        if (rows.isEmpty()) return
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle(getString(R.string.sale_suggest_bar, rows.size))
+            .setMessage(rows.joinToString("\n\n"))
+            .setPositiveButton(R.string.sale_suggest_add_all) { _, _ -> vm.addAllSuggested() }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     private fun renderList(s: ListState) {
         adapter.setHighlights(s.highlights)
         adapter.setProducts(s.products)
@@ -352,7 +406,7 @@ class SaleFragment : Fragment() {
         if (d.mode == DealMode.RETURN) parts += getString(R.string.mode_return)
         if (vm.showCost.value) parts += getString(R.string.sale_cost_switch)
         b.tvContext.text = parts.joinToString(" · ")
-        b.tvWarning.show(lastList.hasProducts && vm.pricing.value.rate <= 0.0)
+        renderInfoLine()
 
         adapter.setCart(d.lines.associateBy { it.productId })
         b.tvCount.text = getString(R.string.sale_items_count, d.itemCount)

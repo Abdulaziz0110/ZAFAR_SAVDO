@@ -193,10 +193,9 @@ class SaleViewModel(
                 val list = withContext(Dispatchers.Default) { Suggestions.build(all, global, System.currentTimeMillis(), feedback = fb) }
                 suggestions.value = list
                 lastOrder.value = own.firstOrNull { it.mode == DealMode.SALE }?.lines?.filter { it.productId.isNotEmpty() }.orEmpty()
-                // Mijoz tanlanganda va savatcha bo'sh bo'lsa, taklif qilinadigan tovarlar o'zi ochiladi.
-                if (list.isNotEmpty() && draftRepo.state.value.lines.isEmpty() && filter.value == ListFilter.All) {
-                    filter.value = ListFilter.Suggested
-                }
+                // v5.0.1: do'kon tanlanganda ro'yxat TAKLIFGA O'TMAYDI — har doim hamma tovar ko'rinadi.
+                // Taklif ma'lumotlari kerak bo'lganda ko'riladi: tepadagi "Mijoz odatda oladigan tovarlar: N ta"
+                // yozuvini bosish (SaleFragment) yoki miqdor oynasidagi tarix (ItemEditSheet).
             }
         }
     }

@@ -67,6 +67,11 @@ data class Receipt(
     val subheader: List<String> = emptyList(),
     /** Eng pastdagi xabar — [ReceiptStyle.thanks]. */
     val thanks: String = "",
+    /**
+     * v5.0.2: 1C chekining aynan o'zi. To'ldirilgan bo'lsa chek shu ko'rinishda chiqadi (rasm, matn va PDF) —
+     * qolgan maydonlar faqat eski ekranlar uchun qoladi.
+     */
+    val chek: Chek? = null,
 ) {
     companion object {
         const val KEY_STAFF = "staff"
@@ -105,7 +110,7 @@ object ReceiptBuilder {
         "%02d:%02d:%02d".format(Stamp.hour(stamp), Stamp.minute(stamp), (stamp % 100).toInt()) to
             "%02d.%02d.%02d".format(Stamp.dayOfMonth(stamp), Stamp.month(stamp), Stamp.year(stamp) % 100)
 
-    fun fromDoc(doc: LedgerDoc, header: String, clientName: String, l: Labels, footer: List<String> = emptyList(), staff: String = ""): Receipt {
+    fun fromDoc(doc: LedgerDoc, header: String, clientName: String, l: Labels, footer: List<String> = emptyList(), staff: String = "", number: String = ""): Receipt {
         val lines = ArrayList<Receipt.Line>()
         if (doc.isGoods && doc.goods.isNotEmpty()) {
             for (e in doc.goods) {
@@ -137,15 +142,20 @@ object ReceiptBuilder {
             EntryKind.RETURN -> l.returnBanner
             else -> l.titleFor(doc.kind).uppercase()
         }
+        // v5.0.2: chek 1C maketidagidek chiqadi (qolgan maydonlar ekrandagi ko'rinish uchun qoladi).
+        // 1C hisobotida to'lov naqd/plastikka ajratilmagan — savdo hujjatida ular 0 bo'ladi, xuddi 1C'dagidek.
+        val before = doc.balanceAfter?.minus(doc.debtEffect) ?: uz.imsoft.shared.report.Money2.ZERO
+        val chek = Chek.ofDoc(doc, number, clientName, staff, Chek.phoneOf(footer), before)
         return Receipt(
             header, l.titleFor(doc.kind), l.client + ": " + clientName, Stamp.formatDateTime(doc.stamp),
             lines, totals, listOf(l.note),
             clientLabel = l.client, clientName = clientName, info = info, date = date, banner = banner, after = after, footer = footer, infoKeys = keys,
+            chek = chek,
         )
     }
 
     /** Oddiy matn (Telegram'ga yuborish, nusxa olish). */
-    fun toText(r: Receipt): String = buildString {
+    fun toText(r: Receipt): String = r.chek?.text() ?: buildString {
         if (r.header.isNotBlank()) append(r.header).append('\n')
         for (x in r.subheader) append(x).append('\n')
         for ((k, v) in r.info) append(k).append(": ").append(v).append('\n')
@@ -173,7 +183,7 @@ object ReceiptBuilder {
     private fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     /** PDF / chop etish: qog'oz chekka o'xshash ustun (80 mm), A4 da ham chiroyli. */
-    fun toHtml(r: Receipt): String = buildString {
+    fun toHtml(r: Receipt): String = r.chek?.html() ?: buildString {
         append("<!DOCTYPE html><html><head><meta charset='utf-8'><style>")
         append("body{font-family:Arial,sans-serif;color:#000;margin:0;padding:16px}.r{max-width:380px;margin:0 auto}")
         append("h1{font-family:'Times New Roman',Georgia,serif;font-size:26px;font-weight:900;margin:0 0 10px;text-align:center;line-height:1.15}")

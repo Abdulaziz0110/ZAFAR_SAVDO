@@ -1,5 +1,58 @@
 # CHANGELOG
 
+## 5.0.4 (versionCode 33), Savdo Mijoz 5.0.4 (versionCode 21) — 2026-11-07
+* **Vidjet uchchala ilovada ham**: Agent, Admin va Mijoz.
+* **6 ta tugma** (2 qator x 3 ta), har biri ikonkali.
+* **Har tugmaning amalini o'zingiz tanlaysiz** — Sozlamalar ▸ Vidjet. Agent/Admin uchun: yangi savdo,
+  shtrix bilan savdo, to'lov, tarix, hisobot, kun yakuni, navbat, shtrix kodlar, qaytarish, statistika,
+  mijozlar statistikasi, Boss, Boshqaruv, narx yorliqlari, tarozi, kurs — yoki **tez do'kon** (tugma
+  bosilishi bilan shu do'kon bilan savdo ochiladi). Mijoz uchun: yangi savdo, narxlar, statistika,
+  savdolarim, kassa hisoboti, bizga to'lov, hisobot, sozlamalar.
+* **Ko'rinishi tuzatildi**: oldingi yashil vidjet o'rniga ilova mavzusidagi yuza rangi, yengil chegara va
+  yumaloq (22dp) burchak; tugmalar yumshoq qavatda, birinchisi ajralib turadi. Admin'da qorong'i,
+  Agent'da yorug', Mijozda indigo — ya'ni vidjet ilovaning o'z rangida.
+* Mijoz vidjetining tepasida ismi va qarzi qoladi.
+
+## 5.0.3 (versionCode 32), Savdo Mijoz 5.0.3 (versionCode 20) — 2026-11-07
+* **Shtrix kod ikonkasi** yana tepada (menyu ichida emas).
+* **Bosh sahifada 4 ta katta ikonkali tugma** (2 qator, burchaklari yumaloq, eng tepada): 1-2 — Yangi savdo va
+  Shtrix bilan savdo (Mijozda — Yangi savdo va Narxlar), 3-4 — o'zingiz tanlaysiz: **uzoq bosing** va ro'yxatdan
+  tanlang (tarozi, narx yorliqlari, qaytarish, to'lov, hisobot, kun yakuni, navbat, narx belgilash, kurs, Boss...).
+  Eski katta tugmalar va 4 plitkali qator olib tashlandi.
+* **Boss va Boshqaruv endi faqat menyuda** (bosh sahifadagi kartalar olib tashlandi). Uch nuqta — ikonkali menyu.
+  Pastdagi 5-bo'lim ikkala rolda ham **Sozlamalar** (bir ish ikki joyda turmasin).
+* **Boshqaruv va Sozlamalar plitkali** — telefonda 2 ustun, kengroq ekranda 3 ustun; plitka uzoq bosilsa to'liq izoh.
+* **Dollar kursi faqat mahalliy**: ilova 1C'dagi kursga umuman qaramaydi, internetdagi bozor kursini o'zi oladi
+  (kuniga bir marta) va hamma hisob shu kurs bilan. Qo'lda yozilsa — o'zi almashtirmaydi. 1C'ga yozish alohida tugma.
+* **Statistika ancha boyidi**:
+  - Boss: "Bugun" ustiga "Oy boshidan" (savdo, foyda va foyda ulushi, tushum, o'rtacha chek) va "Mijozlar" bo'limi qo'shildi.
+  - **Mijoz filtri**: Hammasi / Faqat shu mijoz / Shu mijozsiz — do'kon savdosining katta qismi bitta mijozga
+    to'g'ri kelgani uchun hamma ko'rsatkichni **usiz** ham ko'rish mumkin. Tanlov hamma statistika ekranida bir xil.
+  - **Mijozlar statistikasi**: har mijozning savdosi, foydasi va foyda ulushi, chek soni, o'rtacha cheki, ulushi
+    (halqa grafik) va oxirgi savdosi; mijoz bosilsa — uning to'liq statistikasi.
+  - Hisob faqat savdo yozuvlari va oxirgi kirim narxlaridan.
+* **Mijoz ilovasida ham**: o'zi olgan tovarlari bo'yicha soatlar va "oldin olinardi, endi yo'q" bo'limlari qo'shildi;
+  bosh sahifa tugmalari va ikonkali menyu agentdagidek.
+
+## 5.0.2 (versionCode 31) — 2026-11-07
+* **PLU narx yorlig'i 1C bilan bir xil**: nom Arial 16 qalin, narx Arial 26 qalin, kod Arial 20 qalin
+  (o'lchamlar 1C shaklidan olindi, punktdan printer nuqtasiga o'giriladi). Harflarni sun'iy qalinlashtirish
+  olib tashlandi — shuning uchun harflar endi bo'rtib chiqmaydi. Shtrixli yorliqda ham 1C'dagidek: nom 16, narx 20.
+* **Chek 1C chekining aynan o'zi** (Документы.Реализация maketi "Чек1"): logo, Vaqt/Sana, Mijoz (raqam),
+  Mijoz (nomi), Agent, Qarz qoldig'i (So'm/Val), tovarlar ("1 || Nom" va "40 x 117 000 = 4 680 000" ramkada),
+  Summa, Chegirma, To'lov (Naqd / Plastik / Val), Qarz qoldig'i va Tel. Qo'shimcha hech narsa chiqmaydi —
+  do'kon nomi sarlavhasi, "Xodim/Chek №", "QAYTIB OLISH" banneri, "rahmat" yozuvi va kichik izohlar olib tashlandi.
+* Naqd va plastik endi chekda alohida ko'rinadi (savdoda kiritilgani bo'yicha).
+* Chek ko'rinishi ekrani shunga qarab qisqardi: logo, Agent, telefonlar, qog'oz eni, qoralik va oxiridagi
+  bo'sh joy qoldi (qolgan tugmalar chekka ta'sir qilmay qolgandi).
+
+## 5.0.1 (versionCode 30) — 2026-11-07
+* **Savdo ro'yxatida har doim HAMMA tovar turadi.** Oldin do'kon tanlanganda ro'yxat o'zi "taklif qilinganlar"ga
+  o'tib ketardi (5.0'da filtr qatori olib tashlangani uchun qaytarib bo'lmasdi) — endi bunday emas.
+* **Taklif faqat kerak bo'lganda:** tepadagi "Mijoz odatda oladigan tovarlar: N ta" yozuvini bosing — nima, qancha
+  va nega taklif qilinayotgani ro'yxat bo'lib chiqadi; shu oynadan hammasini birdan qo'shish ham mumkin.
+  Taklif miqdori avvalgidek ishlaydi: "+" bosilganda mijozning odatiy miqdori qo'yiladi.
+
 ## 5.0 (versionCode 29), Savdo Mijoz 5.0 (versionCode 19) — 2026-11-07
 Siz aytgan 24 ta yaxshilash. Qisqacha:
 * **Bir nechta savdo birdan**: Bosh sahifada "Ochiq savdolar" — yangi savdo boshlanganda joriysi kutishga o'tadi,

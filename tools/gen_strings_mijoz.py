@@ -303,8 +303,8 @@ STRINGS.update({
  'rx_footer': 'Chek osti (telefon)', 'rx_footer_hint': "Bo'sh bo'lsa — do'kon egasiniki",
  'rx_thanks': 'Rahmat matni', 'rx_save': 'Saqlash', 'rx_saved': 'Saqlandi', 'rx_test': 'Sinov cheki', 'rx_test_item': 'Sinov',
  # Vidjet
- 'wg_desc': "Qarz, narxlar va kassa",
- 'home_pending_deals': "Server qarziga keyingi %1$d ta savdo/to'lov qo'shildi: %2$s", 'wg_debt': 'Qarz: %1$s', 'wg_no_data': "Ma'lumot yo'q",
+ 'wg_desc': "6 ta tugma — har birini o'zingiz tanlaysiz",
+ 'home_pending_deals': "Server qarziga keyingi %1$d ta savdo/to'lov qo'shildi: %2$s", 'wg_no_data': "Ma'lumot yo'q",
  # v3.9: o'z savdosi (agentdagidek)
  'nav_sale': 'Savdo', 'ms_new_sale': 'Yangi savdo', 'ms_cart': 'Savatcha', 'ms_minus': 'Kamaytirish', 'ms_plus': "Qo'shish",
  'ms_clear': 'Savatchani tozalash', 'ms_clear_text': "Savatchadagi hamma tovar olib tashlanadi. Davom etasizmi?",
@@ -344,6 +344,11 @@ STRINGS.update({
 
 STRINGS.update({
  # v4.0: statistika
+ 'home_pick_action': 'Tugmani tanlang', 'home_pick_hint': 'Uzoq bosib boshqa amalni tanlang', 'menu_more': 'Menyu',
+ 'stt_idle_bought': "Oldin olinardi, endi yo'q", 'stt_idle_bought_sub': 'Oxirgi xariddan beri %1$d kun \u00b7 jami %2$d marta olingan',
+ 'wg_title': 'Tez amallar', 'wgs_title': 'Vidjet', 'wgs_sub': 'Bosh ekrandagi 6 ta tugmani sozlash',
+ 'wgs_hint': 'Bosh ekrandagi vidjetda 6 ta tugma bor. Har birini bosib, nima qilishini tanlang.',
+ 'wgs_slot': '%1$d-tugma', 'wgs_reset': 'Odatdagi holatga qaytarish',
  'ms_tile_stats': 'Statistika',
  'stt_title': 'Statistika', 'stt_day': 'Kun', 'stt_week': 'Hafta', 'stt_month': 'Oy', 'stt_year': 'Yil',
  'stt_payments': "To'lov", 'stt_returns': 'Qaytarish',

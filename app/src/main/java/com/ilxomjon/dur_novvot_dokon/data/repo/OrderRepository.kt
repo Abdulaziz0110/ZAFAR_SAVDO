@@ -51,6 +51,7 @@ class OrderRepository(
             id = 0, sentAt = now.time, storeId = store.id, storeName = store.name, mode = d.mode, priceType = d.priceType,
             currency = d.currency, total = d.total, discount = input.discount, paid = paid,
             lines = d.lines.map { SentLine(it.name, it.qty, it.price, it.productId) }, pending = true,
+            cash = if (d.currency == Currency.SOM) input.pay.cashSom else input.pay.cashUsd, card = input.pay.card,
         )
         val id = outbox.enqueueOrder(agent.id, payload, sent)
         // Savatcha darhol (sinxron) tozalanadi: jarayon shu yerda o'lsa ham, yuborilgan savatcha qayta paydo bo'lmasin.

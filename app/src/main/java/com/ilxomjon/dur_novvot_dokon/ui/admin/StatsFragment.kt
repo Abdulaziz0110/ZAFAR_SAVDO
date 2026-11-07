@@ -9,6 +9,7 @@ import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
 import com.ilxomjon.dur_novvot_dokon.domain.Pricing
 import com.ilxomjon.dur_novvot_dokon.ui.launchOnStarted
+import com.ilxomjon.dur_novvot_dokon.ui.navigator
 import com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost
 import uz.imsoft.shared.android.StatsPanel
 import uz.imsoft.shared.android.Ui
@@ -18,10 +19,22 @@ import uz.imsoft.shared.report.Stamp
 class StatsFragment : CodeFragment() {
     private lateinit var panel: StatsPanel
 
+    /** Bitta mijozning statistikasi uchun (Mijozlar ro'yxatidan ochilganda). */
+    private val fixedClient: String get() = arguments?.getString(ARG_CLIENT).orEmpty()
+
     override fun build(inflater: LayoutInflater): View {
         val p = page(R.string.stt_title)
+        if (fixedClient.isNotEmpty()) p.toolbar.title = fixedClient
         val c = p.content
         c.addView(Ui.hint(ctx, getString(R.string.stt_hint), 4))
+        if (AppRole.isAdmin && fixedClient.isEmpty()) {
+            c.addView(StatsFilter.view(ctx, { clientNames() }) { refresh() })
+            c.addView(
+                Ui.button(ctx, getString(R.string.stc_title), outlined = true, top = 8, icon = R.drawable.ic_groups) {
+                    navigator().push(ClientsStatsFragment())
+                },
+            )
+        }
         val metrics = if (AppRole.isAdmin) StatsPanel.Metric.entries.toList()
         else listOf(StatsPanel.Metric.SALES, StatsPanel.Metric.PAYMENTS, StatsPanel.Metric.RETURNS)
         panel = StatsPanel(ctx, texts(this), { som(it) }, metrics)
@@ -29,16 +42,35 @@ class StatsFragment : CodeFragment() {
         return p.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        launchOnStarted {
-            DokonLedgerHost.dbData.collect { d ->
-                val rate = ServiceLocator.catalog.state.value.rate
-                panel.setData(d.entries, rate, costByName(rate))
-            }
+    private fun clientNames(): List<String> {
+        val rate = ServiceLocator.catalog.state.value.rate
+        val e = DokonLedgerHost.dbData.value.entries
+        return uz.imsoft.shared.report.Stats.clients(e, 0L, Long.MAX_VALUE, rate).map { it.name }.take(60)
+    }
+
+    /** Ro'yxatni filtrga qarab qayta beradi. */
+    private fun refresh() {
+        if (!::panel.isInitialized) return
+        val rate = ServiceLocator.catalog.state.value.rate
+        val all = DokonLedgerHost.dbData.value.entries
+        val e = when {
+            fixedClient.isNotEmpty() -> uz.imsoft.shared.report.Stats.only(all, fixedClient, uz.imsoft.shared.report.Stats.Who.ONLY)
+            AppRole.isAdmin -> StatsFilter.apply(all)
+            else -> all
         }
+        panel.setData(e, rate, costByName(rate))
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        launchOnStarted { DokonLedgerHost.dbData.collect { refresh() } }
     }
 
     companion object {
+        private const val ARG_CLIENT = "client"
+
+        /** Bitta mijozning statistikasi. */
+        fun of(name: String) = StatsFragment().apply { arguments = android.os.Bundle().apply { putString(ARG_CLIENT, name) } }
+
         fun texts(f: androidx.fragment.app.Fragment) = StatsPanel.Texts(
             listOf(f.getString(R.string.stt_day), f.getString(R.string.stt_week), f.getString(R.string.stt_month), f.getString(R.string.stt_year)),
             listOf(f.getString(R.string.stt_sales), f.getString(R.string.stt_payments), f.getString(R.string.stt_returns), f.getString(R.string.stt_profit)),

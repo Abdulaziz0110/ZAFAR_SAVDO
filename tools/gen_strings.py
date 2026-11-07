@@ -31,7 +31,8 @@ STRINGS = {
  'home_today': 'Bugun', 'home_today_orders': 'Buyurtmalar: %1$d ta · %2$s', 'home_today_payments': "To'lovlar: %1$d ta · %2$s",
  'home_no_data_title': "Ma'lumotlar yuklanmagan", 'home_no_data_text': "Tovarlar va do'konlarni serverdan yuklang.",
  'home_load': 'Yuklash', 'sync_ok': "Ma'lumotlar yangilandi", 'sync_failed': "Yangilab bo'lmadi. Avvalgi ma'lumot saqlandi.",
- 'menu_sync': 'Yangilash', 'menu_settings': 'Sozlamalar',
+ 'menu_sync': 'Yangilash', 'menu_settings': 'Sozlamalar', 'menu_more': 'Menyu',
+ 'home_pick_action': 'Tugmani tanlang', 'home_pick_hint': 'Uzoq bosib boshqa amalni tanlang',
  # savdo
  'sale_title': 'Savdo', 'return_title': 'Qaytarib olish', 'sale_select_store': "Do'kon tanlang",
  'type_cash': 'Naqd', 'type_wholesale': 'Optom',
@@ -844,18 +845,10 @@ STRINGS.update({
  # v2.9: chek ko'rinishi
  'rs_title': "Chek ko'rinishi", 'rs_preview': 'Namuna chek', 'rs_open': "Chek ko'rinishi",
  'rs_open_hint': "Do'kon nomi, manzil, logo, shrift, chekda nimalar chiqishi va printer sozlamasi — namunani ko'rib turib.",
- 'rs_sec_preset': 'Andoza', 'rs_preset_std': 'Standart', 'rs_preset_1c': '1C uslubi', 'rs_preset_compact': 'Ixcham 58 mm',
- 'rs_preset_hint': "1C uslubi — do'kon 1C chekidagidek: hamma matn Arial qalin. Keyin istalgan bandni o'zgartirishingiz mumkin.",
- 'rs_sec_texts': 'Matnlar', 'rs_sub': 'Sarlavha osti (manzil)', 'rs_sub_hint': "Do'kon nomi ostida, har qator alohida (4 tagacha)",
- 'rs_thanks': 'Oxirgi xabar', 'rs_thanks_hint': 'Masalan: Xaridingiz uchun rahmat!',
+ 'rs_fixed_hint': "Chek 1C'dagi shaklning aynan o'zi (tartib, yozuv va shriftlar o'zgarmaydi). Bu yerda faqat logo, Agent, telefon, qog'oz eni, qoralik va oxiridagi bo'sh joy sozlanadi.",
+ 'rs_sec_texts': 'Matnlar',
  'rs_sec_logo': 'Logo', 'rs_logo': 'Logo', 'rs_logo_pick': 'Rasm tanlash', 'rs_logo_remove': 'Olib tashlash',
- 'rs_logo_show': 'Logoni chiqarish', 'rs_logo_width': 'Logo eni: %1$d%%', 'rs_logo_bad': "Rasmni o'qib bo'lmadi yoki u juda katta",
- 'rs_sec_font': "Qog'oz va shrift", 'rs_paper_80': '80 mm', 'rs_paper_58': '58 mm', 'rs_font_system': 'Tizim shrifti', 'rs_font_arial': 'Arial (1C)',
- 'rs_bold': 'Hamma matn qalin', 'rs_header_serif': "Do'kon nomi serifli shriftda",
- 'rs_text_size': "Matn o'lchami: %1$d%%", 'rs_header_size': "Do'kon nomi o'lchami: %1$d%%",
- 'rs_sec_show': 'Chekda nimalar chiqsin', 'rs_show_staff': 'Xodim', 'rs_show_number': 'Chek raqami', 'rs_show_time': 'Vaqt', 'rs_show_date': 'Sana',
- 'rs_show_client': 'Mijoz', 'rs_show_before': 'Oldingi qarz', 'rs_show_lineno': 'Qator raqami (1, 2, 3…)', 'rs_show_frame': 'Qatorlar ramkada',
- 'rs_show_after': "To'lov va qarz qoldig'i", 'rs_show_footer': 'Chek osti (telefonlar)', 'rs_show_notes': 'Kichik izohlar',
+ 'rs_logo_show': 'Logoni chiqarish', 'rs_logo_width': 'Logo eni: %1$d%%', 'rs_logo_bad': "Rasmni o'qib bo'lmadi yoki u juda katta", 'rs_paper_80': '80 mm', 'rs_paper_58': '58 mm',
  'rs_sec_printer': 'Printer', 'rs_dark': 'Qoralik: %1$d / 13', 'rs_feed': "Oxirida bo'sh joy: %1$d mm",
  'rs_test_print': 'Sinov cheki', 'rs_share_sample': 'Namunani ulashish',
  'rs_print_hint': "Sinov cheki tanlangan mijozning chek printeriga boradi. 2-ilovalar ham shu ko'rinishda chop etadi (keyingi yuborishdan keyin).",
@@ -1118,8 +1111,11 @@ STRINGS.update({
  # Sozlamalar
  'st_more': "Ko'proq sozlamalar", 'st_less': 'Kamroq',
  # Vidjet
- 'wg_title': 'Tez savdo', 'wg_desc': "Sevimli do'konlar bilan tez savdo, skaner, to'lov",
- 'wg_fav_empty': "Sozlamalarda tez do'kon tanlang", 'wg_scan': 'Skaner', 'wg_pay': "To'lov",
+ 'wgs_title': 'Vidjet', 'wgs_sub': 'Bosh ekrandagi 6 ta tugmani sozlash',
+ 'wgs_hint': "Bosh ekrandagi vidjetda 6 ta tugma bor. Har birini bosib, nima qilishini tanlang. Tez do'kon tanlansa — tugma bosilishi bilan shu do'kon bilan savdo ochiladi.",
+ 'wgs_slot': '%1$d-tugma', 'wgs_store_sub': "Tez do'kon — darhol savdo", 'wgs_reset': 'Odatdagi holatga qaytarish',
+ 'wg_title': 'Tez savdo', 'wg_desc': "6 ta tugma — har birini o'zingiz tanlaysiz",
+ 'wg_fav_empty': 'Tanlanmagan',
 })
 
 # v3.6 Admin: 1C tarixi — barcha mijozlar (serverdan, 1 yil)
@@ -1266,6 +1262,13 @@ STRINGS.update({
 
 STRINGS.update({
  # v4.0: statistika
+ 'boss_month': 'Oy boshidan', 'boss_month_sub': '%1$d chek \u00b7 %2$d mijoz',
+ 'stc_title': 'Mijozlar statistikasi', 'stc_sub': 'Har mijozning savdosi, foydasi va o\'rtacha cheki',
+ 'stc_row': '%1$d chek \u00b7 o\'rtacha %2$s', 'stc_profit': 'Foyda %1$s', 'stc_margin': 'Foyda %1$s (%2$d%%)',
+ 'stc_none': 'Bu davrda mijoz savdosi yo\'q', 'stc_last': 'Oxirgi: %1$s', 'stc_share': 'Ulushi %1$d%%',
+ 'stt_who': 'Mijoz bo\'yicha', 'stt_who_all': 'Hammasi', 'stt_who_only': 'Faqat shu', 'stt_who_without': 'Shusiz',
+ 'stt_client': 'Mijoz: %1$s', 'stt_client_pick': 'Mijozni tanlang', 'stt_client_none': 'Tanlanmagan',
+ 'stt_sec_money': 'Pul', 'stt_sec_goods': 'Tovarlar', 'stt_sec_time': 'Vaqt', 'stt_sec_clients': 'Mijozlar',
  'stt_title': 'Statistika', 'stt_hint': "1C bazasidagi savdo va to'lovlar bo'yicha (kompyuterdan kelgan; telefonda qilingan, hali 1C'ga yetmagan savdo qo'shilmaydi). Ustunni bosing — o'sha kun ko'rsatkichlari chiqadi.",
  'stt_day': 'Kun', 'stt_week': 'Hafta', 'stt_month': 'Oy', 'stt_year': 'Yil',
  'stt_sales': 'Savdo', 'stt_payments': "To'lov", 'stt_returns': 'Qaytarish', 'stt_profit': 'Foyda',
@@ -1291,12 +1294,15 @@ STRINGS.update({
  'boss_agent_id': 'Agent #%1$s', 'boss_agent_sub': "%1$d ta yozuv · to'lov %2$s",
  'boss_system': 'Tizim holati', 'boss_pc': 'Kompyuter (1C)', 'boss_server': 'Server (SQL)', 'boss_cloud': 'Bulut (Firebase)',
  'boss_cloud_sub': "Agent va Mijoz telefonlari bilan aloqa", 'boss_last': 'oxirgi: %1$s', 'boss_never': "hali aloqa bo'lmagan",
- 'rt_title': 'Dollar kursi', 'rt_sub': "1C'dagi kursni telefondan o'zgartirish",
- 'rt_hint': "Yangi kurs 1C'ga yoziladi: bundan keyingi hujjatlar shu kurs bilan. Xato bo'lsa \"Bekor qilish\" eskisini qaytaradi.",
+ 'rt_title': 'Dollar kursi', 'rt_sub': "Dollar kursi — internetdagi bozor kursidan",
+ 'rt_hint': "Ilova 1C'dagi kursga qaramaydi — hisob shu yerdagi kurs bilan boradi. Pastda internetdagi kurs turadi, bosilsa maydonga tushadi.",
  'rt_net_title': 'Internetdagi kurs',
  'rt_net_wait': "O'qilmoqda…", 'rt_net_none': "Internetdan kurs olinmadi (tarmoq yo'q yoki sayt javob bermadi)",
  'rt_net_row': 'Olish %1$s · Sotish %2$s',
- 'rt_now': 'Hozirgi kurs: %1$s', 'rt_new': "Yangi kurs (1 $ = so'm)", 'rt_bad': "Kurs noto'g'ri", 'rt_confirm': 'Kurs: %1$s → %2$s',
+ 'rt_auto': "Internetdagi kursdan o'zi yangilansin (kuniga bir marta)",
+ 'rt_save_local': 'Shu kursni ilovaga qo\'yish', 'rt_to_1c': "1C'ga ham yozish",
+ 'rt_saved': 'Kurs qo\'yildi: %1$s', 'rt_confirm_1c': "1C'dagi kurs %1$s bo'ladi. Yozilsinmi?",
+ 'rt_now': 'Ilovadagi kurs: %1$s', 'rt_new': "Kurs (1 $ = so'm)", 'rt_bad': "Kurs noto'g'ri",
  'boss_paid_ago': "oxirgi to'lov %1$d kun oldin", 'boss_paid_never': "to'lov ko'rinmadi (1 yil)",
  'ev_title': 'Bugungi hisobot', 'ev_text': "Savdo: %1$s (%2$d ta)\nFoyda: %3$s\nTushum: %4$s\nUmumiy qarz: %5$s",
  'boss_ok': '✓ ishlayapti', 'boss_bad': '⚠ tekshiring', 'boss_devices_sub': '%1$d tasi onlayn (jami %2$d)', 'boss_crashes': '%1$d tasida xato',

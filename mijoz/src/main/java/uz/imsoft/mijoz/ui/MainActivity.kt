@@ -180,6 +180,22 @@ class MainActivity : AppCompatActivity() {
 
     /** v3.2 vidjet: Narxlar yoki Kassa. */
     private fun openFromWidget(i: Intent?) {
+        // v5.0.4: vidjetdagi 6 tugma — har biri shu amallardan biri (Sozlamalar ▸ Vidjet)
+        val act = i?.getStringExtra(EXTRA_ACTION).orEmpty()
+        if (act.isNotEmpty()) {
+            i?.removeExtra(EXTRA_ACTION)
+            when (act) {
+                "sale" -> binding.bottomNav.selectedItemId = R.id.nav_sale
+                "prices" -> if (Locator.prefs.link != null) binding.bottomNav.selectedItemId = R.id.nav_prices
+                "stats" -> push(uz.imsoft.mijoz.ui.extra.StatsFragment())
+                "history" -> push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_HISTORY))
+                "report" -> push(uz.imsoft.mijoz.ui.extra.PosFragment.open(uz.imsoft.mijoz.ui.extra.PosFragment.TAB_REPORT))
+                "pay" -> push(uz.imsoft.mijoz.ui.extra.RequestsFragment())
+                "myreport" -> binding.bottomNav.selectedItemId = R.id.nav_report
+                "settings" -> openSettings()
+            }
+            return
+        }
         when (i?.getStringExtra(EXTRA_TAB)) {
             TAB_PRICES -> if (Locator.prefs.link != null) binding.bottomNav.selectedItemId = R.id.nav_prices
             TAB_POS -> push(uz.imsoft.mijoz.ui.extra.PosFragment())
@@ -264,6 +280,9 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_TAB = "tab"
+
+        /** v5.0.4: vidjetdagi tugma amali. */
+        const val EXTRA_ACTION = "action"
         const val TAB_PRICES = "prices"
         const val TAB_POS = "pos"
         const val TAB_PRINTER = "printer"

@@ -43,7 +43,9 @@ class StatsFragment : MFragment() {
         "", getString(R.string.stt_k_pay), "", getString(R.string.stt_share_bought), getString(R.string.stt_other),
         getString(R.string.stt_fast_bought), getString(R.string.stt_fast_bought_sub),
         getString(R.string.stt_weekdays), weekdays(), getString(R.string.stt_best_day),
-        "", "", "", "", getString(R.string.stt_no_goods),
+        // v5.0.3: olgan tovarlarim bo'yicha ham soatlar va "to'xtab qolgan" tovarlar ko'rsatiladi
+        getString(R.string.stt_hours), getString(R.string.stt_best_hour),
+        getString(R.string.stt_idle_bought), getString(R.string.stt_idle_bought_sub), getString(R.string.stt_no_goods),
     )
 
     /** O'z savdolari — chek, o'rtacha chek, ulush, tez sotilayotgan, hafta kunlari, soatlar, to'xtab qolganlari. */
