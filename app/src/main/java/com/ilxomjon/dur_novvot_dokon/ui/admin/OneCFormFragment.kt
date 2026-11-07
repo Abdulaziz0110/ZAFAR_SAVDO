@@ -40,6 +40,15 @@ class OneCFormFragment : CodeFragment() {
     private var eNote: TextInputEditText? = null
     private var eName: TextInputEditText? = null
     private var eBarcode: TextInputEditText? = null
+    // v5.1: yangi tovar kartochkasi (1C'dagi maydonlar)
+    private val card = HashMap<String, String>()
+    private var cardBox: LinearLayout? = null
+    private var eVolume: TextInputEditText? = null
+    private var ePack: TextInputEditText? = null
+    private var eMarkup: TextInputEditText? = null
+    private var ePlu: TextInputEditText? = null
+    private var autoBarcode = false
+    private var weighed = false
     private var sending = false
 
     private val isGoods get() = kind in WriteKind.GOODS
@@ -68,7 +77,7 @@ class OneCFormFragment : CodeFragment() {
             when {
                 kind == WriteKind.CLIENT_PAY -> R.string.wf_client
                 isCash -> R.string.of_op
-                kind == WriteKind.NEW_GOODS -> R.string.of_sample
+                kind == WriteKind.NEW_GOODS -> R.string.ng_sample_opt
                 else -> R.string.of_product
             },
         )))
@@ -79,15 +88,36 @@ class OneCFormFragment : CodeFragment() {
             isGoods -> {
                 if (kind == WriteKind.NEW_GOODS) {
                     c.addView(Ui.section(ctx, getString(R.string.of_new_name_sec)))
+                    c.addView(Ui.hint(ctx, getString(R.string.ng_code_auto), 0))
                     eName = Ui.field(ctx, getString(R.string.of_new_name)).also { c.addView(it.first) }.second
+                    cardBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                    c.addView(cardBox)
+                    eVolume = Ui.field(ctx, getString(R.string.ng_volume), Ui.NUMBER).also { c.addView(it.first) }.second
+                    ePack = Ui.field(ctx, getString(R.string.ng_pack), Ui.NUMBER).also { c.addView(it.first) }.second
+                    eMarkup = Ui.field(ctx, getString(R.string.ng_markup), Ui.NUMBER).also { c.addView(it.first) }.second
+                    c.addView(Ui.text(ctx, getString(R.string.ng_type), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 12))
+                    c.addView(
+                        Ui.toggle(ctx, listOf(getString(R.string.ng_type_goods), getString(R.string.ng_type_weighed)), 0, 4) { i ->
+                            weighed = i == 1
+                            renderCard()
+                        },
+                    )
                     eBarcode = Ui.field(ctx, getString(R.string.of_barcode), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS).also { c.addView(it.first) }.second
+                    c.addView(
+                        Ui.switch(ctx, getString(R.string.ng_auto_barcode), false, 4) { on ->
+                            autoBarcode = on
+                            eBarcode?.isEnabled = !on
+                            if (on) eBarcode?.setText("")
+                        },
+                    )
                 }
                 goodsBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                 c.addView(goodsBox)
             }
             else -> {
                 c.addView(Ui.section(ctx, getString(R.string.wf_amounts)))
-                val keys = if (kind == WriteKind.CLIENT_PAY) listOf("ns", "nu", "ps", "pu", "ks", "ku", "ds") else listOf("ns", "nu", "ps", "pu", "ks")
+                // v5.0.5: faqat so'm — dollar maydonlari olib tashlandi
+                val keys = if (kind == WriteKind.CLIENT_PAY) listOf("ns", "ps", "ks", "ds") else listOf("ns", "ps", "ks")
                 for (k in keys) money[k] = Ui.field(ctx, getString(moneyLabel(k)), Ui.NUMBER).also { c.addView(it.first) }.second
             }
         }
@@ -99,11 +129,8 @@ class OneCFormFragment : CodeFragment() {
 
     private fun moneyLabel(k: String) = when (k) {
         "ns" -> R.string.wf_cash_som
-        "nu" -> R.string.wf_cash_usd
         "ps" -> R.string.wf_card_som
-        "pu" -> R.string.wf_card_usd
         "ks" -> R.string.of_click_som
-        "ku" -> R.string.of_click_usd
         else -> R.string.of_discount_som
     }
 
@@ -116,6 +143,7 @@ class OneCFormFragment : CodeFragment() {
         }
         launchUi { ServiceLocator.onec.load() }
         arguments?.getString(ARG_PRODUCT)?.takeIf { it.isNotEmpty() }?.let { id -> ServiceLocator.catalog.state.value.productsById[id]?.let { setProduct(it) } }
+        if (kind == WriteKind.NEW_GOODS) { renderCard(); buildGoodsFields() }
         render()
     }
 
@@ -185,14 +213,15 @@ class OneCFormFragment : CodeFragment() {
         if (!::goodsBox.isInitialized) return
         goodsBox.removeAllViews()
         goodsInputs.clear()
-        val p = product ?: return
-        val cur = getString(if (p.baseIsSom) R.string.of_cur_som else R.string.of_cur_usd)
+        val p = product
+        if (p == null && kind != WriteKind.NEW_GOODS) return
+        val cur = getString(if (p?.baseIsSom != false) R.string.of_cur_som else R.string.of_cur_usd)
         goodsBox.addView(Ui.section(ctx, getString(R.string.of_prices_sec, cur)))
         val labels = listOf(GoodsField.P1 to R.string.of_p1, GoodsField.P2 to R.string.of_p2, GoodsField.P3 to R.string.of_p3, GoodsField.P4 to R.string.of_p4, GoodsField.COST to R.string.of_cost)
         for ((k, res) in labels) goodsInputs[k] = Ui.field(ctx, getString(res), Ui.NUMBER, prefill[k].orEmpty()).also { goodsBox.addView(it.first) }.second
         // v4.0: 4-narx taklifi — oxirgi kelgan narx + 2 000 so'm (o'zi qo'yilmaydi, bosilsa yoziladi)
-        val last = ServiceLocator.onec.lastCost(p.id)
-        val cost = if (p.baseIsSom) last?.first ?: 0.0 else 0.0
+        val last = p?.let { ServiceLocator.onec.lastCost(it.id) }
+        val cost = if (p?.baseIsSom != false) last?.first ?: 0.0 else 0.0
         if (cost > 0) {
             val sug = cost + SUGGEST_MARKUP
             goodsBox.addView(Ui.item(ctx, getString(R.string.of_suggest, som(cost), som(sug)), getString(R.string.of_suggest_sub), icon = R.drawable.ic_calculate) {
@@ -200,17 +229,56 @@ class OneCFormFragment : CodeFragment() {
                 if (goodsInputs[GoodsField.COST]?.text.isNullOrBlank()) goodsInputs[GoodsField.COST]?.setText(Money.plain(cost))
             })
         }
-        goodsBox.addView(Ui.section(ctx, getString(R.string.of_other_sec)))
-        goodsInputs[GoodsField.PLU] = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, prefill[GoodsField.PLU].orEmpty()).also { goodsBox.addView(it.first) }.second
-        if (kind == WriteKind.GOODS_EDIT) goodsInputs[GoodsField.NAME] = Ui.field(ctx, getString(R.string.of_name), value = p.name).also { goodsBox.addView(it.first) }.second
+        if (kind == WriteKind.GOODS_EDIT) {
+            goodsBox.addView(Ui.section(ctx, getString(R.string.of_other_sec)))
+            goodsInputs[GoodsField.PLU] = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, prefill[GoodsField.PLU].orEmpty()).also { goodsBox.addView(it.first) }.second
+        }
+        if (kind == WriteKind.GOODS_EDIT && p != null) goodsInputs[GoodsField.NAME] = Ui.field(ctx, getString(R.string.of_name), value = p.name).also { goodsBox.addView(it.first) }.second
         goodsBox.addView(Ui.hint(ctx, getString(R.string.of_only_changed), 4))
+    }
+
+    /** 1C ma'lumotnomasidan tanlash qatori (ro'yxat kelmagan bo'lsa — qo'lda yoziladi). */
+    private fun refRow(box: LinearLayout, key: String, label: Int, icon: Int) {
+        val chosen = card[key].orEmpty()
+        box.addView(
+            Ui.item(ctx, getString(label), chosen.ifEmpty { getString(R.string.wf_not_chosen) }, icon = icon, tone = if (chosen.isEmpty()) 0 else 1) {
+                val list = ServiceLocator.onec.state.value.suppliers?.ref(key).orEmpty()
+                if (list.isEmpty()) {
+                    val (til, e) = Ui.field(ctx, getString(label), value = chosen)
+                    val holder = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(Ui.dp(ctx, 20), 0, Ui.dp(ctx, 20), 0); addView(til) }
+                    MaterialAlertDialogBuilder(ctx).setTitle(label).setMessage(R.string.ng_refs_none).setView(holder)
+                        .setPositiveButton(R.string.ok) { _, _ -> card[key] = e.text?.toString()?.trim().orEmpty(); renderCard() }
+                        .setNegativeButton(R.string.cancel, null).show()
+                    return@item
+                }
+                Ui.menuSheet(ctx, getString(label), list.map { n -> Ui.MenuRow(n, "", icon, if (n == chosen) 1 else 0) { card[key] = n; renderCard() } })
+            },
+        )
+    }
+
+    /** Kartochka qatorlari: guruh, brend, o'lchov birligi va (tarozi bo'lsa) PLU hamda tarozi. */
+    private fun renderCard() {
+        val box = cardBox ?: return
+        box.removeAllViews()
+        refRow(box, uz.imsoft.shared.onec.Suppliers.GROUPS, R.string.ng_group, R.drawable.ic_category)
+        refRow(box, uz.imsoft.shared.onec.Suppliers.BRANDS, R.string.ng_brand, R.drawable.ic_label)
+        refRow(box, uz.imsoft.shared.onec.Suppliers.UNITS, R.string.ng_unit, R.drawable.ic_calculate)
+        if (weighed) {
+            refRow(box, uz.imsoft.shared.onec.Suppliers.SCALES, R.string.ng_scale, R.drawable.ic_scale)
+            val til = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, ePlu?.text?.toString().orEmpty())
+            ePlu = til.second
+            box.addView(til.first)
+        } else {
+            ePlu = null
+        }
     }
 
     private fun num(e: TextInputEditText?): Double = Money.parseUser(e?.text?.toString()) ?: 0.0
 
     /** Tovar maydonlari: faqat o'zgarganlari (yangi tovarda — to'ldirilganlari). */
     private fun goodsFields(): Map<String, String> {
-        val p = product ?: return emptyMap()
+        val p = product
+        if (p == null && kind != WriteKind.NEW_GOODS) return emptyMap()
         val out = LinkedHashMap<String, String>()
         for ((k, e) in goodsInputs) {
             val raw = e.text?.toString()?.trim().orEmpty()
@@ -228,8 +296,21 @@ class OneCFormFragment : CodeFragment() {
             eName?.text?.toString()?.trim()?.replace(Regex("\\s+"), " ")?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.NAME] = it }
             eBarcode?.text?.toString()?.trim()?.filter { it.isLetterOrDigit() && it.code < 128 }?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.BARCODE] = it }
             if (out[GoodsField.PLU] == "0") out.remove(GoodsField.PLU)
+            // v5.1: kartochka — 1C'dagi maydonlar
+            card[uz.imsoft.shared.onec.Suppliers.GROUPS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.GROUP] = it }
+            card[uz.imsoft.shared.onec.Suppliers.BRANDS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.BRAND] = it }
+            card[uz.imsoft.shared.onec.Suppliers.UNITS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.UNIT] = it }
+            for ((k, e) in listOf(GoodsField.VOLUME to eVolume, GoodsField.PACK to ePack, GoodsField.MARKUP to eMarkup)) {
+                Money.parseUser(e?.text?.toString())?.takeIf { it > 0 }?.let { out[k] = Money.plain(it) }
+            }
+            out[GoodsField.TYPE] = if (weighed) GoodsField.TYPE_WEIGHED else GoodsField.TYPE_GOODS
+            if (weighed) {
+                card[uz.imsoft.shared.onec.Suppliers.SCALES]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.SCALE] = it }
+                ePlu?.text?.toString()?.filter { it.isDigit() }?.trimStart('0')?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.PLU] = it }
+            }
+            if (autoBarcode) out[GoodsField.AUTO_BARCODE] = "1"
         }
-        if (out.keys.any { it in GoodsField.PRICES }) out[GoodsField.CUR] = if (p.baseIsSom) "s" else "u"
+        if (out.keys.any { it in GoodsField.PRICES }) out[GoodsField.CUR] = if (p?.baseIsSom != false) "s" else "u"
         return out
     }
 
@@ -249,7 +330,16 @@ class OneCFormFragment : CodeFragment() {
             val names = mapOf(
                 GoodsField.P1 to R.string.of_p1, GoodsField.P2 to R.string.of_p2, GoodsField.P3 to R.string.of_p3, GoodsField.P4 to R.string.of_p4,
                 GoodsField.COST to R.string.of_cost, GoodsField.PLU to R.string.of_plu, GoodsField.NAME to R.string.of_name, GoodsField.BARCODE to R.string.of_barcode,
+                GoodsField.GROUP to R.string.ng_group, GoodsField.BRAND to R.string.ng_brand, GoodsField.UNIT to R.string.ng_unit,
+                GoodsField.VOLUME to R.string.ng_volume, GoodsField.PACK to R.string.ng_pack, GoodsField.MARKUP to R.string.ng_markup,
+                GoodsField.SCALE to R.string.ng_scale,
             )
+            if (kind == WriteKind.NEW_GOODS) {
+                append(getString(R.string.ng_code_auto)).append('\n')
+                append("\u2022 ").append(getString(R.string.ng_type)).append(": ")
+                    .append(getString(if (r.fields[GoodsField.TYPE] == GoodsField.TYPE_WEIGHED) R.string.ng_type_weighed else R.string.ng_type_goods)).append('\n')
+                if (r.fields[GoodsField.AUTO_BARCODE] == "1") append("\u2022 ").append(getString(R.string.ng_auto_barcode)).append('\n')
+            }
             for ((k, v) in r.fields) {
                 val res = names[k] ?: continue
                 val old = prefill[k]?.takeIf { kind == WriteKind.GOODS_EDIT }

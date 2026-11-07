@@ -52,9 +52,9 @@ class CartFragment : Fragment() {
         for (e in listOf(binding.edtDiscountAmount, binding.edtDiscountPercent, binding.edtCash, binding.edtCard)) NumInput.attach(e)
 
         val s0 = vm.state.value
-        val usd = s0.currency == Currency.USD
-        binding.tilCash.hint = getString(if (usd) R.string.finish_cash_usd else R.string.finish_cash_som)
-        binding.tilCard.show(!usd)
+        // v5.0.5: to'lov faqat so'mda
+        binding.tilCash.hint = getString(R.string.finish_cash_som)
+        binding.tilCard.show(true)
         setupPrinters(s0.printer)
 
         binding.edtDiscountPercent.onTextChanged {
@@ -202,7 +202,7 @@ class CartFragment : Fragment() {
     /** To'lanadigan summani butun mingga (so'm) yoki butun dollarga tushiradi, farqni chegirma qiladi. */
     private fun roundDown() {
         val s = vm.state.value
-        val step = if (s.currency == Currency.SOM) 1000.0 else 1.0
+        val step = 1000.0
         val payable = s.payable
         val rounded = Math.floor(payable / step) * step
         val extra = Money.round2(payable - rounded)

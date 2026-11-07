@@ -85,7 +85,25 @@ data class Supplier(
 /** v3.12: kassa moddasi (Справочник.Операции). */
 data class CashOp(val code: String, val name: String)
 
-data class Suppliers(val from: Long, val to: Long, val at: Long, val list: List<Supplier>, val errors: List<String> = emptyList(), val ops: List<CashOp> = emptyList())
+/**
+ * [refs] — v5.1: 1C ma'lumotnomalari yangi tovar shakli uchun: "grp" guruhlar, "brd" brendlar,
+ * "unit" o'lchov birliklari, "scale" tarozilar, "reg" regionlar.
+ */
+data class Suppliers(
+    val from: Long, val to: Long, val at: Long, val list: List<Supplier>,
+    val errors: List<String> = emptyList(), val ops: List<CashOp> = emptyList(),
+    val refs: Map<String, List<String>> = emptyMap(),
+) {
+    companion object {
+        const val GROUPS = "grp"
+        const val BRANDS = "brd"
+        const val UNITS = "unit"
+        const val SCALES = "scale"
+        const val REGIONS = "reg"
+    }
+
+    fun ref(key: String): List<String> = refs[key].orEmpty()
+}
 
 object OneCCodec {
     private fun d(x: Any?): Double = (x as? Number)?.toDouble() ?: x?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
@@ -142,7 +160,13 @@ object OneCCodec {
             val name = s(l.getOrNull(1)).trim()
             if (name.isEmpty()) null else CashOp(s(l.getOrNull(0)).trim(), name)
         }
-        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops)
+        val refs = LinkedHashMap<String, List<String>>()
+        (o.map["refs"] as? Map<*, *>)?.forEach { (k, v) ->
+            val key = s(k)
+            val names = (v as? List<*>)?.mapNotNull { n -> s(n).trim().takeIf { it.isNotEmpty() } }.orEmpty()
+            if (key.isNotEmpty() && names.isNotEmpty()) refs[key] = names
+        }
+        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops, refs)
     }
 
     fun lineToList(l: OneCLine): List<Any?> = listOf(l.name, l.code, l.qty, l.priceSom, l.sumSom, l.priceUsd, l.sumUsd)
@@ -160,7 +184,7 @@ object OneCCodec {
         linkedMapOf(
             "v" to 1, "f" to s.from.toString(), "t" to s.to.toString(), "at" to s.at,
             "list" to s.list.map { linkedMapOf("id" to it.id, "code" to it.code, "name" to it.name, "tel" to it.phone, "bs" to it.balanceSom, "bu" to it.balanceUsd, "docs" to it.docs.map { d -> docToMap(d) }) },
-            "err" to s.errors, "ops" to s.ops.map { listOf(it.code, it.name) },
+            "err" to s.errors, "ops" to s.ops.map { listOf(it.code, it.name) }, "refs" to s.refs,
         ),
     )
 }

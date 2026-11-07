@@ -83,7 +83,7 @@ object Ui {
             val p = dp(ctx, 14)
             setPadding(p, p, p, p)
         }
-        card.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        card.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         card.layoutParams = lp(top = dp(ctx, top))
         return card to col
     }
@@ -103,7 +103,8 @@ object Ui {
         for (row in items.chunked(columns)) {
             val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
             for ((i, t) in row.withIndex()) {
-                r.addView(tileView(ctx, t, onHelp), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                // v5.0.5: bir qatordagi plitkalar bir xil balandlikda (nom ikki qatorga tushsa ham)
+                r.addView(tileView(ctx, t, onHelp), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                     if (i > 0) marginStart = gap
                     bottomMargin = gap
                 })
@@ -123,12 +124,12 @@ object Ui {
             isFocusable = true
             setOnClickListener { t.onClick() }
             if (t.help.isNotEmpty() && onHelp != null) setOnLongClickListener { onHelp(t); true }
+            minimumHeight = dp(ctx, 96)
         }
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, 12)
             setPadding(p, p, p, p)
-            minimumHeight = dp(ctx, 92)
         }
         if (t.icon != 0) col.addView(badge(ctx, t.icon, t.tone, 36))
         col.addView(
@@ -266,7 +267,8 @@ object Ui {
                 },
             )
         }
-        d.setContentView(col)
+        val scroll = androidx.core.widget.NestedScrollView(ctx).apply { addView(col) }
+        d.setContentView(scroll)
         d.show()
     }
 

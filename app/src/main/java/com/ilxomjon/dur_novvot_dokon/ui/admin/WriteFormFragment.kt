@@ -14,6 +14,7 @@ import com.ilxomjon.dur_novvot_dokon.domain.PriceType
 import com.ilxomjon.dur_novvot_dokon.domain.Pricing
 import com.ilxomjon.dur_novvot_dokon.ui.common.StorePickerSheet
 import com.ilxomjon.dur_novvot_dokon.ui.navigator
+import com.ilxomjon.dur_novvot_dokon.ui.show
 import uz.imsoft.shared.android.Ui
 import uz.imsoft.shared.onec.WriteCodec
 import uz.imsoft.shared.onec.WriteKind
@@ -30,6 +31,7 @@ class WriteFormFragment : CodeFragment() {
     private var partyCode = ""
     private val lines = ArrayList<WriteLine>()
     private lateinit var tvParty: TextView
+    private lateinit var tvDebt: TextView
     private lateinit var linesBox: LinearLayout
     private lateinit var tvTotal: TextView
     private lateinit var eNote: TextInputEditText
@@ -59,9 +61,11 @@ class WriteFormFragment : CodeFragment() {
         val c = p.content
         c.addView(Ui.hint(ctx, getString(if (isWriteOff) R.string.wo_hint else R.string.wf_hint), 4))
         tvParty = Ui.title(ctx, "", 4)
+        tvDebt = Ui.hint(ctx, "", 2)
         if (!isWriteOff) {
             c.addView(Ui.section(ctx, getString(if (kind == WriteKind.CLIENT_RETURN) R.string.wf_client else R.string.wf_supplier)))
             c.addView(tvParty)
+            c.addView(tvDebt)
             c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() })
         }
         if (isGoods) {
@@ -71,10 +75,9 @@ class WriteFormFragment : CodeFragment() {
             c.addView(Ui.button(ctx, getString(R.string.wf_add), icon = R.drawable.ic_add) { addLine() })
         } else {
             c.addView(Ui.section(ctx, getString(R.string.wf_amounts)))
+            // v5.0.5: faqat so'm
             eCashSom = Ui.field(ctx, getString(R.string.wf_cash_som), Ui.NUMBER).also { c.addView(it.first) }.second
-            eCashUsd = Ui.field(ctx, getString(R.string.wf_cash_usd), Ui.NUMBER).also { c.addView(it.first) }.second
             eCardSom = Ui.field(ctx, getString(R.string.wf_card_som), Ui.NUMBER).also { c.addView(it.first) }.second
-            eCardUsd = Ui.field(ctx, getString(R.string.wf_card_usd), Ui.NUMBER).also { c.addView(it.first) }.second
         }
         eNote = Ui.field(ctx, getString(R.string.wf_note), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE).also { c.addView(it.first) }.second
         tvTotal = Ui.title(ctx, "", 12).also { c.addView(it) }
@@ -96,6 +99,15 @@ class WriteFormFragment : CodeFragment() {
 
     private fun render() {
         tvParty.text = party.ifEmpty { getString(R.string.wf_not_chosen) }
+        // v5.0.5: yuk beruvchiga to'lovda bizning qarzimiz ko'rinib tursin (1C'dagidek)
+        val sup = if (party.isEmpty()) null else ServiceLocator.onec.state.value.suppliers?.list?.firstOrNull { it.name == party }
+        tvDebt.text = when {
+            sup == null -> ""
+            sup.oweSom > 0.5 -> getString(R.string.wf_we_owe, som(sup.oweSom))
+            sup.oweSom < -0.5 -> getString(R.string.wf_they_owe, som(-sup.oweSom))
+            else -> getString(R.string.wf_no_debt)
+        }
+        tvDebt.show(tvDebt.text.isNotEmpty())
         if (isGoods) {
             linesBox.removeAllViews()
             lines.forEachIndexed { i, l ->

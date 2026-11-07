@@ -100,6 +100,17 @@ class DataTest(unittest.TestCase):
         self.assertEqual(ali["bu"], -2)
         self.assertEqual([d["no"] for d in ali["docs"]], ["5"])  # mijoz hujjati kirmaydi
 
+    def test_catalog_refs(self):
+        """v5.1: yangi tovar shakli uchun 1C ma'lumotnomalari."""
+        q = FakeQ({
+            "Справочник.ГруппаТовара": [{"Имя": "Yong'oqlar"}, {"Имя": ""}, {"Имя": "Yong'oqlar"}],
+            "Справочник.ЕдИзм": [{"Имя": "kg"}, {"Имя": "dona"}],
+        }, broken=("Справочник.Бренд",))
+        refs = onec_data.catalog_refs(q)
+        self.assertEqual(refs["grp"], ["Yong'oqlar"])  # bo'sh va takror tushadi
+        self.assertEqual(refs["unit"], ["kg", "dona"])
+        self.assertNotIn("brd", refs)  # xato jadval shunchaki qo'shilmaydi
+
     def test_active_today(self):
         q = FakeQ({"ВзаиморасчетСКонтрагентом КАК Р": [{"Имя": "Ali"}, {"Имя": ""}]})
         self.assertEqual(onec_data.active_today(q, D(2026, 11, 1, 12)), {"Ali"})

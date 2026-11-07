@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## 5.1 (versionCode 35), Savdo Mijoz 5.1 (versionCode 23) — 2026-11-07
+**1C'ga yozish 1C kartochkasidagidek bo'ldi.**
+* **Yangi tovar**: kodni 1C o'zi beradi (shakl shuni yozib turadi); guruh, brend, o'lchov birligi va tarozi —
+  1C ma'lumotnomalaridan tanlanadi (kompyuter ro'yxatni yuboradi); hajmi, upakovkada dona, ustama (%);
+  tovar turi **Oddiy / Tarozi** — tarozi tanlansa PLU va tarozi so'raladi; shtrix kodni qo'lda yozish yoki
+  **"1C o'zi yaratsin"** (ichki EAN-13, "2" bilan boshlanadi, band bo'lmagani tanlanadi).
+  Namuna tovar endi **ixtiyoriy** — tanlanmasa bo'sh kartochka ochiladi (guruh va o'lchov birligi majburiy).
+* **Yuk beruvchiga to'lov**: yuk beruvchi tanlangach bizning qarzimiz ko'rinadi.
+* **Mijoz / yuk beruvchi kartochkasi**: INN va kredit limiti qo'shildi (oldin nom, telefonlar, manzil, region edi).
+* Kompyuter tomoni 1C'dan guruh, brend, o'lchov birligi, tarozi va region ro'yxatlarini yuboradi.
+
+## 5.0.5 (versionCode 34), Savdo Mijoz 5.0.5 (versionCode 22) — 2026-11-07
+* **Plitkalar endi bir xil balandlikda** — nomi ikki qatorga tushsa ham qator buzilmaydi (Boshqaruv, Sozlamalar —
+  uchchala ilovada).
+* **Bosh sahifadagi katta bo'shliq yo'qoldi**: "Ochiq savdolar" kartasi xato joyga — tugmalar qatorining ichiga
+  qo'yilayotgan ekan. Endi tugmalardan yuqorida, o'z qatorida turadi. 4 ta tugma ham teng balandlikda.
+* **Menyu va tanlov ro'yxatlari aylantiriladigan bo'ldi** — pastdagi bandlar (masalan "Boshqaruv") kesilib qolmaydi.
+* **Narx yorlig'i PLU'siz ham chiqadi**: tarozi kodi bo'lmagan tovarga "KOD: 0" yoziladi (oldin bunday tovarlar
+  o'tkazib yuborilardi).
+* **Dollar maydonlari olib tashlandi**: savdoda valyuta tanlash, savatchada dollar to'lovi, 1C'ga yoziladigan
+  shakllardagi dollar summalari. Kurs faqat ko'rsatiladi (bosh sahifa va Kurs ekrani).
+* **"Ta'minotchi" — endi hamma joyda "Yuk beruvchi".**
+* **Yuk beruvchiga to'lovda bizning qarzimiz ko'rinadi** (yuk beruvchi tanlangach).
+
 ## 5.0.4 (versionCode 33), Savdo Mijoz 5.0.4 (versionCode 21) — 2026-11-07
 * **Vidjet uchchala ilovada ham**: Agent, Admin va Mijoz.
 * **6 ta tugma** (2 qator x 3 ta), har biri ikonkali.

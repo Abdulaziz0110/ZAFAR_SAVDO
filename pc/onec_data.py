@@ -234,6 +234,43 @@ def suppliers_payload(onec, d_from, d_to, now_ms):
     errors.extend(errs)
     out = {"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "list": build_suppliers(people, balances, docs), "err": errors}
     out["ops"] = cash_ops(onec)
+    out["refs"] = catalog_refs(onec)
+    return out
+
+
+# v5.1: yangi tovar shakli uchun 1C ma'lumotnomalari (guruh, brend, o'lchov birligi, tarozi, region).
+# Telefon shu ro'yxatlardan tanlaydi — 1C'dagi kabi, qo'lda yozilmaydi.
+REF_TABLES = (
+    ("grp", "Справочник.ГруппаТовара"),
+    ("brd", "Справочник.Бренд"),
+    ("unit", "Справочник.ЕдИзм"),
+    ("scale", "Справочник.Весы"),
+    ("reg", "Справочник.Регион"),
+)
+
+
+def catalog_refs(onec):
+    """{"grp": ["..."], "brd": [...], ...} — bo'sh yoki xato jadval shunchaki tushib qoladi."""
+    out = {}
+    for key, table in REF_TABLES:
+        q = (
+            "ВЫБРАТЬ С.Наименование КАК Имя ИЗ %s КАК С "
+            "ГДЕ НЕ С.ПометкаУдаления УПОРЯДОЧИТЬ ПО С.Наименование" % table
+        )
+        try:
+            rows = onec.query(q, ["Имя"])
+        except Exception as e:  # noqa: BLE001 — bazada bu ma'lumotnoma bo'lmasligi mumkin
+            log.warning("%s o'qilmadi: %s", table, e)
+            continue
+        names = []
+        for r in rows:
+            n = text(r.get("Имя")).strip()
+            if n and n not in names:
+                names.append(n)
+            if len(names) >= 500:
+                break
+        if names:
+            out[key] = names
     return out
 
 

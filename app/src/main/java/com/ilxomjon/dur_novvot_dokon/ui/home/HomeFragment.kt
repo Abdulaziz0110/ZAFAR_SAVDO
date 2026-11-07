@@ -189,14 +189,19 @@ class HomeFragment : Fragment() {
 
     /** Ochiq savdolar ro'yxati: hozirgisi va saqlanganlari. Bosilsa — o'sha savdo davom etadi. */
     private fun addCartsCard() {
-        val parent = binding.cardSale.parent as? android.view.ViewGroup ?: return
+        // v5.0.5: karta ustundagi tugmalar qatoridan OLDIN qo'yiladi (ilgari qator ichiga tushib,
+        // bosh sahifada katta bo'sh joy hosil qilardi)
+        val anchor = binding.quickRow1
+        val parent = anchor.parent as? android.view.ViewGroup ?: return
         val ctx = requireContext()
         val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
         card.tag = "carts_card"
-        val lp0 = binding.cardSale.layoutParams
-        parent.addView(card, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp0.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            (lp0 as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
-        })
+        parent.addView(
+            card, parent.indexOfChild(anchor),
+            android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = uz.imsoft.shared.android.Ui.dp(ctx, 12) },
+        )
         launchOnStarted {
             kotlinx.coroutines.flow.combine(ServiceLocator.parked.items, ServiceLocator.draft.state) { p, d -> p to d }.collect { (parkedList, d) ->
                 col.removeAllViews()

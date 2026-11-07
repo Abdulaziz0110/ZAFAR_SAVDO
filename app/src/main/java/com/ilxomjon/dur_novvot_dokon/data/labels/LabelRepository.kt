@@ -443,9 +443,8 @@ class LabelRepository(
             if (price <= 0) { skipped += prod.id to LabelBatch.Skip.NO_PRICE; continue }
             when (kind) {
                 LabelKind.PLU -> {
-                    val code = pluFor(prod.id)
-                    if (code == null) skipped += prod.id to LabelBatch.Skip.NO_PLU
-                    else out += LabelData(prod.name, LabelPrice.som(price), plu = code, copies = it.copies)
+                    // v5.0.5: PLU bo'lmasa ham yorliq chiqadi — "KOD: 0" (tarozisiz tovarlar uchun)
+                    out += LabelData(prod.name, LabelPrice.som(price), plu = pluFor(prod.id) ?: "0", copies = it.copies)
                 }
                 LabelKind.BARCODE -> {
                     val bc = barcodes.barcodesFor(prod.id).firstOrNull { c -> BarcodeEncode.forShopCode(c) != null }

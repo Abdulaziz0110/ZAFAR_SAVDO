@@ -34,10 +34,19 @@ KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk",
 DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
           "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
 # ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
-GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc", "rate"}
+GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc", "rate",
+                # v5.1: yangi tovar kartochkasi (1C'dagi maydonlar)
+                "grp", "brd", "unit", "vol", "pack", "nac", "typ", "scl", "abc"}
+
+# v5.1: telefondagi kalit -> 1C ma'lumotnomasi (yangi tovar kartochkasi)
+CARD_REFS = {"grp": "ГруппаТовара", "brd": "Бренд", "unit": "ЕдИзм", "scl": "Весы"}
+# son maydonlari
+CARD_NUMS = {"vol": "Обьём", "pack": "Шт", "nac": "Нац"}
 # v4.1: nk / ke — kontragent maydonlari (grp: "c" mijozlar, "s" ta'minotchilar)
-PARTY_FIELDS = {"nm", "tel", "tel2", "adr", "reg", "grp"}
-PARTY_ATTR = {"nm": "Наименование", "tel": "Тел", "tel2": "Тел2", "adr": "Адрес"}
+PARTY_FIELDS = {"nm", "tel", "tel2", "adr", "reg", "grp", "inn", "lim"}
+PARTY_ATTR = {"nm": "Наименование", "tel": "Тел", "tel2": "Тел2", "adr": "Адрес", "inn": "ИНН"}
+# v5.1: son maydonlari (kredit limiti)
+PARTY_NUMS = {"lim": "ЛимитСум"}
 PHONE_RE = re.compile(r"[+0-9 ()-]{5,20}")
 PRICE_KEYS = ("p1", "p2", "p3", "p4", "pin")
 KEEP_BACKUPS = 7
@@ -683,6 +692,29 @@ class Writer:
             nm = " ".join(str(f["nm"]).split())[:150]
             old["Наименование"] = go.Наименование
             go.Наименование = nm
+        # v5.1: kartochka maydonlari — guruh, brend, o'lchov birligi, tarozi
+        for key, cat in CARD_REFS.items():
+            v = " ".join(str(f.get(key) or "").split())
+            if not v:
+                continue
+            ref = getattr(c.Справочники, cat).НайтиПоНаименованию(v, True)
+            if ref is None or ref.Пустая():
+                raise WriteError("1C'da topilmadi (%s): %s" % (cat, v))
+            attr = "ГруппаТовара" if key == "grp" else ("Бренд" if key == "brd" else ("ЕдИзм" if key == "unit" else "Весы"))
+            old[attr] = None  # COM havola jurnalga yozilmaydi
+            setattr(go, attr, ref)
+        for key, attr in CARD_NUMS.items():
+            if key not in f or str(f[key]).strip() == "":
+                continue
+            old[attr] = getattr(go, attr)
+            setattr(go, attr, _fnum(f[key]))
+        if f.get("typ"):
+            kind = "Весовой" if str(f["typ"]) == "w" else "Товар"
+            try:
+                old["ТипТовара"] = None
+                go.ТипТовара = getattr(c.Перечисления.ТипТовара, kind)
+            except Exception as e:  # noqa: BLE001 — bu bazada bunday tur bo'lmasligi mumkin
+                raise WriteError("1C'da tovar turi yo'q: %s" % kind) from e
         return old
 
     @staticmethod
@@ -702,9 +734,30 @@ class Writer:
         keep = {k: self._plain(v) for k, v in old.items() if k != "Весы"}
         return {"id": req["id"], "ok": True, "st": "done", "no": str(g.Код), "ref": self.uuid_of(c, g), "doc": "Товары", "old": keep}
 
+    @staticmethod
+    def _ean13(body12):
+        """12 raqamga nazorat raqamini qo'shadi (EAN-13)."""
+        total = 0
+        for i, ch in enumerate(body12):
+            total += int(ch) * (1 if i % 2 == 0 else 3)
+        return body12 + str((10 - total % 10) % 10)
+
+    def _auto_barcode(self, c, code):
+        """v5.1: ichki shtrix kod — "2" bilan boshlanadi (do'kon ichidagi diapazon), bo'sh raqam tanlanadi."""
+        digits = "".join(ch for ch in str(code) if ch.isdigit())[-9:] or "0"
+        for n in range(100):
+            bc = self._ean13("2" + digits.rjust(9, "0") + ("%02d" % n))
+            old = c.Справочники.Штрих.НайтиПоНаименованию(bc, True)
+            if old is None or old.Пустая():
+                return bc
+        raise WriteError("avtomatik shtrix kod yaratib bo'lmadi")
+
     def new_goods(self, c, req):
-        tpl = self.find_goods(c, req["party"], req["party_code"])
         f = req["f"]
+        # v5.1: namuna tovar ixtiyoriy — berilmasa bo'sh kartochka ochiladi (1C'dagidek)
+        tpl = None
+        if str(req.get("party") or "").strip() or str(req.get("party_code") or "").strip():
+            tpl = self.find_goods(c, req["party"], req["party_code"])
         nm = " ".join(str(f.get("nm") or "").split())[:150]
         dup = c.Справочники.Товары.НайтиПоНаименованию(nm, True)
         if dup is not None and not dup.Пустая():
@@ -712,8 +765,11 @@ class Writer:
         bc = str(f.get("bc") or "").strip()
         if bc:
             self._check_barcode_free(c, bc)
-        info = self.goods_info(c, tpl)
-        obj = tpl.ПолучитьОбъект().Скопировать()
+        info = self.goods_info(c, tpl) if tpl is not None else {"cur": "Сум"}
+        if tpl is not None:
+            obj = tpl.ПолучитьОбъект().Скопировать()
+        else:
+            obj = c.Справочники.Товары.СоздатьЭлемент()
         try:
             obj.УстановитьНовыйКод()
         except Exception:  # noqa: BLE001 — avtomatik raqamlashda kerak emas
@@ -733,6 +789,9 @@ class Writer:
         fields["nm"] = nm
         fields.pop("bc", None)
         self._apply_fields(c, obj, fields, info["cur"] == "Вал", None)
+        # v5.1: "avtomatik shtrix" tanlansa — 1C tomonida bo'sh kod yaratiladi
+        if not bc and str(f.get("abc") or "") == "1":
+            bc = self._auto_barcode(c, obj.Код)
         if bc:
             # Товары.ПриЗаписи o'zi Справочник.Штрих'ga yozadi (1C'da qo'lda kiritgandagidek)
             obj.ШтрихКод = bc
@@ -759,6 +818,11 @@ class Writer:
             v = " ".join(str(f[key] or "").split()) if key == "nm" else str(f[key] or "").strip()
             old[attr] = self._plain(getattr(obj, attr))
             setattr(obj, attr, v[:150] if key == "nm" else v[:250])
+        for key, attr in PARTY_NUMS.items():
+            if key not in f or str(f[key]).strip() == "":
+                continue
+            old[attr] = getattr(obj, attr)
+            setattr(obj, attr, _fnum(f[key]))
         if str(f.get("reg") or "").strip():
             old["Регион"] = None  # COM havola jurnalga yozilmaydi (bekor qilishda region o'zgarmaydi)
             obj.Регион = self.find_region(c, f["reg"])

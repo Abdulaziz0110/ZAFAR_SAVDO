@@ -57,6 +57,9 @@ class PartyFormFragment : CodeFragment() {
         inputs[PartyField.PHONE] = Ui.field(ctx, getString(R.string.kf_phone), InputType.TYPE_CLASS_PHONE).also { c.addView(it.first) }.second
         inputs[PartyField.PHONE2] = Ui.field(ctx, getString(R.string.kf_phone2), InputType.TYPE_CLASS_PHONE).also { c.addView(it.first) }.second
         inputs[PartyField.ADDRESS] = Ui.field(ctx, getString(R.string.kf_address), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES).also { c.addView(it.first) }.second
+        // v5.1: 1C kartochkasidagi qolgan maydonlar
+        inputs[PartyField.INN] = Ui.field(ctx, getString(R.string.kf_inn), InputType.TYPE_CLASS_NUMBER).also { c.addView(it.first) }.second
+        inputs[PartyField.LIMIT] = Ui.field(ctx, getString(R.string.kf_limit), Ui.NUMBER).also { c.addView(it.first) }.second
         c.addView(Ui.text(ctx, getString(R.string.kf_region), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 10))
         tvRegion = Ui.text(ctx, "", top = 2).also { c.addView(it) }
         c.addView(Ui.button(ctx, getString(R.string.kf_pick_region), outlined = true, icon = R.drawable.ic_list) { pickRegion() })
@@ -140,7 +143,8 @@ class PartyFormFragment : CodeFragment() {
         }
         if (!ServiceLocator.onec.ready) { snack(getString(R.string.oc_no_cloud)); return }
         val names = mapOf(PartyField.NAME to R.string.kf_name, PartyField.PHONE to R.string.kf_phone, PartyField.PHONE2 to R.string.kf_phone2,
-            PartyField.ADDRESS to R.string.kf_address, PartyField.REGION to R.string.kf_region)
+            PartyField.ADDRESS to R.string.kf_address, PartyField.REGION to R.string.kf_region,
+            PartyField.INN to R.string.kf_inn, PartyField.LIMIT to R.string.kf_limit)
         val summary = buildString {
             if (isEdit) append(party).append('\n')
             else append(getString(if (group == PartyField.SUPPLIERS) R.string.kf_suppliers else R.string.kf_clients)).append('\n')

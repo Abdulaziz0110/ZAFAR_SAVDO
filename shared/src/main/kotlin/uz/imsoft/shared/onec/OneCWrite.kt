@@ -61,8 +61,32 @@ object GoodsField {
     const val CUR = "cur"
     const val BARCODE = "bc"
     const val RATE = "rate"
+
+    // v5.1: yangi tovar — 1C kartochkasidagi maydonlar (kodni 1C o'zi beradi)
+    /** Guruh (Справочник.ГруппаТовара). */
+    const val GROUP = "grp"
+    /** Brend (Справочник.Бренд). */
+    const val BRAND = "brd"
+    /** O'lchov birligi (Справочник.ЕдИзм). */
+    const val UNIT = "unit"
+    /** Hajmi (Обьём). */
+    const val VOLUME = "vol"
+    /** Upakovkadagi dona (Шт). */
+    const val PACK = "pack"
+    /** Ustama foiz (Нац %). */
+    const val MARKUP = "nac"
+    /** Tovar turi: [TYPE_GOODS] yoki [TYPE_WEIGHED] (Перечисление.ТипТовара). */
+    const val TYPE = "typ"
+    const val TYPE_GOODS = "g"
+    const val TYPE_WEIGHED = "w"
+    /** Tarozi (Справочник.Весы). */
+    const val SCALE = "scl"
+    /** "1" bo'lsa shtrix kodni 1C tomoni o'zi yaratadi. */
+    const val AUTO_BARCODE = "abc"
+
     val PRICES = listOf(P1, P2, P3, P4, COST)
-    val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE, RATE)
+    val CARD = setOf(GROUP, BRAND, UNIT, VOLUME, PACK, MARKUP, TYPE, SCALE)
+    val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE, RATE, AUTO_BARCODE) + CARD
 }
 
 /**
@@ -78,7 +102,10 @@ object PartyField {
     const val GROUP = "grp"
     const val CLIENTS = "c"
     const val SUPPLIERS = "s"
-    val ALL = setOf(NAME, PHONE, PHONE2, ADDRESS, REGION, GROUP)
+    /** v5.1: 1C kartochkasidagi qolgan maydonlar. */
+    const val INN = "inn"
+    const val LIMIT = "lim"
+    val ALL = setOf(NAME, PHONE, PHONE2, ADDRESS, REGION, GROUP, INN, LIMIT)
     private val PHONE_RE = Regex("[+0-9 ()-]{5,20}")
 
     fun problem(kind: String, party: String, f: Map<String, String>): String? {
@@ -89,7 +116,9 @@ object PartyField {
         for (k in listOf(PHONE, PHONE2)) f[k]?.trim()?.takeIf { it.isNotEmpty() }?.let { if (!PHONE_RE.matches(it)) return "phone" }
         f[ADDRESS]?.let { if (it.length > 250) return "address" }
         f[GROUP]?.let { if (it != CLIENTS && it != SUPPLIERS) return "group" }
-        if (kind == WriteKind.PARTY_EDIT && f.keys.none { it in setOf(NAME, PHONE, PHONE2, ADDRESS, REGION) }) return "empty"
+        f[INN]?.takeIf { it.isNotEmpty() }?.let { if (!it.all { c -> c.isDigit() } || it.length !in 9..14) return "inn" }
+        f[LIMIT]?.takeIf { it.isNotEmpty() }?.let { v -> val d = v.toDoubleOrNull(); if (d == null || d < 0 || d > 1e12) return "limit" }
+        if (kind == WriteKind.PARTY_EDIT && f.keys.none { it in setOf(NAME, PHONE, PHONE2, ADDRESS, REGION, INN, LIMIT) }) return "empty"
         return null
     }
 }
@@ -132,7 +161,15 @@ data class WriteRequest(
     val totalUsd: Double get() = if (kind in WriteKind.MONEY) cashUsd + cardUsd + clickUsd else lines.sumOf { it.sumUsd }
 
     private fun goodsProblem(): String? {
-        if (party.isBlank() && partyCode.isBlank()) return "party"
+        // v5.1: yangi tovarda namuna ixtiyoriy — namuna bo'lmasa guruh va o'lchov birligi majburiy
+        if (kind == WriteKind.NEW_GOODS) {
+            if (party.isBlank() && partyCode.isBlank()) {
+                if (fields[GoodsField.GROUP].isNullOrBlank()) return "group"
+                if (fields[GoodsField.UNIT].isNullOrBlank()) return "unit"
+            }
+        } else if (party.isBlank() && partyCode.isBlank()) {
+            return "party"
+        }
         val f = fields
         if (kind == WriteKind.GOODS_EDIT && GoodsField.PRICES.none { it in f } && GoodsField.PLU !in f && GoodsField.NAME !in f) return "empty"
         for (k in GoodsField.PRICES) {
@@ -144,6 +181,18 @@ data class WriteRequest(
         f[GoodsField.NAME]?.let { if (it.trim().length !in 2..150) return "name" }
         if (kind == WriteKind.NEW_GOODS && f[GoodsField.NAME].isNullOrBlank()) return "name"
         f[GoodsField.BARCODE]?.takeIf { it.isNotEmpty() }?.let { if (it.length !in 4..40 || !it.all { c -> c.isLetterOrDigit() && c.code < 128 }) return "barcode" }
+        // v5.1: kartochka maydonlari
+        for (k in listOf(GoodsField.VOLUME, GoodsField.PACK, GoodsField.MARKUP)) {
+            val v = f[k]?.takeIf { it.isNotEmpty() } ?: continue
+            val d = v.toDoubleOrNull() ?: return k
+            if (d < 0 || d.isNaN() || d > 1_000_000) return k
+        }
+        for (k in listOf(GoodsField.GROUP, GoodsField.BRAND, GoodsField.UNIT, GoodsField.SCALE)) {
+            f[k]?.takeIf { it.isNotEmpty() }?.let { if (it.trim().length > 150) return k }
+        }
+        f[GoodsField.TYPE]?.let { if (it != GoodsField.TYPE_GOODS && it != GoodsField.TYPE_WEIGHED) return "type" }
+        if (f[GoodsField.TYPE] == GoodsField.TYPE_WEIGHED && (f[GoodsField.PLU]?.toIntOrNull() ?: 0) <= 0) return "plu"
+        if (f[GoodsField.AUTO_BARCODE] == "1" && !f[GoodsField.BARCODE].isNullOrEmpty()) return "barcode"
         return null
     }
 

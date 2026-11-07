@@ -545,5 +545,20 @@ class QueryAliasTest(unittest.TestCase):
         self.assertGreater(len(texts), 15)
 
 
+
+class AutoBarcode(unittest.TestCase):
+    """v5.1: avtomatik shtrix kod — EAN-13, "2" bilan boshlanadi."""
+
+    def test_check_digit(self):
+        w = onec_write.Writer.__new__(onec_write.Writer)
+        self.assertEqual(w._ean13("487011200890"), "4870112008906")
+        bc = w._ean13("2" + "000002555" + "00")
+        self.assertEqual(len(bc), 13)
+        self.assertTrue(bc.startswith("2"))
+        total = 0
+        for i, ch in enumerate(bc):
+            total += int(ch) * (1 if i % 2 == 0 else 3)
+        self.assertEqual(total % 10, 0)
+
 if __name__ == "__main__":
     unittest.main()

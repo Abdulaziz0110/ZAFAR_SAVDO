@@ -177,13 +177,8 @@ class SaleFragment : Fragment() {
         )
         // v5.0: 2-ilova mijoziga 4-narx tavsiya qilinadi, lekin boshqasiga o'tkazsa ham bo'ladi
         if (fixed4) col.addView(Ui.hint(ctx, getString(R.string.sale_price_branch), 4))
-        col.addView(Ui.text(ctx, getString(R.string.sale_currency_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
-        var currency = d.currency
-        col.addView(
-            Ui.toggle(ctx, listOf(getString(R.string.currency_som), getString(R.string.currency_usd)), if (d.currency == Currency.USD) 1 else 0, 4) { i ->
-                currency = if (i == 1) Currency.USD else Currency.SOM
-            },
-        )
+        // v5.0.5: savdo faqat so'mda — dollar tanlovi olib tashlandi (kurs faqat ko'rsatiladi)
+        val currency = Currency.SOM
         col.addView(Ui.text(ctx, getString(R.string.sale_mode_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
         var mode = d.mode
         col.addView(
@@ -402,7 +397,6 @@ class SaleFragment : Fragment() {
                 else -> R.string.price_l4
             },
         )
-        parts += getString(if (d.currency == Currency.USD) R.string.currency_usd else R.string.currency_som)
         if (d.mode == DealMode.RETURN) parts += getString(R.string.mode_return)
         if (vm.showCost.value) parts += getString(R.string.sale_cost_switch)
         b.tvContext.text = parts.joinToString(" · ")

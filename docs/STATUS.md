@@ -1,10 +1,39 @@
-# Holat — Savdo Agent / Savdo Admin 5.0.4 (versionCode 33) + Savdo Mijoz 5.0.4 (versionCode 21), 2026-11-07
+# Holat — Savdo Agent / Savdo Admin 5.1 (versionCode 35) + Savdo Mijoz 5.1 (versionCode 23), 2026-11-07
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.1 — 1C'ga yozish 1C'dagidek
+| Narsa | Holat |
+|---|---|
+| Yangi tovar: kod 1C tomonidan avtomatik (shaklda yozib turiladi) | VERIFIED (kod: `УстановитьНовыйКод`) |
+| Guruh, brend, o'lchov birligi, tarozi — 1C ma'lumotnomalaridan tanlanadi; kompyuter ro'yxatni yuboradi | VERIFIED (`catalog_refs` + `test_catalog_refs`, `Suppliers.refs`) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Hajmi (Обьём), upakovkada dona (Шт), ustama % (Нац) | VERIFIED (`NewGoodsTest.numbersChecked`, PC `CARD_NUMS`) |
+| Tovar turi Oddiy / Tarozi (Перечисление.ТипТовара); tarozi tanlansa PLU va tarozi majburiy | VERIFIED (`NewGoodsTest.weighedNeedsPlu`) |
+| Shtrix kodni 1C o'zi yaratishi (ichki EAN-13, "2" bilan, band bo'lmagani) | VERIFIED (`AutoBarcode.test_check_digit`) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Namuna tovar ixtiyoriy — bo'lmasa bo'sh kartochka, guruh va o'lchov birligi majburiy | VERIFIED (`NewGoodsTest.groupAndUnitRequiredWithoutSample`) |
+| Yuk beruvchiga to'lovda bizning qarzimiz | VERIFIED (kod) / ma'lumot bilan IMPLEMENTED-UNVERIFIED |
+| Kontragent kartochkasida INN va kredit limiti | VERIFIED (kompilyatsiya + PC `PARTY_ATTR`/`PARTY_NUMS`) |
+| Kontragentning bank rekvizitlari (РС, Банк, МФО, ОКОНХ), "Доставшик" | NOT-IMPLEMENTED (telefondan kam kiritiladi; kerak bo'lsa qo'shiladi) |
+| Tovar kartochkasidagi Кг, НормаОст, Доля %, Клавиатура, rasm | NOT-IMPLEMENTED |
+| Yangi tovar 1C'da haqiqatda yaratilishi (COM) | IMPLEMENTED-UNVERIFIED — kompyuterda sinash kerak |
+
+## 5.0.5 — ko'rinish tuzatishlari, dollarsiz, yuk beruvchi
+| Narsa | Holat |
+|---|---|
+| Plitkalar bir qatorda bir xil balandlikda (Ui.tiles) — uchchala ilovada | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| Bosh sahifadagi katta bo'shliq: "Ochiq savdolar" kartasi tugmalar qatori ICHIGA qo'yilayotgani sabab edi — tuzatildi | VERIFIED |
+| 4 ta tugma teng balandlikda (match_parent) — Agent/Admin va Mijoz | VERIFIED |
+| Menyu va tanlov varaqasi aylantiriladi (uzun ro'yxat kesilmaydi) | VERIFIED |
+| Narx yorlig'i: PLU bo'lmasa "KOD: 0" bilan chiqadi | VERIFIED (kod) / printerda IMPLEMENTED-UNVERIFIED |
+| Savdoda valyuta tanlash, savatchadagi dollar to'lovi va 1C shakllaridagi dollar summalari olib tashlandi | VERIFIED (kompilyatsiya) |
+| "Ta'minotchi" -> "Yuk beruvchi" (hamma matnlar) | VERIFIED (0 ta eski so'z qoldi) |
+| Yuk beruvchiga to'lovda bizning qarzimiz ko'rsatiladi | VERIFIED (kod) / 1C ma'lumoti bilan IMPLEMENTED-UNVERIFIED |
+| Tarixdagi eski dollar summalari ko'rsatilishi (kiritish emas) | IMPLEMENTED-UNVERIFIED (ataylab qoldirildi — 1C'da eski dollar qarzlar bor) |
+| **1C'ga yoziladigan shakllar 1C bilan to'liq bir xil** (yangi tovar: guruh, brend, o'lchov birligi, hajmi, shtrix/tarozi turi, avtomatik shtrix; kirim; qolgan hujjatlar) | NOT-IMPLEMENTED — keyingi ish. Hozircha faqat yuk beruvchi qarzi qo'shildi; to'liq moslash uchun 1C'dan guruh/brend/o'lchov/tarozi ro'yxatlarini kompyuter orqali yuborish va `onec_write.py` ni kengaytirish kerak |
 
 ## 5.0.4 — vidjet
 | Narsa | Holat |

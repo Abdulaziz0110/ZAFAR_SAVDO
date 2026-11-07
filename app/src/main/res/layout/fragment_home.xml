@@ -38,6 +38,7 @@
             <!-- v5.0.3: eng tepada 4 ta katta ikonkali tugma (2 qator). 3- va 4-sini foydalanuvchi tanlaydi
                  (uzoq bosiladi) — tarozi, narx yorliqlari, qaytarish, to'lov, hisobot va hokazo. -->
             <LinearLayout
+                android:id="@+id/quickRow1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
@@ -45,7 +46,7 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/cardSale"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1"
                     android:maxLines="2"
@@ -63,7 +64,7 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/cardScan"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="6dp"
                     android:layout_weight="1"
                     android:maxLines="2"
