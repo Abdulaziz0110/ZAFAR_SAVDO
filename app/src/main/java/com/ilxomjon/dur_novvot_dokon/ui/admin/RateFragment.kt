@@ -39,6 +39,27 @@ class RateFragment : CodeFragment() {
                 }.setNegativeButton(R.string.cancel, null).show()
         })
         c.addView(Ui.hint(ctx, getString(R.string.wf_safety), 8))
+        // v5.0: internetdagi kurs — bosilsa yuqoridagi maydonga qo'yiladi (1C'ga faqat tasdiqdan keyin yoziladi)
+        c.addView(Ui.section(ctx, getString(R.string.rt_net_title)))
+        val box = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.VERTICAL }
+        c.addView(box)
+        box.addView(Ui.hint(ctx, getString(R.string.rt_net_wait), 0))
+        fun render(list: List<uz.imsoft.shared.sched.RateQuote.Quote>) {
+            box.removeAllViews()
+            if (list.isEmpty()) { box.addView(Ui.hint(ctx, getString(R.string.rt_net_none), 0)); return }
+            for (q in list) {
+                val sub = if (q.buy > 0 && q.sell > 0) getString(R.string.rt_net_row, som(q.buy), som(q.sell)) else som(q.value)
+                val title = q.source + (if (q.date.isNotEmpty()) " · " + q.date else "")
+                box.addView(
+                    Ui.item(ctx, title, sub, som(q.value), R.drawable.ic_currency) {
+                        e.setText(Money.plain(q.value))
+                        e.setSelection(e.text?.length ?: 0)
+                    },
+                )
+            }
+        }
+        render(ServiceLocator.rateOnline.cached())
+        launchUi { render(ServiceLocator.rateOnline.load()) }
         return p.root
     }
 }

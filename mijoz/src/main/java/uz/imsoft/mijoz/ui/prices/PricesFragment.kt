@@ -106,13 +106,14 @@ class PricesFragment : Fragment() {
         val edt = TextInputEditText(til.context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             setText(Fmt.qty(suggest).replace(" ", "").replace('\u00A0'.toString(), ""))
+            uz.imsoft.shared.android.NumInput.attach(this)
             selectAll()
         }
         til.addView(edt)
         if (r.last != null) til.helperText = getString(R.string.cart_last, Stamp.formatDate(r.last.stamp), Fmt.qty(r.last.qty))
         val d = MaterialAlertDialogBuilder(ctx).setTitle(r.item.name).setView(til)
             .setPositiveButton(R.string.cart_put) { _, _ ->
-                val q = edt.text?.toString().orEmpty().replace(',', '.').replace(" ", "").toDoubleOrNull() ?: 0.0
+                val q = uz.imsoft.shared.NumText.parse(edt.text?.toString())
                 val (price, usd) = priceOf(r)
                 Locator.cart.set(OrderCart.Item(r.key, r.item.name, r.item.id, q, price, usd))
             }

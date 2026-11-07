@@ -68,8 +68,15 @@ class StoreHistory(
         val status: String = "",
         /** Do'kon id -> server kartochkasi qamragan davrlar (kompyuter hujjatlari bilan takrorlanmaslik uchun). */
         val cov: Map<String, List<Coverage>> = emptyMap(),
+        /** v5.0 yangilash rejasi: -1 — reja yo'q, 0..4 — kun / hafta / oy / yil / hammasi. */
+        val stage: Int = -1,
+        val stageDone: Int = 0,
+        val stageTotal: Int = 0,
+        /** Bazadagi yozuvlar soni (ko'rsatilayotgani aynan shu yerdan). */
+        val rows: Int = 0,
     )
 
+    private val db by lazy { com.ilxomjon.dur_novvot_dokon.data.local.LedgerDb(context) }
     private val mutex = Mutex()
     private val net = Mutex()
     private val metas = HashMap<String, Meta>()
@@ -91,6 +98,9 @@ class StoreHistory(
     /** 2-ilovadagi mijozlarning do'kon id lari — ular birinchi navbatda yuklanadi. */
     var priorityStores: () -> Set<String> = { emptySet() }
 
+    /** v5.0: hozir ish vaqtimi (ish vaqtidan tashqarida o'zi yangilanmaydi; qo'lda yangilash doim ishlaydi). */
+    var workTime: () -> Boolean = { true }
+
     private fun dir() = File(context.filesDir, "hist").apply { mkdirs() }
     private fun safe(id: String) = id.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.ifEmpty { "x" }
     private fun bookFile(id: String) = File(dir(), "s_" + safe(id) + ".json")
@@ -108,48 +118,57 @@ class StoreHistory(
     suspend fun load() = mutex.withLock {
         if (loaded) return@withLock
         withContext(Dispatchers.IO) {
-            runCatching {
-                val o = JObj.parse(indexFile().readText())
-                for ((id, v) in o.map) {
-                    @Suppress("UNCHECKED_CAST")
-                    val m = JObj((v as? Map<String, Any?>) ?: continue)
-                    metas[id] = Meta(m.str("n"), m.long("b").toInt(), m.long("v").toInt(), m.long("ok"), m.long("try"), m.str("e"), m.long("due"), m.long("le"))
-                }
+            runCatching { importOldFiles() }
+            for (m in runCatching { db.metas() }.getOrDefault(emptyList())) {
+                metas[m.storeId] = Meta(m.name, m.back, m.ver, m.okAt, m.tryAt, m.err, m.due, m.lastEntry)
             }
             for (id in metas.keys) {
-                val f = bookFile(id)
-                if (!f.isFile) continue
-                runCatching {
-                    val o = JObj.parse(f.readText())
-                    @Suppress("UNCHECKED_CAST")
-                    val l = o.arr("l").mapNotNull { (it as? List<Any?>)?.let { a -> runCatching { SnapshotCodec.entryFromList(a) }.getOrNull() } }
-                    books[id] = Book(l, o.objs("cov").map { Coverage(it.long("f"), it.long("t"), it.long("at"), it.str("src")) })
-                }
+                val (entries, cov) = runCatching { db.book(id) }.getOrNull() ?: continue
+                if (entries.isNotEmpty() || cov.isNotEmpty()) books[id] = Book(entries, cov)
             }
             loaded = true
-            publish()
+            publish(force = true)
         }
+    }
+
+    /** v5.0: eski JSON kitoblar bazaga ko'chiriladi (bir marta), so'ng fayllar o'chiriladi. */
+    private fun importOldFiles() {
+        if (!indexFile().isFile) return
+        val old = HashMap<String, Meta>()
+        runCatching {
+            val o = JObj.parse(indexFile().readText())
+            for ((id, v) in o.map) {
+                @Suppress("UNCHECKED_CAST")
+                val m = JObj((v as? Map<String, Any?>) ?: continue)
+                old[id] = Meta(m.str("n"), m.long("b").toInt(), m.long("v").toInt(), m.long("ok"), m.long("try"), m.str("e"), m.long("due"), m.long("le"))
+            }
+        }
+        for ((id, _) in old) {
+            val f = bookFile(id)
+            if (!f.isFile) continue
+            runCatching {
+                val o = JObj.parse(f.readText())
+                @Suppress("UNCHECKED_CAST")
+                val l = o.arr("l").mapNotNull { (it as? List<Any?>)?.let { a -> runCatching { SnapshotCodec.entryFromList(a) }.getOrNull() } }
+                db.saveBook(id, l, o.objs("cov").map { Coverage(it.long("f"), it.long("t"), it.long("at"), it.str("src")) })
+            }
+            runCatching { f.delete() }
+        }
+        runCatching {
+            db.saveMetas(old.map { (id, m) -> com.ilxomjon.dur_novvot_dokon.data.local.LedgerDb.MetaRow(id, m.name, m.back, m.ver, m.okAt, m.tryAt, m.err, m.due, m.lastEntry) })
+        }
+        runCatching { indexFile().delete() }
     }
 
     private fun saveIndex() {
-        val map = LinkedHashMap<String, Any?>()
-        for ((id, m) in metas) {
-            map[id] = linkedMapOf("n" to m.name, "b" to m.back, "v" to m.ver, "ok" to m.okAt, "try" to m.tryAt, "e" to m.err, "due" to m.due, "le" to m.lastEntry)
+        runCatching {
+            db.saveMetas(metas.map { (id, m) -> com.ilxomjon.dur_novvot_dokon.data.local.LedgerDb.MetaRow(id, m.name, m.back, m.ver, m.okAt, m.tryAt, m.err, m.due, m.lastEntry) })
         }
-        write(indexFile(), Json.write(map))
     }
 
+    /** Avval bazaga yoziladi — ekranda ko'ringan narsa aynan bazadan o'qiladi. */
     private fun saveBook(id: String, b: Book) {
-        write(
-            bookFile(id),
-            Json.write(
-                linkedMapOf(
-                    "v" to 1,
-                    "l" to b.entries.map { SnapshotCodec.entryToList(it) },
-                    "cov" to b.coverage.map { linkedMapOf("f" to it.from, "t" to it.to, "at" to it.importedAt, "src" to it.source) },
-                ),
-            ),
-        )
+        db.saveBook(id, b.entries, b.coverage)
     }
 
     private fun write(f: File, text: String) {
@@ -160,18 +179,38 @@ class StoreHistory(
 
     // ---------------- UI holati ----------------
 
-    private fun publish() {
+    @Volatile private var publishedAt = 0L
+
+    /**
+     * Ekranga chiqarish: yozuvlar BAZADAN o'qiladi (saqlangani aniq bo'lishi uchun). Tez-tez chaqirilganda
+     * [force] = false bo'lsa, 2 soniyada bir marta o'qiladi; bosqich tugaganda force bilan chaqiriladi.
+     */
+    private fun publish(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - publishedAt < 2_000L) return
+        publishedAt = now
         val all = ArrayList<LedgerEntry>()
-        for ((id, b) in books) {
-            val name = metas[id]?.name?.ifBlank { null } ?: catalog.storeById(id)?.name ?: id
-            for (e in b.entries) all += e.copy(kindText = LedgerOwner.tag(e.kindText, id, name))
+        val rows = runCatching {
+            for ((id, e) in db.allEntries()) {
+                val name = metas[id]?.name?.ifBlank { null } ?: catalog.storeById(id)?.name ?: id
+                all += e.copy(kindText = LedgerOwner.tag(e.kindText, id, name))
+            }
+            all.size
+        }.getOrElse {
+            // Baza o'qilmasa — xotiradagi nusxa (ilova baribir ishlasin)
+            all.clear()
+            for ((id, b) in books) {
+                val name = metas[id]?.name?.ifBlank { null } ?: catalog.storeById(id)?.name ?: id
+                for (e in b.entries) all += e.copy(kindText = LedgerOwner.tag(e.kindText, id, name))
+            }
+            all.size
         }
         all.sortBy { it.stamp }
         version++
-        _state.value = State(all, version, loaded, statusText(), books.mapValues { it.value.coverage })
+        _state.value = State(all, version, loaded, statusText(), books.mapValues { it.value.coverage }, stage, planDone.size, planTotal, rows)
     }
 
-    private fun refreshStatus() { _state.value = _state.value.copy(status = statusText()) }
+    private fun refreshStatus() { _state.value = _state.value.copy(status = statusText(), stage = stage, stageDone = planDone.size, stageTotal = planTotal) }
 
     private fun hm(ms: Long) = SimpleDateFormat("dd.MM HH:mm", Locale.US).format(Date(ms))
 
@@ -182,6 +221,10 @@ class StoreHistory(
         val okAt = metas.values.maxOfOrNull { it.okAt } ?: 0L
         val parts = ArrayList<String>()
         parts += if (okAt > 0) context.getString(R.string.sh_status, hm(okAt), ready, total, year) else context.getString(R.string.sh_status_none, total)
+        if (planning) {
+            val names = listOf(R.string.sh_stage_day, R.string.sh_stage_week, R.string.sh_stage_month, R.string.sh_stage_year, R.string.sh_stage_all)
+            parts += context.getString(R.string.sh_stage, context.getString(names[stage.coerceIn(0, names.lastIndex)]), planDone.size, maxOf(planTotal, 1))
+        }
         if (running.isNotEmpty()) parts += context.getString(R.string.sh_status_running, running)
         if (lastErr.isNotEmpty() && lastErrAt > okAt) parts += context.getString(R.string.sh_status_err, hm(lastErrAt), lastErr)
         return parts.joinToString("\n")
@@ -237,16 +280,83 @@ class StoreHistory(
         mutex.withLock { val m = metas.getOrPut(storeId) { Meta() }; if (m.due == 0L || atMs < m.due) m.due = atMs; withContext(Dispatchers.IO) { saveIndex() } }
     }
 
-    /** Hammasini oxirgi 31 kun bo'yicha tez yangilash ("Hozir yangilash"). */
-    suspend fun bumpAll() {
+    /**
+     * v5.0: kompyuterdan yangi 1C hujjatlari kelganda — faqat o'sha mijozlar yangilansin (davriy so'rov o'rniga).
+     * [names] — hujjatlardagi kontragent nomlari.
+     */
+    suspend fun bumpByNames(names: Collection<String>) {
+        if (names.isEmpty()) return
+        load()
+        val keys = names.mapNotNull { n -> uz.imsoft.shared.report.LedgerMerge.nameKey(n).takeIf { it.isNotEmpty() } }.toHashSet()
+        if (keys.isEmpty()) return
+        val ids = catalog.state.value.stores.filter { uz.imsoft.shared.report.LedgerMerge.nameKey(it.name) in keys }.map { it.id }
+        if (ids.isEmpty()) return
+        val now = System.currentTimeMillis()
+        mutex.withLock {
+            for (id in ids) metas.getOrPut(id) { Meta() }.let { if (it.due == 0L) it.due = now }
+            withContext(Dispatchers.IO) { saveIndex() }
+        }
+    }
+
+    /** Hech narsa yuklanmagan bo'lsa — birinchi ochilishda o'zi to'ldiriladi. */
+    suspend fun startIfEmpty() {
+        load()
+        if (metas.values.none { it.okAt > 0 } && catalog.state.value.stores.isNotEmpty()) startPlan()
+    }
+
+    // ---------------- v5.0: bosqichma-bosqich yangilash ----------------
+
+    /** Bosqichlar: 0 — kun, 1 — hafta, 2 — oy, 3 — yil, 4 — hammasini bazaga qayta yozish. */
+    @Volatile private var stage = -1
+    @Volatile private var planTotal = 0
+    private val planDone = HashSet<String>()
+
+    /** "Yangilash" bosilganda: kun -> hafta -> oy -> yil -> hammasi. Ish vaqtidan tashqarida ham ishlaydi. */
+    suspend fun startPlan() {
         load()
         mutex.withLock {
-            val now = System.currentTimeMillis()
-            for (s in catalog.state.value.stores) metas.getOrPut(s.id) { Meta(s.name) }.let { if (it.due == 0L) it.due = now }
-            withContext(Dispatchers.IO) { saveIndex() }
+            stage = 0
+            planDone.clear()
+            planTotal = catalog.state.value.stores.size
+            for (s in catalog.state.value.stores) metas.getOrPut(s.id) { Meta(s.name) }
         }
         lastReqAt = 0L
         pauseUntil = 0L
+        refreshStatus()
+    }
+
+    /** Eski nom (menyular uchun). */
+    suspend fun bumpAll() = startPlan()
+
+    /** Reja ishlayaptimi. */
+    val planning: Boolean get() = stage in 0..LAST_STAGE
+
+    private fun stageDays(st: Int) = when (st) {
+        0 -> 1
+        1 -> 7
+        2 -> 31
+        else -> DAYS
+    }
+
+    /** Bosqich tugadi — keyingisiga o'tiladi yoki reja yopiladi. */
+    private fun nextStage() {
+        planDone.clear()
+        stage = if (stage >= LAST_STAGE) -1 else stage + 1
+        if (stage == -1) planTotal = 0
+    }
+
+    /**
+     * Oxirgi bosqich (hammasi): tarmoqqa chiqmaydi — har mijozning kitobi bazaga qayta yoziladi va
+     * yozilgani tekshiriladi. @return tekshirilgan mijoz bor-yo'qligi.
+     */
+    private fun verifyOne(storeId: String): Boolean {
+        val b = books[storeId] ?: Book(emptyList(), emptyList())
+        return runCatching {
+            db.saveBook(storeId, b.entries, b.coverage)
+            val back = db.book(storeId).first
+            if (back.size != b.entries.size) lastErr = context.getString(R.string.sh_db_mismatch, metas[storeId]?.name.orEmpty(), b.entries.size, back.size)
+            true
+        }.getOrDefault(false)
     }
 
     // ---------------- serverdan ----------------
@@ -325,20 +435,27 @@ class StoreHistory(
         val t0 = System.currentTimeMillis()
         if (t0 - lastReqAt < GAP_MS || t0 < pauseUntil) return false
         if (catalog.state.value.agent == null || catalog.state.value.stores.isEmpty()) return false
+        // v5.0: davriy so'rov yo'q — faqat reja ishlayotganda yoki savdodan keyin (batareya uchun)
+        val urgent = metas.values.any { it.due in 1..t0 }
+        if (!planning && !urgent) return false
+        if (!planning && !workTime()) return false
         var any = false
-        while (true) {
+        var guard = 0
+        while (guard++ < 400) {
             val r = stepOnce()
             if (r == 0) break
             any = true
-            if (r == 2 || System.currentTimeMillis() - t0 > 20_000L) break
-            kotlinx.coroutines.delay(1_500L)
+            if (System.currentTimeMillis() - t0 > 20_000L) break
+            // Reja ishlayotganda bir qadamda bir nechta mijoz yuklanadi (yangilash tez tugashi uchun)
+            if (r == 2 && !planning) break
+            if (r != 3) kotlinx.coroutines.delay(1_200L)
         }
         return any
     }
 
     private class Job(val id: String, val fromAgo: Int, val toAgo: Int, val urgent: Boolean)
 
-    /** @return 0 — ish yo'q, 1 — shoshilinch so'rov bajarildi, 2 — oddiy so'rov bajarildi. */
+    /** @return 0 — ish yo'q, 1 — shoshilinch so'rov, 2 — oddiy so'rov, 3 — tarmoqsiz qadam (bosqich/tekshiruv). */
     private suspend fun stepOnce(): Int {
         val now = System.currentTimeMillis()
         val stores = catalog.state.value.stores
@@ -349,30 +466,43 @@ class StoreHistory(
                 .thenByDescending { Math.abs(it.debtSom) + Math.abs(it.debtUsd) * rate }
                 .thenBy { it.name.lowercase() },
         )
+        var verified = false
+        var advanced = false
         val job: Job? = mutex.withLock {
             fun meta(id: String, name: String) = metas.getOrPut(id) { Meta(name) }
             fun cooled(m: Meta) = now - m.tryAt >= RETRY_MS
-            // 1) savdodan keyin / "Hozir yangilash"
+            // 1) savdodan keyin (shoshilinch) — oxirgi 31 kun
             ordered.firstOrNull { s -> metas[s.id]?.let { it.due in 1..now && (it.tryAt < it.due || cooled(it)) } == true }
                 ?.let { return@withLock Job(it.id, 30, 0, true) }
-            // 2) hali yuklanmagan (yoki yangi versiya) — oxirgi 31 kun
-            ordered.firstOrNull { s -> meta(s.id, s.name).let { (it.okAt == 0L || it.ver != VER) && cooled(it) } }
-                ?.let { return@withLock Job(it.id, 30, 0, true) }
-            // 3) 1 yilgacha orqaga, 92 kunlik bo'laklar
-            ordered.firstOrNull { s -> meta(s.id, s.name).let { it.back in 1 until DAYS && cooled(it) } }?.let { s ->
-                val m = meta(s.id, s.name)
-                return@withLock Job(s.id, minOf(m.back + CHUNK, DAYS) - 1, m.back, false)
+            if (!planning) return@withLock null
+            planTotal = ordered.size
+            // 2) oxirgi bosqich: tarmoqsiz — bazaga qayta yozib tekshirish
+            if (stage == LAST_STAGE) {
+                val s = ordered.firstOrNull { it.id !in planDone }
+                if (s == null) { nextStage(); advanced = true; return@withLock null }
+                planDone += s.id
+                verified = verifyOne(s.id)
+                return@withLock null
             }
-            // 4) eskirganlarini yangilash: faollari (qarzi bor, 60 kun ichida harakat, 2-ilovada) har soatda, qolgani kuniga bir
-            val recent = daysAgoStamp(60)
-            ordered.filter { s ->
-                val m = meta(s.id, s.name)
-                val active = s.debtSom != 0.0 || s.debtUsd != 0.0 || m.lastEntry >= recent || s.id in prio
-                cooled(m) && now - m.okAt >= (if (active) ACTIVE_MS else IDLE_MS)
-            }.minByOrNull { metas[it.id]?.okAt ?: 0L }?.let { return@withLock Job(it.id, 30, 0, false) }
-            null
+            // 3) joriy bosqich: hamma mijoz shu davr bo'yicha yangilanadi
+            val days = stageDays(stage)
+            val s = ordered.firstOrNull { it.id !in planDone }
+            if (s == null) { nextStage(); advanced = true; return@withLock null }
+            val m = meta(s.id, s.name)
+            if (!cooled(m) && m.err.isNotEmpty()) { planDone += s.id; advanced = true; return@withLock null }
+            planDone += s.id
+            // Yil bosqichida 92 kunlik bo'lak: qayerdan to'xtagan bo'lsa shu yerdan
+            if (stage == 3 && m.back in 1 until DAYS) Job(s.id, minOf(m.back + CHUNK, DAYS) - 1, m.back, false)
+            else Job(s.id, days - 1, 0, stage == 0)
         }
-        if (job == null) return 0
+        if (job == null) {
+            if (verified || advanced) {
+                publish(force = !planning)
+                refreshStatus()
+                return 3
+            }
+            return 0
+        }
         val name = catalog.storeById(job.id)?.name.orEmpty()
         running = name
         refreshStatus()
@@ -381,6 +511,8 @@ class StoreHistory(
             commit(job.id, name, r, "server", back = job.fromAgo + 1)
             mutex.withLock {
                 metas[job.id]?.let { it.tryAt = System.currentTimeMillis(); if (it.due in 1..now) it.due = 0L }
+                // Yil bosqichi: shu mijozning keyingi bo'lagi ham shu rejada yuklansin
+                if (stage == 3 && (metas[job.id]?.back ?: 0) < DAYS) planDone -= job.id
                 withContext(Dispatchers.IO) { saveIndex() }
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -404,6 +536,7 @@ class StoreHistory(
             running = ""
             refreshStatus()
         }
+        if (!planning) publish(force = true)
         return if (job.urgent) 1 else 2
     }
 
@@ -419,6 +552,8 @@ class StoreHistory(
         /** Yuklash versiyasi: o'qish qoidasi o'zgarsa oshiriladi — hammasi qayta yuklanadi. */
         /** v3.8: 2 — server javobi (akt sverki) endi o'qiladi, avval "o'qilmadi" deb o'tkazilganlar qayta yuklanadi. */
         const val VER = 2
+        /** Oxirgi bosqich: tarmoqsiz, hammasini bazaga qayta yozib tekshirish. */
+        const val LAST_STAGE = 4
         const val DAYS = 365
         const val CHUNK = 92
         const val GAP_MS = 20_000L

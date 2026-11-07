@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Admin ilova belgisi foni (to'q ko'k) — Agent'dan ajralib tursin -->
+<!-- Admin belgisi foni (v5.0): terminal — qora-yashil. Agent va Mijozdan aniq ajralib turadi. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -14,8 +14,8 @@
                 android:startX="0"
                 android:startY="0"
                 android:type="linear">
-                <item android:color="#3949AB" android:offset="0" />
-                <item android:color="#1A237E" android:offset="1" />
+                <item android:color="#16261D" android:offset="0" />
+                <item android:color="#040705" android:offset="1" />
             </gradient>
         </aapt:attr>
     </path>

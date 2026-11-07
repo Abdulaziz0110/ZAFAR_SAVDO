@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Savdo (v5.0): eng tepada qidiruv va shtrix kod. Do'kon, narx turi, valyuta va kelgan narx — "Sozlash" oynasida,
+     shunda ro'yxatga joy ko'p qoladi va tovarlar ko'proq ko'rinadi. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -25,385 +27,95 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="12dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="12dp"
                 app:layout_scrollFlags="scroll|enterAlways|snap">
 
+                <!-- Qidiruv + shtrix kod + sozlash -->
                 <LinearLayout
+                    android:id="@+id/searchBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="8dp">
 
-                    <LinearLayout
-                        android:id="@+id/rowStore"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilSearch"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:gravity="center_vertical"
-                        android:minHeight="48dp"
-                        android:orientation="horizontal">
+                        android:hint="@string/search_hint"
+                        app:endIconMode="clear_text"
+                        app:startIconDrawable="@drawable/ic_search">
 
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_store"
-                            app:tint="?attr/colorPrimary" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edtSearch"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tvStoreName"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:text="@string/sale_select_store"
-                                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                            <TextView
-                                android:id="@+id/tvStoreInfo"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:maxLines="1"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_expand_more"
-                            app:tint="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
+                            android:imeOptions="actionSearch"
+                            android:inputType="text"
+                            android:singleLine="true" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnRepeat"
-                        style="?attr/materialIconButtonStyle"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:contentDescription="@string/sale_repeat_last"
-                        android:visibility="gone"
-                        app:icon="@drawable/ic_history" />
+                        android:id="@+id/btnScan"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="6dp"
+                        android:contentDescription="@string/scan_title"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="0dp"
+                        android:padding="0dp"
+                        app:icon="@drawable/ic_scan"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnClear"
+                        android:id="@+id/btnSetup"
                         style="?attr/materialIconButtonStyle"
                         android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:contentDescription="@string/sale_clear"
-                        android:visibility="gone"
-                        app:icon="@drawable/ic_delete" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnPark"
-                        style="?attr/materialIconButtonStyle"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:contentDescription="@string/park_action"
-                        android:visibility="gone"
-                        app:icon="@drawable/ic_pause" />
+                        android:layout_height="48dp"
+                        android:contentDescription="@string/sale_setup"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:icon="@drawable/ic_tune"
+                        app:iconSize="24dp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/rowPrice"
+                <!-- Hozirgi holat: do'kon, narx turi, valyuta. Bosilsa — sozlash oynasi -->
+                <TextView
+                    android:id="@+id/tvContext"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleType"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1.2"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <!-- v3.1: 1C'dagi 4 narx (3 — Naqd, 4 — Optom) -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnP1"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:contentDescription="@string/price_l1_desc"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="2dp"
-                            android:paddingEnd="2dp"
-                            android:text="@string/price_l1"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnP2"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:contentDescription="@string/price_l2_desc"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="2dp"
-                            android:paddingEnd="2dp"
-                            android:text="@string/price_l2"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCash"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:contentDescription="@string/price_l3_desc"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="2dp"
-                            android:paddingEnd="2dp"
-                            android:text="@string/price_l3"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnWholesale"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:contentDescription="@string/price_l4_desc"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="2dp"
-                            android:paddingEnd="2dp"
-                            android:text="@string/price_l4"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleCurrency"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSom"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/currency_som"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnUsd"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/currency_usd"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/rowMode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleMode"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
-                        android:layout_weight="1.25"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSale"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/mode_sale"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnReturn"
-                            style="@style/Widget.App.Segment"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/mode_return"
-                            android:minHeight="40dp"
-                            android:maxLines="2" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchCost"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/sale_cost_switch"
-                        android:textAppearance="?attr/textAppearanceLabelLarge" />
-                </LinearLayout>
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:ellipsize="end"
+                    android:focusable="true"
+                    android:maxLines="1"
+                    android:paddingStart="16dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="4dp"
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorPrimary" />
 
                 <TextView
                     android:id="@+id/tvWarning"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="2dp"
                     android:text="@string/rate_missing_warning"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?attr/colorError"
                     android:visibility="gone" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnParked"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone"
-                    app:icon="@drawable/ic_pause" />
             </LinearLayout>
-
-            <!-- v2.6: qidiruv + shtrix kod skaneri -->
-            <LinearLayout
-                android:id="@+id/searchBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="8dp">
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSearch"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="@string/search_hint"
-                app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/ic_search">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/edtSearch"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:singleLine="true" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnScan"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="6dp"
-                android:contentDescription="@string/scan_title"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:padding="0dp"
-                app:icon="@drawable/ic_scan"
-                app:iconGravity="textStart"
-                app:iconPadding="0dp"
-                app:iconSize="26dp" />
-            </LinearLayout>
-
-            <HorizontalScrollView
-                android:id="@+id/chipScroll"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none">
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroups"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    app:selectionRequired="true"
-                    app:singleLine="true"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
-
-            <LinearLayout
-                android:id="@+id/suggestBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="8dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/tvSuggest"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddSuggested"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sale_suggest_add_all"
-                    android:maxLines="2" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvApprox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="2dp"
-                android:text="@string/search_approx"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:textColor="?attr/colorTertiary"
-                android:visibility="gone" />
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.recyclerview.widget.RecyclerView
@@ -433,33 +145,13 @@
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnFav0"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="16dp"
-                android:textSize="18sp"
-                android:visibility="gone"
-                app:icon="@drawable/ic_store" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnFav1"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginTop="8dp"
-                android:textSize="18sp"
-                android:visibility="gone"
-                app:icon="@drawable/ic_store" />
-
-            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnOtherStore"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/sale_other_store"
-                android:maxLines="2" />
+                android:layout_marginTop="12dp"
+                android:maxLines="2"
+                android:text="@string/sale_other_store" />
         </LinearLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -467,13 +159,14 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSmart"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="48dp"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp"
-        android:layout_marginBottom="6dp"
-        android:textSize="16sp"
+        android:layout_marginBottom="4dp"
+        android:textSize="15sp"
         android:visibility="gone" />
 
+    <!-- Pastki panel (v5.0: ixchamroq) -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
@@ -482,9 +175,9 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="8dp">
+        android:paddingTop="4dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="4dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -503,7 +196,7 @@
                 android:id="@+id/tvTotal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -511,9 +204,11 @@
             android:id="@+id/btnCart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:maxLines="1"
+            android:minHeight="44dp"
             android:text="@string/sale_cart"
-            app:icon="@drawable/ic_cart"
-            android:minHeight="52dp"
-            android:maxLines="2" />
+            app:icon="@drawable/ic_cart" />
     </LinearLayout>
 </LinearLayout>

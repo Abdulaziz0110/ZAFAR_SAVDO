@@ -162,7 +162,7 @@ class MSaleFragment : Fragment() {
         eq.selectAll()
     }
 
-    private fun num(s: String?): Double = s.orEmpty().filter { !it.isWhitespace() }.replace(',', '.').toDoubleOrNull() ?: 0.0
+    private fun num(s: String?): Double = uz.imsoft.shared.NumText.parse(s)
 
     private inner class Adapter : RecyclerView.Adapter<Adapter.VH>() {
         private var items: List<PriceItem> = emptyList()
@@ -180,7 +180,8 @@ class MSaleFragment : Fragment() {
                 val ctx = v.root.context
                 val pr = price(p)
                 val q = Locator.sale.qtyOf(p.name, p.id)
-                v.tvName.text = p.name
+                // v5.0: 1-qator — tovar kodi va nom (Narxlar ro'yxatidagi kabi)
+                v.tvName.text = if (p.id.isNotEmpty()) p.id + " \u00B7 " + p.name else p.name
                 v.tvPrice.text = if (pr > 0) ctx.money(pr, false) else ctx.getString(R.string.ms_no_price)
                 v.tvMeta.text = listOf(p.group, p.plu.takeIf { it.isNotEmpty() }?.let { "PLU $it" }.orEmpty()).filter { it.isNotEmpty() }.joinToString(" · ")
                 v.tvQty.text = if (q > 0) Fmt.qty(q) else ""

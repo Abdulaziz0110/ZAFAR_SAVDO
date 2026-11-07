@@ -1271,7 +1271,8 @@ def data_tick(cfg, cloud, onec, req=None, now=None):
     now = now or dt.datetime.now()
     st = load_state()
     out = []
-    kinds = [req.get("k")] if req and req.get("k") in ("sales", "supp") else ["sales", "supp"]
+    # v4.1: "rep" (hisobotlar) — faqat Admin so'raganda
+    kinds = [req.get("k")] if req and req.get("k") in ("sales", "supp", "rep") else ["sales", "supp"]
     onec.connect()
     try:
         ms = int(time.time() * 1000)
@@ -1285,6 +1286,11 @@ def data_tick(cfg, cloud, onec, req=None, now=None):
             p = onec_data.suppliers_payload(onec, f, t, ms)
             sent = upload_json(cloud, "supp", p, st, force=bool(req))
             out.append("Ta'minotchilar: %d ta%s" % (len(p["list"]), "" if sent else " (o'zgarmagan)"))
+        if "rep" in kinds:
+            f, t = onec_data.period_of(req, 1, now)
+            p = onec_data.reports_payload(onec, f, t, ms)
+            upload_json(cloud, "rep", p, st, force=True)
+            out.append("Hisobotlar: %s%s" % (onec_data.ymd(f), (" (xato: %d)" % len(p["err"])) if p["err"] else ""))
     finally:
         onec.close()
     return "; ".join(out)

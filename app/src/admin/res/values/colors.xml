@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tools/gen_theme.py yaratgan — qo'lda o'zgartirmang -->
+<resources>
+    <color name="brand_primary">#2BD67B</color>
+    <color name="brand_on_primary">#00160A</color>
+    <color name="brand_primary_container">#00512C</color>
+    <color name="brand_on_primary_container">#7FF8B0</color>
+    <color name="brand_secondary">#64D8CB</color>
+    <color name="brand_on_secondary">#00201C</color>
+    <color name="brand_secondary_container">#004A43</color>
+    <color name="brand_on_secondary_container">#9EF2E6</color>
+    <color name="brand_tertiary">#FFC14D</color>
+    <color name="brand_on_tertiary">#2A1D00</color>
+    <color name="brand_tertiary_container">#4A3600</color>
+    <color name="brand_on_tertiary_container">#FFDFA0</color>
+    <color name="brand_error">#FF8A80</color>
+    <color name="brand_on_error">#3A0003</color>
+    <color name="brand_error_container">#6B0007</color>
+    <color name="brand_on_error_container">#FFDAD6</color>
+    <color name="brand_surface">#070B09</color>
+    <color name="brand_on_surface">#D7E3DB</color>
+    <color name="brand_surface_variant">#2A322D</color>
+    <color name="brand_on_surface_variant">#A9B8AE</color>
+    <color name="brand_outline">#6E7D74</color>
+    <color name="brand_outline_variant">#2A322D</color>
+    <color name="brand_inverse_surface">#D7E3DB</color>
+    <color name="brand_inverse_on_surface">#1A211C</color>
+    <color name="brand_inverse_primary">#00693B</color>
+    <color name="brand_surface_dim">#070B09</color>
+    <color name="brand_surface_bright">#2A322D</color>
+    <color name="brand_surface_container_lowest">#040706</color>
+    <color name="brand_surface_container_low">#0C110E</color>
+    <color name="brand_surface_container">#111713</color>
+    <color name="brand_surface_container_high">#171E19</color>
+    <color name="brand_surface_container_highest">#1E2620</color>
+    <color name="brand_debt">#FF8A80</color>
+    <color name="brand_success">#2BD67B</color>
+    <color name="brand_success_container">#00341C</color>
+    <color name="brand_on_success_container">#7FF8B0</color>
+    <color name="brand_warning_container">#4A3600</color>
+    <color name="brand_on_warning_container">#FFDFA0</color>
+</resources>

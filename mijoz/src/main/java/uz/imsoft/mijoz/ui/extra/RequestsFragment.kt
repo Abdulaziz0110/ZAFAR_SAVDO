@@ -39,7 +39,7 @@ class RequestsFragment : MFragment() {
         val (tNote, eNote) = Ui.field(ctx, getString(R.string.rq_note))
         c.addView(tNote)
         c.addView(Ui.button(ctx, getString(R.string.rq_send), icon = R.drawable.ic_check) {
-            val v = eSum.text?.toString().orEmpty().replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
+            val v = uz.imsoft.shared.NumText.parse(eSum.text?.toString())
             if (v <= 0.0) { snack(getString(R.string.rq_err_sum)); return@button }
             MaterialAlertDialogBuilder(ctx).setTitle(R.string.rq_confirm_title).setMessage(getString(R.string.rq_confirm, som(v)))
                 .setPositiveButton(R.string.rq_send) { _, _ ->
@@ -132,8 +132,8 @@ class RequestsFragment : MFragment() {
             MaterialAlertDialogBuilder(ctx).setTitle(R.string.ed_title).setView(scroll)
                 .setPositiveButton(R.string.rq_send) { _, _ ->
                     val lines = fields.mapIndexed { i, (name, q, p) ->
-                        val qty = q.text?.toString().orEmpty().replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
-                        val pr = p.text?.toString().orEmpty().replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
+                        val qty = uz.imsoft.shared.NumText.parse(q.text?.toString())
+                        val pr = uz.imsoft.shared.NumText.parse(p.text?.toString())
                         if (usd[i]) EditLine(name, qty, 0.0, pr) else EditLine(name, qty, pr, 0.0)
                     }
                     val note = en.text?.toString().orEmpty()

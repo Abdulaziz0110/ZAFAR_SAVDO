@@ -120,14 +120,14 @@ class PosFragment : MFragment() {
         body.addView(Ui.hint(ctx, getString(R.string.pos_local_hint), 8))
     }
 
-    private fun num(e: TextInputEditText): Double = e.text?.toString().orEmpty().replace(" ", "").replace(',', '.').toDoubleOrNull() ?: 0.0
+    private fun num(e: TextInputEditText): Double = uz.imsoft.shared.NumText.parse(e.text?.toString())
     private fun plain(v: Double): String = if (v == Math.floor(v)) v.toLong().toString() else v.toString()
 
     private fun save(eNote: TextInputEditText, print: Boolean) {
         if (lines.isEmpty()) { snack(getString(R.string.pos_no_goods)); return }
         val t = total()
         if (t < 0) { snack(getString(R.string.pos_err_discount)); return }
-        val paid = paidText.replace(" ", "").replace(',', '.').toDoubleOrNull() ?: if (customerId == 0L) t else 0.0
+        val paid = uz.imsoft.shared.NumText.parseOrNull(paidText) ?: if (customerId == 0L) t else 0.0
         if (customerId == 0L && paid + 0.009 < t) { snack(getString(R.string.pos_err_cash)); return }
         val stamp = now()
         val ls = lines.toList()

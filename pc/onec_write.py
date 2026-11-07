@@ -8,6 +8,8 @@ Admin -> 1C yozish ("Tasdiqlab kiritish", v3.2). Faqat Admin ilovasida egasi TAS
                                        v3.12: cp — mijozdan to'lov (Оплата_Клента), ci / ce — kassa kirim / chiqim
                                        (КассаПриход / КассаРасход), ge — tovar kartochkasi (narx 1-4, kirim narxi, PLU, nomi),
                                        ng — yangi tovar (namuna tovardan nusxa, Товары),
+                                       v4.1: nk / ke — yangi kontragent / tahrirlash (Контрагенты),
+                                       wo — tovarni hisobdan chiqarish (СписанияТоваров, tannarx 1C qoldig'idan),
                                        undo — oldingi yozuvni bekor qilish (o'chirish belgisi; ge — eski qiymatlar tiklanadi)
   natija -> wr/{inbox}/{id} = {at, ok, st, no, ref, e}
 
@@ -28,11 +30,15 @@ import shutil
 
 log = logging.getLogger("onec_export")
 
-KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "undo"}
+KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk", "ke", "wo", "undo"}
 DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
           "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
 # ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
 GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc", "rate"}
+# v4.1: nk / ke — kontragent maydonlari (grp: "c" mijozlar, "s" ta'minotchilar)
+PARTY_FIELDS = {"nm", "tel", "tel2", "adr", "reg", "grp"}
+PARTY_ATTR = {"nm": "Наименование", "tel": "Тел", "tel2": "Тел2", "adr": "Адрес"}
+PHONE_RE = re.compile(r"[+0-9 ()-]{5,20}")
 PRICE_KEYS = ("p1", "p2", "p3", "p4", "pin")
 KEEP_BACKUPS = 7
 
@@ -79,7 +85,7 @@ def parse_request(rid, item):
         "ks": g("ks"), "ku": g("ku"), "ds": g("ds"), "du": g("du"),
         "bc": str(p.get("bc") or "").strip(), "target": str(p.get("t") or "").strip(),
         "op": str(p.get("op") or "").strip(), "op_code": str(p.get("opc") or "").strip(),
-        "f": {str(a): b for a, b in f.items() if str(a) in GOODS_FIELDS},
+        "f": {str(a): b for a, b in f.items() if str(a) in GOODS_FIELDS or str(a) in PARTY_FIELDS},
     }
 
 
@@ -147,10 +153,51 @@ def problem(req):
             return "yangi tovar nomi yo'q"
         if str(f.get("bc") or "").strip() and not re.fullmatch(r"[0-9A-Za-z]{4,40}", str(f["bc"]).strip()):
             return "shtrix kod noto'g'ri"
+    elif k in ("nk", "ke"):
+        f = req["f"]
+        nm = " ".join(str(f.get("nm") or "").split())
+        if k == "ke" and not req["party"] and not req["party_code"]:
+            return "kontragent ko'rsatilmagan"
+        if k == "nk" and not nm:
+            return "kontragent nomi yo'q"
+        if "nm" in f and not 2 <= len(nm) <= 150:
+            return "kontragent nomi noto'g'ri"
+        for x in ("tel", "tel2"):
+            v = str(f.get(x) or "").strip()
+            if v and not PHONE_RE.fullmatch(v):
+                return "telefon noto'g'ri"
+        if len(str(f.get("adr") or "")) > 250:
+            return "manzil juda uzun"
+        if "grp" in f and f["grp"] not in ("c", "s"):
+            return "guruh noto'g'ri"
+        if k == "ke" and not any(x in f for x in ("nm", "tel", "tel2", "adr", "reg")):
+            return "o'zgarish yo'q"
+    elif k == "wo":
+        if not req["lines"]:
+            return "tovar yo'q"
+        for ln in req["lines"]:
+            if not ln["name"] and not ln["code"]:
+                return "tovar nomi bo'sh"
+            if ln["q"] <= 0:
+                return "miqdor noto'g'ri: %s" % ln["name"]
     elif k == "undo":
         if not req["target"]:
             return "bekor qilinadigan yozuv ko'rsatilmagan"
     return None
+
+
+# 1C konfiguratsiyasidagi Товары / Контрагенты modullari faqat 1C oynasida bor global o'zgaruvchi va funksiyalarga
+# murojaat qiladi (мМобилАпп, Вигрузит_док1 ...). Kompyuter dasturi (COM) ulanganda ular yo'q — 1C bir martalik sozlashni so'raydi.
+COM_SETUP_HINT = ("1C'da bir martalik sozlash kerak: Konfigurator > Konfiguratsiya > \"Модуль внешнего соединения\" "
+                  "(OQING.txt, 4.1 bo'limi)")
+
+
+def explain_1c_error(text):
+    """1C xato matni -> telefonda ko'rinadigan tushuntirish."""
+    t = str(text or "")
+    if re.search(r"(?i)(переменная не определена|процедура или функция с указанным именем не определена)", t):
+        return "%s — %s" % (t[:160], COM_SETUP_HINT)
+    return t
 
 
 def row_values(line, goods, rate=0.0):
@@ -330,6 +377,12 @@ class Writer:
                 return self.new_goods(c, req)
             if k == "rt":
                 return self.set_rate(c, req)
+            if k == "nk":
+                return self.new_party(c, req)
+            if k == "ke":
+                return self.edit_party(c, req)
+            if k == "wo":
+                return self.write_off(c, req)
             return self.document(c, req)
         except WriteError as e:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)}
@@ -337,7 +390,7 @@ class Writer:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)[:250]}
         except Exception as e:  # noqa: BLE001 — 1C xatosi matni telefonga
             log.exception("1C'ga yozishda xato")
-            return {"id": rid, "ok": False, "st": "err", "e": "1C: %s" % str(e)[:250]}
+            return {"id": rid, "ok": False, "st": "err", "e": "1C: %s" % explain_1c_error(str(e))[:290]}
 
     # --- yordamchilar ---
     @staticmethod
@@ -687,6 +740,156 @@ class Writer:
         self.goods_changed = True
         return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Код), "ref": self.uuid_of(c, obj.Ссылка), "doc": "Товары", "new": True, "bc": bc}
 
+    # --- v4.1: kontragentlar ---
+    @staticmethod
+    def find_region(c, name):
+        name = " ".join(str(name or "").split())
+        if not name:
+            return None
+        ref = c.Справочники.Регион.НайтиПоНаименованию(name, True)
+        if ref is None or ref.Пустая():
+            raise WriteError("1C'da region topilmadi: %s" % name)
+        return ref
+
+    def _apply_party(self, c, obj, f):
+        old = {}
+        for key, attr in PARTY_ATTR.items():
+            if key not in f:
+                continue
+            v = " ".join(str(f[key] or "").split()) if key == "nm" else str(f[key] or "").strip()
+            old[attr] = self._plain(getattr(obj, attr))
+            setattr(obj, attr, v[:150] if key == "nm" else v[:250])
+        if str(f.get("reg") or "").strip():
+            old["Регион"] = None  # COM havola jurnalga yozilmaydi (bekor qilishda region o'zgarmaydi)
+            obj.Регион = self.find_region(c, f["reg"])
+        return old
+
+    def new_party(self, c, req):
+        f = req["f"]
+        nm = " ".join(str(f.get("nm") or "").split())[:150]
+        cat = c.Справочники.Контрагенты
+        dup = cat.НайтиПоНаименованию(nm, True)
+        if dup is not None and not dup.Пустая():
+            raise WriteError("bu nomli kontragent 1C'da bor (kodi %s)" % dup.Код)
+        obj = cat.СоздатьЭлемент()
+        obj.Родитель = cat.Поставщики if f.get("grp") == "s" else cat.Клиенты
+        try:
+            obj.УстановитьНовыйКод()
+        except Exception:  # noqa: BLE001 — avtomatik raqamlashda kerak emas
+            pass
+        fields = dict(f)
+        fields["nm"] = nm
+        self._apply_party(c, obj, fields)
+        obj.Записать()
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Код), "ref": self.uuid_of(c, obj.Ссылка), "doc": "Контрагенты", "new": True}
+
+    def edit_party(self, c, req):
+        ref = self.find_party(c, req["party"], req["party_code"])
+        obj = ref.ПолучитьОбъект()
+        f = dict(req["f"])
+        if "nm" in f:
+            nm = " ".join(str(f["nm"] or "").split())
+            dup = c.Справочники.Контрагенты.НайтиПоНаименованию(nm, True)
+            if dup is not None and not dup.Пустая() and str(dup.Код) != str(ref.Код):
+                raise WriteError("bu nomli kontragent 1C'da bor (kodi %s)" % dup.Код)
+        old = self._apply_party(c, obj, f)
+        obj.Записать()
+        keep = {k: v for k, v in old.items() if v is not None}
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(ref.Код), "ref": self.uuid_of(c, ref), "doc": "Контрагенты", "old": keep}
+
+    # --- v4.1: hisobdan chiqarish ---
+    def stock(self, c, goods, store):
+        """Tovar qoldig'i (miqdor, summa so'm, summa $) — РегистрНакопления.Товар."""
+        q = c.NewObject("Запрос")
+        q.Текст = ("ВЫБРАТЬ ЕСТЬNULL(СУММА(О.КоличествоОстаток), 0) КАК Кол, ЕСТЬNULL(СУММА(О.СуммаСумОстаток), 0) КАК Сум, "
+                   "ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК Вал ИЗ РегистрНакопления.Товар.Остатки(, Товар = &Т И Склад = &С) КАК О")
+        q.УстановитьПараметр("Т", goods)
+        q.УстановитьПараметр("С", store)
+        r = q.Выполнить().Выбрать()
+        if r.Следующий():
+            return float(r.Кол or 0), float(r.Сум or 0), float(r.Вал or 0)
+        return 0.0, 0.0, 0.0
+
+    def write_off(self, c, req):
+        """СписанияТоваров: tannarx — o'rtacha (qoldiq summasi / qoldiq miqdori), qoldiq bo'lmasa — kirim narxi.
+        1C hujjat modulida dollarli tovar uchun xato bor (Стр.ОстКол) — bunday hujjatda harakatlar shu yerda yoziladi
+        (modul bilan aynan bir xil: Товар — расход, Прибль — СписанияМахсулот)."""
+        store = c.Константы.Склад1.Получить()
+        rate = c.Константы.Курс.Получить()
+        obj = c.Документы.СписанияТоваров.СоздатьДокумент()
+        obj.Дата = self.now()
+        obj.Склад = store
+        obj.Курс = rate
+        obj.Подбор = True
+        obj.Комментарий = ("Telefondan (Admin): " + req["note"]).strip()[:250]
+        total_s = total_u = 0.0
+        any_usd = False
+        short = []
+        rows = []
+        for ln in req["lines"]:
+            g = self.find_goods(c, ln["name"], ln["code"])
+            usd = self.goods_info(c, g)["cur"] == "Вал"
+            bq, bs, bu = self.stock(c, g, store)
+            qty = ln["q"]
+            avg_s = bs / bq if bq > 0 else float(g.ПриходЦена or 0)
+            avg_u = bu / bq if bq > 0 else float(g.ПриходВал or 0)
+            r = obj.Таблица.Добавить()
+            r.Товары = g
+            r.ЕдИзм = g.ЕдИзм
+            r.Код = g.Код
+            r.Кол = qty
+            r.Ост = bq
+            r.ОстСуммаСум = bs
+            r.ОстСуммаВал = bu
+            r.УртачаНархСум = round(avg_s, 2)
+            r.УртачаНархВал = round(avg_u, 4)
+            if usd:
+                any_usd = True
+                r.СуммаВал = round(bu if qty == bq else qty * avg_u, 4)
+                total_u += r.СуммаВал
+            else:
+                r.СуммаСум = round(bs if qty == bq else qty * avg_s, 2)
+                total_s += r.СуммаСум
+            if qty > bq:
+                short.append(str(g.Наименование))
+            rows.append((g, qty, r, usd))
+        obj.ВсегоСум = round(total_s, 2)
+        obj.ВсегоВал = round(total_u, 4)
+        manual = False
+        if not any_usd:
+            obj.Записать(c.РежимЗаписиДокумента.Проведение)
+        else:
+            manual = True
+            obj.ОбменДанными.Загрузка = True
+            obj.Проведен = True
+            mv = obj.Движения
+            mv.Товар.Записывать = True
+            mv.Прибль.Записывать = True
+            for g, qty, r, usd in rows:
+                m = mv.Товар.Добавить()
+                m.ВидДвижения = c.ВидДвиженияНакопления.Расход
+                m.Период = obj.Дата
+                m.Склад = store
+                m.Товар = g
+                m.Количество = qty
+                if usd:
+                    m.СуммаВал = r.СуммаВал
+                else:
+                    m.СуммаСум = r.СуммаСум
+                p = mv.Прибль.Добавить()
+                p.Период = obj.Дата
+                p.ХаракатТури = c.Перечисления.ХарактаТури.СписанияМахсулот
+                p.Товар = g
+                p.Кол = qty
+                p.ПриходСумма = r.СуммаСум
+                p.ПриходВал = r.СуммаВал
+            obj.Записать()
+        res = {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, obj.Ссылка),
+               "doc": "СписанияТоваров", "manual": manual}
+        if short:
+            res["e"] = "qoldiqdan ko'p chiqarildi: %s" % ", ".join(short)[:200]
+        return res
+
     # --- v4.0: dollar kursi ---
     def set_rate(self, c, req):
         rate = round(_fnum(req["f"].get("rate")), 2)
@@ -731,6 +934,17 @@ class Writer:
                         setattr(obj, attr, v)
                 obj.Записать()
             self.goods_changed = True
+        elif doc == "Контрагенты":
+            obj = c.Справочники.Контрагенты.ПолучитьСсылку(uid).ПолучитьОбъект()
+            if obj is None:
+                raise WriteError("1C'da kontragent topilmadi")
+            if t.get("new"):
+                obj.УстановитьПометкуУдаления(True)
+            else:
+                for attr, v in (t.get("old") or {}).items():
+                    if v is not None:
+                        setattr(obj, attr, v)
+                obj.Записать()
         elif doc == "Штрих":
             ref = c.Справочники.Штрих.ПолучитьСсылку(uid)
             obj = ref.ПолучитьОбъект()

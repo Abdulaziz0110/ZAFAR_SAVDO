@@ -21,13 +21,24 @@ import uz.imsoft.shared.report.Stamp
 
 /** v3.2 kod bilan yig'iladigan ekranlar uchun asos: sarlavha + orqaga, xabar, xavfsiz ishga tushirish. */
 abstract class CodeFragment : Fragment() {
+    companion object {
+        const val ARG_ROOT = "root_tab"
+    }
+
     protected val ctx: Context get() = requireContext()
 
     abstract fun build(inflater: LayoutInflater): View
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View = build(inflater)
 
-    protected fun page(title: Int): Ui.Page = Ui.page(requireContext(), getString(title), R.drawable.ic_arrow_back) { navigator().pop() }
+    /** v5.0: pastki menyudan ochilgan ekranda orqaga tugmasi bo'lmaydi. */
+    protected val isRootTab: Boolean get() = arguments?.getBoolean(ARG_ROOT) == true
+
+    protected fun page(title: Int): Ui.Page =
+        Ui.page(requireContext(), getString(title), if (isRootTab) 0 else R.drawable.ic_arrow_back) { navigator().pop() }
+
+    /** Shu ekranni pastki menyu bo'limi sifatida ochish uchun. */
+    fun asRootTab(): CodeFragment = apply { arguments = (arguments ?: Bundle()).apply { putBoolean(ARG_ROOT, true) } }
 
     protected fun listPage(title: Int, onRow: (Int) -> Unit): Ui.ListPage =
         Ui.listPage(requireContext(), getString(title), R.drawable.ic_arrow_back, { navigator().pop() }, onRow)

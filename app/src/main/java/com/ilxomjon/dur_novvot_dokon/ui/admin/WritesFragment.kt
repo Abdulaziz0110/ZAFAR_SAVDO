@@ -58,6 +58,9 @@ class WritesFragment : CodeFragment() {
             WriteKind.GOODS_EDIT -> R.string.of_goods_edit
             WriteKind.NEW_GOODS -> R.string.of_new_goods
             WriteKind.RATE -> R.string.rt_title
+            WriteKind.PARTY_NEW -> R.string.kf_new_title
+            WriteKind.PARTY_EDIT -> R.string.kf_edit_title
+            WriteKind.WRITE_OFF -> R.string.wo_title
             else -> R.string.wr_undo
         },
     )
@@ -73,6 +76,9 @@ class WritesFragment : CodeFragment() {
         WriteKind.GOODS_EDIT -> R.drawable.ic_price
         WriteKind.NEW_GOODS -> R.drawable.ic_add_box
         WriteKind.RATE -> R.drawable.ic_currency
+        WriteKind.PARTY_NEW -> R.drawable.ic_person_add
+        WriteKind.PARTY_EDIT -> R.drawable.ic_person_search
+        WriteKind.WRITE_OFF -> R.drawable.ic_assignment_return
         else -> R.drawable.ic_undo
     }
 
@@ -105,11 +111,13 @@ class WritesFragment : CodeFragment() {
                 WriteKind.BARCODE -> w.req.party + " · " + w.req.barcode
                 WriteKind.UNDO -> w.req.target
                 WriteKind.CASH_IN, WriteKind.CASH_OUT -> w.req.op
-                WriteKind.NEW_GOODS -> w.req.fields[uz.imsoft.shared.onec.GoodsField.NAME].orEmpty()
+                WriteKind.NEW_GOODS, WriteKind.PARTY_NEW -> w.req.fields[uz.imsoft.shared.onec.GoodsField.NAME].orEmpty()
+                WriteKind.WRITE_OFF -> w.req.lines.joinToString(", ") { it.name }.take(60)
                 WriteKind.RATE -> w.req.fields[uz.imsoft.shared.onec.GoodsField.RATE].orEmpty()
                 else -> w.req.party
             }
-            val noMoney = w.req.kind == WriteKind.BARCODE || w.req.kind == WriteKind.UNDO || w.req.kind == WriteKind.RATE || w.req.kind in WriteKind.GOODS
+            val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF) ||
+                w.req.kind in WriteKind.GOODS
             Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w), if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
         })
     }
@@ -127,6 +135,8 @@ class WritesFragment : CodeFragment() {
         val names = mapOf(
             "p1" to R.string.of_p1, "p2" to R.string.of_p2, "p3" to R.string.of_p3, "p4" to R.string.of_p4, "pin" to R.string.of_cost,
             "plu" to R.string.of_plu, "nm" to R.string.of_name, "bc" to R.string.of_barcode,
+            uz.imsoft.shared.onec.PartyField.PHONE to R.string.kf_phone, uz.imsoft.shared.onec.PartyField.PHONE2 to R.string.kf_phone2,
+            uz.imsoft.shared.onec.PartyField.ADDRESS to R.string.kf_address, uz.imsoft.shared.onec.PartyField.REGION to R.string.kf_region,
         )
         for ((k, v) in w.req.fields) names[k]?.let { sb.append(getString(it)).append(": ").append(v).append('\n') }
         if (w.req.barcode.isNotEmpty()) sb.append(w.req.barcode).append('\n')

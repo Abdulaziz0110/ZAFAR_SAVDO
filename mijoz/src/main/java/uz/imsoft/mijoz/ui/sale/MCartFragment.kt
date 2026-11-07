@@ -34,7 +34,7 @@ class MCartFragment : MFragment() {
         launchOnStarted { Locator.pos.state.collect { render() } }
     }
 
-    private fun num(s: String): Double = s.filter { !it.isWhitespace() }.replace(',', '.').toDoubleOrNull() ?: 0.0
+    private fun num(s: String): Double = uz.imsoft.shared.NumText.parse(s)
     private fun plain(v: Double): String = Fmt.qty(v).filter { !it.isWhitespace() }
 
     private fun total(): Double {

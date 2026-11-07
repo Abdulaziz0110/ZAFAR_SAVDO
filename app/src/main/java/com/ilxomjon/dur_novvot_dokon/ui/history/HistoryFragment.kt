@@ -73,20 +73,6 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.history_orders))
         binding.tabs.addTab(binding.tabs.newTab().setText(R.string.history_payments))
         ensureTabs()
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_pdf -> {
-                    val lf = childFragmentManager.findFragmentByTag(TAG_LEDGER) as? com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerFragment
-                    if (lf != null) {
-                        val html = com.ilxomjon.dur_novvot_dokon.ui.ledger.LedgerPdf.html(requireContext(), ServiceLocator.share.currentClient()?.name.orEmpty(), lf.currentState())
-                        com.ilxomjon.dur_novvot_dokon.ui.ledger.ReceiptActions.printHtml(requireContext(), html, "1C_tarixi")
-                    }
-                    true
-                }
-                R.id.action_orders -> { com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager); true }
-                else -> false
-            }
-        }
         binding.btnOrdersBanner.setOnClickListener { com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager) }
         binding.btnClientPick.setOnClickListener { pickClient() }
         launchOnStarted {
@@ -177,8 +163,6 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
         val ctx = requireContext()
         val ledger = binding.tabs.selectedTabPosition == TAB_ALL
         binding.ledgerPane.show(ledger)
-        binding.toolbar.menu.findItem(R.id.action_pdf)?.isVisible = ledger
-        binding.toolbar.menu.findItem(R.id.action_orders)?.isVisible = ledger && ServiceLocator.shareStore.acceptOrders && ServiceLocator.shareStore.isConfigured
         binding.recycler.show(!ledger)
         if (ledger) {
             binding.tvEmpty.show(false)

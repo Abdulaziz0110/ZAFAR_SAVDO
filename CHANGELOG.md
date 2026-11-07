@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## 5.0 (versionCode 29), Savdo Mijoz 5.0 (versionCode 19) — 2026-11-07
+Siz aytgan 24 ta yaxshilash. Qisqacha:
+* **Bir nechta savdo birdan**: Bosh sahifada "Ochiq savdolar" — yangi savdo boshlanganda joriysi kutishga o'tadi,
+  bosilsa qaytadi. Pauza belgisi kerak emas.
+* **Savdo ekrani ixcham**: eng yuqorida qidiruv + skaner + sozlash; do'kon, narx turi, valyuta va tannarx — dialogda;
+  dialog yopilsa kursor qidiruvda va klaviatura ochiq. Filtr qatori, "odatdagini qo'shish" va park olib tashlandi.
+* **Tovar qatori**: 1-qator — kod va nom; 2-qator — narx, PLU, blok. Tovar dialogi kichik, qizil "Kerak emas" tugmasi bor,
+  pastida shu mijozning shu tovar bo'yicha tarixi (qachon, qancha, qanchadan).
+* **To'lov savatchada**: tugash dialogi yo'q — to'lov ro'yxatning oxirida, tovarlardan ajralib turadi.
+  Printer: 1 / 1+2 / 2 / Cheksiz. Asosiy tugma uzoq bosilsa savatcha tozalanadi.
+* **Tavsiya to'liq tarixdan**: mijozning 1C'dagi barcha xaridi hisobga olinadi (oldin faqat telefonda qilingan savdolar edi).
+* **Minglik ajratgich** hamma raqam maydonida ("12 000"), maydonlar qisqartirildi — uch ilovada ham.
+* **Dollar kursi internetdan**: bank kursi (bozorga yaqin) va Markaziy bank kursi sana bilan ko'rsatiladi;
+  bosilsa maydonga tushadi. 1C'ga faqat siz tasdiqlaganda yoziladi.
+* **Yangilash bosqichli**: har daqiqada emas — ish vaqtida, kompyuterdagi ma'lumot o'zgarsa yoki qo'lda.
+  Bitta tugma kun → hafta → oy → yil → hammasini oladi; avval telefon bazasiga yoziladi, ko'rsatish bazadan.
+* **Bo'limlar**: Bosh sahifa, Savdo, To'lov, Tarix va 5-si — Adminda "Boshqaruv", Agentda "Sozlamalar".
+  Boshqaruv — qidiruvli bitta ro'yxat (1C ko'rish / 1C'ga yozish / Odamlar / Tovarlar / Ilova). Har sozlama bitta joyda.
+* **Sozlamalar**: ism/telefon yo'q (ular Profilda, versiya ham shu yerda), ko'rinish ixcham, plitkalar 2 ustun,
+  plitka uzoq bosilsa to'liq izoh chiqadi.
+* **Agent faqat sotadi**: savdo, to'lov, tarix, shtrix kod. Admin ishlari Agentda yo'q.
+* **Uch ilova — uch qiyofa**: Admin qorong'i "terminal" (monospace raqam, o'tkir burchak, yashil-amber urg'u, yangi ">_" belgisi),
+  Agent yorug' va do'stona, Mijoz indigo va juda yumaloq. Adminda yorug'/qorong'i tanlovi yo'q — u har doim qorong'i.
+* **Tarix ekrani**: printer belgisi va sarlavha olib tashlandi — yuqorida uch bo'lim, keyin qidiruv, filtrlar, sanoq, ro'yxat.
+
+## 4.1 (versionCode 28) — 2026-11-06
+* **Tarozi xatosi tuzatildi** ("Ожидается имя"): 1C so'rovida "В" nomi alias sifatida ishlatilgan edi — bu 1C kalit so'zi.
+  Shu xato ta'minotchilar qoldig'ini ham o'qitmasdi.
+* **Narx belgilash**: bir nechta tovarga birdan 1–4-narx — guruh, oxirgi kirim yoki qo'lda tanlash;
+  kelgan narx + summa / + foiz, hozirgi narxdan foiz, aniq narx; yaxlitlash; yozishdan oldin eski → yangi ro'yxat.
+* **Yangi mijoz / ta'minotchi** va kontragentni tahrirlash (nom, telefon, manzil, region).
+* **Hisobdan chiqarish**: buzilgan tovarni 1C'dan chiqarish; tannarx 1C qoldig'idan. Dollarli tovarda 1C modulidagi
+  xato chetlab o'tiladi — harakatlarni dasturning o'zi yozadi.
+* **Hisobotlar**: foyda (tovar bo'yicha ham), xarajatlar, kassa qoldig'i va aylanmasi, ombor qoldig'i, qarzlar.
+* 1C'da bir martalik sozlash kerak bo'lsa, xato matnida nima qilish yozilgan (OQING.txt, 4.1 bo'limi).
+
 ## 4.0.2 (versionCode 27) — 2026-11-02
 * Admin telefonida qilingan savdo agentlarda ham darhol ko'rinadi ("1C'ga ketmoqda", 1C'dan kelgach almashadi).
 * Agent tarixi tezroq yangilanadi; "Yangilash" tugmasi tarixni ham oladi.

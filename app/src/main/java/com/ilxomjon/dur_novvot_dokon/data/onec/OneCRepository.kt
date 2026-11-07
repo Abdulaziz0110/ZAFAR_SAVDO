@@ -34,6 +34,8 @@ data class OneCState(
     val writes: List<WriteItem> = emptyList(),
     val requestedAt: Long = 0L,
     val requestedKind: String = "",
+    /** v4.1: 1C hisobotlari (oxirgi so'ralgan davr). */
+    val reports: uz.imsoft.shared.onec.OneCReports? = null,
 )
 
 /**
@@ -90,7 +92,8 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         withContext(Dispatchers.IO) {
             val sales = runCatching { File(dir(), "sales.json").takeIf { it.isFile }?.readBytes()?.let(OneCCodec::parseSales) }.getOrNull()
             val supp = runCatching { File(dir(), "supp.json").takeIf { it.isFile }?.readBytes()?.let(OneCCodec::parseSuppliers) }.getOrNull()
-            _state.value = _state.value.copy(sales = sales, suppliers = supp, writes = readWrites())
+            val rep = runCatching { File(dir(), "rep.json").takeIf { it.isFile }?.readBytes()?.let(uz.imsoft.shared.onec.OneCReportsCodec::parse) }.getOrNull()
+            _state.value = _state.value.copy(sales = sales, suppliers = supp, writes = readWrites(), reports = rep)
         }
         loaded = true
     }
@@ -108,6 +111,12 @@ class OneCRepository(private val context: Context, private val store: ShareStore
                     tmp.writeText(OneCCodec.salesJson(merged))
                     if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
                     _state.value = _state.value.copy(sales = merged)
+                    true
+                }
+                "rep" -> {
+                    val r = uz.imsoft.shared.onec.OneCReportsCodec.parse(bytes)
+                    File(dir(), "rep.json").writeBytes(bytes)
+                    _state.value = _state.value.copy(reports = r)
                     true
                 }
                 "supp" -> {

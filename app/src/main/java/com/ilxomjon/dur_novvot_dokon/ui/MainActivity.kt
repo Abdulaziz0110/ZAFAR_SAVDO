@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity(), Navigator {
         super.attachBaseContext(wrapped)
     }
 
-    private val tabIds = listOf(R.id.nav_home, R.id.nav_sale, R.id.nav_payment, R.id.nav_history, R.id.nav_report)
+    private val tabIds = listOf(R.id.nav_home, R.id.nav_sale, R.id.nav_payment, R.id.nav_history, R.id.nav_last)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +69,7 @@ class MainActivity : AppCompatActivity(), Navigator {
         // v3.0 Admin: agentlar ko'prigi yoqilgan bo'lsa ishlab tursin (ilova ochilganda — fon cheklovlari tufayli)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.relay.RelayService.ensureRunning(applicationContext)
 
+        applyRoleToNav()
         binding.bottomNav.setOnItemSelectedListener { item ->
             showTab(item.itemId)
             true
@@ -343,7 +344,21 @@ class MainActivity : AppCompatActivity(), Navigator {
         R.id.nav_sale -> SaleFragment()
         R.id.nav_payment -> PaymentFragment()
         R.id.nav_history -> HistoryFragment()
-        else -> ReportFragment()
+        // v5.0: oxirgi bo'lim — Admin'da Boshqaruv, agentda Sozlamalar
+        else -> if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment().asRootTab()
+        } else {
+            com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment().asRootTab()
+        }
+    }
+
+    /** Oxirgi bo'limning nomi va ikonkasi rolga qarab. */
+    private fun applyRoleToNav() {
+        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        binding.bottomNav.menu.findItem(R.id.nav_last)?.apply {
+            setTitle(if (admin) R.string.nav_manage else R.string.nav_settings)
+            setIcon(if (admin) R.drawable.ic_tune else R.drawable.ic_settings)
+        }
     }
 
     private fun showTab(id: Int) {

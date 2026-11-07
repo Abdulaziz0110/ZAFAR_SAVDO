@@ -40,6 +40,8 @@ class WriteFormFragment : CodeFragment() {
     private var sending = false
 
     private val isGoods: Boolean get() = kind != WriteKind.SUPPLIER_PAY
+    /** v4.1: hisobdan chiqarish — kontragentsiz, faqat tovar va miqdor (tannarx 1C qoldig'idan). */
+    private val isWriteOff: Boolean get() = kind == WriteKind.WRITE_OFF
 
     override fun build(inflater: LayoutInflater): View {
         if (party.isEmpty()) {
@@ -50,14 +52,18 @@ class WriteFormFragment : CodeFragment() {
             WriteKind.RECEIPT -> R.string.wf_receipt
             WriteKind.SUPPLIER_PAY -> R.string.wf_pay
             WriteKind.SUPPLIER_RETURN -> R.string.wf_sreturn
+            WriteKind.WRITE_OFF -> R.string.wo_title
             else -> R.string.wf_creturn
         }
         val p = page(title)
         val c = p.content
-        c.addView(Ui.hint(ctx, getString(R.string.wf_hint), 4))
-        c.addView(Ui.section(ctx, getString(if (kind == WriteKind.CLIENT_RETURN) R.string.wf_client else R.string.wf_supplier)))
-        tvParty = Ui.title(ctx, "", 4).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() })
+        c.addView(Ui.hint(ctx, getString(if (isWriteOff) R.string.wo_hint else R.string.wf_hint), 4))
+        tvParty = Ui.title(ctx, "", 4)
+        if (!isWriteOff) {
+            c.addView(Ui.section(ctx, getString(if (kind == WriteKind.CLIENT_RETURN) R.string.wf_client else R.string.wf_supplier)))
+            c.addView(tvParty)
+            c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() })
+        }
         if (isGoods) {
             c.addView(Ui.section(ctx, getString(R.string.wf_goods)))
             linesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
@@ -93,13 +99,17 @@ class WriteFormFragment : CodeFragment() {
         if (isGoods) {
             linesBox.removeAllViews()
             lines.forEachIndexed { i, l ->
+                if (isWriteOff) {
+                    linesBox.addView(Ui.item(ctx, "${i + 1}) ${l.name}", getString(R.string.wo_line, fmtQty(l.qty))) { editLine(i) })
+                    return@forEachIndexed
+                }
                 val price = if (l.priceSom > 0) som(l.priceSom) else usd(l.priceUsd)
                 val sum = if (l.priceSom > 0) som(l.sumSom) else usd(l.sumUsd)
                 linesBox.addView(Ui.item(ctx, "${i + 1}) ${l.name}", getString(R.string.oc_line, fmtQty(l.qty), price, sum)) { editLine(i) })
             }
             if (lines.isEmpty()) linesBox.addView(Ui.hint(ctx, getString(R.string.wf_no_goods)))
             val r = request()
-            tvTotal.text = getString(R.string.wf_total, money2(r.totalSom, r.totalUsd))
+            tvTotal.text = if (isWriteOff) getString(R.string.wo_total, lines.size) else getString(R.string.wf_total, money2(r.totalSom, r.totalUsd))
         } else tvTotal.text = ""
     }
 
@@ -124,6 +134,10 @@ class WriteFormFragment : CodeFragment() {
     }
 
     private fun addLine() {
+        if (isWriteOff) {
+            Pickers.product(ctx) { p -> Pickers.qty(ctx, p.name, 0.0) { q -> lines += WriteLine(p.name, p.id, q, 0.0, 0.0); render() } }
+            return
+        }
         Pickers.product(ctx) { p ->
             val rate = ServiceLocator.catalog.state.value.rate
             val usdMain = !p.baseIsSom
@@ -144,6 +158,7 @@ class WriteFormFragment : CodeFragment() {
         MaterialAlertDialogBuilder(ctx).setTitle(l.name)
             .setItems(arrayOf(getString(R.string.wf_edit), getString(R.string.wf_remove))) { _, w ->
                 if (w == 1) { lines.removeAt(i); render() }
+                else if (isWriteOff) Pickers.qty(ctx, l.name, l.qty) { q -> lines[i] = l.copy(qty = q); render() }
                 else Pickers.qtyPrice(ctx, l.name, l.qty, l.priceSom, l.priceUsd, l.priceSom == 0.0 && l.priceUsd > 0) { q, s, u ->
                     val usdMain = l.priceSom == 0.0 && l.priceUsd > 0
                     lines[i] = l.copy(qty = q, priceSom = if (usdMain) 0.0 else s, priceUsd = if (usdMain) u else 0.0)
@@ -171,8 +186,11 @@ class WriteFormFragment : CodeFragment() {
         }
         if (!ServiceLocator.onec.ready) { snack(getString(R.string.oc_no_cloud)); return }
         val summary = buildString {
-            append(tvParty.text).append('\n')
-            if (isGoods) {
+            if (!isWriteOff) append(tvParty.text).append('\n')
+            if (isWriteOff) {
+                r.lines.forEach { l -> append("• ").append(l.name).append(" — ").append(fmtQty(l.qty)).append('\n') }
+                append(getString(R.string.wo_cost_note))
+            } else if (isGoods) {
                 append(getString(R.string.wf_sum_lines, r.lines.size)).append('\n')
                 append(getString(R.string.wf_total, money2(r.totalSom, r.totalUsd)))
             } else append(getString(R.string.wf_total, money2(r.totalSom, r.totalUsd)))

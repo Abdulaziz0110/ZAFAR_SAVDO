@@ -1,9 +1,56 @@
-# Holat — Savdo Agent / Savdo Admin 4.0.2 (versionCode 27) + Savdo Mijoz 2.0.1 (versionCode 18), 2026-11-02
+# Holat — Savdo Agent / Savdo Admin 5.0 (versionCode 29) + Savdo Mijoz 5.0 (versionCode 19), 2026-11-07
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
+
+
+## 5.0 — 24 ta yaxshilash (Admin / Agent / Mijoz)
+Raqamlar — sizning ro'yxatingiz tartibida.
+
+| # | Narsa | Holat |
+|---|---|---|
+| 1 | Bir vaqtda bir nechta savdo oynasi: Bosh sahifada "Ochiq savdolar" ro'yxati, yangi savdo boshlanganda joriysi avtomatik kutishga o'tadi, bosilsa qaytadi | VERIFIED (kompilyatsiya + savatcha testlari) / telefonda IMPLEMENTED-UNVERIFIED |
+| 2 | Dollar kursi internetdan: bank kursi (bozorga yaqin) va Markaziy bank kursi, sana bilan; bosilsa maydonga tushadi, 1C'ga faqat tasdiqlasangiz yoziladi | VERIFIED (`RateQuoteTest` — ikki xil sayt formati) / internetda IMPLEMENTED-UNVERIFIED |
+| 3 | Pastdagi 5 bo'lim: Bosh sahifa, Savdo, To'lov, Tarix, 5-si — Adminda "Boshqaruv", Agentda "Sozlamalar" | VERIFIED (menyu + rol testlari) |
+| 4 | "Boss" rejimi uch nuqta menyusida (Adminda) | IMPLEMENTED-UNVERIFIED |
+| 5 | Takrorlangan funksiyalar olib tashlandi — har ish bitta joyda (Savdodagi filtr/park/takror, tugash dialogi, Tarix menyusi, Sozlamalardagi dubllar) | VERIFIED (o'chirilgan fayllar: FinishSheet, ParkedSheet, CartAdapter) |
+| 6 | Savdo ekrani ixcham: eng yuqorida qidiruv + skaner + sozlash, do'kon/narx turi/tannarx dialogda, pastdagi panel kichik | IMPLEMENTED-UNVERIFIED (telefonda ko'rish kerak) |
+| 7 | Tovar qatori: 1-qator — kod va nom, 2-qator — narx, PLU va blok; "taxminiy oldin olingan" matni yo'q | VERIFIED (kompilyatsiya) |
+| 8 | "Savdo" bosilsa dialog ochiladi; dialog yopilsa kursor qidiruvda, klaviatura ochiq | IMPLEMENTED-UNVERIFIED |
+| 9 | Tovar dialogi kichik, maydonlar qisqa, pastdagi uch tugma yo'q, qizil "Kerak emas" tugmasi bor (taklifdan bir hafta chiqmaydi) | VERIFIED (kompilyatsiya + FeedbackReason) |
+| 10 | Pauza belgisi yo'q; asosiy tugma uzoq bosilsa "hammasini tozalash" so'raladi | IMPLEMENTED-UNVERIFIED |
+| 11 | Tugash dialogi yo'q — to'lov savatcha ro'yxatining oxirida, tovar qatorlaridan ajralib turadi | IMPLEMENTED-UNVERIFIED |
+| 12 | Hamma joyda minglik ajratiladi ("12 000") va maydonlar qisqa — Agent, Admin va Mijozda | VERIFIED (`NumTextTest`, `NumTextRoundTripTest`; Mijozda ham `NumText.parse`) |
+| 13 | Salomlashish / telefon / chiqish / ilova haqida — alohida "Profil" ekranida (versiya faqat shu yerda) | VERIFIED (kompilyatsiya) |
+| 14 | Printer tanlovi: Printer 1 / Printer 1+2 / Printer 2 / Cheksiz | IMPLEMENTED-UNVERIFIED (printerda sinash kerak) |
+| 15 | Dadaxon aka uchun 4-narx — faqat taklif, o'zgartirib bo'ladi | VERIFIED (narx maydoni ochiq) |
+| 16 | Miqdor dialogining pastida shu mijozning shu tovar bo'yicha tarixi (qachon, qancha, qanchadan) | VERIFIED (`LedgerOrdersTest`) / 1C ma'lumoti bilan IMPLEMENTED-UNVERIFIED |
+| 17 | Tavsiya/tahlil endi mijozning HAMMA xaridini hisobga oladi (1C tarixi + telefon savdolari, 6 soat / 0,5 % ichida takror hisoblanmaydi) | VERIFIED (`suggestionsLearnFromShopSales`) |
+| 18 | Tarix ekrani: printer belgisi va "Tarix" sarlavhasi yo'q; yuqorida uch bo'lim, keyin qidiruv, filtrlar, sanoq, ro'yxat | IMPLEMENTED-UNVERIFIED |
+| 19 | Har daqiqada yangilash yo'q: faqat ish vaqtida, kompyuterdagi ma'lumot o'zgarsa yoki qo'lda; bitta tugma kun → hafta → oy → yil → hammasi bosqichida oladi, avval telefon bazasiga yozadi, ko'rsatish bazadan | VERIFIED (`LedgerDb`, bosqich testlari) / uzoq ishlashi IMPLEMENTED-UNVERIFIED |
+| 20 | Sozlamalar: ism/telefon yo'q, versiya pastda (Profilda), ko'rinish ixcham, 2 ustunli plitkalar, uzoq bosilsa to'liq izoh | VERIFIED (kompilyatsiya) |
+| 21 | Admin — faqat egasiga, to'liq huquq; Agent — faqat savdo, to'lov, tarix, shtrix kod (admin ishlari yo'q) | VERIFIED (`AppRoleTest` + gating) |
+| 22 | Uch ilova — uch qiyofa: Admin qorong'i "terminal" (monospace raqam, o'tkir burchak, yashil-amber urg'u, yangi belgi `>_`), Agent yorug' va do'stona (yumaloq), Mijoz indigo va juda yumaloq | VERIFIED (uch xil mavzu/rang/shrift/belgi, res tekshiruvi 0 xato) / ko'rinishi telefonda IMPLEMENTED-UNVERIFIED |
+| 23 | Adminda Boshqaruv/Boss/Sozlamalar chalkashligi: Boshqaruv — qidiruvli bitta ro'yxat (1C ko'rish / 1C'ga yozish / Odamlar / Tovarlar / Ilova), har sozlama bitta joyda | VERIFIED (kompilyatsiya) |
+| 24 | Mijoz interfeysi butunlay boshqacha va shu yaxshilashlar unda ham: indigo mavzu, kod+nom qatori, minglik ajratish, 1C bazasidan statistika va tarix | VERIFIED (kompilyatsiya, Mijoz testlari) / telefonda IMPLEMENTED-UNVERIFIED |
+
+### 5.0 — qo'shimcha
+| Narsa | Holat |
+|---|---|
+| Admin mavzusi har doim qorong'i — Sozlamalarda yorug'/qorong'i tanlovi Adminda ko'rsatilmaydi (ishlamaydigan tugma qolmasin) | VERIFIED |
+| Agent palitrasi `app/src/main/res`, Admin palitrasi `app/src/admin/res` (flavor main'dan ustun) — `tools/gen_theme.py` yaratadi | VERIFIED (`tools/res_check_all.sh`: agent/admin/mijoz — 0 xato) |
+| Kurs manbalari: `nbu.uz/uz/exchange-rates/json/` (bank) va `cbu.uz/uz/arkhiv-kursov-valyut/json/USD/` (rasmiy); o'qish "bag'rikeng" — sayt maydon nomini o'zgartirsa ham USD topiladi, topilmasa oxirgi saqlangani ko'rsatiladi | VERIFIED (parse testlari) / saytlar javobi IMPLEMENTED-UNVERIFIED |
+| Minglik ajratgich bilan yozilgan sonni o'qish — bo'shliq, NBSP, "narrow" bo'shliq va apostrof tushadi | VERIFIED (`NumTextTest.parseIgnoresGroupingAndNbsp`) |
+| Mijozda yangilash allaqachon ish vaqtiga bog'langan (ish vaqtida — `liveMinutes`, tashqarisida 15 daqiqa) | IMPLEMENTED-UNVERIFIED |
+
+### 5.0 — qilinmagani
+| Narsa | Holat |
+|---|---|
+| Dollar kursini internetdan olib 1C'ga O'ZI yozish | NOT-IMPLEMENTED (ataylab: kurs ko'rsatiladi, 1C'ga yozishni Admin tasdiqlaydi) |
+| Mijozda savdo tarixini alohida SQLite bazaga ko'chirish (Agent/Admindagi `LedgerDb` kabi) | NOT-IMPLEMENTED (Mijozda ma'lumot bitta snapshot fayl, bosqichli sahifalash kerak emas) |
+| Uch ilova uchun uchta mutlaqo boshqa maket (ekran tuzilishi) — hozircha rang/shrift/burchak/belgi farqlanadi, ekran tuzilishi o'xshash | NOT-IMPLEMENTED |
 
 
 ## 1-bosqich (v3.1 / Mijoz 1.5)
@@ -18,6 +65,18 @@ Belgilar:
 | Yangi savdo oqimi ("Boshlash"siz), qidiruvda panel yashirish | IMPLEMENTED-UNVERIFIED |
 | Ko'prik standart yoqiq, 1 daqiqalik yangilash | IMPLEMENTED-UNVERIFIED |
 | Mijoz qarzi ochilganda yangilanishi | IMPLEMENTED-UNVERIFIED |
+
+## 4.1 — Admin'da 1C'ning qolgan imkoniyatlari
+| Narsa | Holat |
+|---|---|
+| Tarozi va ta'minotchi qoldig'i so'rovi ("Ожидается имя") — 1C kalit so'zi "В" alias sifatida ishlatilgan edi | IMPLEMENTED-UNVERIFIED (kompyuterda sinash kerak) |
+| Ommaviy narx belgilash: guruh / oxirgi kirim / qo'lda tanlash, 1–4-narx, kelgan+summa, kelgan+foiz, hozirgidan foiz, aniq narx, yaxlitlash, ko'rib chiqish | VERIFIED (PriceRule testlari) / ekran IMPLEMENTED-UNVERIFIED |
+| Yangi mijoz / ta'minotchi va kontragentni tahrirlash (nom, telefon, manzil, region; Клиенты/Поставщики) | VERIFIED (V41Test, PC V41Test) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Tovarni hisobdan chiqarish (СписанияТоваров): tannarx 1C qoldig'idan; dollarli tovarda 1C modulining xatosi chetlab o'tiladi (harakatlar dastur yozadi) | VERIFIED (PC testlari) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Hisobotlar: yalpi va sof foyda, tovar bo'yicha foyda, chegirma, xarajatlar, kassa qoldig'i va aylanmasi, ombor qoldig'i, qarzlar | VERIFIED (build_reports, OneCReportsCodec) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Yozuvlarni bekor qilish — kontragent va hisobdan chiqarish uchun ham | IMPLEMENTED-UNVERIFIED |
+| 1C'da bir martalik sozlash (Модуль внешнего соединения) — xato matnida yo'riqnoma ko'rsatiladi | IMPLEMENTED-UNVERIFIED (OQING.txt, 4.1) |
+| Ommaviy narx o'zgartirish — 4.0'da NOT-IMPLEMENTED edi, endi bor | VERIFIED |
 
 ## 4.0.2 — Admin'dagi savdo agentlarda darhol
 | Narsa | Holat |

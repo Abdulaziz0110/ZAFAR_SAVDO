@@ -40,8 +40,11 @@ object Ui {
         }
         val tb = MaterialToolbar(ctx).apply {
             this.title = title
-            setNavigationIcon(backIcon)
-            setNavigationOnClickListener { onBack() }
+            // v5.0: backIcon = 0 — ildiz bo'lim (pastki menyudan ochilgan), orqaga tugmasi kerak emas
+            if (backIcon != 0) {
+                setNavigationIcon(backIcon)
+                setNavigationOnClickListener { onBack() }
+            }
         }
         root.addView(tb, lp())
         val scroll = NestedScrollView(ctx).apply { isFillViewport = true }
@@ -85,6 +88,59 @@ object Ui {
         return card to col
     }
 
+    /**
+     * v5.0: sozlamalar plitkasi (2 ustunli to'r). [help] — uzoq bosilganda chiqadigan to'liq tushuntirish.
+     * Nomi ikki qatorgacha, uzun bo'lsa qisqaradi.
+     */
+    class Tile(val title: CharSequence, val icon: Int, val help: CharSequence = "", val tone: Int = 0, val onClick: () -> Unit)
+
+    fun tiles(ctx: Context, items: List<Tile>, columns: Int = 2, top: Int = 8, onHelp: ((Tile) -> Unit)? = null): LinearLayout {
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = lp(top = dp(ctx, top))
+        }
+        val gap = dp(ctx, 8)
+        for (row in items.chunked(columns)) {
+            val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for ((i, t) in row.withIndex()) {
+                r.addView(tileView(ctx, t, onHelp), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    if (i > 0) marginStart = gap
+                    bottomMargin = gap
+                })
+            }
+            repeat(columns - row.size) { i ->
+                r.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap })
+            }
+            box.addView(r)
+        }
+        return box
+    }
+
+    private fun tileView(ctx: Context, t: Tile, onHelp: ((Tile) -> Unit)?): View {
+        val card = MaterialCardView(ctx, null, com.google.android.material.R.attr.materialCardViewOutlinedStyle).apply {
+            radius = dp(ctx, 16).toFloat()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { t.onClick() }
+            if (t.help.isNotEmpty() && onHelp != null) setOnLongClickListener { onHelp(t); true }
+        }
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = dp(ctx, 12)
+            setPadding(p, p, p, p)
+            minimumHeight = dp(ctx, 92)
+        }
+        if (t.icon != 0) col.addView(badge(ctx, t.icon, t.tone, 36))
+        col.addView(
+            text(ctx, t.title, com.google.android.material.R.style.TextAppearance_Material3_TitleSmall, 8).apply {
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+        )
+        card.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        return card
+    }
+
     fun button(ctx: Context, s: CharSequence, outlined: Boolean = false, top: Int = 8, icon: Int = 0, onClick: (View) -> Unit): MaterialButton {
         val b = if (outlined) MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle) else MaterialButton(ctx)
         b.text = s
@@ -110,6 +166,8 @@ object Ui {
         val e = TextInputEditText(til.context)
         e.inputType = type
         e.setText(value)
+        // v5.0: pul va miqdor maydonlarida minglik ajraladi ("12 000"); PLU/shtrix kod/telefon — tegilmaydi
+        if (type and InputType.TYPE_NUMBER_FLAG_DECIMAL != 0) NumInput.attach(e)
         if (type and InputType.TYPE_TEXT_FLAG_MULTI_LINE == 0) e.maxLines = 1
         til.addView(e, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         til.layoutParams = lp(top = dp(ctx, top))

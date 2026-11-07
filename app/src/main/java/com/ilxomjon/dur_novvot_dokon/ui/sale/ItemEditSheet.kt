@@ -1,5 +1,6 @@
 package com.ilxomjon.dur_novvot_dokon.ui.sale
 
+import uz.imsoft.shared.android.NumInput
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -47,6 +48,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val args = requireArguments()
+        for (e in listOf(binding.edtQty, binding.edtPrice)) NumInput.attach(e)
         val productId = args.getString(ARG_PRODUCT).orEmpty()
         vm = viewModel { ItemEditViewModel(productId, ServiceLocator.catalog, ServiceLocator.draft) }
         val product = vm.product
@@ -63,7 +65,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.tilPrice.hint = getString(R.string.item_price, unit)
         binding.tilBlocks.show(product.hasBlock)
         binding.chipPlusBlock.show(product.hasBlock)
-        binding.btnRemove.show(vm.exists)
+        binding.btnRemove.setText(if (vm.exists) R.string.item_remove else R.string.item_not_needed)
         binding.btnSave.setText(if (vm.exists) R.string.item_save_update else R.string.item_save_add)
 
         if (savedInstanceState == null) {
@@ -96,7 +98,10 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.chipPlus10.setOnClickListener { addQty(10.0) }
         binding.chipPlusBlock.setOnClickListener { addQty(product.blockSize) }
         binding.btnSave.setOnClickListener { save() }
-        binding.btnRemove.setOnClickListener { vm.remove(); offerUndo(R.string.cart_deleted); dismiss() }
+        // Savatchada bo'lsa — chiqarib tashlaydi; bo'lmasa "kerak emas" deb belgilanadi (taklif bir hafta chiqmaydi)
+        binding.btnRemove.setOnClickListener {
+            if (vm.exists) { vm.remove(); offerUndo(R.string.cart_deleted); dismiss() } else notNeeded()
+        }
         setupHints(product.id)
 
         val focusPrice = args.getBoolean(ARG_FOCUS_PRICE)
@@ -147,9 +152,19 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         Snackbar.make(root, msg, Snackbar.LENGTH_LONG).setAction(R.string.cart_undo) { v.undo() }.show()
     }
 
-    /** "Shu do'konga oxirgi narx" va "Yo'q ekan" tugmalari. */
+    private fun notNeeded() {
+        val storeId = vm.storeId ?: run { dismiss(); return }
+        val productId = vm.product?.id.orEmpty()
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { ServiceLocator.history.addFeedback(storeId, productId, FeedbackReason.NOT_NEEDED) }
+            dismissAllowingStateLoss()
+        }
+    }
+
+    /** "Shu do'konga oxirgi narx" va shu mijozning shu tovar bo'yicha kichik tarixi (v5.0). */
     private fun setupHints(productId: String) {
         val storeId = vm.storeId ?: return
+        val name = vm.product?.name.orEmpty()
         viewLifecycleOwner.lifecycleScope.launch {
             val orders = ServiceLocator.history.storeOrders(storeId)
             if (_binding == null) return@launch
@@ -157,19 +172,26 @@ class ItemEditSheet : BottomSheetDialogFragment() {
                 binding.tvLastPrice.show(true)
                 binding.tvLastPrice.text = getString(R.string.item_last_price, requireContext().money(p, vm.currency), formatDate(java.util.Date(at)))
             }
-            val usual = orders.any { o -> o.lines.any { it.productId == productId } }
-            binding.feedbackGroup.show(usual && !vm.exists)
         }
-        val fb = { reason: String ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                ServiceLocator.history.addFeedback(storeId, productId, reason)
-                dismissAllowingStateLoss()
+        // 1C tarixi: qachon, qancha va qanchadan olgan
+        viewLifecycleOwner.lifecycleScope.launch {
+            val buys = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.buys(
+                    com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.value.entries, storeId, name, 4,
+                )
             }
-            Unit
+            val b = _binding ?: return@launch
+            if (buys.isEmpty()) return@launch
+            val ctx = requireContext()
+            val lines = buys.joinToString("\n") { x ->
+                getString(
+                    R.string.item_hist_row, uz.imsoft.shared.report.Stamp.formatDate(x.stamp),
+                    Money.qtyDisplay(x.qty), ctx.money(x.price, vm.currency),
+                )
+            }
+            b.tvHistory.show(true)
+            b.tvHistory.text = getString(R.string.item_hist_title) + "\n" + lines
         }
-        binding.chipNotNeeded.setOnClickListener { fb(FeedbackReason.NOT_NEEDED) }
-        binding.chipNoStock.setOnClickListener { fb(FeedbackReason.NO_STOCK) }
-        binding.chipLater.setOnClickListener { fb(FeedbackReason.LATER) }
     }
 
     override fun onDestroyView() {

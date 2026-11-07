@@ -10,6 +10,7 @@ STRINGS = {
  'unit_som': "so'm", 'unit_usd': '$', 'ok': 'OK', 'cancel': 'Bekor qilish', 'save': 'Saqlash', 'close': 'Yopish', 'retry': 'Qayta urinish',
  'delete': "O'chirish", 'loading': 'Yuklanmoqda…', 'back': 'Orqaga',
  'nav_home': 'Bosh sahifa', 'nav_sale': 'Savdo', 'nav_payment': "To'lov", 'nav_history': 'Tarix', 'nav_report': 'Hisobot',
+ 'nav_manage': 'Boshqaruv', 'nav_settings': 'Sozlamalar',
  # xatolar
  'err_not_configured': "Server sozlanmagan. Sozlamalardan server ma'lumotlarini kiriting.",
  'err_connect': "Serverga ulanib bo'lmadi. Internet va server manzilini tekshiring.",
@@ -85,6 +86,7 @@ STRINGS = {
  'settings_logout_title': 'Hisobdan chiqish', 'settings_logout_message': 'Savatcha tozalanadi. Davom etasizmi?',
  'settings_server': 'Server', 'settings_server_edit': 'Serverni sozlash', 'settings_server_none': 'Sozlanmagan',
  'settings_language': 'Til', 'settings_lang_latin': 'Lotin', 'settings_lang_cyrillic': '{{Кирилл}}',
+ 'settings_theme_admin': "Mavzu: Admin ilovasi har doim qorong'i (terminal ko'rinish)",
  'settings_theme': 'Mavzu', 'settings_theme_system': 'Tizim', 'settings_theme_light': "Yorug'", 'settings_theme_dark': "Qorong'i",
  'settings_backup': 'Zaxira nusxa',
  'settings_backup_hint': "Ma'lumotni saqlab qo'ying. Parol qo'ysangiz, sozlamalar ham (server, bulut, printerlar) saqlanadi — Admin ilovaga yoki yangi telefonga ko'chirish uchun. Parolsiz zaxirada server paroli bo'lmaydi.",
@@ -792,7 +794,7 @@ STRINGS.update({
 
 STRINGS.update({
  # v2.7: tovar kodlari (1C -> kompyuter -> telefon)
- 'meta_code': 'Kod %1$s', 'meta_code_plu': 'Kod %1$s · PLU %2$s',
+ 'meta_code': 'Kod %1$s', 'meta_code_plu': 'Kod %1$s · PLU %2$s', 'meta_plu': 'PLU %1$s',
  'lb_codes': "Kompyuterdan kodlar (1C)",
  'lb_codes_last': "Oxirgi: %1$s\nPLU: %2$d ta tovar · shtrix kod: %3$d ta",
  'lb_codes_src': "1C'dagi joyi: %1$s",
@@ -1291,6 +1293,9 @@ STRINGS.update({
  'boss_cloud_sub': "Agent va Mijoz telefonlari bilan aloqa", 'boss_last': 'oxirgi: %1$s', 'boss_never': "hali aloqa bo'lmagan",
  'rt_title': 'Dollar kursi', 'rt_sub': "1C'dagi kursni telefondan o'zgartirish",
  'rt_hint': "Yangi kurs 1C'ga yoziladi: bundan keyingi hujjatlar shu kurs bilan. Xato bo'lsa \"Bekor qilish\" eskisini qaytaradi.",
+ 'rt_net_title': 'Internetdagi kurs',
+ 'rt_net_wait': "O'qilmoqda…", 'rt_net_none': "Internetdan kurs olinmadi (tarmoq yo'q yoki sayt javob bermadi)",
+ 'rt_net_row': 'Olish %1$s · Sotish %2$s',
  'rt_now': 'Hozirgi kurs: %1$s', 'rt_new': "Yangi kurs (1 $ = so'm)", 'rt_bad': "Kurs noto'g'ri", 'rt_confirm': 'Kurs: %1$s → %2$s',
  'boss_paid_ago': "oxirgi to'lov %1$d kun oldin", 'boss_paid_never': "to'lov ko'rinmadi (1 yil)",
  'ev_title': 'Bugungi hisobot', 'ev_text': "Savdo: %1$s (%2$d ta)\nFoyda: %3$s\nTushum: %4$s\nUmumiy qarz: %5$s",
@@ -1306,6 +1311,129 @@ STRINGS.update({
  'sg_system': 'Tizim (faqat Admin)', 'sg_server_sub': "SQL server manzili (Tailscale)",
  'sg_help': 'Yordam', 'sg_update_sub': "Yangi versiya bormi — tekshirish va o'rnatish", 'sg_diag': 'Diagnostika',
  'sg_more': 'Boshqa sozlamalar', 'sg_more_sub': "Sevimli do'konlar, zaxira, qo'shimcha imkoniyatlar (eski to'liq ekran)",
+})
+
+# v5.0: ochiq savdolar (bir vaqtda bir nechta)
+STRINGS.update({
+ 'carts_title': 'Ochiq savdolar',
+ 'carts_now': 'Hozir ochiq · %1$d ta tovar',
+ 'carts_saved': 'Saqlangan · %1$d ta tovar · %2$s',
+})
+
+# v5.0: tovar oynasi
+STRINGS.update({
+ 'item_not_needed': 'Kerak emas',
+ 'item_hist_title': 'Shu mijoz oldin olgan:',
+ 'item_hist_row': '%1$s · %2$s · %3$s',
+})
+
+# v5.0: savdo oynasi sozlash
+STRINGS.update({
+ 'sale_setup': 'Sozlash', 'sale_setup_done': 'Tayyor',
+ 'sale_store_label': "Do'kon", 'sale_price_label': 'Narx turi', 'sale_currency_label': 'Valyuta', 'sale_mode_label': 'Amal',
+ 'sale_price_branch': "Bu mijozga odatda 4-narx. Kerak bo'lsa boshqasini tanlashingiz mumkin.",
+})
+
+# v5.0: Boshqaruvda qidiruv
+STRINGS.update({
+ 'ad_search': 'Qidirish: narx, kirim, qurilma...',
+ 'ad_search_none': 'Topilmadi. Boshqacha yozib ko\'ring.',
+})
+
+# v5.0: sozlamalar plitkalari va tushuntirishlari
+STRINGS.update({
+ 'sg_fav': "Tez do'konlar", 'sg_extras': 'Qulayliklar', 'sg_long_press': 'Plitkani uzoq bossangiz — nima qilishi yoziladi.',
+ 'sg_h_queue': "Internet bo'lmaganda savdo va to'lovlar shu navbatda turadi. Ulangach o'zi yuboriladi. Bu yerda nimalar kutayotganini ko'rasiz va qayta yuborishingiz mumkin.",
+ 'sg_h_scanner': "Shtrix kod skaneri va tarozi kodlari: skaner qanday o'qishi, tovush va tebranish, tarozi yorlig'idagi kodni tanish.",
+ 'sg_h_fav': "Doim savdo qiladigan 2 ta do'koningizni belgilab qo'ysangiz, savdo oynasida ular birinchi chiqadi. Bu yerda boshqa eski sozlamalar ham bor.",
+ 'sg_h_extras': "Qo'shimcha qulayliklar: tez tugmalar, ovozli javob, ekran yorqinligi va shunga o'xshashlar.",
+ 'sg_h_batch': "Bir nechta tovarning shtrix kodini ketma-ket skanerlab, bitta tugma bilan 1C'ga yozish.",
+ 'sg_h_stats': "Kun, hafta, oy va yil bo'yicha savdo, foyda, eng ko'p sotilgan tovarlar va narx o'zgarishlari.",
+ 'sg_h_update': "Yangi versiya chiqqanini tekshiradi va o'rnatadi. Odatda o'zi tekshirib turadi.",
+ 'sg_h_server': "Do'kon kompyuteridagi server manzili. Buni odatda faqat bir marta, ilovani o'rnatganda kiritiladi.",
+ 'sg_h_diag': "Ilova nima qilayotgani: ulanish, navbat, oxirgi xatolar. Nimadir ishlamasa shu yerni ko'rsating.",
+ 'sg_h_profile': "Kim kirgan, ilova haqida qisqacha va hisobdan chiqish.",
+})
+
+# v5.0: "Men" (profil)
+STRINGS.update({
+ 'pf_title': 'Men', 'pf_admin': 'Admin', 'pf_agent': 'Agent',
+ 'pf_role_admin': 'to\'liq huquq', 'pf_role_agent': 'savdo va to\'lov',
+ 'pf_about': 'Ilova haqida',
+ 'pf_about_admin': "Savdo Admin — do'konni telefondan boshqarish: 1C'ga yozish, narxlar, hisobotlar, agentlar va 2-ilova.",
+ 'pf_about_agent': "Savdo Agent — mijozlarga savdo, to'lov va tarix. Internet bo'lmasa ham ishlaydi: yozuvlar navbatda turadi va ulangach yuboriladi.",
+ 'pf_version': 'Versiya %1$s (%2$d)',
+ 'pf_exit_sec': 'Hisob', 'pf_exit_sub': "Boshqa hisob bilan kirish uchun",
+})
+
+# v5.0: bosqichma-bosqich yangilash
+STRINGS.update({
+ 'sh_stage': 'Yangilanmoqda: %1$s · %2$d/%3$d',
+ 'sh_stage_day': 'kun', 'sh_stage_week': 'hafta', 'sh_stage_month': 'oy', 'sh_stage_year': 'yil', 'sh_stage_all': 'hammasi',
+ 'sh_db_mismatch': "%1$s: bazaga %2$d yozuvdan %3$d tasi yozildi",
+ 'sh_refresh_started': "Yangilash boshlandi: kun, keyin hafta, oy, yil va hammasi",
+ 'sh_rows': 'Bazada: %1$d yozuv',
+})
+
+# v4.1: hisobdan chiqarish, kontragent, ommaviy narx, hisobotlar
+STRINGS.update({
+ # hisobdan chiqarish (СписанияТоваров)
+ 'wo_title': 'Hisobdan chiqarish', 'wo_sub': "Buzilgan yoki yaroqsiz tovarni 1C'dan chiqarish",
+ 'wo_hint': "Buzilgan, yaroqsiz yoki kam chiqqan tovar 1C'da hisobdan chiqariladi. Narx kiritilmaydi — tannarx 1C qoldig'idan olinadi.",
+ 'wo_line': 'Miqdor: %1$s', 'wo_total': '%1$d xil tovar',
+ 'wo_cost_note': "Tannarx 1C'dagi qoldiqdan hisoblanadi. Qoldiqdan ko'p chiqarsangiz, 1C'da manfiy qoldiq qoladi.",
+ # kontragent (Контрагенты)
+ 'kf_new_title': 'Yangi mijoz yoki taminotchi', 'kf_new_sub': "1C'da yangi kontragent ochish",
+ 'kf_edit_title': 'Kontragentni tahrirlash', 'kf_edit_sub': 'Nomi, telefoni, manzili, regionini tuzatish',
+ 'kf_new_hint': "1C'da yangi kontragent ochiladi — qaysi papkaga tushishini tanlaysiz.",
+ 'kf_edit_hint': "Faqat o'zgartirgan maydoningiz 1C'ga yoziladi.",
+ 'kf_who': 'Kim', 'kf_pick_client': 'Mijozlardan', 'kf_pick_supplier': 'Taminotchilardan',
+ 'kf_group': "Qayerga qo'shiladi", 'kf_clients': 'Mijoz', 'kf_suppliers': 'Taminotchi',
+ 'kf_data': 'Malumotlari', 'kf_name': 'Nomi', 'kf_phone': 'Telefon', 'kf_phone2': "Qo'shimcha telefon",
+ 'kf_address': 'Manzil', 'kf_region': 'Region', 'kf_region_none': 'Tanlanmagan', 'kf_pick_region': 'Regionni tanlash',
+ 'kf_no_regions': "Region ro'yxati bo'sh — avval malumotni yangilang",
+ 'kf_no_suppliers': "Taminotchilar ro'yxati yo'q — kompyuter malumot yuborishi kerak",
+ 'kf_edit_note': "Bo'sh qoldirilgan maydon o'zgarmaydi.",
+ 'kf_err_name': 'Nomini kiriting (kamida 2 ta harf)', 'kf_err_phone': "Telefon raqami noto'g'ri",
+ 'kf_err_empty': "Hech narsa o'zgartirilmadi", 'kf_err_other': "Malumot to'liq emas",
+ # ommaviy narx belgilash
+ 'ps_title': 'Narx belgilash', 'ps_sub': 'Bir nechta tovarga birdan yangi narx',
+ 'ps_hint': "Avval tovarlarni tanlang, keyin usul va qiymatni ko'rsatib \"Hisoblash\"ni bosing. Yozishdan oldin ro'yxatni ko'rib chiqasiz.",
+ 'ps_goods': 'Tovarlar', 'ps_none': 'Tovar tanlanmagan', 'ps_count': '%1$d ta tovar tanlandi',
+ 'ps_by_group': "Guruh bo'yicha", 'ps_by_receipt': 'Oxirgi kirimlardan', 'ps_add_one': "Bitta qo'shish", 'ps_clear': 'Tozalash',
+ 'ps_no_groups': 'Guruhlar topilmadi', 'ps_no_receipts': "Kirim hujjatlari yo'q — kompyuter malumot yuborishi kerak",
+ 'ps_receipt_row': '%1$s · %2$s · %3$d xil tovar', 'ps_missing': "%1$d ta tovar ro'yxatdan topilmadi",
+ 'ps_levels': 'Qaysi narx', 'ps_level': '%1$d-narx', 'ps_no_levels': 'Kamida bitta narxni tanlang',
+ 'ps_method': 'Usul', 'ps_m_cost_plus': 'Kelgan + summa', 'ps_m_cost_pct': 'Kelgan + foiz',
+ 'ps_m_pct': 'Hozirgi narxdan foiz', 'ps_m_fixed': 'Aniq narx', 'ps_value': 'Qiymat',
+ 'ps_v_cost_plus': "Kelgan narxga shuncha so'm qo'shiladi (dollarli tovarda kurs bilan hisoblanadi)",
+ 'ps_v_cost_pct': 'Kelgan narx shuncha foizga oshiriladi (manfiy yozsangiz — kamayadi)',
+ 'ps_v_pct': "Hozirgi narx shuncha foizga o'zgaradi (manfiy yozsangiz — kamayadi)",
+ 'ps_v_fixed': 'Tanlangan hamma tovarga shu narx qoyiladi',
+ 'ps_bad_value': "Qiymatni to'g'ri kiriting", 'ps_round': 'Yaxlitlash', 'ps_round_none': "Yo'q", 'ps_calc': 'Hisoblash',
+ 'ps_preview': "%1$d ta tovar · %2$d ta narx o'zgaradi", 'ps_more': 'va yana %1$d ta',
+ 'ps_tap_remove': "Keraksiz qatorni bosib ro'yxatdan chiqaring.",
+ 'ps_skipped': "%1$d ta narx hisoblanmadi (kelgan narx yoki kurs yo'q)",
+ 'ps_send': "1C'ga yozish", 'ps_confirm': "%1$d ta tovar kartochkasi o'zgaradi (%2$d ta narx).",
+ 'ps_sent_partly': '%1$d ta yuborildi, %2$d tasi navbatda qoldi', 'ps_note': 'Telefondan: ommaviy narx',
+ # hisobotlar (1C registrlaridan)
+ 'rp_title': 'Hisobotlar', 'rp_sub': "Foyda, xarajat, kassa, ombor qoldig'i, qarzlar",
+ 'rp_hint': "1C bazasidan olinadi. Davrni tanlang — kompyuter hisoblab yuboradi.",
+ 'rp_today': 'Bugun', 'rp_yesterday': 'Kecha', 'rp_week': 'Hafta', 'rp_month': 'Oy', 'rp_last30': '30 kun',
+ 'rp_refresh': "Qaytadan so'rash", 'rp_asked': "So'raldi — kompyuter javobini kuting…",
+ 'rp_none': 'Hali hisobot olinmagan. Davrni tanlang.',
+ 'rp_period': '%1$s – %2$s · olingan: %3$s', 'rp_errors': "Bazi bo'limlar o'qilmadi:\n%1$s",
+ 'rp_profit': 'Foyda', 'rp_sales': 'Savdo', 'rp_cost': 'Tannarx', 'rp_gross': 'Yalpi foyda',
+ 'rp_expenses': 'Xarajatlar', 'rp_net': 'Sof foyda', 'rp_discount': 'Chegirma', 'rp_margin': 'Foyda ulushi: %1$s',
+ 'rp_by_goods': "Tovarlar bo'yicha (%1$d ta)", 'rp_goods_sub': '%1$s · savdo %2$s',
+ 'rp_losses': '%1$d ta tovar zarariga sotilgan', 'rp_cash': 'Kassa', 'rp_cash_cash': 'Naqd', 'rp_cash_card': "O'tkazma",
+ 'rp_cash_click': 'Click', 'rp_cash_usd': 'Dollarda', 'rp_cash_total': 'Jami (kurs bilan): %1$s',
+ 'rp_cash_turn': "Moddalar bo'yicha harakat", 'rp_in_out': 'kirim %1$s · chiqim %2$s',
+ 'rp_stock': "Ombor qoldig'i", 'rp_stock_value': 'Qoldiq summasi', 'rp_stock_count': 'Tovar turi',
+ 'rp_stock_negative': "%1$d ta tovar qoldig'i manfiy — 1C'da tekshiring", 'rp_stock_row': '%1$s · kelgan narx %2$s',
+ 'rp_more': 'va yana %1$d ta', 'rp_debts': 'Qarzlar', 'rp_owed_to_us': 'Bizga qarz', 'rp_we_owe': 'Biz qarzdormiz',
+ 'rp_top_debtors': "Eng ko'p qarzdorlar", 'rp_top_owe': 'Biz qarzdor bo\'lganlar',
+ 'rp_client': 'Mijoz', 'rp_supplier': 'Taminotchi',
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

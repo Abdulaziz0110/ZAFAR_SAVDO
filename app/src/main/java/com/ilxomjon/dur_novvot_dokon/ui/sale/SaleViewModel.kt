@@ -180,7 +180,17 @@ class SaleViewModel(
                 _storeOrders.value = own
                 val global = history.recentSaleOrders()
                 val fb = history.feedback(storeId)
-                val list = withContext(Dispatchers.Default) { Suggestions.build(own, global, System.currentTimeMillis(), feedback = fb) }
+                // v5.0: tavsiya mijozning BUTUN tarixidan o'rganadi (1C hujjatlari ham), faqat shu telefondan emas
+                val all = withContext(Dispatchers.Default) {
+                    val byName = HashMap<String, String>()
+                    for (p in catalog.state.value.products) byName.putIfAbsent(com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.key(p.name), p.id)
+                    val led = com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.of(
+                        com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.value.entries, storeId,
+                        { n -> byName[com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.key(n)] },
+                    )
+                    com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.merge(own, led)
+                }
+                val list = withContext(Dispatchers.Default) { Suggestions.build(all, global, System.currentTimeMillis(), feedback = fb) }
                 suggestions.value = list
                 lastOrder.value = own.firstOrNull { it.mode == DealMode.SALE }?.lines?.filter { it.productId.isNotEmpty() }.orEmpty()
                 // Mijoz tanlanganda va savatcha bo'sh bo'lsa, taklif qilinadigan tovarlar o'zi ochiladi.

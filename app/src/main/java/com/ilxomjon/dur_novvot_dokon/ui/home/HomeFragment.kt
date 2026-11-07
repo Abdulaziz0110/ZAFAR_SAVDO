@@ -41,9 +41,10 @@ class HomeFragment : Fragment() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_sync -> { vm.sync(); true }
+                R.id.action_boss -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment()); true }
                 R.id.action_stats -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); true }
                 R.id.action_barcodes -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); true }
-                R.id.action_settings -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment()); true }
+                R.id.action_profile -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.ProfileFragment()); true }
                 else -> false
             }
         }
@@ -57,9 +58,18 @@ class HomeFragment : Fragment() {
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment())
         }
         binding.cardReturn.setOnClickListener { startDeal(DealMode.RETURN) }
-        binding.cardPayment.setOnClickListener { navigator().openTab(R.id.nav_payment) }
-        binding.cardReport.setOnClickListener { navigator().openTab(R.id.nav_report) }
+        // v5.0: "To'lov" pastki bo'limda bor — bosh sahifadan olib tashlandi (takrorlanmasin)
+        binding.cardPayment.show(false)
+        binding.cardReport.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment()) }
+        // Yorliqlar — Admin ishi (Boshqaruv ▸ Tovarlar)
+        binding.cardLabels.show(com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin)
         binding.cardLabels.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()) }
+        // v5.0: Boss va statistika — faqat Admin menyusida
+        binding.toolbar.menu.findItem(R.id.action_boss)?.isVisible = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        binding.toolbar.menu.findItem(R.id.action_stats)?.isVisible = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        // Ism va telefon "Men" ekranida (bosh sahifada ish qoladi)
+        binding.tvGreeting.show(false)
+        binding.tvPhone.show(false)
         binding.cardLedger.setOnClickListener {
             if (com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.state.value.newOrders > 0) {
                 com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(childFragmentManager)
@@ -83,6 +93,7 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch { runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.share.load() } }
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HOME)
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
+        addCartsCard()
         if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) addAdminCard()
 
         launchOnStarted { vm.state.collect { render(it) } }
@@ -155,9 +166,68 @@ class HomeFragment : Fragment() {
         vm.onResume()
     }
 
+    /**
+     * v5.0: bir vaqtda bir nechta savdo. Yangi savdo boshlanganda ochiq savdo o'zi saqlanadi va
+     * "Ochiq savdolar" ro'yxatida turadi — istagan paytda qaytib davom ettiriladi.
+     */
     private fun startDeal(mode: DealMode) {
-        vm.startDeal(mode)
-        navigator().openTab(R.id.nav_sale)
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { if (ServiceLocator.draft.state.value.lines.isNotEmpty()) ServiceLocator.parked.parkActive() }
+            vm.startDeal(mode)
+            navigator().openTab(R.id.nav_sale)
+        }
+    }
+
+    /** Ochiq savdolar ro'yxati: hozirgisi va saqlanganlari. Bosilsa — o'sha savdo davom etadi. */
+    private fun addCartsCard() {
+        val parent = binding.cardSale.parent as? android.view.ViewGroup ?: return
+        val ctx = requireContext()
+        val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
+        card.tag = "carts_card"
+        val lp0 = binding.cardSale.layoutParams
+        parent.addView(card, parent.indexOfChild(binding.cardSale), android.view.ViewGroup.MarginLayoutParams(lp0.width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            (lp0 as? android.view.ViewGroup.MarginLayoutParams)?.let { setMargins(it.leftMargin, it.topMargin, it.rightMargin, it.bottomMargin) }
+        })
+        launchOnStarted {
+            kotlinx.coroutines.flow.combine(ServiceLocator.parked.items, ServiceLocator.draft.state) { p, d -> p to d }.collect { (parkedList, d) ->
+                col.removeAllViews()
+                val any = parkedList.isNotEmpty() || d.lines.isNotEmpty()
+                card.show(any)
+                if (!any) return@collect
+                col.addView(uz.imsoft.shared.android.Ui.section(ctx, getString(R.string.carts_title)))
+                if (d.lines.isNotEmpty()) {
+                    col.addView(
+                        uz.imsoft.shared.android.Ui.item(
+                            ctx, d.store?.name ?: getString(R.string.sale_select_store),
+                            getString(R.string.carts_now, d.itemCount), ctx.money(d.total, d.currency),
+                            icon = R.drawable.ic_cart, tone = 1,
+                        ) { navigator().openTab(R.id.nav_sale) },
+                    )
+                }
+                for (p in parkedList) {
+                    col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
+                    col.addView(
+                        uz.imsoft.shared.android.Ui.item(
+                            ctx, p.storeName.ifBlank { getString(R.string.sale_select_store) },
+                            getString(R.string.carts_saved, p.lines.size, formatDateTime(p.created)), ctx.money(p.total, p.currency),
+                            icon = R.drawable.ic_pause,
+                        ) { resumeCart(p.id) },
+                    )
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch { runCatching { ServiceLocator.parked.refresh() } }
+    }
+
+    private fun resumeCart(id: Long) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching { if (ServiceLocator.draft.state.value.lines.isNotEmpty()) ServiceLocator.parked.parkActive() }
+            val missing = runCatching { ServiceLocator.parked.resume(id) }.getOrNull()
+            if (missing != null && missing > 0) {
+                Snackbar.make(binding.root, getString(R.string.sale_repeat_missing, missing), Snackbar.LENGTH_LONG).show()
+            }
+            navigator().openTab(R.id.nav_sale)
+        }
     }
 
     private fun render(s: HomeState) {
@@ -167,7 +237,7 @@ class HomeFragment : Fragment() {
         binding.tvRate.text = if (s.rate > 0) getString(R.string.home_rate, requireContext().money(s.rate, Currency.SOM)) else getString(R.string.home_rate_missing)
         binding.tvSync.text = if (s.lastSyncAt > 0) getString(R.string.home_last_sync, formatDateTime(s.lastSyncAt)) else getString(R.string.home_never_synced)
         binding.cardNoData.show(s.loaded && !s.hasProducts && !s.syncing)
-        binding.cardDraft.show(s.draftCount > 0)
+        binding.cardDraft.show(false)
         if (s.draftCount > 0) {
             binding.tvDraftStore.text = s.draftStore ?: getString(R.string.sale_select_store)
             binding.tvDraftInfo.text = getString(R.string.home_resume_info, s.draftCount, requireContext().money(s.draftTotal, s.draftCurrency))

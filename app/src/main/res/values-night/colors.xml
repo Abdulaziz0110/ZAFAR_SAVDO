@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- tools/gen_theme.py yaratgan — qo'lda o'zgartirmang -->
 <resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
     <color name="brand_primary">#53DBCA</color>
     <color name="brand_on_primary">#003732</color>
     <color name="brand_primary_container">#005048</color>

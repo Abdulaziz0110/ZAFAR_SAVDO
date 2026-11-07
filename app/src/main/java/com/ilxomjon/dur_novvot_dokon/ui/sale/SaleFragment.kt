@@ -4,21 +4,18 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
-import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
 import com.ilxomjon.dur_novvot_dokon.databinding.FragmentSaleBinding
-import com.ilxomjon.dur_novvot_dokon.databinding.ItemGroupChipBinding
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
 import com.ilxomjon.dur_novvot_dokon.domain.DealMode
 import com.ilxomjon.dur_novvot_dokon.domain.DraftState
-import com.ilxomjon.dur_novvot_dokon.domain.Group
-import com.ilxomjon.dur_novvot_dokon.domain.PriceType
 import com.ilxomjon.dur_novvot_dokon.ui.common.StorePickerSheet
 import com.ilxomjon.dur_novvot_dokon.ui.launchOnStarted
 import com.ilxomjon.dur_novvot_dokon.ui.money
@@ -27,7 +24,13 @@ import com.ilxomjon.dur_novvot_dokon.ui.onTextChanged
 import com.ilxomjon.dur_novvot_dokon.ui.show
 import com.ilxomjon.dur_novvot_dokon.ui.viewModel
 import com.ilxomjon.dur_novvot_dokon.ui.UiBus
+import uz.imsoft.shared.android.Ui
 
+/**
+ * v5.0 Savdo: eng tepada qidiruv va shtrix kod, tagida darhol tovarlar. Do'kon, narx turi, valyuta, savdo/qaytarish va
+ * kelgan narx — "Sozlash" oynasida (ikonka yoki tepadagi yozuvni bosib). Oyna yopilgach kursor qidiruvga o'tadi.
+ * Savdo pauza qilinmaydi — bosh sahifadan yangi savdo boshlanadi, boshlangani "Ochiq savdolar"da turadi.
+ */
 class SaleFragment : Fragment() {
     private var _binding: FragmentSaleBinding? = null
     private val binding get() = _binding!!
@@ -37,8 +40,8 @@ class SaleFragment : Fragment() {
     private var lastDraft = DraftState()
     private var lastList = ListState()
     private var rendering = false
-    private var shownGroupIds: List<String>? = null
     private var autoPicked = false
+    private var setupOpen = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSaleBinding.inflate(inflater, container, false)
@@ -50,6 +53,7 @@ class SaleFragment : Fragment() {
             SaleViewModel(ServiceLocator.catalog, ServiceLocator.draft, ServiceLocator.history, ServiceLocator.appPrefs, ServiceLocator.parked, ServiceLocator.kpi)
         }
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.SALE)
+        vm.setFilter(ListFilter.All)
 
         adapter = ProductAdapter(
             onPlus = { p, price, amount ->
@@ -62,7 +66,7 @@ class SaleFragment : Fragment() {
             onZero = { p ->
                 val before = vm.draft.value.lines
                 if (vm.zero(p)) {
-                    com.google.android.material.snackbar.Snackbar.make(binding.root, getString(R.string.sale_zeroed, p.name), com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                    Snackbar.make(binding.root, getString(R.string.sale_zeroed, p.name), Snackbar.LENGTH_LONG)
                         .setAction(R.string.cart_undo) { vm.undo(before) }.show()
                 }
             },
@@ -76,7 +80,6 @@ class SaleFragment : Fragment() {
                 isLastItemDecorated = false
             },
         )
-        binding.switchCost.show(ServiceLocator.appPrefs.fCostSwitch)
         binding.recycler.setHasFixedSize(true)
         binding.recycler.setItemViewCacheSize(24)
         (binding.recycler.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
@@ -84,64 +87,13 @@ class SaleFragment : Fragment() {
         childFragmentManager.setFragmentResultListener(REQ_STORE, viewLifecycleOwner) { _, bundle ->
             val id = bundle.getString(StorePickerSheet.KEY_ID).orEmpty()
             vm.storeById(id)?.let { vm.setStore(it) }
+            focusSearch()
         }
-        binding.rowStore.setOnClickListener { StorePickerSheet.show(childFragmentManager, REQ_STORE) }
-        // Do'kon kartasi (qarz, oxirgi buyurtma, to'lov) — uzoq bosilganda
-        binding.rowStore.setOnLongClickListener { lastDraft.store?.let { StoreCardSheet.show(childFragmentManager, it.id) }; true }
-
-        binding.btnClear.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.clear_cart_title)
-                .setMessage(R.string.clear_cart_message)
-                .setPositiveButton(R.string.delete) { _, _ -> vm.clearCart() }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
-        }
-        binding.btnRepeat.setOnClickListener { vm.repeatLast() }
-        binding.btnAddSuggested.setOnClickListener { vm.addAllSuggested() }
-        binding.btnFav0.setOnClickListener { vm.favorites.value.getOrNull(0)?.let { vm.setStore(it) } }
-        binding.btnFav1.setOnClickListener { vm.favorites.value.getOrNull(1)?.let { vm.setStore(it) } }
+        binding.btnSetup.setOnClickListener { openSetup() }
+        binding.tvContext.setOnClickListener { openSetup() }
+        binding.tvContext.setOnLongClickListener { lastDraft.store?.let { StoreCardSheet.show(childFragmentManager, it.id) }; true }
         binding.btnOtherStore.setOnClickListener { StorePickerSheet.show(childFragmentManager, REQ_STORE) }
-        // v3.1: qidirayotganda (klaviatura ochiq) — narx/rejim qatorlari va pastki jami yashiriladi, ro'yxatga joy qoladi
-        // (insets tinglovchisi o'rnatilmaydi — tizim chetlari ishlovini buzmaslik uchun; joylashuv o'zgarganda tekshiriladi)
-        val imeWatch = android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            val bb = _binding ?: return@OnGlobalLayoutListener
-            val ime = androidx.core.view.ViewCompat.getRootWindowInsets(bb.root)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
-            setSearchCompact(ime && bb.edtSearch.hasFocus())
-        }
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener(imeWatch)
-        viewLifecycleOwner.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
-                _binding?.root?.viewTreeObserver?.removeOnGlobalLayoutListener(imeWatch)
-            }
-        })
-        binding.edtSearch.setOnFocusChangeListener { _, has ->
-            val ime = androidx.core.view.ViewCompat.getRootWindowInsets(binding.root)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
-            setSearchCompact(has && ime)
-        }
 
-        binding.toggleType.addOnButtonCheckedListener { _, id, checked ->
-            if (!checked || rendering) return@addOnButtonCheckedListener
-            val level = levelOfButton(id)
-            if (level != lastDraft.level) confirmReprice { vm.setPriceLevel(level) }
-        }
-        binding.toggleCurrency.addOnButtonCheckedListener { _, id, checked ->
-            if (!checked || rendering) return@addOnButtonCheckedListener
-            val cur = if (id == R.id.btnUsd) Currency.USD else Currency.SOM
-            if (cur != lastDraft.currency) confirmReprice { vm.setCurrency(cur) }
-        }
-        binding.toggleMode.addOnButtonCheckedListener { _, id, checked ->
-            if (!checked || rendering) return@addOnButtonCheckedListener
-            val mode = if (id == R.id.btnReturn) DealMode.RETURN else DealMode.SALE
-            if (mode != lastDraft.mode) vm.setMode(mode)
-        }
-        binding.switchCost.setOnCheckedChangeListener { _, on -> if (!rendering) vm.setShowCost(on) }
-
-        binding.chipGroups.setOnCheckedStateChangeListener { group, checkedIds ->
-            if (rendering) return@setOnCheckedStateChangeListener
-            val chip = checkedIds.firstOrNull()?.let { group.findViewById<Chip>(it) }
-            vm.setFilter(chip?.tag as? ListFilter ?: ListFilter.All)
-        }
         binding.edtSearch.onTextChanged { vm.setQuery(it) }
         // v2.6: shtrix kod — kamera yoki ulanadigan skaner (klaviatura kabi yozib, Enter bosadi)
         binding.btnScan.setOnClickListener { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.ScanFragment()) }
@@ -158,21 +110,13 @@ class SaleFragment : Fragment() {
         }
         binding.btnCart.setOnClickListener { vm.tap(); navigator().push(CartFragment()) }
         binding.btnSmart.setOnClickListener { onSmart() }
-        binding.btnPark.setOnClickListener {
-            vm.park()
-            Snackbar.make(binding.root, R.string.park_done, Snackbar.LENGTH_SHORT).show()
-        }
-        binding.btnParked.setOnClickListener { ParkedSheet.show(childFragmentManager) }
 
         launchOnStarted { vm.list.collect { lastList = it; renderList(it) } }
         launchOnStarted { vm.draft.collect { lastDraft = it; renderDraft(it) } }
         launchOnStarted { vm.pricing.collect { adapter.setPricing(it, vm.showCost.value) } }
-        launchOnStarted { vm.showCost.collect { on -> adapter.setPricing(vm.pricing.value, on); setSwitch(on) } }
-        launchOnStarted { vm.canRepeat.collect { binding.btnRepeat.show(it) } }
+        launchOnStarted { vm.showCost.collect { on -> adapter.setPricing(vm.pricing.value, on) } }
         launchOnStarted { vm.suggestedQty.collect { adapter.setSuggested(it) } }
-        launchOnStarted { vm.suggestionList.collect { list -> adapter.setExplanations(if (vm.flags.fExplainSuggest) SuggestText.map(requireContext(), list) else emptyMap()) } }
         launchOnStarted { vm.smart.collect { renderSmart(it) } }
-        launchOnStarted { vm.parkedCount.collect { renderParked(it) } }
         launchOnStarted { vm.favorites.collect { updateEmpty() } }
         launchOnStarted {
             vm.events.collect { e ->
@@ -188,6 +132,104 @@ class SaleFragment : Fragment() {
             }
         }
     }
+
+    // ---------------- sozlash oynasi ----------------
+
+    /** Do'kon, narx turi, valyuta, savdo/qaytarish va kelgan narx — bitta oynada. Yopilgach kursor qidiruvga o'tadi. */
+    private fun openSetup() {
+        if (setupOpen) return
+        setupOpen = true
+        val ctx = requireContext()
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = Ui.dp(ctx, 20)
+            setPadding(p, Ui.dp(ctx, 8), p, 0)
+        }
+        var pickStore = false
+        val d = lastDraft
+        col.addView(Ui.text(ctx, getString(R.string.sale_store_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge))
+        col.addView(
+            Ui.button(ctx, d.store?.name ?: getString(R.string.sale_select_store), outlined = true, top = 4, icon = R.drawable.ic_store) {
+                pickStore = true
+                (it.tag as? android.app.Dialog)?.dismiss()
+            },
+        )
+        val fixed4 = d.store != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == d.store?.id }
+        col.addView(Ui.text(ctx, getString(R.string.sale_price_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
+        var level = d.level
+        col.addView(
+            Ui.toggle(
+                ctx,
+                listOf(getString(R.string.price_l1), getString(R.string.price_l2), getString(R.string.price_l3), getString(R.string.price_l4)),
+                (d.level - 1).coerceIn(0, 3), 4,
+            ) { i -> level = i + 1 },
+        )
+        // v5.0: 2-ilova mijoziga 4-narx tavsiya qilinadi, lekin boshqasiga o'tkazsa ham bo'ladi
+        if (fixed4) col.addView(Ui.hint(ctx, getString(R.string.sale_price_branch), 4))
+        col.addView(Ui.text(ctx, getString(R.string.sale_currency_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
+        var currency = d.currency
+        col.addView(
+            Ui.toggle(ctx, listOf(getString(R.string.currency_som), getString(R.string.currency_usd)), if (d.currency == Currency.USD) 1 else 0, 4) { i ->
+                currency = if (i == 1) Currency.USD else Currency.SOM
+            },
+        )
+        col.addView(Ui.text(ctx, getString(R.string.sale_mode_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
+        var mode = d.mode
+        col.addView(
+            Ui.toggle(ctx, listOf(getString(R.string.mode_sale), getString(R.string.mode_return)), if (d.mode == DealMode.RETURN) 1 else 0, 4) { i ->
+                mode = if (i == 1) DealMode.RETURN else DealMode.SALE
+            },
+        )
+        var cost = vm.showCost.value
+        if (ServiceLocator.appPrefs.fCostSwitch) {
+            col.addView(Ui.switch(ctx, getString(R.string.sale_cost_switch), cost, 14) { on -> cost = on })
+        }
+        val dialog = MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.sale_setup)
+            .setView(col)
+            .setPositiveButton(R.string.sale_setup_done, null)
+            .setOnDismissListener {
+                setupOpen = false
+                if (pickStore) {
+                    StorePickerSheet.show(childFragmentManager, REQ_STORE)
+                } else {
+                    applySetup(level, currency, mode, cost)
+                    focusSearch()
+                }
+            }
+            .show()
+        // "Do'konni tanlash" tugmasi oynani yopishi uchun
+        for (i in 0 until col.childCount) (col.getChildAt(i) as? com.google.android.material.button.MaterialButton)?.tag = dialog
+    }
+
+    private fun applySetup(level: Int, currency: Currency, mode: DealMode, cost: Boolean) {
+        val d = lastDraft
+        val priceChanged = level != d.level || currency != d.currency
+        if (mode != d.mode) vm.setMode(mode)
+        if (cost != vm.showCost.value) vm.setShowCost(cost)
+        if (!priceChanged) return
+        val apply = {
+            if (level != lastDraft.level) vm.setPriceLevel(level)
+            if (currency != lastDraft.currency) vm.setCurrency(currency)
+        }
+        if (d.lines.isEmpty()) apply() else confirmReprice(apply)
+    }
+
+    /** Oyna yopilgach: kursor qidiruvga, klaviatura ochiladi. */
+    private fun focusSearch() {
+        val b = _binding ?: return
+        if (lastDraft.store == null) return
+        b.edtSearch.post {
+            val bb = _binding ?: return@post
+            bb.edtSearch.requestFocus()
+            runCatching {
+                (requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .showSoftInput(bb.edtSearch, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+
+    // ---------------- ro'yxat va holat ----------------
 
     private fun undoSnack(msg: String, before: List<com.ilxomjon.dur_novvot_dokon.domain.CartLine>) {
         Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).setAction(R.string.cart_undo) { vm.undo(before) }.show()
@@ -211,19 +253,13 @@ class SaleFragment : Fragment() {
         when (val a = vm.smart.value) {
             SmartAction.PickStore -> StorePickerSheet.show(childFragmentManager, REQ_STORE)
             is SmartAction.AddUsual -> vm.addAllSuggested()
-            SmartAction.Finish -> if (lastDraft.store != null) FinishSheet.show(childFragmentManager)
+            SmartAction.Finish -> if (lastDraft.store != null) navigator().push(CartFragment())
             is SmartAction.TakePayment -> {
                 UiBus.paymentStore.value = lastDraft.store?.id
                 navigator().openTab(R.id.nav_payment)
             }
             SmartAction.None -> Unit
         }
-    }
-
-    private fun renderParked(n: Int) {
-        val on = vm.flags.fMultiCart
-        binding.btnParked.show(on && n > 0)
-        binding.btnParked.text = getString(R.string.parked_chip, n)
     }
 
     override fun onResume() {
@@ -239,7 +275,7 @@ class SaleFragment : Fragment() {
         binding.edtSearch.setText("")
         com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.handle(this, text.trim(), onAdded = { a ->
             _binding?.let { b ->
-                com.google.android.material.snackbar.Snackbar.make(b.root, a.product.name + "\n" + com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.describe(requireContext(), a), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT)
+                Snackbar.make(b.root, a.product.name + "\n" + com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.describe(requireContext(), a), Snackbar.LENGTH_SHORT)
                     .setAction(R.string.scan_undo) { com.ilxomjon.dur_novvot_dokon.ui.scan.ScanUi.undo(a) }.show()
             }
         }, onIdle = { _binding?.edtSearch?.requestFocus() })
@@ -250,47 +286,20 @@ class SaleFragment : Fragment() {
         if (!hidden) vm.reloadFavorites()
         super.onHiddenChanged(hidden)
         if (!hidden) com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.SALE)
-        if (hidden) autoPicked = false else maybeAutoPickStore()
-    }
-
-    private var compact = false
-
-    private fun setSearchCompact(on: Boolean) {
-        val bb = _binding ?: return
-        if (on == compact) return
-        compact = on
-        bb.rowPrice.show(!on)
-        bb.rowMode.show(!on)
-        bb.bottomBar.show(!on)
-        if (!on) updateEmpty()
-    }
-
-    private fun levelOfButton(id: Int): Int = when (id) {
-        R.id.btnP1 -> 1
-        R.id.btnP2 -> 2
-        R.id.btnCash -> 3
-        else -> 4
-    }
-
-    private fun buttonOfLevel(level: Int): Int = when (level) {
-        1 -> R.id.btnP1
-        2 -> R.id.btnP2
-        3 -> R.id.btnCash
-        else -> R.id.btnWholesale
+        if (hidden) autoPicked = false else maybeAutoSetup()
     }
 
     private fun confirmReprice(apply: () -> Unit) {
-        if (lastDraft.lines.isEmpty()) { apply(); return }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.reprice_title)
             .setMessage(R.string.reprice_message)
             .setPositiveButton(R.string.ok) { _, _ -> apply() }
-            .setNegativeButton(R.string.cancel) { _, _ -> renderDraft(lastDraft) }
-            .setOnCancelListener { renderDraft(lastDraft) }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun maybeAutoPickStore() {
+    /** v5.0: "Savdo" bo'limiga kirilganda do'kon tanlanmagan bo'lsa — sozlash oynasi o'zi ochiladi. */
+    private fun maybeAutoSetup() {
         if (autoPicked || isHidden || _binding == null) return
         if (lastList.loaded && lastList.hasProducts && lastDraft.store == null) {
             autoPicked = true
@@ -298,21 +307,9 @@ class SaleFragment : Fragment() {
         }
     }
 
-    private fun setSwitch(on: Boolean) {
-        rendering = true
-        if (binding.switchCost.isChecked != on) binding.switchCost.isChecked = on
-        rendering = false
-    }
-
-    /** Ro'yxat: qidiruv/filtr/katalog o'zgarganda. */
     private fun renderList(s: ListState) {
         adapter.setHighlights(s.highlights)
         adapter.setProducts(s.products)
-        binding.tvApprox.show(s.searching && s.approximate)
-        renderGroups(s.groups, s.filter)
-        val showSuggest = s.filter == ListFilter.Suggested && s.products.isNotEmpty()
-        binding.suggestBar.show(showSuggest)
-        if (showSuggest) binding.tvSuggest.text = getString(R.string.sale_suggest_bar, s.products.size)
         updateEmpty()
     }
 
@@ -328,86 +325,47 @@ class SaleFragment : Fragment() {
             when {
                 !s.hasProducts -> R.string.home_no_data_text
                 noStore -> R.string.sale_no_store
-                s.filter == ListFilter.Suggested && !s.searching -> R.string.frequent_empty
-                s.filter == ListFilter.InCart && !s.searching -> R.string.incart_empty
                 else -> R.string.sale_empty_products
             },
         )
-        // v3.1: do'kon tanlanmagan — orqa fon bo'sh (qidiruv va filtrlar yashirin), faqat "Do'kon tanlash"; tanlash oynasi o'zi ochiladi
         val pick = noStore && s.hasProducts
         binding.searchBox.show(!pick)
-        binding.chipScroll.show(!pick)
-        binding.btnFav0.show(false)
-        binding.btnFav1.show(false)
+        binding.tvContext.show(!pick)
         binding.btnOtherStore.show(pick)
     }
 
-    /** Sarlavha, savatcha va pastki panel: savatcha har o'zgarganda (faqat o'zgargan qatorlar yangilanadi). */
     private fun renderDraft(d: DraftState) {
         val b = binding
         val ctx = requireContext()
         rendering = true
-
-        val store = d.store
-        b.tvStoreName.text = store?.name ?: getString(R.string.sale_select_store)
-        val info = ArrayList<String>()
-        store?.regionName?.takeIf { it.isNotEmpty() }?.let { info += it }
-        store?.let { st -> StorePickerSheet.debtText(ctx, st).takeIf { it.isNotEmpty() }?.let { info += it } }
-        b.tvStoreInfo.text = info.joinToString(" · ")
-        b.tvStoreInfo.show(info.isNotEmpty())
-
-        b.toggleType.check(buttonOfLevel(d.level))
-        // v3.1: 2-filial mijozlariga (Mijozlar ro'yxatidagi do'konlar) narx doim 4 (optom) — almashtirib bo'lmaydi
-        val fixed4 = store != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == store.id }
-        for (i in 0 until b.toggleType.childCount) b.toggleType.getChildAt(i).isEnabled = !fixed4
-        if (fixed4 && d.level != 4) b.root.post { vm.setPriceLevel(4) }
-        b.toggleCurrency.check(if (d.currency == Currency.USD) R.id.btnUsd else R.id.btnSom)
-        b.toggleMode.check(if (d.mode == DealMode.RETURN) R.id.btnReturn else R.id.btnSale)
-        b.btnClear.show(d.lines.isNotEmpty())
-        b.btnPark.show(d.lines.isNotEmpty() && vm.flags.fMultiCart)
+        val parts = ArrayList<String>(4)
+        parts += d.store?.name ?: getString(R.string.sale_select_store)
+        parts += getString(
+            when (d.level) {
+                1 -> R.string.price_l1
+                2 -> R.string.price_l2
+                3 -> R.string.price_l3
+                else -> R.string.price_l4
+            },
+        )
+        parts += getString(if (d.currency == Currency.USD) R.string.currency_usd else R.string.currency_som)
+        if (d.mode == DealMode.RETURN) parts += getString(R.string.mode_return)
+        if (vm.showCost.value) parts += getString(R.string.sale_cost_switch)
+        b.tvContext.text = parts.joinToString(" · ")
         b.tvWarning.show(lastList.hasProducts && vm.pricing.value.rate <= 0.0)
 
         adapter.setCart(d.lines.associateBy { it.productId })
-
         b.tvCount.text = getString(R.string.sale_items_count, d.itemCount)
         b.tvTotal.text = ctx.money(d.total, d.currency)
         b.btnCart.isEnabled = d.itemCount > 0
         rendering = false
         updateEmpty()
-        maybeAutoPickStore()
-    }
-
-    private fun renderGroups(groups: List<Group>, selected: ListFilter) {
-        val ids = groups.map { it.id }
-        val chips = binding.chipGroups
-        rendering = true
-        if (ids != shownGroupIds) {
-            shownGroupIds = ids
-            chips.removeAllViews()
-            addChip(ListFilter.All, getString(R.string.group_all))
-            addChip(ListFilter.Suggested, getString(R.string.filter_frequent))
-            addChip(ListFilter.InCart, getString(R.string.filter_in_cart))
-            groups.forEach { addChip(ListFilter.OfGroup(it.id), it.name) }
-        }
-        for (i in 0 until chips.childCount) {
-            val chip = chips.getChildAt(i) as Chip
-            if (chip.tag == selected) { if (!chip.isChecked) chips.check(chip.id); break }
-        }
-        rendering = false
-    }
-
-    private fun addChip(filter: ListFilter, title: String) {
-        val chip = ItemGroupChipBinding.inflate(layoutInflater, binding.chipGroups, false).root
-        chip.id = View.generateViewId()
-        chip.tag = filter
-        chip.text = title
-        binding.chipGroups.addView(chip)
+        maybeAutoSetup()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        shownGroupIds = null
     }
 
     private companion object {

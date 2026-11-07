@@ -35,8 +35,15 @@ object WriteKind {
     const val NEW_GOODS = "ng"
     /** v4.0: dollar kursi (Константы.Курс + kurslar tarixi). Maydon: fields["rate"]. */
     const val RATE = "rt"
+    /** v4.1: yangi kontragent (mijoz yoki ta'minotchi) — Справочник.Контрагенты. [WriteRequest.fields]: [PartyField]. */
+    const val PARTY_NEW = "nk"
+    /** v4.1: kontragentni tahrirlash (nom, telefon, manzil, region). */
+    const val PARTY_EDIT = "ke"
+    /** v4.1: tovarni hisobdan chiqarish (СписанияТоваров): qatorlar — tovar va miqdor; tannarx 1C qoldig'idan. */
+    const val WRITE_OFF = "wo"
 
-    val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS, RATE)
+    val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS, RATE,
+        PARTY_NEW, PARTY_EDIT, WRITE_OFF)
     val MONEY = setOf(SUPPLIER_PAY, CLIENT_PAY, CASH_IN, CASH_OUT)
     val GOODS = setOf(GOODS_EDIT, NEW_GOODS)
 }
@@ -56,6 +63,35 @@ object GoodsField {
     const val RATE = "rate"
     val PRICES = listOf(P1, P2, P3, P4, COST)
     val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE, RATE)
+}
+
+/**
+ * v4.1: kontragent maydonlari. [GROUP]: "c" — mijozlar (Клиенты), "s" — ta'minotchilar (Поставщики).
+ * Tahrirlashda faqat yuborilgan maydon o'zgaradi.
+ */
+object PartyField {
+    const val NAME = "nm"
+    const val PHONE = "tel"
+    const val PHONE2 = "tel2"
+    const val ADDRESS = "adr"
+    const val REGION = "reg"
+    const val GROUP = "grp"
+    const val CLIENTS = "c"
+    const val SUPPLIERS = "s"
+    val ALL = setOf(NAME, PHONE, PHONE2, ADDRESS, REGION, GROUP)
+    private val PHONE_RE = Regex("[+0-9 ()-]{5,20}")
+
+    fun problem(kind: String, party: String, f: Map<String, String>): String? {
+        if (kind == WriteKind.PARTY_EDIT && party.isBlank()) return "party"
+        val name = f[NAME]?.trim()
+        if (kind == WriteKind.PARTY_NEW && name.isNullOrEmpty()) return "name"
+        if (name != null && name.length !in 2..150) return "name"
+        for (k in listOf(PHONE, PHONE2)) f[k]?.trim()?.takeIf { it.isNotEmpty() }?.let { if (!PHONE_RE.matches(it)) return "phone" }
+        f[ADDRESS]?.let { if (it.length > 250) return "address" }
+        f[GROUP]?.let { if (it != CLIENTS && it != SUPPLIERS) return "group" }
+        if (kind == WriteKind.PARTY_EDIT && f.keys.none { it in setOf(NAME, PHONE, PHONE2, ADDRESS, REGION) }) return "empty"
+        return null
+    }
 }
 
 data class WriteLine(val name: String, val code: String, val qty: Double, val priceSom: Double, val priceUsd: Double) {
@@ -149,6 +185,12 @@ data class WriteRequest(
         }
         WriteKind.GOODS_EDIT, WriteKind.NEW_GOODS -> goodsProblem()
         WriteKind.RATE -> fields[GoodsField.RATE]?.toDoubleOrNull()?.takeIf { it > 0 && it < 1_000_000 }?.let { null } ?: "rate"
+        WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT -> PartyField.problem(kind, party, fields)
+        WriteKind.WRITE_OFF -> when {
+            lines.isEmpty() -> "lines"
+            lines.any { it.qty <= 0.0 || it.name.isBlank() } -> "line"
+            else -> null
+        }
         else -> "kind"
     }
 }
@@ -175,7 +217,7 @@ object WriteCodec {
             "l" to r.lines.map { listOf(it.name, it.code, it.qty, it.priceSom, it.priceUsd) },
             "ns" to r.cashSom, "nu" to r.cashUsd, "ps" to r.cardSom, "pu" to r.cardUsd, "bc" to r.barcode, "t" to r.target,
             "ks" to r.clickSom, "ku" to r.clickUsd, "ds" to r.discountSom, "du" to r.discountUsd, "op" to r.op, "opc" to r.opCode,
-            "f" to LinkedHashMap(r.fields.filterKeys { it in GoodsField.ALL }),
+            "f" to LinkedHashMap(r.fields.filterKeys { it in GoodsField.ALL || it in PartyField.ALL }),
         ),
     )
 
@@ -193,7 +235,7 @@ object WriteCodec {
             val l = x as? List<Any?> ?: return@mapNotNull null
             WriteLine(l.getOrNull(0)?.toString().orEmpty(), l.getOrNull(1)?.toString().orEmpty(), d(l.getOrNull(2)), d(l.getOrNull(3)), d(l.getOrNull(4)))
         }
-        val f = (p.map["f"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) -> if (k in GoodsField.ALL && v != null) k to v.toString() else null }.toMap()
+        val f = (p.map["f"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) -> if ((k in GoodsField.ALL || k in PartyField.ALL) && v != null) k to v.toString() else null }.toMap()
         return WriteRequest(
             id, kind, o.long("c").takeIf { it > 0 } ?: o.long("at"), p.str("c"), p.str("cc"), p.str("n"), lines,
             p.num("ns"), p.num("nu"), p.num("ps"), p.num("pu"), p.str("bc"), p.str("t"),

@@ -27,3 +27,22 @@ Yangi (v3.10):
    tushadi. Tarozi IP manzillari 1C'dan (Весы > ОбщиеВесы) olinadi. 1C'ga hech narsa yozilmaydi.
 
 Hammasi shu. Kompyuter yoqilganda kerakli narsa o'zi ishga tushadi. Qayta sozlash: ORNATISH.bat ni yana oching.
+
+Yangi (v4.1):
+ - Tarozi xatosi tuzatildi ("Ожидается имя"): 1C so'rovida "В" nomi ishlatilgan edi (1C'da bu kalit so'z).
+   Shu xato ta'minotchilar qoldig'ini ham o'qitmas edi - u ham tuzatildi.
+ - Admin'dan: yangi mijoz / ta'minotchi, kontragentni tahrirlash, tovarni hisobdan chiqarish, 1C hisobotlari
+   (foyda, xarajat, kassa, ombor qoldig'i, qarzlar).
+ - 1C'da BIR MARTALIK sozlash (tovar va kontragent yozuvlari uchun). Telefonda
+   "Переменная не определена (мМобилАпп)" yoki "Процедура или функция ... не определена" xatosi chiqsa:
+     1) 1C Konfigurator > Конфигурация > Открыть конфигурацию;
+     2) daraxtda eng yuqoridagi "Конфигурация" ustida o'ng tugma > "Открыть модуль внешнего соединения";
+     3) ochilgan modulga quyidagi 3 qatorni yozing:
+          Перем мМобилАпп Экспорт;
+          Перем мХодим Экспорт;
+          мМобилАпп = Истина;
+     4) "Общие модули" > "ОбщиеНазначения" > Свойства > "Внешнее соединение" belgisini qo'ying;
+     5) F7 (Обновить конфигурацию базы данных), "Принять".
+   Shundan keyin kompyuter dasturi tovar va kontragentlarni 1C oynasidagidek yozadi.
+   (oxirgi qator - 1C oynasidagidek narx/kontragent o'zgarishi telefonlar bazasiga (SQL) ham yoziladi).
+   F7 dan keyin xato chiqsa - 4-qadamni qaytaring va oynaning rasmini yuboring.

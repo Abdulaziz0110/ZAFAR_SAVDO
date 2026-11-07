@@ -186,7 +186,7 @@ SUPPLIER_LIST_Q = (
 # v3.12: kassa moddalari (Admin: kassa kirim / chiqim shakli uchun)
 OPS_Q = "ВЫБРАТЬ О.Код КАК Код, О.Наименование КАК Имя ИЗ Справочник.Операции КАК О ГДЕ НЕ О.ПометкаУдаления УПОРЯДОЧИТЬ ПО О.Наименование"
 BALANCE_Q = (
-    "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, О.СуммаОстаток КАК С, О.СуммаВалОстаток КАК В "
+    "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, О.СуммаОстаток КАК С, О.СуммаВалОстаток КАК Вл "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О"
 )
 
@@ -197,7 +197,7 @@ def build_suppliers(people, balances, docs):
     for b in balances or []:
         n = text(b.get("Имя"))
         s, u = bal.get(n, (0.0, 0.0))
-        bal[n] = (round(s + num(b.get("С")), 2), round(u + num(b.get("В")), 4))
+        bal[n] = (round(s + num(b.get("С")), 2), round(u + num(b.get("Вл")), 4))
     by_party = {}
     for d in docs:
         by_party.setdefault(d["c"], []).append(d)
@@ -225,7 +225,7 @@ def suppliers_payload(onec, d_from, d_to, now_ms):
         except Exception:
             return {"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "list": [], "err": ["Поступления: %s" % str(e)[:150]]}
     try:
-        balances = onec.query(BALANCE_Q, ["Имя", "С", "В"])
+        balances = onec.query(BALANCE_Q, ["Имя", "С", "Вл"])
     except Exception as e:  # noqa: BLE001
         balances = []
         errors.append("ВзаиморасчетСКонтрагентом: %s" % str(e)[:120])
@@ -253,6 +253,153 @@ def cash_ops(onec):
         if isinstance(code, float) and code == int(code):
             code = int(code)
         out.append([str(code if code is not None else "").strip(), name])
+    return out
+
+
+# ---------------------------------------------------------------- v4.1: hisobotlar (1C registrlaridan, faqat o'qish)
+# 1C'dagi "Фойда", "Касса", "Харажатлар", "Остаток по товаров" hisobotlari bilan bir xil registrlar.
+
+PROFIT_Q = (
+    "ВЫБРАТЬ П.Товар.Наименование КАК Товар, П.Товар.Код КАК Код, СУММА(П.КолОборот) КАК Кол, "
+    "СУММА(П.ПриходСуммаОборот) КАК ПС, СУММА(П.РасходСуммаОборот) КАК РС, СУММА(П.ПрибльСуммаОборот) КАК ФС, "
+    "СУММА(П.ПриходВалОборот) КАК ПВ, СУММА(П.РасходВалОборот) КАК РВ, СУММА(П.ПрибльВалОборот) КАК ФВ "
+    "ИЗ РегистрНакопления.Прибль.Обороты(&Н, &К, , ) КАК П СГРУППИРОВАТЬ ПО П.Товар.Наименование, П.Товар.Код"
+)
+PROFIT_F = ["Товар", "Код", "Кол", "ПС", "РС", "ФС", "ПВ", "РВ", "ФВ"]
+DISCOUNT_Q = (
+    "ВЫБРАТЬ ЕСТЬNULL(СУММА(П.ПрибльСумСкидкаОборот), 0) КАК С, ЕСТЬNULL(СУММА(П.ПрибльВалСкидкаОборот), 0) КАК Вл "
+    "ИЗ РегистрНакопления.Прибль.Обороты(&Н, &К, , ) КАК П"
+)
+EXPENSES_Q = (
+    "ВЫБРАТЬ Х.Номи.Наименование КАК Имя, СУММА(Х.СумОборот) КАК С, СУММА(Х.ВалОборот) КАК Вл "
+    "ИЗ РегистрНакопления.Харажатлар.Обороты(&Н, &К, , ) КАК Х СГРУППИРОВАТЬ ПО Х.Номи.Наименование"
+)
+CASH_BAL_Q = (
+    "ВЫБРАТЬ ЕСТЬNULL(СУММА(К.НаличОстаток), 0) КАК Н, ЕСТЬNULL(СУММА(К.ПеречОстаток), 0) КАК П, "
+    "ЕСТЬNULL(СУММА(К.КликОстаток), 0) КАК К, ЕСТЬNULL(СУММА(К.НаличВалОстаток), 0) КАК НВ, "
+    "ЕСТЬNULL(СУММА(К.ПеречВалОстаток), 0) КАК ПВ ИЗ РегистрНакопления.Касса.Остатки(&К, ) КАК К"
+)
+CASH_TURN_Q = (
+    "ВЫБРАТЬ К.Асос.Наименование КАК Имя, СУММА(К.НаличПриход) КАК НП, СУММА(К.НаличРасход) КАК НР, "
+    "СУММА(К.ПеречПриход) КАК ПП, СУММА(К.ПеречРасход) КАК ПР, СУММА(К.КликПриход) КАК КП, СУММА(К.КликРасход) КАК КР, "
+    "СУММА(К.НаличВалПриход) КАК ВП, СУММА(К.НаличВалРасход) КАК ВР "
+    "ИЗ РегистрНакопления.Касса.Обороты(&Н, &К, , ) КАК К СГРУППИРОВАТЬ ПО К.Асос.Наименование"
+)
+CASH_TURN_F = ["Имя", "НП", "НР", "ПП", "ПР", "КП", "КР", "ВП", "ВР"]
+STOCK_Q = (
+    "ВЫБРАТЬ О.Товар.Наименование КАК Товар, О.Товар.Код КАК Код, СУММА(О.КоличествоОстаток) КАК Кол, "
+    "ВЫБОР КОГДА О.Товар.ВидВал = ЗНАЧЕНИЕ(Перечисление.ВидВал.Вал) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Вал, "
+    "О.Товар.ПриходЦена КАК ЦС, О.Товар.ПриходВал КАК ЦВ "
+    "ИЗ РегистрНакопления.Товар.Остатки(&К, ) КАК О "
+    "СГРУППИРОВАТЬ ПО О.Товар.Наименование, О.Товар.Код, О.Товар.ВидВал, О.Товар.ПриходЦена, О.Товар.ПриходВал"
+)
+STOCK_F = ["Товар", "Код", "Кол", "Вал", "ЦС", "ЦВ"]
+DEBT_Q = (
+    "ВЫБРАТЬ Вз.Контрагент.Наименование КАК Имя, ВЫБОР КОГДА Вз.Контрагент.Родитель = ЗНАЧЕНИЕ(Справочник.Контрагенты.Поставщики) "
+    "ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Пост, СУММА(Вз.СуммаОстаток) КАК С, СУММА(Вз.СуммаВалОстаток) КАК Вл "
+    "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(&К, ) КАК Вз "
+    "СГРУППИРОВАТЬ ПО Вз.Контрагент.Наименование, Вз.Контрагент.Родитель"
+)
+REPORT_ROWS = 300
+
+
+def build_reports(profit, discount, expenses, cash_bal, cash_turn, stock, debts, limit=REPORT_ROWS):
+    """Sof mantiq: so'rov qatorlaridan hisobotlar (test qilinadi). Har bo'lim — jami + eng kattalari."""
+    out = {}
+    if profit is not None:
+        rows = []
+        tot = [0.0] * 6
+        for r in profit:
+            vals = [num(r.get(k)) for k in ("ПС", "РС", "ФС", "ПВ", "РВ", "ФВ")]
+            if not any(vals) and not num(r.get("Кол")):
+                continue
+            tot = [a + b for a, b in zip(tot, vals)]
+            rows.append([text(r.get("Товар")), text(r.get("Код")), num(r.get("Кол"))] + vals)
+        rows.sort(key=lambda x: -(abs(x[5]) + abs(x[8]) * 12000))
+        d = discount or {}
+        out["profit"] = {"tot": [round(x, 4) for x in tot], "rows": rows[:limit], "n": len(rows),
+                         "disc": [num(d.get("С")), num(d.get("Вл"))]}
+    if expenses is not None:
+        ex = [[text(r.get("Имя")) or "-", num(r.get("С")), num(r.get("Вл"))] for r in expenses]
+        ex = [x for x in ex if x[1] or x[2]]
+        ex.sort(key=lambda x: -(abs(x[1]) + abs(x[2]) * 12000))
+        out["exp"] = ex[:limit]
+    if cash_bal is not None or cash_turn is not None:
+        b = (cash_bal or [{}])[0] if cash_bal else {}
+        turn = []
+        for r in cash_turn or []:
+            v = [num(r.get(k)) for k in CASH_TURN_F[1:]]
+            if any(v):
+                turn.append([text(r.get("Имя")) or "-"] + v)
+        turn.sort(key=lambda x: -(sum(abs(y) for y in x[1:7]) + (abs(x[7]) + abs(x[8])) * 12000))
+        out["cash"] = {"bal": [num(b.get(k)) for k in ("Н", "П", "К", "НВ", "ПВ")], "turn": turn[:limit]}
+    if stock is not None:
+        rows = []
+        vs = vu = 0.0
+        for r in stock:
+            q = num(r.get("Кол"))
+            if q == 0:
+                continue
+            usd = bool(num(r.get("Вал")))
+            cost = num(r.get("ЦВ")) if usd else num(r.get("ЦС"))
+            value = round(q * cost, 4 if usd else 2)
+            if usd:
+                vu += value
+            else:
+                vs += value
+            rows.append([text(r.get("Товар")), text(r.get("Код")), q, 1 if usd else 0, cost, value])
+        rows.sort(key=lambda x: -(abs(x[5]) * (12000 if x[3] else 1)))
+        out["stock"] = {"rows": rows[:limit * 4], "n": len(rows), "vs": round(vs, 2), "vu": round(vu, 4),
+                        "neg": sum(1 for x in rows if x[2] < 0)}
+    if debts is not None:
+        pos = [0.0, 0.0]
+        neg = [0.0, 0.0]
+        top, owe = [], []
+        for r in debts:
+            sm, us = num(r.get("С")), num(r.get("Вл"))
+            if not sm and not us:
+                continue
+            name = text(r.get("Имя"))
+            sup = bool(num(r.get("Пост")))
+            if sm > 0:
+                pos[0] += sm
+            else:
+                neg[0] += -sm
+            if us > 0:
+                pos[1] += us
+            else:
+                neg[1] += -us
+            if sm > 0 or us > 0:
+                top.append([name, max(sm, 0), max(us, 0), 1 if sup else 0])
+            if sm < 0 or us < 0:
+                owe.append([name, max(-sm, 0), max(-us, 0), 1 if sup else 0])
+        key = lambda x: -(x[1] + x[2] * 12000)  # noqa: E731
+        top.sort(key=key)
+        owe.sort(key=key)
+        out["debt"] = {"pos": [round(x, 2) for x in pos], "neg": [round(x, 2) for x in neg], "top": top[:50], "owe": owe[:50]}
+    return out
+
+
+def reports_payload(onec, d_from, d_to, now_ms):
+    """Hisobotlar: foyda (tovar bo'yicha), chegirma, xarajatlar, kassa qoldig'i va aylanmasi, ombor qoldig'i, qarzlar."""
+    errors = []
+
+    def q(name, text_, fields, **params):
+        try:
+            return onec.query(text_, fields, **params)
+        except Exception as e:  # noqa: BLE001 — bitta hisobot buzuq bo'lsa ham qolganlari
+            errors.append("%s: %s" % (name, str(e)[:120]))
+            return None
+
+    profit = q("Прибль", PROFIT_Q, PROFIT_F, Н=d_from, К=d_to)
+    disc = q("Прибль (скидка)", DISCOUNT_Q, ["С", "Вл"], Н=d_from, К=d_to)
+    expenses = q("Харажатлар", EXPENSES_Q, ["Имя", "С", "Вл"], Н=d_from, К=d_to)
+    cash_bal = q("Касса", CASH_BAL_Q, ["Н", "П", "К", "НВ", "ПВ"], К=d_to)
+    cash_turn = q("Касса (aylanma)", CASH_TURN_Q, CASH_TURN_F, Н=d_from, К=d_to)
+    stock = q("Товар (qoldiq)", STOCK_Q, STOCK_F, К=d_to)
+    debts = q("ВзаиморасчетСКонтрагентом", DEBT_Q, ["Имя", "Пост", "С", "Вл"], К=d_to)
+    out = build_reports(profit, (disc or [{}])[0] if disc else None, expenses, cash_bal, cash_turn, stock, debts)
+    out.update({"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "err": errors})
     return out
 
 

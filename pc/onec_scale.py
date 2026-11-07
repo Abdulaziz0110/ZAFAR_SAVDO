@@ -46,8 +46,8 @@ IP_FIELDS = ["И%d" % i for i in range(1, 11)]
 
 
 def ips_query():
-    sel = ", ".join("В.ТспИП%d КАК И%d" % (i, i) for i in range(1, 11))
-    return "ВЫБРАТЬ %s ИЗ Справочник.Весы КАК В ГДЕ В.Ссылка = %s" % (sel, SCALE_REF)
+    sel = ", ".join("Вс.ТспИП%d КАК И%d" % (i, i) for i in range(1, 11))
+    return "ВЫБРАТЬ %s ИЗ Справочник.Весы КАК Вс ГДЕ Вс.Ссылка = %s" % (sel, SCALE_REF)
 
 
 def _num(v):

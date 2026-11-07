@@ -112,12 +112,13 @@ class RepeatSheet : BottomSheetDialogFragment() {
         val edt = TextInputEditText(til.context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             setText(NumFmt.qty(l.qty).replace(" ", ""))
+            uz.imsoft.shared.android.NumInput.attach(this)
             selectAll()
         }
         til.addView(edt)
         MaterialAlertDialogBuilder(requireContext()).setTitle(l.name).setView(til)
             .setPositiveButton(R.string.lg_ok) { _, _ ->
-                val v = Num.parse(edt.text?.toString().orEmpty())
+                val v = uz.imsoft.shared.NumText.parseOrNull(edt.text?.toString())
                 if (v != null && v > 0) { l.qty = v; done() }
             }
             .setNegativeButton(R.string.lg_cancel, null).show()

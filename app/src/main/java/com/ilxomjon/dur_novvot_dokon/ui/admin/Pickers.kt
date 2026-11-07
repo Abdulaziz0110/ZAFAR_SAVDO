@@ -41,6 +41,23 @@ object Pickers {
         dialog = MaterialAlertDialogBuilder(ctx).setTitle(R.string.ad_product_pick).setView(col).setNegativeButton(R.string.cancel, null).show()
     }
 
+    /** v4.1: faqat miqdor (hisobdan chiqarish). */
+    fun qty(ctx: Context, title: String, qty: Double, onOk: (Double) -> Unit) {
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(Ui.dp(ctx, 20), Ui.dp(ctx, 4), Ui.dp(ctx, 20), 0)
+        }
+        val (tq, eq) = Ui.field(ctx, ctx.getString(R.string.ad_qty), Ui.NUMBER, if (qty > 0) Money.plain(qty) else "")
+        col.addView(tq)
+        MaterialAlertDialogBuilder(ctx).setTitle(title).setView(col)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                val q = Money.parseUser(eq.text?.toString()) ?: 0.0
+                if (q > 0.0) onOk(q)
+            }
+            .setNegativeButton(R.string.cancel, null).show()
+        eq.requestFocus()
+    }
+
     /** Miqdor va narx (so'm yoki $ — tovar valyutasida). [onOk](miqdor, narx so'm, narx $). */
     fun qtyPrice(ctx: Context, title: String, qty: Double, priceSom: Double, priceUsd: Double, usdMain: Boolean, onOk: (Double, Double, Double) -> Unit) {
         val rate = ServiceLocator.catalog.state.value.rate

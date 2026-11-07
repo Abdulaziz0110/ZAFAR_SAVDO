@@ -136,19 +136,16 @@ class ProductAdapter(
         fun bind(p: Product, full: Boolean) {
             val ctxt = b.root.context
             val line = lines[p.id]
-            if (full) b.tvName.text = Highlight.apply(p.name, highlights[p.id], ctxt)
+            // v5.0: 1-qator — kod va nom; 2-qator — narx va PLU
+            if (full) {
+                val name = Highlight.apply(p.name, highlights[p.id], ctxt)
+                b.tvName.text = if (showCodes) android.text.TextUtils.concat(p.id + " · ", name) else name
+            }
             val parts = ArrayList<String>(3)
-            if (showCodes) {
-                val plu = pluOf(p.id)
-                parts += if (plu != null) ctxt.getString(R.string.meta_code_plu, p.id, plu) else ctxt.getString(R.string.meta_code, p.id)
-            }
+            if (showCodes) pluOf(p.id)?.let { parts += ctxt.getString(R.string.meta_plu, it) }
             notes[p.id]?.let { parts += it }
-            if (line == null) {
-                val ex = explanations[p.id]
-                if (ex != null) parts += ex else suggested[p.id]?.let { parts += ctxt.getString(R.string.meta_usual, Money.qtyDisplay(it)) }
-            }
             if (showCost) parts += ctxt.getString(R.string.meta_cost, ctxt.money(Pricing.costPrice(p, ctx.currency, ctx.rate), ctx.currency))
-            if (parts.size <= (if (showCodes) 1 else 0) && p.hasBlock) parts += ctxt.getString(R.string.block_info, Money.qtyDisplay(p.blockSize))
+            if (p.hasBlock) parts += ctxt.getString(R.string.block_info, Money.qtyDisplay(p.blockSize))
             val meta = parts.joinToString(" · ")
             b.tvMeta.text = meta
             b.tvMeta.show(meta.isNotEmpty())

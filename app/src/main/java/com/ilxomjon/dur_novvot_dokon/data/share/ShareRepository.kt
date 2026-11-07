@@ -147,6 +147,7 @@ class ShareRepository(
     val history = StoreHistory(context, catalog, api).also { h ->
         h.priorityStores = { store.clients().map { it.storeId }.filter { it.isNotEmpty() }.toSet() }
         h.onReport = { storeId, _, report, source -> fromHistory(storeId, report, source) }
+        h.workTime = { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.appPrefs.workHours.isWorkTime(System.currentTimeMillis()) }
     }
     /** Oxirgi server hisobotidan 2-ilova mijozining kitobi o'zgardimi (do'kon id bo'yicha). */
     private val historyChanged = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
@@ -627,7 +628,7 @@ class ShareRepository(
                 val raw = B64.decode(o.str("b"))
                 val bytes = if (o.bool("gz")) B64.gunzip(raw) else raw
                 val dk = o.str("k")
-                if (dk == "sales" || dk == "supp") {
+                if (dk == "sales" || dk == "supp" || dk == "rep") {
                     (dataHook ?: throw IllegalStateException(dk)).invoke(dk, bytes)
                     return@runCatching
                 }
@@ -800,7 +801,9 @@ class ShareRepository(
             if (c.storeId.isEmpty()) continue
             val last = serverImportAt[c.id] ?: 0L
             val asked = served.any { it.first == c.id }
-            if (now - last >= 10 * 60_000L || (asked && now - last >= 2 * 60_000L)) {
+            // v5.0: ish vaqtidan tashqarida o'zi so'ramaydi (batareya); 2-ilova so'rasa — baribir yangilanadi
+            val period = if (history.workTime()) 10 * 60_000L else 3 * 60 * 60_000L
+            if (now - last >= period || (asked && now - last >= 2 * 60_000L)) {
                 runCatching { serverImport(c.id) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; serverImportAt[c.id] = now - 7 * 60_000L }
             }
         }

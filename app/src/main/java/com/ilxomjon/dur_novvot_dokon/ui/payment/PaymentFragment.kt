@@ -1,5 +1,6 @@
 package com.ilxomjon.dur_novvot_dokon.ui.payment
 
+import uz.imsoft.shared.android.NumInput
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -38,6 +39,7 @@ class PaymentFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vm = viewModel { PaymentViewModel(ServiceLocator.catalog, ServiceLocator.orders, ServiceLocator.appPrefs, ServiceLocator.historyDb) }
+        for (e in listOf(binding.edtCash, binding.edtTransfer, binding.edtClick)) NumInput.attach(e)
         lastToken = vm.state.value.sentToken
 
         childFragmentManager.setFragmentResultListener(REQ_STORE, viewLifecycleOwner) { _, bundle ->

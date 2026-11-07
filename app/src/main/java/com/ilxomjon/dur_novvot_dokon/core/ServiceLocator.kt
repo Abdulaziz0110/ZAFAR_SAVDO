@@ -89,7 +89,11 @@ object ServiceLocator {
             // v2.4: 2-ilova bilan ulashish (sozlangan bo'lsa)
             runCatching {
                 share.load()
-                if (AppRole.isAdmin) share.history.load()
+                if (AppRole.isAdmin) {
+                    share.history.load()
+                    // v5.0: birinchi ochilishda baza bo'sh bo'lsa — o'zi to'ldiradi (keyin faqat qo'lda yoki kompyuter o'zgarganda)
+                    runCatching { share.history.startIfEmpty() }
+                }
                 catalog.onChanged = { barcodes.invalidate(); share.markDirty(); if (shareStore.isConfigured && shareStore.autoPublish) ShareWorker.kick(app) }
                 if (shareStore.isConfigured) ShareWorker.schedule(app)
             }
@@ -251,7 +255,16 @@ object ServiceLocator {
             // v3.2: 1C savdolar/ta'minotchilar, ish vaqti, mijoz so'rovlari (faqat Admin)
             s.workHours = { appPrefs.workHours }
             // v4.0.1: yangi 1C savdolari kelganda 2-ilova mijozlari qayta yuboriladi (tarixda tovarlar, Narxlar ro'yxati)
-            s.dataHook = { kind, bytes -> onec.onData(kind, bytes).also { ok -> if (ok && kind == "sales" && AppRole.isAdmin) s.markDirty() } }
+            s.dataHook = { kind, bytes ->
+                onec.onData(kind, bytes).also { ok ->
+                    if (ok && kind == "sales" && AppRole.isAdmin) {
+                        s.markDirty()
+                        // v5.0: kompyuterda o'zgarish bo'ldi — davriy so'rov o'rniga faqat shu mijozlar yangilanadi
+                        val names = onec.state.value.sales?.docs.orEmpty().map { it.party }.filter { it.isNotBlank() }.distinct().take(40)
+                        appScope.launch { runCatching { s.history.bumpByNames(names) } }
+                    }
+                }
+            }
             s.salesOf = { if (AppRole.isAdmin) onec.state.value.sales else null }
             if (AppRole.isAdmin) {
                 s.editHook = { id, entries -> clientRequests.apply(id, entries) }
@@ -325,6 +338,9 @@ object ServiceLocator {
     val onec: com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository by lazy {
         com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore).also { it.scope = appScope }
     }
+    /** v5.0: dollar kursi internetdan (bozorga yaqin bank kursi + rasmiy kurs). */
+    val rateOnline: uz.imsoft.shared.android.RateOnline by lazy { uz.imsoft.shared.android.RateOnline(app) }
+
     /** v3.12: "Shtrix kod → 1C" ro'yxati. */
     val barcodeBatch by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch(app) }
 
