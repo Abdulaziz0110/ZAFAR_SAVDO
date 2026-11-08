@@ -13,6 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
 import com.ilxomjon.dur_novvot_dokon.data.share.ClientOrder
+import com.ilxomjon.dur_novvot_dokon.data.share.OrderConfirm
 import com.ilxomjon.dur_novvot_dokon.databinding.ItemOrderBinding
 import com.ilxomjon.dur_novvot_dokon.databinding.SheetOrdersBinding
 import com.ilxomjon.dur_novvot_dokon.ui.formatDateTime
@@ -86,17 +87,55 @@ class OrdersSheet : BottomSheetDialogFragment() {
         val text = head + o.lines.joinToString("\n") { "• " + it.name + " — " + NumFmt.qty(it.qty) } + if (o.note.isNotBlank()) "\n\n" + getString(R.string.ord_note, o.note) else ""
         val fm = parentFragmentManager
         MaterialAlertDialogBuilder(ctx).setTitle(getString(R.string.ord_item_title, formatDateTime(o.at))).setMessage(text)
-            .setPositiveButton(R.string.lgh_to_cart) { _, _ ->
+            // v5.1.1: "Tasdiqlash" — darhol savdo bo'lib rasmiylashadi, chek printerini Admin tanlaydi.
+            .setPositiveButton(R.string.ord_ok) { _, _ -> askPrinter(co) }
+            .setNeutralButton(R.string.ord_to_cart) { _, _ ->
                 dismiss()
                 RepeatSheet.showPlan(fm, DokonLedgerHost.planForOrder(ctx, co))
             }
-            .setNeutralButton(R.string.ord_reject) { _, _ ->
+            .setNegativeButton(R.string.ord_reject) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     runCatching { ServiceLocator.share.setOrderStatus(co.clientId, o.id, OrderRequest.Status.REJECTED) }
                     render(ServiceLocator.share.orders.value)
                 }
             }
-            .setNegativeButton(R.string.close, null).show()
+            .show()
+    }
+
+    /** Chek qayerdan chiqsin: Printer 1 / Printer 2 / cheksiz. Keyin buyurtma darhol savdo bo'ladi. */
+    private fun askPrinter(co: ClientOrder) {
+        val ctx = requireContext()
+        val choices = OrderConfirm.printerChoices(ctx)
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.ord_where)
+            .setMessage(getString(R.string.ord_where_sub, co.clientName))
+            .setItems(choices.map { it.second }.toTypedArray()) { _, i -> accept(co, choices[i].first) }
+            .setNegativeButton(R.string.lg_cancel, null)
+            .show()
+    }
+
+    private fun accept(co: ClientOrder, printer: String) {
+        val ctx = requireContext().applicationContext
+        val root = requireActivity().findViewById<View>(android.R.id.content)
+        b.progress.show(true)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val msg = try {
+                val r = OrderConfirm.accept(ctx, co.clientId, co.order.id, printer)
+                listOfNotNull(
+                    getString(R.string.ord_done, r.storeName, r.added, OrderConfirm.printerName(ctx, printer)),
+                    r.missing.takeIf { it > 0 }?.let { getString(R.string.ord_missing_n, it) },
+                ).joinToString(" · ")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                getString(R.string.ord_fail_title) + ": " + (e.message ?: e.javaClass.simpleName)
+            }
+            if (_b != null) {
+                b.progress.show(false)
+                render(ServiceLocator.share.orders.value)
+            }
+            com.google.android.material.snackbar.Snackbar.make(root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+        }
     }
 
     override fun onDestroyView() {

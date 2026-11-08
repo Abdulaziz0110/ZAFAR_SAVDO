@@ -65,6 +65,42 @@ class OrderRepository(
         code
     }
 
+    /**
+     * v5.1.1: savatchaga TEGMASDAN tayyor savdo yuborish — 2-ilova buyurtmasini tasdiqlaganda (bildirishnomadan ham).
+     * Joriy savatcha o'zgarmaydi. To'lov yo'q (qarzga), chegirma yo'q; chek [printer] dan chiqadi ("3" — cheksiz).
+     * @return kvitansiya kodi
+     */
+    suspend fun sendDirect(
+        store: com.ilxomjon.dur_novvot_dokon.domain.Store,
+        mode: com.ilxomjon.dur_novvot_dokon.domain.DealMode,
+        currency: Currency,
+        priceType: com.ilxomjon.dur_novvot_dokon.domain.PriceType,
+        lines: List<com.ilxomjon.dur_novvot_dokon.domain.CartLine>,
+        printer: String,
+    ): String = sendLock.withLock {
+        val agent = catalog.state.value.agent ?: throw IllegalStateException("Agent topilmadi")
+        if (lines.isEmpty()) throw IllegalStateException("Savatcha bo'sh")
+        val now = Date()
+        val pay = Protocol.Payments(0.0, 0.0, 0.0)
+        val payload = Protocol.order(
+            agentId = agent.id, storeId = store.id, time = now, currency = currency, priceType = priceType,
+            pay = pay, discount = 0.0, rate = catalog.state.value.rateText, mode = mode,
+            printer = printer, lines = lines,
+        )
+        val sent = SentOrder(
+            id = 0, sentAt = now.time, storeId = store.id, storeName = store.name, mode = mode, priceType = priceType,
+            currency = currency, total = lines.sumOf { it.total }, discount = 0.0, paid = 0.0,
+            lines = lines.map { SentLine(it.name, it.qty, it.price, it.productId) }, pending = true,
+            cash = 0.0, card = 0.0,
+        )
+        val id = outbox.enqueueOrder(agent.id, payload, sent)
+        val code = OutboxEntry.receiptOf(OutboxKind.ORDER, id)
+        runCatching { onOrderPayload?.invoke(agent.id, payload, sent, code) }
+        outbox.kick()
+        runCatching { onOrderQueued?.invoke(sent, id, code) }
+        code
+    }
+
     /** @return kvitansiya kodi (masalan "T-0013") */
     suspend fun sendPayment(storeId: String, storeName: String, cash: Double, transfer: Double, click: Double, note: String, printer: String): String =
         OutboxEntry.receiptOf(OutboxKind.PAYMENT, sendPaymentId(storeId, storeName, cash, transfer, click, note, printer))

@@ -566,7 +566,7 @@
     <string name="ord_item_lines">%1$d xil tovar</string>
     <string name="ord_note">Izoh: %1$s</string>
     <string name="ord_st_new">Yangi</string>
-    <string name="ord_st_taken">Savatchaga olindi</string>
+    <string name="ord_st_taken">Tasdiqlandi</string>
     <string name="ord_st_rejected">Rad etildi</string>
     <string name="ord_reject">Rad etish</string>
     <string name="ord_notif_title">%1$s: yangi buyurtma</string>
@@ -2004,4 +2004,17 @@
     <string name="rp_top_owe">Biz qarzdor bo\'lganlar</string>
     <string name="rp_client">Mijoz</string>
     <string name="rp_supplier">Yuk beruvchi</string>
+    <string name="ord_ok">Tasdiqlash</string>
+    <string name="ord_to_cart">Savatchaga</string>
+    <string name="ord_notif_one">%1$d xil tovar: %2$s</string>
+    <string name="ord_where">Chek qayerda chiqsin</string>
+    <string name="ord_where_sub">Buyurtma darhol savdo bo\'lib rasmiylashadi: %1$s</string>
+    <string name="ord_done_title">Buyurtma tasdiqlandi</string>
+    <string name="ord_done">%1$s · %2$d xil tovar · %3$s</string>
+    <string name="ord_fail_title">Buyurtma tasdiqlanmadi</string>
+    <string name="ord_gone">Buyurtma topilmadi</string>
+    <string name="ord_already">Bu buyurtma allaqachon tasdiqlangan</string>
+    <string name="ord_missing_n">katalogda yo\'q: %1$d</string>
+    <string name="ord_working">Tasdiqlanmoqda...</string>
+    <string name="notif_channel_orders">Buyurtmalar</string>
 </resources>

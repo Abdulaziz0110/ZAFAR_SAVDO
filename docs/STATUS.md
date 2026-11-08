@@ -1,10 +1,26 @@
-# Holat — Savdo Agent / Savdo Admin 5.1 (versionCode 35) + Savdo Mijoz 5.1 (versionCode 23), 2026-11-07
+# Holat — Savdo Agent / Savdo Admin 5.1.1 (versionCode 36) + Savdo Mijoz 5.1.1 (versionCode 24), 2026-11-08
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.1.1 — Mijoz kamchiliklari va buyurtmani tasdiqlash
+| Narsa | Holat |
+|---|---|
+| Mijoz: "Buyurtma berish" asosiy tugmalar qatorida (2-tugma); buyurtma yopiq bo'lsa shu tugma "Narxlar" bo'ladi | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| Mijoz: narx turlari "1-narx" emas "1", "2", "3", "4" | VERIFIED (strings.xml, lotin va kirill) |
+| **Mijoz: "Yakunlash/Yuborish" bosilganda hech narsa bo'lmasligi — XATOLIK tuzatildi** | VERIFIED (sabab: `Fragment.ledgerHost()` "Narxlar" ekranida null qaytarar edi va buyurtma oynasi darhol yopilib ketardi; endi `MijozLedgerHost` ga tushadi) |
+| Admin: yangi buyurtma darhol bilinadi (Firebase oqimi — `s/{kalit}/ord`, oxirgi 1 yozuv) | VERIFIED (kompilyatsiya) / internet bilan IMPLEMENTED-UNVERIFIED |
+| Admin: buyurtma bildirishnomasi alohida, ovozli kanalda (IMPORTANCE_HIGH), har buyurtmaga bittasi | VERIFIED (kompilyatsiya) / qurilmada IMPLEMENTED-UNVERIFIED |
+| Admin: bildirishnomadagi "Tasdiqlash" — savdo darhol rasmiylashadi, chek **Printer 1** dan chiqadi | VERIFIED (`OrderConfirmTest.directSalePayloadIsDebtSaleOnChosenPrinter`) / 1C va printerda IMPLEMENTED-UNVERIFIED |
+| Admin: bildirishnomadagi "Rad etish" | VERIFIED (kompilyatsiya) |
+| Admin: ilova ichida tasdiqlaganda chek printerini o'zi tanlaydi (Printer 1 / Printer 2 / Cheksiz) | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
+| Tasdiqlash savatchaga TEGMAYDI (`OrderRepository.sendDirect`): optom narx, so'm, qarzga, chegirmasiz | VERIFIED (`OrderConfirmTest`, 4 ta test) |
+| "Savatchaga" yo'li saqlandi (tovar/miqdorni o'zgartirish kerak bo'lsa) | VERIFIED (kompilyatsiya) |
+| Bildirishnoma bosilsa buyurtmalar ro'yxati ochiladi | VERIFIED (kompilyatsiya) |
+| Bildirishnomadan tasdiqlash ilova yopiq bo'lsa ham ishlashi (WorkManager) | IMPLEMENTED-UNVERIFIED — qurilmada sinash kerak |
 
 ## 5.1 — 1C'ga yozish 1C'dagidek
 | Narsa | Holat |

@@ -277,10 +277,10 @@
     <string name="cart_clear_msg">Buyurtma savatchasidagi hamma tovarlar olib tashlanadi.</string>
     <string name="cart_title">Yangi buyurtma</string>
     <string name="cart_hint">Miqdorni tekshiring. Bu savdo emas: do\'kon egasi tasdiqlasa, uning savatchasiga tushadi va rasmiylashtiriladi. Narxlar taxminiy.</string>
-    <string name="price_n1">1-narx</string>
-    <string name="price_n2">2-narx</string>
-    <string name="price_n3">3-narx</string>
-    <string name="price_n4">4-narx</string>
+    <string name="price_n1">1</string>
+    <string name="price_n2">2</string>
+    <string name="price_n3">3</string>
+    <string name="price_n4">4</string>
     <string name="price_usd">USD</string>
     <string name="x_error">Xato: %1$s</string>
     <string name="st_more">Ko\'proq sozlamalar</string>

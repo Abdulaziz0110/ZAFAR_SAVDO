@@ -39,16 +39,18 @@ class HomeFragment : Fragment() {
         b.btnLink.setOnClickListener { (activity as? uz.imsoft.mijoz.ui.MainActivity)?.showLogin() }
         b.btnRefresh.setOnClickListener { refresh() }
         b.btnPrices.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_prices) }
+        // v5.1.1: "Buyurtma berish" asosiy tugmalar qatorida. Buyurtma yopiq bo'lsa — shu tugma "Narxlar" bo'lib ishlaydi.
         b.btnOrder.setOnClickListener {
             (activity as? MainActivity)?.openTab(R.id.nav_prices)
-            activity?.let { a -> com.google.android.material.snackbar.Snackbar.make(a.findViewById(android.R.id.content), R.string.home_order_hint, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show() }
+            if (ordersOn()) activity?.let { a ->
+                com.google.android.material.snackbar.Snackbar.make(a.findViewById(android.R.id.content), R.string.home_order_hint, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+            }
         }
         b.btnReport.setOnClickListener { (activity as? MainActivity)?.openTab(R.id.nav_report) }
         // v3.2: o'z kassasi va to'lov kiritish
         // v3.9: o'z savdosi (agentdagidek) — savdo ekrani, mijozlar, kassa tarixi/hisoboti; bizga to'lov kiritish
         val main = { activity as? MainActivity }
         b.btnNewSale.setOnClickListener { main()?.openTab(R.id.nav_sale) }
-        b.btnSlot2.setOnClickListener { main()?.openTab(R.id.nav_prices) }
         bindSlot(b.btnSlot3, 3)
         bindSlot(b.btnSlot4, 4)
         b.toolbar.inflateMenu(R.menu.home_menu)
@@ -59,6 +61,12 @@ class HomeFragment : Fragment() {
             // Internet holati: yo'q bo'lsa — oxirgi saqlangan ma'lumot vaqti bilan ogohlantirish (ilova ishlayveradi)
             while (true) { renderOffline(); kotlinx.coroutines.delay(10_000L) }
         }
+    }
+
+    /** Buyurtma berish yoqilganmi (1-ilova ruxsat bergan). */
+    private fun ordersOn(): Boolean {
+        val s = Locator.data.state.value
+        return s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true
     }
 
     // ---------------- v5.0.3: tepadagi tanlanadigan tugmalar va ikonkali menyu ----------------
@@ -146,7 +154,9 @@ class HomeFragment : Fragment() {
         bb.progress.show(s.loading)
         bb.btnRefresh.isEnabled = !s.loading && s.linked
         bb.cardLink.show(s.loaded && !s.linked)
-        bb.btnOrder.show(s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true)
+        val canOrder = s.linked && s.snapshot?.features?.contains(uz.imsoft.shared.report.ClientSnapshot.FEATURE_ORDERS) == true
+        bb.btnOrder.setText(if (canOrder) R.string.home_order else R.string.nav_prices)
+        bb.btnOrder.setIconResource(if (canOrder) R.drawable.ic_order else R.drawable.ic_price)
         renderOffline()
         val snap = s.snapshot
         bb.toolbar.title = snap?.clientName?.ifEmpty { null } ?: Locator.prefs.link?.clientName?.ifEmpty { null } ?: getString(R.string.app_name)

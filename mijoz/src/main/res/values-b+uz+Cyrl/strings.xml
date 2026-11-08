@@ -277,10 +277,10 @@
     <string name="cart_clear_msg">Буюртма саватчасидаги ҳамма товарлар олиб ташланади.</string>
     <string name="cart_title">Янги буюртма</string>
     <string name="cart_hint">Миқдорни текширинг. Бу савдо эмас: дўкон эгаси тасдиқласа, унинг саватчасига тушади ва расмийлаштирилади. Нархлар тахминий.</string>
-    <string name="price_n1">1-нарх</string>
-    <string name="price_n2">2-нарх</string>
-    <string name="price_n3">3-нарх</string>
-    <string name="price_n4">4-нарх</string>
+    <string name="price_n1">1</string>
+    <string name="price_n2">2</string>
+    <string name="price_n3">3</string>
+    <string name="price_n4">4</string>
     <string name="price_usd">УСД</string>
     <string name="x_error">Хато: %1$s</string>
     <string name="st_more">Кўпроқ созламалар</string>

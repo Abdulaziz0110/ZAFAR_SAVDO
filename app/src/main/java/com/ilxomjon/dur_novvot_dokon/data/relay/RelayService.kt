@@ -51,6 +51,9 @@ import java.util.concurrent.TimeUnit
 class RelayService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val wake = Channel<Unit>(Channel.CONFLATED)
+    /** v5.1.1: 2-ilova buyurtma yozishi bilan (Firebase oqimi) — darhol tekshirish. */
+    private val orderWake = Channel<Unit>(Channel.CONFLATED)
+    private val orderStreams = HashMap<String, kotlinx.coroutines.Job>()
     private var lock: PowerManager.WakeLock? = null
     private var lastText = ""
 
@@ -64,6 +67,8 @@ class RelayService : Service() {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "imsoft:relay").apply { setReferenceCounted(false); acquire() }
         scope.launch { mainLoop() }
         scope.launch { streamLoop() }
+        scope.launch { orderStreamsLoop() }
+        scope.launch { orderLoop() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -102,6 +107,87 @@ class RelayService : Service() {
             val time = if (s.at > 0) SimpleDateFormat("HH:mm", Locale.US).format(Date(s.at)) else "—"
             update(if (s.error.isNotEmpty()) getString(R.string.rl_notif_error, time) else getString(R.string.rl_notif_ok, time, s.written))
             withTimeoutOrNull(25_000L) { wake.receive() }
+        }
+    }
+
+    /**
+     * v5.1.1: 2-ilova buyurtma yozgan zahoti bilish. Har mijozning s/{kalit}/ord joyida oxirgi bitta yozuv kuzatiladi
+     * (orderBy="$key"&limitToLast=1 — indeks kerak emas, trafik juda kichik). Mijozlar ro'yxati o'zgarsa — moslashadi.
+     */
+    private suspend fun orderStreamsLoop() {
+        while (scope.isActive) {
+            val st = ServiceLocator.shareStore
+            val keys = if (st.isCloudReady && st.acceptOrders && st.rulesVersion >= 2) {
+                runCatching { st.clients().map { it.readKey }.filter { it.length >= 24 }.take(6).toSet() }.getOrDefault(emptySet())
+            } else {
+                emptySet()
+            }
+            for ((k, job) in orderStreams.toList()) {
+                if (k !in keys || job.isCompleted) { job.cancel(); orderStreams.remove(k) }
+            }
+            for (k in keys) {
+                if (orderStreams[k] != null) continue
+                orderStreams[k] = scope.launch {
+                    sseLoop(mapOf("orderBy" to "\"${'$'}key\"", "limitToLast" to "1")) { "s/$k/ord" }
+                }
+            }
+            delay(60_000L)
+        }
+    }
+
+    /** Oqimdan signal kelganda (yoki har 2 daqiqada) buyurtmalarni tekshirib, yangisi bo'lsa bildirishnoma beradi. */
+    private suspend fun orderLoop() {
+        var lastAt = 0L
+        while (scope.isActive) {
+            withTimeoutOrNull(120_000L) { orderWake.receive() }
+            val st = ServiceLocator.shareStore
+            if (!st.acceptOrders || st.rulesVersion < 2 || !st.isCloudReady) continue
+            val now = System.currentTimeMillis()
+            if (now - lastAt < 3_000L) continue
+            lastAt = now
+            runCatching { ServiceLocator.share.refreshOrders(notify = true) }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+        }
+    }
+
+    /** Bitta yo'lni Firebase oqimi (SSE) bilan kuzatish: put/patch kelsa [orderWake] uyg'onadi. */
+    private suspend fun sseLoop(query: Map<String, String>, path: () -> String) {
+        var backoff = 2_000L
+        while (scope.isActive) {
+            val st = ServiceLocator.shareStore
+            if (!st.isCloudReady) { delay(30_000L); continue }
+            try {
+                val db = uz.imsoft.shared.CloudDb(st.dbUrl, st.secret)
+                val c = URL(db.url(path(), query)).openConnection() as HttpURLConnection
+                c.setRequestProperty("Accept", "text/event-stream")
+                c.connectTimeout = 15_000
+                c.readTimeout = 120_000
+                try {
+                    if (c.responseCode != 200) throw java.io.IOException("SSE HTTP ${c.responseCode}")
+                    backoff = 2_000L
+                    BufferedReader(InputStreamReader(c.inputStream, Charsets.UTF_8)).use { r ->
+                        var first = true
+                        while (scope.isActive) {
+                            val line = r.readLine() ?: break
+                            if (!line.startsWith("event:")) continue
+                            val ev = line.substringAfter(':').trim()
+                            if (ev == "cancel" || ev == "auth_revoked") break
+                            // Ulanishdagi birinchi "put" — bor ma'lumot, yangilik emas.
+                            if (ev == "put" || ev == "patch") {
+                                if (first && ev == "put") first = false else orderWake.trySend(Unit)
+                            }
+                        }
+                    }
+                } finally {
+                    c.disconnect()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // internet yo'q — keyinroq; asosiy sikl baribir buyurtmalarni tekshiradi
+            }
+            delay(backoff)
+            backoff = minOf(backoff * 2, 60_000L)
         }
     }
 

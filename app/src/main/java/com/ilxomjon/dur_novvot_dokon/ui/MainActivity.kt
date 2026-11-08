@@ -194,6 +194,8 @@ class MainActivity : AppCompatActivity(), Navigator {
             "labels" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()); return }
             "scale" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment()); return }
             "rate" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.RateFragment()); return }
+            // v5.1.1: buyurtma bildirishnomasi bosilganda
+            "orders" -> { openTab(R.id.nav_home); com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(supportFragmentManager); return }
         }
         val draft = ServiceLocator.draft
         val st = storeId?.let { ServiceLocator.catalog.storeById(it) }

@@ -566,7 +566,7 @@
     <string name="ord_item_lines">%1$d хил товар</string>
     <string name="ord_note">Изоҳ: %1$s</string>
     <string name="ord_st_new">Янги</string>
-    <string name="ord_st_taken">Саватчага олинди</string>
+    <string name="ord_st_taken">Тасдиқланди</string>
     <string name="ord_st_rejected">Рад этилди</string>
     <string name="ord_reject">Рад этиш</string>
     <string name="ord_notif_title">%1$s: янги буюртма</string>
@@ -2004,4 +2004,17 @@
     <string name="rp_top_owe">Биз қарздор бўлганлар</string>
     <string name="rp_client">Мижоз</string>
     <string name="rp_supplier">Юк берувчи</string>
+    <string name="ord_ok">Тасдиқлаш</string>
+    <string name="ord_to_cart">Саватчага</string>
+    <string name="ord_notif_one">%1$d хил товар: %2$s</string>
+    <string name="ord_where">Чек қайерда чиқсин</string>
+    <string name="ord_where_sub">Буюртма дарҳол савдо бўлиб расмийлашади: %1$s</string>
+    <string name="ord_done_title">Буюртма тасдиқланди</string>
+    <string name="ord_done">%1$s · %2$d хил товар · %3$s</string>
+    <string name="ord_fail_title">Буюртма тасдиқланмади</string>
+    <string name="ord_gone">Буюртма топилмади</string>
+    <string name="ord_already">Бу буюртма аллақачон тасдиқланган</string>
+    <string name="ord_missing_n">каталогда йўқ: %1$d</string>
+    <string name="ord_working">Тасдиқланмоқда...</string>
+    <string name="notif_channel_orders">Буюртмалар</string>
 </resources>

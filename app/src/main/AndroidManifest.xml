@@ -51,6 +51,15 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+        <!-- v5.1.1: bildirishnomadagi "Tasdiqlash"/"Rad etish" tugmalari -->
+        <receiver
+            android:name=".data.share.OrderActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.ilxomjon.dur_novvot_dokon.ORDER_ACCEPT" />
+                <action android:name="com.ilxomjon.dur_novvot_dokon.ORDER_REJECT" />
+            </intent-filter>
+        </receiver>
         <!-- v3.2: "Tez savdo" vidjeti -->
         <receiver
             android:name=".ui.widget.QuickWidget"

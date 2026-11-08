@@ -39,6 +39,8 @@ import uz.imsoft.shared.B64
 /** v2.4 "Qulayliklar": fon ishlari, bildirishnomalar, ekran o'lchami, PIN. Har biri Sozlamalarda o'chiriladi. */
 object Extras {
     const val CHANNEL = "imsoft_main"
+    /** v5.1.1: buyurtmalar uchun alohida (ovozli, tepada ko'rinadigan) kanal — tez bilish uchun. */
+    const val CHANNEL_ORDERS = "imsoft_orders"
     private const val BACKUP_WORK = "auto_backup"
     private const val REMINDER_WORK = "dayend_reminder"
     private const val NOTIF_REMINDER = 4101
@@ -92,6 +94,18 @@ object Extras {
     fun canNotify(context: Context): Boolean =
         Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
+    /** v5.1.1: buyurtmalar kanali — IMPORTANCE_HIGH (ovoz va ekran tepasida). */
+    private fun ensureOrdersChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            if (nm.getNotificationChannel(CHANNEL_ORDERS) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(CHANNEL_ORDERS, context.getString(R.string.notif_channel_orders), NotificationManager.IMPORTANCE_HIGH),
+                )
+            }
+        }
+    }
+
     fun notify(context: Context, id: Int, title: String, text: String) {
         if (!canNotify(context)) return
         ensureChannel(context)
@@ -106,6 +120,45 @@ object Extras {
             .setAutoCancel(true)
             .build()
         runCatching { context.getSystemService(NotificationManager::class.java).notify(id, n) }
+    }
+
+    /**
+     * v5.1.1: 2-ilovadan kelgan yangi buyurtma — darhol, tugmalari bilan: "Tasdiqlash" (chek Printer 1 dan chiqadi)
+     * va "Rad etish". Bosilsa — buyurtmalar ro'yxati ochiladi.
+     */
+    fun notifyOrder(context: Context, id: Int, title: String, text: String, clientId: String, orderId: String) {
+        if (!canNotify(context)) return
+        ensureOrdersChannel(context)
+        val open = Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget.EXTRA_ACTION, "orders")
+        val pi = PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        fun act(action: String, code: Int) = PendingIntent.getBroadcast(
+            context, code,
+            Intent(context, com.ilxomjon.dur_novvot_dokon.data.share.OrderActionReceiver::class.java).setAction(action)
+                .putExtra(com.ilxomjon.dur_novvot_dokon.data.share.OrderActionWorker.KEY_CLIENT, clientId)
+                .putExtra(com.ilxomjon.dur_novvot_dokon.data.share.OrderActionWorker.KEY_ORDER, orderId)
+                .putExtra(com.ilxomjon.dur_novvot_dokon.data.share.OrderActionWorker.KEY_NOTIF, id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val n = NotificationCompat.Builder(context, CHANNEL_ORDERS)
+            .setSmallIcon(R.drawable.ic_cart)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(pi)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(0, context.getString(R.string.ord_ok), act(com.ilxomjon.dur_novvot_dokon.data.share.OrderActionReceiver.ACTION_ACCEPT, id * 2))
+            .addAction(0, context.getString(R.string.ord_reject), act(com.ilxomjon.dur_novvot_dokon.data.share.OrderActionReceiver.ACTION_REJECT, id * 2 + 1))
+            .build()
+        runCatching { context.getSystemService(NotificationManager::class.java).notify(id, n) }
+    }
+
+    /** Tasdiqlash boshlandi (tugma bosilgach darhol ko'rinadi). */
+    fun notifyOrderWorking(context: Context, id: Int) {
+        if (id == 0) return
+        notify(context, id, context.getString(R.string.ord_working), "")
     }
 
     /** OutboxWorker chaqiradi: yuborilmagan buyurtma 30 daqiqadan ko'p tursa (soatda bir martadan ko'p emas). */

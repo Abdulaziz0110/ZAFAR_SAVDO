@@ -993,12 +993,19 @@ class ShareRepository(
             val seen = store.seenOrders.split('|').filter { it.isNotEmpty() }.toMutableSet()
             val fresh = list.filter { it.order.id !in seen && (it.order.status == OrderRequest.Status.SEEN || it.order.status == OrderRequest.Status.SENT) }
             if (fresh.isNotEmpty()) {
-                val f = fresh.first()
-                com.ilxomjon.dur_novvot_dokon.data.extras.Extras.notify(
-                    context, 4103,
-                    context.getString(R.string.ord_notif_title, f.clientName),
-                    context.getString(R.string.ord_notif_text, fresh.size, f.order.lines.size, f.order.note.ifBlank { f.order.by.ifBlank { "—" } }),
-                )
+                // v5.1.1: har buyurtmaga alohida bildirishnoma — ichida "Tasdiqlash" (chek Printer 1) va "Rad etish".
+                for (f in fresh.take(3)) {
+                    val names = f.order.lines.take(3).joinToString(", ") { it.name }
+                    val text = listOfNotNull(
+                        context.getString(R.string.ord_notif_one, f.order.lines.size, names + if (f.order.lines.size > 3) " ..." else ""),
+                        f.order.note.takeIf { it.isNotBlank() }?.let { context.getString(R.string.ord_note, it) },
+                        f.order.by.takeIf { it.isNotBlank() }?.let { context.getString(R.string.ord_by, it) },
+                    ).joinToString("\n")
+                    com.ilxomjon.dur_novvot_dokon.data.extras.Extras.notifyOrder(
+                        context, notifIdFor(f.order.id),
+                        context.getString(R.string.ord_notif_title, f.clientName), text, f.clientId, f.order.id,
+                    )
+                }
                 seen += fresh.map { it.order.id }
                 store.seenOrders = seen.toList().takeLast(300).joinToString("|")
             }
@@ -1006,6 +1013,9 @@ class ShareRepository(
         mutex.withLock { publishState() }
         list
     }
+
+    /** Har buyurtmaning o'z bildirishnoma raqami (tasdiqlagandan keyin to'g'risi o'chirilsin). */
+    private fun notifIdFor(orderId: String): Int = 4200 + (orderId.hashCode().let { if (it < 0) -it else it } % 500)
 
     suspend fun setOrderStatus(clientId: String, id: String, status: OrderRequest.Status) = withContext(Dispatchers.IO) {
         val c = store.client(clientId) ?: return@withContext

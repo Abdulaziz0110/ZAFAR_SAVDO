@@ -455,7 +455,7 @@ STRINGS.update({
  'ord_item_lines': '%1$d xil tovar',
  'ord_note': 'Izoh: %1$s',
  'ord_st_new': 'Yangi',
- 'ord_st_taken': 'Savatchaga olindi',
+ 'ord_st_taken': 'Tasdiqlandi',
  'ord_st_rejected': 'Rad etildi',
  'ord_reject': 'Rad etish',
  'ord_notif_title': '%1$s: yangi buyurtma',
@@ -1447,6 +1447,23 @@ STRINGS.update({
  'rp_more': 'va yana %1$d ta', 'rp_debts': 'Qarzlar', 'rp_owed_to_us': 'Bizga qarz', 'rp_we_owe': 'Biz qarzdormiz',
  'rp_top_debtors': "Eng ko'p qarzdorlar", 'rp_top_owe': 'Biz qarzdor bo\'lganlar',
  'rp_client': 'Mijoz', 'rp_supplier': 'Yuk beruvchi',
+})
+
+# v5.1.1: 2-ilova buyurtmasini tasdiqlash (bildirishnomadan ham) va chek printerini tanlash
+STRINGS.update({
+ 'ord_ok': 'Tasdiqlash',
+ 'ord_to_cart': 'Savatchaga',
+ 'ord_notif_one': '%1$d xil tovar: %2$s',
+ 'ord_where': 'Chek qayerda chiqsin',
+ 'ord_where_sub': 'Buyurtma darhol savdo bo\'lib rasmiylashadi: %1$s',
+ 'ord_done_title': 'Buyurtma tasdiqlandi',
+ 'ord_done': '%1$s · %2$d xil tovar · %3$s',
+ 'ord_fail_title': 'Buyurtma tasdiqlanmadi',
+ 'ord_gone': 'Buyurtma topilmadi',
+ 'ord_already': 'Bu buyurtma allaqachon tasdiqlangan',
+ 'ord_missing_n': "katalogda yo'q: %1$d",
+ 'ord_working': 'Tasdiqlanmoqda...',
+ 'notif_channel_orders': 'Buyurtmalar',
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

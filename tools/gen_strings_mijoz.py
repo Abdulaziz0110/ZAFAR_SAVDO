@@ -231,7 +231,7 @@ STRINGS.update({
 
 STRINGS.update({
  # v3.1 — 1..4-narx
- 'price_n1': '1-narx', 'price_n2': '2-narx', 'price_n3': '3-narx', 'price_n4': '4-narx', 'price_usd': 'USD',
+ 'price_n1': '1', 'price_n2': '2', 'price_n3': '3', 'price_n4': '4', 'price_usd': 'USD',
 })
 
 STRINGS.update({
