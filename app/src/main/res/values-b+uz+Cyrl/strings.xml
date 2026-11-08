@@ -2017,4 +2017,6 @@
     <string name="ord_missing_n">каталогда йўқ: %1$d</string>
     <string name="ord_working">Тасдиқланмоқда...</string>
     <string name="notif_channel_orders">Буюртмалар</string>
+    <string name="ord_notif_off">Билдиришнома рухсати йўқ — янги буюртма ҳақида хабар келмайди. Босинг ва рухсат беринг.</string>
+    <string name="ord_relay_off">Фон хизмати ўчиқ — илова ёпиқ бўлса хабар кечикади. Бошқарув -&gt; Кўприк дан ёқинг.</string>
 </resources>

@@ -107,6 +107,9 @@ class AppPrefs(context: Context) {
     var statsClient: String get() = str("stats_client", ""); set(v) = setStr("stats_client", v)
     var statsWho: String get() = str("stats_who", "all"); set(v) = setStr("stats_who", v)
 
+    /** v5.1.1: bildirishnoma ruxsati bir marta so'ralganmi (Android 13+). */
+    var notifAsked: Boolean get() = prefs.getBoolean("notif_asked", false); set(v) = setFlag("notif_asked", v)
+
     /** v5.0.4: vidjetdagi 6 ta tugma amallari (kalitlar, tartib bilan). */
     var widgetSlots: List<String>
         get() = str("widget_slots", "").split("|").filter { it.isNotEmpty() }

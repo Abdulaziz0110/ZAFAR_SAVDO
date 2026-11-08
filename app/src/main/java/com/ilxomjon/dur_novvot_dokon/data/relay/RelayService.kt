@@ -117,7 +117,7 @@ class RelayService : Service() {
     private suspend fun orderStreamsLoop() {
         while (scope.isActive) {
             val st = ServiceLocator.shareStore
-            val keys = if (st.isCloudReady && st.acceptOrders && st.rulesVersion >= 2) {
+            val keys = if (st.isCloudReady && st.acceptOrders) {
                 runCatching { st.clients().map { it.readKey }.filter { it.length >= 24 }.take(6).toSet() }.getOrDefault(emptySet())
             } else {
                 emptySet()
@@ -141,7 +141,7 @@ class RelayService : Service() {
         while (scope.isActive) {
             withTimeoutOrNull(120_000L) { orderWake.receive() }
             val st = ServiceLocator.shareStore
-            if (!st.acceptOrders || st.rulesVersion < 2 || !st.isCloudReady) continue
+            if (!st.acceptOrders || !st.isCloudReady) continue
             val now = System.currentTimeMillis()
             if (now - lastAt < 3_000L) continue
             lastAt = now

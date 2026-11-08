@@ -70,7 +70,7 @@ object OrderConfirm {
 
     suspend fun accept(ctx: Context, clientId: String, orderId: String, printer: String): Result {
         val found = ServiceLocator.share.orders.value.firstOrNull { it.order.id == orderId }
-            ?: runCatching { ServiceLocator.share.refreshOrders() }.getOrNull()?.firstOrNull { it.order.id == orderId }
+            ?: runCatching { ServiceLocator.share.refreshOrders(notify = false) }.getOrNull()?.firstOrNull { it.order.id == orderId }
             ?: throw IllegalStateException(ctx.getString(R.string.ord_gone))
         if (found.order.status == OrderRequest.Status.TAKEN) throw IllegalStateException(ctx.getString(R.string.ord_already))
         val client = ServiceLocator.shareStore.client(clientId.ifEmpty { found.clientId })

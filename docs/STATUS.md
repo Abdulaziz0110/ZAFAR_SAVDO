@@ -1,10 +1,18 @@
-# Holat — Savdo Agent / Savdo Admin 5.1.1 (versionCode 36) + Savdo Mijoz 5.1.1 (versionCode 24), 2026-11-08
+# Holat — Savdo Agent / Savdo Admin 5.1.1 (versionCode 37) + Savdo Mijoz 5.1.1 (versionCode 24), 2026-11-08
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.1.1a — qurilmada topilgan 3 ta xato
+| Narsa | Holat |
+|---|---|
+| "Chek qayerda chiqsin" oynasida tugmalar ko'rinmasligi | VERIFIED (sabab: AlertDialog'da `setMessage` va `setItems` BIRGA ishlamaydi — xabar bo'lsa ro'yxat yashirinadi; xabar sarlavhaga ko'chirildi) |
+| "Savatchaga" ishlamasligi | VERIFIED (sabab: Mijozdagi bilan bir xil — `Fragment.ledgerHost()` buyurtmalar varaqasidan null qaytarardi; endi `DokonLedgerHost` ga tushadi) |
+| Bildirishnoma kelmasligi | VERIFIED (3 ta sabab yopildi: Android 13+ POST_NOTIFICATIONS ruxsati ilova ochilganda bir marta so'raladi; `refreshOrders` endi sukut bo'yicha xabar beradi; `rulesVersion >= 2` sharti olib tashlandi) |
+| Buyurtmalar varaqasida "bildirishnoma ruxsati yo'q" / "fon xizmati o'chiq" ogohlantirishi (bosilsa ruxsat so'raydi) | VERIFIED (kompilyatsiya) / qurilmada IMPLEMENTED-UNVERIFIED |
 
 ## 5.1.1 — Mijoz kamchiliklari va buyurtmani tasdiqlash
 | Narsa | Holat |

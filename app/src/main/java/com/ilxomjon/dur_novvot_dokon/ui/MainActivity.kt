@@ -1,6 +1,7 @@
 package com.ilxomjon.dur_novvot_dokon.ui
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import com.ilxomjon.dur_novvot_dokon.ui.widget.QuickWidget
 import androidx.activity.OnBackPressedCallback
@@ -59,6 +60,22 @@ class MainActivity : AppCompatActivity(), Navigator {
 
     private val tabIds = listOf(R.id.nav_home, R.id.nav_sale, R.id.nav_payment, R.id.nav_history, R.id.nav_last)
 
+    private val notifPerm = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
+    /** Android 13+ da POST_NOTIFICATIONS bo'lmasa hech qanday bildirishnoma ko'rinmaydi. Bir marta so'raymiz. */
+    private fun askNotifPermission() {
+        if (Build.VERSION.SDK_INT < 33) return
+        if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val p = com.ilxomjon.dur_novvot_dokon.data.AppPrefs(this)
+        if (p.notifAsked) return
+        p.notifAsked = true
+        runCatching { notifPerm.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -68,6 +85,8 @@ class MainActivity : AppCompatActivity(), Navigator {
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.countLaunch(this)
         // v3.0 Admin: agentlar ko'prigi yoqilgan bo'lsa ishlab tursin (ilova ochilganda — fon cheklovlari tufayli)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.data.relay.RelayService.ensureRunning(applicationContext)
+        // v5.1.1: bildirishnoma ruxsati bo'lmasa buyurtma xabari KELMAYDI — ilova ochilganda bir marta so'raladi.
+        if (savedInstanceState == null) askNotifPermission()
 
         applyRoleToNav()
         binding.bottomNav.setOnItemSelectedListener { item ->

@@ -20,7 +20,7 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 36
+        versionCode = 37
         versionName = "5.1.1"
 
         // v4.0: kalitsiz ishlash va o'zi yangilanish — GitHub secret SHOP_CODE (Admin ▸ Qurilmalar) va build skripti beradi.

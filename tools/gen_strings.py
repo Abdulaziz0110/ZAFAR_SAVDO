@@ -1464,6 +1464,8 @@ STRINGS.update({
  'ord_missing_n': "katalogda yo'q: %1$d",
  'ord_working': 'Tasdiqlanmoqda...',
  'notif_channel_orders': 'Buyurtmalar',
+ 'ord_notif_off': "Bildirishnoma ruxsati yo'q — yangi buyurtma haqida xabar kelmaydi. Bosing va ruxsat bering.",
+ 'ord_relay_off': "Fon xizmati o'chiq — ilova yopiq bo'lsa xabar kechikadi. Boshqaruv -> Ko'prik dan yoqing.",
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

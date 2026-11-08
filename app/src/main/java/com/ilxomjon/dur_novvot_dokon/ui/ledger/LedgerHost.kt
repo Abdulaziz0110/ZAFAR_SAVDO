@@ -82,12 +82,15 @@ interface LedgerHost {
     fun emptyText(ctx: android.content.Context): String? = null
 }
 
-/** Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. */
+/**
+ * Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. Bu ilovada yagona host bor (DokonLedgerHost) —
+ * daraxtda topilmasa (masalan buyurtmalar varaqasidan ochilgan "Savatchaga" oynasi) shunisi qaytadi.
+ */
 fun Fragment.ledgerHost(): LedgerHost? {
     var f: Fragment? = this
     while (f != null) {
         if (f is LedgerHost) return f
         f = f.parentFragment
     }
-    return activity as? LedgerHost
+    return (activity as? LedgerHost) ?: com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost
 }

@@ -810,7 +810,7 @@ class ShareRepository(
         runCatching { history.step() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
         val sent = if (served.isNotEmpty() || imported > 0 || (store.autoPublish && store.clients().any { it.dirty })) publish() else false
         if (sent) for ((id, req) in served) store.update(id) { it.copy(lastRequestServed = req) }
-        if (store.acceptOrders && store.rulesVersion >= 2) runCatching { refreshOrders(notify = true) }
+        if (store.acceptOrders) runCatching { refreshOrders(notify = true) }
         runCatching { mirror.retryPending() }
         extraTick?.let { f -> runCatching { f() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it } }
         return sent
@@ -968,7 +968,7 @@ class ShareRepository(
      * Buyurtmalarni o'qiydi (barcha mijozlar). Yangi (SENT) buyurtmaga "1-ilovaga yetib bordi" (SEEN) belgisi qo'yiladi —
      * bu odam ko'rdi degani EMAS. 30 kundan eskilari o'chiriladi.
      */
-    suspend fun refreshOrders(notify: Boolean = false): List<ClientOrder> = withContext(Dispatchers.IO) {
+    suspend fun refreshOrders(notify: Boolean = true): List<ClientOrder> = withContext(Dispatchers.IO) {
         if (!store.isConfigured) return@withContext emptyList()
         val db = cloud()
         val now = System.currentTimeMillis()

@@ -34,10 +34,32 @@ class OrdersSheet : BottomSheetDialogFragment() {
         return b.root
     }
 
+    private val notifPerm = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { showNotifWarning() }
+
+    /** v5.1.1: bildirishnoma ruxsati yoki fon xizmati o'chiq bo'lsa — Admin buni ko'rib tursin. */
+    private fun showNotifWarning() {
+        val bb = _b ?: return
+        val ctx = requireContext()
+        val noPerm = !com.ilxomjon.dur_novvot_dokon.data.extras.Extras.canNotify(ctx)
+        val noRelay = !ServiceLocator.shareStore.relayOn
+        bb.tvNotif.text = when {
+            noPerm -> getString(R.string.ord_notif_off)
+            noRelay -> getString(R.string.ord_relay_off)
+            else -> ""
+        }
+        bb.tvNotif.show(noPerm || noRelay)
+        bb.tvNotif.setOnClickListener {
+            if (noPerm && android.os.Build.VERSION.SDK_INT >= 33) {
+                runCatching { notifPerm.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+            }
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        showNotifWarning()
         render(ServiceLocator.share.orders.value)
         viewLifecycleOwner.lifecycleScope.launch {
-            val list = runCatching { ServiceLocator.share.refreshOrders() }.getOrNull()
+            val list = runCatching { ServiceLocator.share.refreshOrders(notify = false) }.getOrNull()
             _b ?: return@launch
             b.progress.show(false)
             if (list != null) render(list)
@@ -106,9 +128,10 @@ class OrdersSheet : BottomSheetDialogFragment() {
     private fun askPrinter(co: ClientOrder) {
         val ctx = requireContext()
         val choices = OrderConfirm.printerChoices(ctx)
+        // DIQQAT: AlertDialog'da setMessage va setItems BIRGA ishlamaydi — xabar bo'lsa ro'yxat ko'rinmaydi.
+        // Shuning uchun tushuntirish sarlavhaga qo'shilgan.
         MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.ord_where)
-            .setMessage(getString(R.string.ord_where_sub, co.clientName))
+            .setTitle(getString(R.string.ord_where) + " — " + co.clientName)
             .setItems(choices.map { it.second }.toTypedArray()) { _, i -> accept(co, choices[i].first) }
             .setNegativeButton(R.string.lg_cancel, null)
             .show()
