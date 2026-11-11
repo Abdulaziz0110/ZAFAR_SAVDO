@@ -265,13 +265,31 @@ class OneCFormFragment : CodeFragment() {
         refRow(box, uz.imsoft.shared.onec.Suppliers.UNITS, R.string.ng_unit, R.drawable.ic_calculate)
         if (weighed) {
             refRow(box, uz.imsoft.shared.onec.Suppliers.SCALES, R.string.ng_scale, R.drawable.ic_scale)
-            val til = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, ePlu?.text?.toString().orEmpty())
+            // v5.2 (A10b): PLU bo'sh bo'lsa eng oxirgisidan keyingisi taklif qilinadi — qo'lda qidirish shart emas
+            val cur = ePlu?.text?.toString().orEmpty().ifBlank { nextPlu() }
+            val til = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, cur)
             ePlu = til.second
             box.addView(til.first)
+            box.addView(Ui.hint(ctx, getString(R.string.ng_plu_hint, nextPlu(), usedPlu()), 2))
         } else {
             ePlu = null
         }
+        if (kind == WriteKind.NEW_GOODS) {
+            box.addView(Ui.hint(ctx, getString(R.string.ng_code_hint, lastCode()), 6))
+        }
     }
+
+    /** Ishlatilgan PLU'lar (yorliqlar ro'yxatidan) va keyingi bo'sh raqam. */
+    private fun pluNumbers(): List<Int> =
+        ServiceLocator.labels.allPlu().mapNotNull { it.filter { ch -> ch.isDigit() }.toIntOrNull() }.filter { it > 0 }
+
+    private fun nextPlu(): String = ((pluNumbers().maxOrNull() ?: 0) + 1).toString()
+
+    private fun usedPlu(): Int = pluNumbers().distinct().size
+
+    /** Katalogdagi eng katta tovar kodi — 1C yangi tovarga shundan keyingisini beradi. */
+    private fun lastCode(): String =
+        ServiceLocator.catalog.state.value.products.mapNotNull { it.id.filter { ch -> ch.isDigit() }.toIntOrNull() }.maxOrNull()?.toString().orEmpty().ifEmpty { "—" }
 
     private fun num(e: TextInputEditText?): Double = Money.parseUser(e?.text?.toString()) ?: 0.0
 

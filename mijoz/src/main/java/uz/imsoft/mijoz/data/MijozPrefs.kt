@@ -81,6 +81,9 @@ class MijozPrefs(context: Context) {
     /** "som" / "usd". */
     var currency: String get() = s("currency", "som"); set(v) = put("currency", v)
     var fuzzy: Boolean get() = b("fuzzy", true); set(v) = putB("fuzzy", v)
+
+    /** v5.2 (A7): savdo paytida mahsulot ma'lumoti o'zi ochilib tursinmi. */
+    var bioAuto: Boolean get() = b("bio_auto", false); set(v) = putB("bio_auto", v)
     /** Ilova ochilganda o'zi yangilasin. */
     var autoRefresh: Boolean get() = b("auto_refresh", true); set(v) = putB("auto_refresh", v)
     /** Fonda avtomatik yangilash oralig'i, daqiqa (0 — o'chiq). v2.5 */

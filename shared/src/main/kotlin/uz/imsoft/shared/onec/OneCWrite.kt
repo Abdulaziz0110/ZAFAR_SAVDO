@@ -41,11 +41,32 @@ object WriteKind {
     const val PARTY_EDIT = "ke"
     /** v4.1: tovarni hisobdan chiqarish (СписанияТоваров): qatorlar — tovar va miqdor; tannarx 1C qoldig'idan. */
     const val WRITE_OFF = "wo"
+    /**
+     * v5.2 (A5): tayyor 1C hujjatidagi tovarlarni o'zgartirish (tarixdagi savdoni tuzatish).
+     * Maydonlar: [DocField.KIND] (r/m/z/q/b), [DocField.NUMBER], [DocField.STAMP]; qatorlar — yangi tovarlar.
+     */
+    const val DOC_EDIT = "de"
+    /**
+     * v5.2 (A11): KO'P tovarga birdan amal (nomdagi belgini olib tashlash, matn qo'shish, maydonni
+     * o'zgartirish). Maydonlar: [BulkField]. Kompyuter COM orqali bajaradi, eski qiymatlar jurnalda qoladi.
+     */
+    const val BULK = "bk"
 
     val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS, RATE,
-        PARTY_NEW, PARTY_EDIT, WRITE_OFF)
+        PARTY_NEW, PARTY_EDIT, WRITE_OFF, DOC_EDIT, BULK)
     val MONEY = setOf(SUPPLIER_PAY, CLIENT_PAY, CASH_IN, CASH_OUT)
     val GOODS = setOf(GOODS_EDIT, NEW_GOODS)
+}
+
+/** v5.2 (A5): tahrirlanadigan hujjatni ko'rsatuvchi maydonlar ([WriteRequest.fields]). */
+object DocField {
+    /** Hujjat turi: r, m, z, q, b (1C tarixidagi kabi). */
+    const val KIND = "dk"
+    const val NUMBER = "no"
+    /** yyyyMMddHHmmss. */
+    const val STAMP = "dt"
+    val ALL = setOf(KIND, NUMBER, STAMP)
+    val EDITABLE = setOf("r", "m", "z", "q", "b")
 }
 
 /** v3.12: tovar kartochkasi maydonlari ([WriteRequest.fields]). Narxlar [CUR] valyutasida ("s" so'm, "u" $). */
@@ -240,6 +261,15 @@ data class WriteRequest(
             lines.any { it.qty <= 0.0 || it.name.isBlank() } -> "line"
             else -> null
         }
+        WriteKind.BULK -> BulkPlan.problem(fields)
+        WriteKind.DOC_EDIT -> when {
+            fields[DocField.KIND] !in DocField.EDITABLE -> "kind"
+            fields[DocField.NUMBER].isNullOrBlank() -> "number"
+            (fields[DocField.STAMP]?.length ?: 0) < 8 -> "stamp"
+            lines.isEmpty() -> "lines"
+            lines.any { it.qty <= 0.0 || it.name.isBlank() || it.priceSom < 0.0 || it.priceUsd < 0.0 } -> "line"
+            else -> null
+        }
         else -> "kind"
     }
 }
@@ -266,7 +296,7 @@ object WriteCodec {
             "l" to r.lines.map { listOf(it.name, it.code, it.qty, it.priceSom, it.priceUsd) },
             "ns" to r.cashSom, "nu" to r.cashUsd, "ps" to r.cardSom, "pu" to r.cardUsd, "bc" to r.barcode, "t" to r.target,
             "ks" to r.clickSom, "ku" to r.clickUsd, "ds" to r.discountSom, "du" to r.discountUsd, "op" to r.op, "opc" to r.opCode,
-            "f" to LinkedHashMap(r.fields.filterKeys { it in GoodsField.ALL || it in PartyField.ALL }),
+            "f" to LinkedHashMap(r.fields.filterKeys { it in GoodsField.ALL || it in PartyField.ALL || it in DocField.ALL || it in BulkField.ALL }),
         ),
     )
 
@@ -284,7 +314,7 @@ object WriteCodec {
             val l = x as? List<Any?> ?: return@mapNotNull null
             WriteLine(l.getOrNull(0)?.toString().orEmpty(), l.getOrNull(1)?.toString().orEmpty(), d(l.getOrNull(2)), d(l.getOrNull(3)), d(l.getOrNull(4)))
         }
-        val f = (p.map["f"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) -> if ((k in GoodsField.ALL || k in PartyField.ALL) && v != null) k to v.toString() else null }.toMap()
+        val f = (p.map["f"] as? Map<String, Any?>).orEmpty().mapNotNull { (k, v) -> if ((k in GoodsField.ALL || k in PartyField.ALL || k in DocField.ALL || k in BulkField.ALL) && v != null) k to v.toString() else null }.toMap()
         return WriteRequest(
             id, kind, o.long("c").takeIf { it > 0 } ?: o.long("at"), p.str("c"), p.str("cc"), p.str("n"), lines,
             p.num("ns"), p.num("nu"), p.num("ps"), p.num("pu"), p.str("bc"), p.str("t"),

@@ -25,6 +25,10 @@ class SettingsHubFragment : CodeFragment() {
         }
 
         c.addView(Ui.section(ctx, getString(R.string.sg_g_work)))
+        // v5.2 (A7): mahsulotlar ro'yxati va ularning ma'lumoti (internetsiz ham ochiladi)
+        row(R.string.pb_title, R.string.pb_sub, R.drawable.ic_shopping_bag, 1) {
+            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.ProductsFragment())
+        }
         row(R.string.sg_queue, R.string.sg_r_queue_sub, R.drawable.ic_sync_alt, 1) {
             navigator().push(com.ilxomjon.dur_novvot_dokon.ui.outbox.OutboxFragment())
         }

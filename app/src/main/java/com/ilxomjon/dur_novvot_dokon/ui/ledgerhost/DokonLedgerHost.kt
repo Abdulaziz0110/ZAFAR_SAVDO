@@ -75,8 +75,12 @@ object DokonLedgerHost : LedgerHost {
 
     private fun startAgentSync() {
         ServiceLocator.appScope.launch {
+            var n = 0
             while (true) {
                 runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, false) }
+                // v5.2 (A7): mahsulot ma'lumotlari — kamroq, 5 daqiqada bir (kichik fayl, kam o'zgaradi)
+                if (n % 10 == 0) runCatching { ServiceLocator.bio.sync(ServiceLocator.secure.relayConfig) }
+                n++
                 kotlinx.coroutines.delay(30_000L)
             }
         }
@@ -85,6 +89,26 @@ object DokonLedgerHost : LedgerHost {
     override val syncStatus: StateFlow<String>? by lazy {
         if (!admin) ServiceLocator.historyShare.agent.map { it.status }.stateIn(ServiceLocator.appScope, SharingStarted.Eagerly, "")
         else ServiceLocator.adminHistory.status
+    }
+
+    /**
+     * v5.2 (A5): Admin tarixdagi savdoni o'zgartira oladi (cheklovsiz — istalgan eski hujjat).
+     * Faqat 1C'dan kelgan tovarli hujjat uchun: telefonda qilingan, hali 1C'ga yetmagani uchun emas.
+     */
+    override fun editLabel(doc: LedgerDoc): Int =
+        if (admin && doc.isGoods && onecDoc(doc) != null) R.string.de_edit else 0
+
+    override fun requestEdit(f: androidx.fragment.app.Fragment, doc: LedgerDoc) {
+        val d = onecDoc(doc) ?: return
+        (f.activity as? Navigator)?.push(com.ilxomjon.dur_novvot_dokon.ui.admin.DocEditFragment.of(d.id))
+    }
+
+    /** Tarixdagi yozuvga mos 1C hujjati (raqam va vaqt bo'yicha). */
+    private fun onecDoc(doc: LedgerDoc): uz.imsoft.shared.onec.OneCDoc? {
+        val number = uz.imsoft.shared.report.LedgerOwner.plain(doc.kindText).substringAfter("\u2116", "").trim()
+        if (number.isEmpty()) return null
+        val docs = ServiceLocator.onec.state.value.sales?.docs ?: return null
+        return docs.firstOrNull { it.number == number && it.stamp == doc.stamp && it.kind in uz.imsoft.shared.onec.DocField.EDITABLE }
     }
 
     override fun emptyText(ctx: Context): String? = ctx.getString(if (admin) R.string.ah_empty else R.string.ah_agent_empty)

@@ -359,6 +359,11 @@ object ServiceLocator {
     /** v5.0: dollar kursi internetdan (bozorga yaqin bank kursi + rasmiy kurs). */
     val rateOnline: uz.imsoft.shared.android.RateOnline by lazy { uz.imsoft.shared.android.RateOnline(app) }
 
+    /** v5.2 (A7): mahsulot ma'lumotlari (bio) — internetsiz ham ochiladi. */
+    val bio: com.ilxomjon.dur_novvot_dokon.data.bio.BioRepository by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.bio.BioRepository(app).also { r -> appScope.launch { runCatching { r.load() } } }
+    }
+
     /** v3.12: "Shtrix kod → 1C" ro'yxati. */
     val barcodeBatch by lazy { com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch(app) }
 

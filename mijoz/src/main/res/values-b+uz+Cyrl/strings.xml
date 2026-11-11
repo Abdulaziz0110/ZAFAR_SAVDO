@@ -278,6 +278,11 @@
     <string name="cart_title">Янги буюртма</string>
     <string name="cart_hint">Миқдорни текширинг. Бу савдо эмас: дўкон эгаси тасдиқласа, унинг саватчасига тушади ва расмийлаштирилади. Нархлар тахминий.</string>
     <string name="price_n1">1</string>
+    <string name="bio_info">ИНФО</string>
+    <string name="bio_auto">Савдо пайтида маълумот ўзи очилсин</string>
+    <string name="bio_auto_sub">Маҳсулотни танлаганда маълумот дарҳол кўринади</string>
+    <string name="bio_title">Маҳсулот маълумоти</string>
+    <string name="bio_none">Бу маҳсулот ҳақида маълумот йўқ</string>
     <string name="price_n2">2</string>
     <string name="price_n3">3</string>
     <string name="price_n4">4</string>

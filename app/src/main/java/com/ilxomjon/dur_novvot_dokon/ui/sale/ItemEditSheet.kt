@@ -57,6 +57,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.tvName.text = product.name
         binding.tvInfo.text = if (product.hasBlock) getString(R.string.block_info, Money.qtyDisplay(product.blockSize)) else ""
         binding.tvInfo.show(product.hasBlock)
+        bindBio(product.id)
         val showCost = args.getBoolean(ARG_COST)
         binding.tvCost.show(showCost)
         if (showCost) binding.tvCost.text = getString(R.string.item_cost, requireContext().money(vm.costPrice, vm.currency))
@@ -197,6 +198,36 @@ class ItemEditSheet : BottomSheetDialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    /**
+     * v5.2 (A7): INFO — mahsulot ma'lumoti. Bosilsa klaviatura yopiladi, kursor olinadi va matn
+     * parametrlar USTIDA ochiladi (kitob ochilgandek); yana bossa yopiladi.
+     * Sozlamada "avtomatik ochish" yoqilgan bo'lsa — darhol ochiq, lekin klaviatura va kursor o'z holida qoladi.
+     */
+    private fun bindBio(productId: String) {
+        val bio = ServiceLocator.bio.of(productId)
+        val b = _binding ?: return
+        if (bio == null) {
+            b.btnBio.visibility = View.GONE
+            b.tvBio.visibility = View.GONE
+            return
+        }
+        b.btnBio.visibility = View.VISIBLE
+        b.tvBio.text = bio.text
+        var open = ServiceLocator.appPrefs.bioAuto
+        b.tvBio.visibility = if (open) View.VISIBLE else View.GONE
+        b.btnBio.setOnClickListener { v ->
+            open = !open
+            b.tvBio.visibility = if (open) View.VISIBLE else View.GONE
+            if (open) {
+                // klaviatura yopiladi va kursor maydonlardan olinadi
+                requireContext().getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    ?.hideSoftInputFromWindow(v.windowToken, 0)
+                b.edtQty.clearFocus()
+                b.edtPrice.clearFocus()
+            }
+        }
     }
 
     companion object {

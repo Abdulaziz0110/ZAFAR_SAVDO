@@ -140,6 +140,14 @@ class SettingsFragment : Fragment() {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.ReceiptExtrasFragment())
         })
         col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
+        // v5.2 (A7): savdo paytida mahsulot ma'lumoti o'zi ochilsinmi
+        col.addView(
+            uz.imsoft.shared.android.Ui.switch(ctx, getString(R.string.bio_auto), Locator.prefs.bioAuto, 4) { on ->
+                Locator.prefs.bioAuto = on
+            },
+        )
+        col.addView(uz.imsoft.shared.android.Ui.hint(ctx, getString(R.string.bio_auto_sub), 0))
+        col.addView(uz.imsoft.shared.android.Ui.divider(ctx))
         // v5.0.4: bosh ekrandagi vidjetning 6 ta tugmasi
         col.addView(uz.imsoft.shared.android.Ui.item(ctx, getString(R.string.wgs_title), getString(R.string.wgs_sub), icon = R.drawable.ic_widgets) {
             (activity as? MainActivity)?.push(uz.imsoft.mijoz.ui.extra.WidgetFragment())

@@ -560,5 +560,74 @@ class AutoBarcode(unittest.TestCase):
             total += int(ch) * (1 if i % 2 == 0 else 3)
         self.assertEqual(total % 10, 0)
 
+
+class DocEditParseTest(unittest.TestCase):
+    """v5.2 (A5): tarixdagi savdoni o'zgartirish — so'rovni o'qish va tekshirish (sof mantiq)."""
+
+    def req(self, **over):
+        p = {"dk": "r", "no": "125", "dt": "20261108103000",
+             "l": [["Bodom", "1042", 15, 120000, 0]], "n": "qayta hisoblandi"}
+        p.update(over.pop("p", {}))
+        item = {"k": "de", "by": "Admin", "p": json.dumps(p)}
+        item.update(over)
+        return onec_write.parse_request("w1", item)
+
+    def test_parses_doc_fields(self):
+        r = self.req()
+        self.assertEqual("r", r["dk"])
+        self.assertEqual("125", r["no"])
+        self.assertEqual("20261108103000", r["ds_stamp"])
+        self.assertEqual(1, len(r["lines"]))
+        self.assertEqual(15.0, r["lines"][0]["q"])
+        self.assertIsNone(onec_write.problem(r))
+
+    def test_rejects_uneditable_kind_and_empty_fields(self):
+        self.assertEqual("bu turdagi hujjatni o'zgartirib bo'lmaydi", onec_write.problem(self.req(p={"dk": "y"})))
+        self.assertEqual("hujjat raqami yo'q", onec_write.problem(self.req(p={"no": ""})))
+        self.assertEqual("hujjat sanasi yo'q", onec_write.problem(self.req(p={"dt": "2026"})))
+        self.assertEqual("tovar yo'q", onec_write.problem(self.req(p={"l": []})))
+
+    def test_rejects_bad_line(self):
+        self.assertIn("miqdor yoki narx", onec_write.problem(self.req(p={"l": [["Bodom", "1042", 0, 1, 0]]})))
+
+    def test_stamp_date(self):
+        d = onec_write.Writer.stamp_date("20261108103000")
+        self.assertEqual((2026, 11, 8, 10, 30, 0), (d.year, d.month, d.day, d.hour, d.minute, d.second))
+
+
+class BulkPureTest(unittest.TestCase):
+    """v5.2 (A11): ko'p tovarga birdan amal — sof mantiq (telefondagi BulkText bilan bir xil)."""
+
+    def test_needles_and_tidy(self):
+        self.assertEqual(["(", ")", "gr"], onec_write.bulk_needles("(|)|gr"))
+        self.assertEqual([], onec_write.bulk_needles(""))
+        self.assertEqual("Pista Eron", onec_write.bulk_tidy("  Pista   Eron  "))
+
+    def test_replace_matches_phone_rule(self):
+        f = {"bop": "repl", "bfind": "(|)|gr", "bto": ""}
+        self.assertEqual("Pista Eron 500", onec_write.bulk_new_name(f, "Pista (Eron) 500gr"))
+
+    def test_add_start_end_index(self):
+        self.assertEqual("NEW Shakar", onec_write.bulk_new_name({"bop": "add", "btxt": "NEW ", "bwhere": "start"}, "Shakar"))
+        self.assertEqual("Shakar *", onec_write.bulk_new_name({"bop": "add", "btxt": " *", "bwhere": "end"}, "Shakar"))
+        self.assertEqual("Sha-kar", onec_write.bulk_new_name({"bop": "add", "btxt": "-", "bwhere": "3"}, "Shakar"))
+
+    def test_scope(self):
+        f = {"bgrp": "Quruq meva"}
+        self.assertTrue(onec_write.bulk_covers(f, "1", "Pista", "Quruq meva"))
+        self.assertFalse(onec_write.bulk_covers(f, "1", "Shakar", "Oziq-ovqat"))
+        self.assertTrue(onec_write.bulk_covers({"bmatch": "pis"}, "1", "Pista", "x"))
+        self.assertFalse(onec_write.bulk_covers({"bcodes": "2,3"}, "1", "Pista", "x"))
+
+    def test_validation(self):
+        def req(f):
+            return onec_write.parse_request("w1", {"k": "bk", "p": json.dumps({"f": f})})
+        self.assertIsNone(onec_write.problem(req({"bop": "repl", "bfind": "-"})))
+        self.assertEqual("amal turi noto'g'ri", onec_write.problem(req({"bop": "x"})))
+        self.assertEqual("nima almashtirilishi ko'rsatilmagan", onec_write.problem(req({"bop": "repl", "bfind": ""})))
+        self.assertEqual("maydon noto'g'ri", onec_write.problem(req({"bop": "field", "bkey": "nm", "bval": "x"})))
+        self.assertEqual("qiymat bo'sh", onec_write.problem(req({"bop": "field", "bkey": "grp", "bval": " "})))
+
+
 if __name__ == "__main__":
     unittest.main()

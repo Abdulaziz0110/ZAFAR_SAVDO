@@ -231,7 +231,13 @@ STRINGS.update({
 
 STRINGS.update({
  # v3.1 — 1..4-narx
- 'price_n1': '1', 'price_n2': '2', 'price_n3': '3', 'price_n4': '4', 'price_usd': 'USD',
+ 'price_n1': '1',
+ # v5.2 (A7): mahsulot ma'lumoti
+ 'bio_info': 'INFO',
+ 'bio_auto': "Savdo paytida ma'lumot o'zi ochilsin",
+ 'bio_auto_sub': "Mahsulotni tanlaganda ma'lumot darhol ko'rinadi",
+ 'bio_title': "Mahsulot ma'lumoti",
+ 'bio_none': "Bu mahsulot haqida ma'lumot yo'q", 'price_n2': '2', 'price_n3': '3', 'price_n4': '4', 'price_usd': 'USD',
 })
 
 STRINGS.update({

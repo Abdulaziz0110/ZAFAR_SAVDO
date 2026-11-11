@@ -81,6 +81,8 @@ class AdminHubFragment : CodeFragment() {
             Act(getString(R.string.ad_relay), getString(if (ServiceLocator.shareStore.relayOn) R.string.rl_on_short else R.string.rl_off_short), R.drawable.ic_hub, 0, go { com.ilxomjon.dur_novvot_dokon.ui.share.RelayFragment() }),
         )
         val goods = listOf(
+            // v5.2 (A11): ko'p tovarga birdan amal (nom tozalash, maydon o'zgartirish) — undo bilan
+            Act(getString(R.string.bk_title), getString(R.string.bk_sub), R.drawable.ic_tune, 1, go { BulkFragment() }),
             Act(getString(R.string.ad_labels), getString(R.string.ad_labels_sub), R.drawable.ic_label, 0, go { com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment() }),
             Act(getString(R.string.sc_title), getString(R.string.sc_sub), R.drawable.ic_scale, 0, go { ScaleFragment() }),
             Act(getString(R.string.ad_barcodes), getString(R.string.ad_barcodes_sub), R.drawable.ic_qr, 0, go { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment() }),

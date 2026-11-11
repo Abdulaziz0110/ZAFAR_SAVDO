@@ -711,6 +711,8 @@ class ShareRepository(
             items.sortedBy { it.name.lowercase() }, (base + mirrorEntries).let { l -> editHook?.invoke(c.id, l) ?: l }, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
             features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
             receiptStyle = store.receiptStyle, receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
+            // v5.2 (A7): mahsulot ma'lumotlari 2-ilovaga ham boradi
+            bio = uz.imsoft.shared.bio.BioBook.pack(com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.bio.state.value),
         )
     }
 
@@ -811,6 +813,12 @@ class ShareRepository(
         val sent = if (served.isNotEmpty() || imported > 0 || (store.autoPublish && store.clients().any { it.dirty })) publish() else false
         if (sent) for ((id, req) in served) store.update(id) { it.copy(lastRequestServed = req) }
         if (store.acceptOrders) runCatching { refreshOrders(notify = true) }
+        // v5.2 (A7): mahsulot ma'lumotlari agentlarga ham borsin
+        runCatching {
+            com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.bio.publish(
+                com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.secure.relayConfig, store.secret,
+            )
+        }
         runCatching { mirror.retryPending() }
         extraTick?.let { f -> runCatching { f() }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it } }
         return sent

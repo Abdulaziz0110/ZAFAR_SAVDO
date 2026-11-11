@@ -61,6 +61,8 @@ class WritesFragment : CodeFragment() {
             WriteKind.PARTY_NEW -> R.string.kf_new_title
             WriteKind.PARTY_EDIT -> R.string.kf_edit_title
             WriteKind.WRITE_OFF -> R.string.wo_title
+            WriteKind.DOC_EDIT -> R.string.de_title
+            WriteKind.BULK -> R.string.bk_title
             else -> R.string.wr_undo
         },
     )
@@ -114,9 +116,11 @@ class WritesFragment : CodeFragment() {
                 WriteKind.NEW_GOODS, WriteKind.PARTY_NEW -> w.req.fields[uz.imsoft.shared.onec.GoodsField.NAME].orEmpty()
                 WriteKind.WRITE_OFF -> w.req.lines.joinToString(", ") { it.name }.take(60)
                 WriteKind.RATE -> w.req.fields[uz.imsoft.shared.onec.GoodsField.RATE].orEmpty()
+                WriteKind.DOC_EDIT -> "\u2116" + w.req.fields[uz.imsoft.shared.onec.DocField.NUMBER].orEmpty()
+                WriteKind.BULK -> w.req.fields[uz.imsoft.shared.onec.BulkField.OP].orEmpty()
                 else -> w.req.party
             }
-            val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF) ||
+            val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF, WriteKind.BULK) ||
                 w.req.kind in WriteKind.GOODS
             Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w), if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
         })

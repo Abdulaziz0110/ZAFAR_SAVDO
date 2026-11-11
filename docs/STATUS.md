@@ -1,10 +1,32 @@
-# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 38) + Savdo Mijoz 5.2 (versionCode 25), 2026-11-11
+# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 39) + Savdo Mijoz 5.2 (versionCode 26), 2026-11-12
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.2 — 2-qism: savdo tahriri, 1C shakllari, mahsulot ma'lumoti, ommaviy amallar
+| Narsa | Holat |
+|---|---|
+| **A5**: tarixdagi savdoni o'zgartirish — Admin 1C hujjatidagi tovar/miqdor/narxni almashtiradi, 1C izohiga "Admin o'zgartirdi" qo'shiladi, eski qatorlar kompyuter jurnalida. CHEKLOVSIZ (istalgan eski hujjat) | VERIFIED (5 Kotlin + 4 Python test, kompilyatsiya) / 1C'da IMPLEMENTED-UNVERIFIED |
+| **A10a**: yuk beruvchi tanlash — qidiruvli ro'yxat (nom, kod, telefon), qarz va oxirgi hujjat sanasi, oxirgi ishlanganlar tepada | VERIFIED (kompilyatsiya) |
+| **A10b**: to'lovda qarz, to'lovdan keyingi qoldiq (yozayotganda darhol), "Qarzni to'liq yopish", "Tarixi" (oxirgi 40 hujjat, qidiruv bilan); kirimda hujjatdan keyingi qarz | VERIFIED (kompilyatsiya) |
+| **A10b**: yangi tovarda keyingi bo'sh PLU taklif qilinadi, eng katta kod ko'rsatiladi | VERIFIED (kompilyatsiya) |
+| **A7**: mahsulot ma'lumoti (bio) — matn ALOHIDA yozuv, tovarlar unga ulanadi; 278 belgi chegarasi (58x40, Arial 10) | VERIFIED (12 test) |
+| A7: Sozlamalar > Mahsulotlar — qidiruv, "ma'lumoti bor/yo'q" filtri, soni; internetsiz ishlaydi | VERIFIED (kompilyatsiya) |
+| A7: ko'chirish (kod almashsa), bir nechta mahsulotga ulash, uzish, boshqasidan olish | VERIFIED (testlar) |
+| A7: savdo oynasida INFO — bosilsa klaviatura yopilib matn tepada ochiladi; "avtomatik ochish" sozlamasi (3 ilovada) | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| A7: Xprinterdan chiqarish (Arial 10, 58x40) | IMPLEMENTED-UNVERIFIED — printerda sinash kerak |
+| A7: kompyuterda (Excel) yozish — CSV chiqarish/yuklash (kod;nom;malumot) | VERIFIED (3 test) |
+| A7: ma'lumot 2-ilovaga snapshot bilan, Agentga bulut orqali boradi | VERIFIED (kompilyatsiya) / ulanishda IMPLEMENTED-UNVERIFIED |
+| **A11**: ko'p tovarga birdan — nomdan belgi olib tashlash/almashtirish, matn qo'shish (bosh/oxir/indeks), maydon o'zgartirish | VERIFIED (8 Kotlin + 5 Python test) |
+| A11: qamrov (guruh, nomida, kodlar, hammasi), KO'RIB CHIQISH (nechta + 20 misol), tasdiq, bajarish | VERIFIED (testlar) |
+| A11: kompyuter COM orqali bajaradi — telefon o'chsa ham davom etadi | VERIFIED (kompilyatsiya) / 1C'da IMPLEMENTED-UNVERIFIED |
+| A11: **QAYTARISH** — eski qiymatlar saqlanadi, Yozuvlar ro'yxatidan bitta tugma | VERIFIED (kod) / 1C'da IMPLEMENTED-UNVERIFIED |
+| A11: qoldiqni belgilangan songa o'zgartirish | NOT-IMPLEMENTED — 1C'dagi "qayta sanash" hujjatining aniq nomi kerak (sizdan so'raymiz) |
+| **A12**: 2-ilovada "server" -> "do'kon kompyuteri"; "kontragent" -> "mijoz / yuk beruvchi"; Agentda 1C server sozlamasi yashirildi | VERIFIED |
+| A12: qolgan soddalashtirish (kam ekran, qisqa savdo) | IMPLEMENTED-UNVERIFIED — qaysi joy qiyinligini aytsangiz aniq qilamiz |
 
 ## 5.2 — 1-qism: mayda detallar, sozlamalar va holat
 | Narsa | Holat |

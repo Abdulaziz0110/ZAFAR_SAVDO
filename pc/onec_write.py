@@ -30,7 +30,7 @@ import shutil
 
 log = logging.getLogger("onec_export")
 
-KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk", "ke", "wo", "undo"}
+KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk", "ke", "wo", "undo", "de", "bk"}
 DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
           "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
 # ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
@@ -47,6 +47,19 @@ PARTY_FIELDS = {"nm", "tel", "tel2", "adr", "reg", "grp", "inn", "lim"}
 PARTY_ATTR = {"nm": "Наименование", "tel": "Тел", "tel2": "Тел2", "adr": "Адрес", "inn": "ИНН"}
 # v5.1: son maydonlari (kredit limiti)
 PARTY_NUMS = {"lim": "ЛимитСум"}
+# v5.2 (A5): tarixdagi savdoni o'zgartirish — 1C hujjati nomi va tovarlar jadvali
+EDITABLE_DOCS = {
+    "r": ("Реализация", "Расход"),
+    "m": ("РеализацияМобил", "Расход"),
+    "z": ("ПродажаРозница", "Таблица"),
+    "q": ("Возврат_товара_от_клиента", "Расход"),
+    "b": ("Возврат_товара_поставщику", "Таблица"),
+}
+# v5.2 (A11): ko'p tovarga birdan amal
+BULK_FIELDS = {"bop", "bfind", "bto", "btxt", "bwhere", "bkey", "bval", "bgrp", "bmatch", "bcodes"}
+BULK_OPS = {"repl", "add", "field"}
+BULK_KEYS = {"grp", "brd", "unit", "vol", "pack", "nac", "scl", "p1", "p2", "p3", "p4", "pin"}
+BULK_MAX = 5000
 PHONE_RE = re.compile(r"[+0-9 ()-]{5,20}")
 PRICE_KEYS = ("p1", "p2", "p3", "p4", "pin")
 KEEP_BACKUPS = 7
@@ -94,7 +107,9 @@ def parse_request(rid, item):
         "ks": g("ks"), "ku": g("ku"), "ds": g("ds"), "du": g("du"),
         "bc": str(p.get("bc") or "").strip(), "target": str(p.get("t") or "").strip(),
         "op": str(p.get("op") or "").strip(), "op_code": str(p.get("opc") or "").strip(),
-        "f": {str(a): b for a, b in f.items() if str(a) in GOODS_FIELDS or str(a) in PARTY_FIELDS},
+        # v5.2 (A5): tayyor 1C hujjatini tahrirlash — turi, raqami va sanasi (yyyyMMddHHmmss)
+        "dk": str(p.get("dk") or "").strip(), "no": str(p.get("no") or "").strip(), "ds_stamp": str(p.get("dt") or "").strip(),
+        "f": {str(a): b for a, b in f.items() if str(a) in GOODS_FIELDS or str(a) in PARTY_FIELDS or str(a) in BULK_FIELDS},
     }
 
 
@@ -104,6 +119,64 @@ def _fnum(v):
     except (TypeError, ValueError):
         return None
     return x if x == x else None  # NaN emas
+
+
+def bulk_needles(find):
+    """Bir nechta topiladigan matn "|" bilan beriladi. Telefondagi BulkText.needles bilan bir xil."""
+    return [x for x in str(find or "").split("|") if x]
+
+
+def bulk_tidy(s):
+    """Ketma-ket bo'shliqlar bittaga, chetlari kesiladi (telefondagi BulkText.tidy bilan bir xil)."""
+    out = []
+    space = False
+    for ch in s:
+        if ch in (" ", "\u00a0"):
+            space = True
+            continue
+        if space and out:
+            out.append(" ")
+        space = False
+        out.append(ch)
+    return "".join(out).strip()
+
+
+def bulk_new_name(f, name):
+    """Yangi nom (telefondagi BulkPlan.newName bilan AYNAN bir xil qoida)."""
+    op = str(f.get("bop") or "")
+    if op == "repl":
+        s = name
+        for n in bulk_needles(f.get("bfind")):
+            s = s.replace(n, str(f.get("bto") or ""))
+        return bulk_tidy(s)
+    if op == "add":
+        text = str(f.get("btxt") or "")
+        if not text:
+            return name
+        where = str(f.get("bwhere") or "")
+        if where == "start":
+            s = text + name
+        elif where == "end":
+            s = name + text
+        else:
+            i = int(where) if where.isdigit() else len(name)
+            i = max(0, min(i, len(name)))
+            s = name[:i] + text + name[i:]
+        return bulk_tidy(s)
+    return name
+
+
+def bulk_covers(f, code, name, group):
+    codes = [x.strip() for x in str(f.get("bcodes") or "").split(",") if x.strip()]
+    if codes and str(code) not in codes:
+        return False
+    grp = str(f.get("bgrp") or "").strip()
+    if grp and str(group).strip().lower() != grp.lower():
+        return False
+    match = str(f.get("bmatch") or "").strip()
+    if match and match.lower() not in str(name).lower():
+        return False
+    return True
 
 
 def problem(req):
@@ -192,6 +265,39 @@ def problem(req):
     elif k == "undo":
         if not req["target"]:
             return "bekor qilinadigan yozuv ko'rsatilmagan"
+    elif k == "bk":
+        f = req["f"]
+        op = str(f.get("bop") or "")
+        if op not in BULK_OPS:
+            return "amal turi noto'g'ri"
+        if op == "repl" and not bulk_needles(f.get("bfind")):
+            return "nima almashtirilishi ko'rsatilmagan"
+        if op == "add":
+            if not str(f.get("btxt") or ""):
+                return "qo'shiladigan matn yo'q"
+            w = str(f.get("bwhere") or "")
+            if w not in ("start", "end") and not w.isdigit():
+                return "qayerga qo'shilishi noto'g'ri"
+        if op == "field":
+            if str(f.get("bkey") or "") not in BULK_KEYS:
+                return "maydon noto'g'ri"
+            if not str(f.get("bval") or "").strip():
+                return "qiymat bo'sh"
+    elif k == "de":
+        # v5.2 (A5): hujjatni tahrirlash
+        if req["dk"] not in EDITABLE_DOCS:
+            return "bu turdagi hujjatni o'zgartirib bo'lmaydi"
+        if not req["no"]:
+            return "hujjat raqami yo'q"
+        if len(req["ds_stamp"]) < 8:
+            return "hujjat sanasi yo'q"
+        if not req["lines"]:
+            return "tovar yo'q"
+        for ln in req["lines"]:
+            if not ln["name"] and not ln["code"]:
+                return "tovar nomi bo'sh"
+            if ln["q"] <= 0 or ln["ps"] < 0 or ln["pu"] < 0:
+                return "miqdor yoki narx noto'g'ri: %s" % ln["name"]
     return None
 
 
@@ -392,6 +498,10 @@ class Writer:
                 return self.edit_party(c, req)
             if k == "wo":
                 return self.write_off(c, req)
+            if k == "de":
+                return self.doc_edit(c, req)
+            if k == "bk":
+                return self.bulk(c, req)
             return self.document(c, req)
         except WriteError as e:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)}
@@ -535,6 +645,127 @@ class Writer:
         obj.Записать(c.РежимЗаписиДокумента.Проведение)
         ref = obj.Ссылка
         return {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, ref), "doc": doc_name}
+
+    def bulk(self, c, req):
+        """
+        v5.2 (A11): ko'p tovarga birdan amal. Telefon o'chsa ham shu yerda oxirigacha bajariladi.
+        Eski qiymatlar natijaga yoziladi — "Qaytarish" shular bo'yicha tiklaydi.
+        """
+        f = req["f"]
+        op = str(f.get("bop") or "")
+        q = c.NewObject("Запрос")
+        q.Текст = ("ВЫБРАТЬ Т.Ссылка КАК Ссылка, Т.Код КАК Код, Т.Наименование КАК Нм, ПРЕДСТАВЛЕНИЕ(Т.ГруппаТовара) КАК Грп "
+                   "ИЗ Справочник.Товары КАК Т ГДЕ НЕ Т.ПометкаУдаления")
+        sel = q.Выполнить().Выбрать()
+        changed = 0
+        seen = 0
+        old_all = []
+        while sel.Следующий():
+            code = str(sel.Код)
+            name = str(sel.Нм or "")
+            group = str(sel.Грп or "")
+            if not bulk_covers(f, code, name, group):
+                continue
+            seen += 1
+            go = sel.Ссылка.ПолучитьОбъект()
+            if go is None:
+                continue
+            if op in ("repl", "add"):
+                new = bulk_new_name(f, name)
+                if not new or new == name:
+                    continue
+                old_all.append({"c": code, "f": {"Наименование": name}})
+                go.Наименование = new[:150]
+            else:
+                key = str(f.get("bkey"))
+                val = str(f.get("bval") or "").strip()
+                info = self.goods_info(c, sel.Ссылка)
+                old = self._apply_fields(c, go, {key: val}, info["cur"] == "Вал", code)
+                keep = {k: self._plain(v) for k, v in old.items() if v is not None}
+                old_all.append({"c": code, "f": keep})
+            go.Записать()
+            changed += 1
+            if changed >= BULK_MAX:
+                break
+        self.goods_changed = True
+        return {
+            "id": req["id"], "ok": True, "st": "done" if changed else "skip",
+            "no": str(changed), "ref": "bulk", "doc": "ТоварларКуп", "seen": seen, "old_all": old_all,
+            "e": "" if changed else "o'zgaradigan tovar topilmadi",
+        }
+
+    def doc_edit(self, c, req):
+        """
+        v5.2 (A5): tayyor 1C hujjatidagi tovarlarni almashtirish. Hujjat raqami va sanasi bo'yicha topiladi,
+        eski qatorlar jurnalga yoziladi (qaytarish uchun), yangi qatorlar yoziladi va hujjat qayta o'tkaziladi.
+        Izohga "Admin o'zgartirdi" qo'shiladi — 1C'da kim o'zgartirgani ko'rinib tursin.
+        """
+        doc_name, table = EDITABLE_DOCS[req["dk"]]
+        mgr = getattr(c.Документы, doc_name)
+        day = self.stamp_date(req["ds_stamp"])
+        ref = mgr.НайтиПоНомеру(req["no"], day)
+        if ref is None or ref.Пустая():
+            ref = mgr.НайтиПоНомеру(req["no"].lstrip("0"), day)
+        if ref is None or ref.Пустая():
+            raise WriteError("1C'da hujjat topilmadi: %s %s" % (doc_name, req["no"]))
+        obj = ref.ПолучитьОбъект()
+        if obj is None:
+            raise WriteError("1C'da hujjatni ochib bo'lmadi: %s" % req["no"])
+        ts = getattr(obj, table)
+        old = []
+        for i in range(ts.Количество()):
+            r = ts.Получить(i)
+            old.append({
+                "code": str(getattr(r.Товары, "Код", "")), "q": float(r.Кол or 0),
+                "ps": float(getattr(r, "ЦенаСум", 0) or 0), "pu": float(getattr(r, "ЦенаВал", 0) or 0),
+            })
+        rate = c.Константы.Курс.Получить()
+        ts.Очистить()
+        total_s = total_u = 0.0
+        for ln in req["lines"]:
+            g = self.find_goods(c, ln["name"], ln["code"])
+            v = row_values(ln, self.goods_info(c, g), rate)
+            r = ts.Добавить()
+            r.Товары = g
+            r.ЕдИзм = g.ЕдИзм
+            if v["pieces"]:
+                r.Шт = v["pieces"]
+            r.Кол = v["q"]
+            if v["usd"]:
+                r.ЦенаВал = v["price"]
+                r.СуммаВал = v["sum"]
+                total_u += v["sum"]
+            else:
+                r.ЦенаСум = v["price"]
+                r.СуммаСум = v["sum"]
+                total_s += v["sum"]
+            if req["dk"] == "b":
+                r.Код = g.Код
+            if req["dk"] == "q":
+                r.ВидВал = c.Перечисления.ВидВал.Вал if v["usd"] else c.Перечисления.ВидВал.Сум
+                r.УртачаНархСум = g.ПриходЦена
+                r.УртачаНархВал = g.ПриходВал
+        obj.ВсегоСум = round(total_s, 2)
+        obj.ВсегоВал = round(total_u, 4)
+        mark = "Admin o'zgartirdi %s" % self.now().strftime("%d.%m.%Y %H:%M")
+        if req["note"]:
+            mark += ": " + req["note"]
+        prev_note = str(getattr(obj, "Комментарий", "") or "")
+        obj.Комментарий = (prev_note + " | " + mark).strip(" |")[:250]
+        obj.Записать(c.РежимЗаписиДокумента.Проведение)
+        self.goods_changed = True
+        return {
+            "id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(),
+            "ref": self.uuid_of(c, obj.Ссылка), "doc": doc_name, "tab": table, "note0": prev_note,
+            "old_lines": old,
+        }
+
+    @staticmethod
+    def stamp_date(stamp):
+        """yyyyMMddHHmmss -> datetime (kun boshi bo'lsa ham 1C НайтиПоНомеру uchun yetarli)."""
+        t = "".join(ch for ch in str(stamp) if ch.isdigit())
+        t = (t + "00000000000000")[:14]
+        return dt.datetime(int(t[0:4]), int(t[4:6]), int(t[6:8]), int(t[8:10]), int(t[10:12]), int(t[12:14]))
 
     def barcode(self, c, req):
         g = self.find_goods(c, req["party"], req["party_code"])
@@ -981,6 +1212,24 @@ class Writer:
                 c.Константы.Курс.Установить(old)
             self.journal.add(dict(t, st="undone", undone_by=req["id"]))
             return {"id": req["id"], "ok": True, "st": "done", "no": str(old or ""), "ref": "rate"}
+        if doc == "ТоварларКуп":
+            # v5.2 (A11): ko'p tovarga qilingan amalni qaytarish — har tovarga eski qiymatlari yoziladi
+            back = 0
+            for row in t.get("old_all") or []:
+                g = c.Справочники.Товары.НайтиПоКоду(int(row["c"]) if str(row["c"]).isdigit() else row["c"])
+                if g is None or g.Пустая():
+                    continue
+                go = g.ПолучитьОбъект()
+                if go is None:
+                    continue
+                for attr, v in (row.get("f") or {}).items():
+                    if v is not None:
+                        setattr(go, attr, v)
+                go.Записать()
+                back += 1
+            self.goods_changed = True
+            self.journal.add(dict(t, st="undone", undone_by=req["id"]))
+            return {"id": req["id"], "ok": True, "st": "done", "no": str(back), "ref": "bulk"}
         uid = c.NewObject("УникальныйИдентификатор", t["ref"])
         if doc == "Товары":
             obj = c.Справочники.Товары.ПолучитьСсылку(uid).ПолучитьОбъект()

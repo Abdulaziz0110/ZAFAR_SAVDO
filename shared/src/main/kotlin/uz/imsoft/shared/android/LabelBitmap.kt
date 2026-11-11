@@ -41,6 +41,7 @@ object LabelBitmap {
         when (kind) {
             LabelKind.PLU -> drawPlu(c, d, (w * SS).toFloat(), (h * SS).toFloat(), dpi)
             LabelKind.BARCODE -> drawBarcode(c, d, (w * SS).toFloat(), (h * SS).toFloat(), w, dpi)
+            LabelKind.BIO -> drawBio(c, d, (w * SS).toFloat(), (h * SS).toFloat(), dpi)
         }
         return downsample(big, w, h)
     }
@@ -139,6 +140,27 @@ object LabelBitmap {
             rows = listOf(lineOf(d.name, pt(16f, dpi) * k, bw, 2), lineOf(d.price, pt(26f, dpi) * k, bw, 1), lineOf(code, pt(20f, dpi) * k, bw, 1))
         }
         stack(c, left, h, gap, rows)
+    }
+
+    /**
+     * v5.2 (A7): mahsulot ma'lumoti yorlig'i — nom Arial 11 qalin, matn Arial 10.
+     * 58x40 etiketkaga Arial 10 bilan ~278 belgi sig'adi; uzunroq bo'lsa shrift sal kichrayadi.
+     */
+    private fun drawBio(c: Canvas, d: LabelData, w: Float, h: Float, dpi: Int) {
+        val left = w * 0.03f
+        val bw = (w * 0.94f).toInt().coerceAtLeast(10)
+        val gap = h * 0.02f
+        var k = 1f
+        fun rows() = listOf(
+            lineOf(d.name, pt(11f, dpi) * k, bw, 2),
+            lineOf(d.bio, pt(10f, dpi) * k, bw, 20),
+        )
+        var list = rows()
+        while (list.sumOf { it.height } + gap > h * 0.97f && k > 0.55f) {
+            k *= 0.95f
+            list = rows()
+        }
+        stack(c, left, h, gap, list)
     }
 
     /**

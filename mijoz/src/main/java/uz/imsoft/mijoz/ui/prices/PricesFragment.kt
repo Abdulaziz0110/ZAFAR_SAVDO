@@ -111,7 +111,31 @@ class PricesFragment : Fragment() {
         }
         til.addView(edt)
         if (r.last != null) til.helperText = getString(R.string.cart_last, Stamp.formatDate(r.last.stamp), Fmt.qty(r.last.qty))
-        val d = MaterialAlertDialogBuilder(ctx).setTitle(r.item.name).setView(til)
+        // v5.2 (A7): INFO — mahsulot ma'lumoti. Tepada ochiladi; bosilsa klaviatura yopiladi.
+        val box = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.VERTICAL }
+        val bio = uz.imsoft.mijoz.ui.MijozBio.of(Locator.data.state.value.snapshot?.bio, r.item.id)
+        if (bio != null) {
+            val auto = Locator.prefs.bioAuto
+            val tvBio = uz.imsoft.shared.android.Ui.text(ctx, bio.text).apply {
+                setPadding(uz.imsoft.shared.android.Ui.dp(ctx, 12), uz.imsoft.shared.android.Ui.dp(ctx, 8), uz.imsoft.shared.android.Ui.dp(ctx, 12), uz.imsoft.shared.android.Ui.dp(ctx, 8))
+                setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceVariant))
+                visibility = if (auto) View.VISIBLE else View.GONE
+            }
+            var open = auto
+            val btn = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.bio_info), outlined = true, top = 0, icon = R.drawable.ic_info) { v ->
+                open = !open
+                tvBio.visibility = if (open) View.VISIBLE else View.GONE
+                if (open) {
+                    ctx.getSystemService(android.view.inputmethod.InputMethodManager::class.java)?.hideSoftInputFromWindow(v.windowToken, 0)
+                    edt.clearFocus()
+                }
+            }
+            box.setPadding(48, 16, 48, 0)
+            box.addView(btn)
+            box.addView(tvBio)
+        }
+        box.addView(til)
+        val d = MaterialAlertDialogBuilder(ctx).setTitle(r.item.name).setView(box)
             .setPositiveButton(R.string.cart_put) { _, _ ->
                 val q = uz.imsoft.shared.NumText.parse(edt.text?.toString())
                 val (price, usd) = priceOf(r)

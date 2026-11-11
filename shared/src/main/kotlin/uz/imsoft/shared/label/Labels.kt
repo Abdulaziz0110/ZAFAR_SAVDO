@@ -8,7 +8,7 @@ import uz.imsoft.shared.report.LedgerMerge
 import uz.imsoft.shared.report.TableReader
 
 /** Narx yorlig'i turi (1C'dagi "PLU Narx" va "Shtrix chek" shakllari). */
-enum class LabelKind { PLU, BARCODE }
+enum class LabelKind { PLU, BARCODE, BIO }
 
 /** Bitta yorliq ma'lumoti (chizishdan oldin). */
 data class LabelData(
@@ -20,6 +20,8 @@ data class LabelData(
     /** Do'kondagi shtrix kod (shtrixli yorliq uchun). */
     val barcode: String = "",
     val copies: Int = 1,
+    /** v5.2 (A7): mahsulot ma'lumoti (bio) — Arial 10, 58x40 etiketkaga 278 belgi sig'adi. */
+    val bio: String = "",
 )
 
 /**

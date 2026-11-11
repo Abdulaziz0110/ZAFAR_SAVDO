@@ -221,6 +221,9 @@ class LabelRepository(
 
     fun pluFor(productId: String): String? = pluManual[productId] ?: plu[productId]
 
+    /** v5.2 (A10b): ishlatilgan hamma PLU (yangi tovarga keyingi raqamni taklif qilish uchun). */
+    fun allPlu(): List<String> = (plu.values + pluManual.values).filter { it.isNotBlank() }
+
     fun setPlu(productId: String, value: String?) {
         val v = value?.filter { it.isDigit() }?.trimStart('0')?.ifEmpty { null }
         if (v == null) pluManual.remove(productId) else pluManual[productId] = v
@@ -451,6 +454,8 @@ class LabelRepository(
                     if (bc == null) skipped += prod.id to LabelBatch.Skip.NO_BARCODE
                     else out += LabelData(prod.name, LabelPrice.som(price), barcode = bc, copies = it.copies)
                 }
+                // v5.2 (A7): bio yorlig'i ro'yxatdan emas, bitta mahsulotdan chiqadi ([printBio])
+                LabelKind.BIO -> Unit
             }
         }
         val (w, h) = sizePx()
@@ -458,6 +463,20 @@ class LabelRepository(
     }
 
     fun render(b: LabelBatch, d: LabelData) = LabelBitmap.render(d, b.kind, b.wPx, b.hPx, _state.value.dpi)
+
+    /**
+     * v5.2 (A7): mahsulot ma'lumotini (bio) 58x40 etiketkaga chiqarish — Arial 10.
+     * @return foydalanuvchiga ko'rsatiladigan natija matni.
+     */
+    suspend fun printBio(name: String, text: String): String {
+        val (w, h) = sizePx()
+        val b = LabelBatch(LabelKind.BIO, listOf(LabelData(name, "", bio = text)), emptyList(), w, h)
+        val r = print(b)
+        return when (r) {
+            is LabelPrinterClient.Sent.Printed -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_printed, r.count, r.printer.ifBlank { "Xprinter" })
+            is LabelPrinterClient.Sent.Queued -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_queued, r.count)
+        }
+    }
 
     suspend fun print(b: LabelBatch, only: List<LabelData> = b.labels): LabelPrinterClient.Sent {
         if (_state.value.lpd) return printLpd(b, only)

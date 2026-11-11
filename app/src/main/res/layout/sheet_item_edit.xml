@@ -26,6 +26,31 @@
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
+    <!-- v5.2 (A7): INFO — mahsulot ma'lumoti. Bosilsa klaviatura yopiladi va matn SHU YERDA, parametrlar USTIDA ochiladi. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnBio"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:minHeight="44dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="8dp"
+        android:text="@string/bio_info"
+        android:visibility="gone"
+        app:icon="@drawable/ic_info"
+        app:iconPadding="4dp" />
+
+    <TextView
+        android:id="@+id/tvBio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:background="?attr/colorSurfaceVariant"
+        android:padding="12dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

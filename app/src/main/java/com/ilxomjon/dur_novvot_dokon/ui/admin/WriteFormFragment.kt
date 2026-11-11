@@ -40,6 +40,7 @@ class WriteFormFragment : CodeFragment() {
     private var eCardSom: TextInputEditText? = null
     private var eCardUsd: TextInputEditText? = null
     private var sending = false
+    private var btnHistory: com.google.android.material.button.MaterialButton? = null
 
     private val isGoods: Boolean get() = kind != WriteKind.SUPPLIER_PAY
     /** v4.1: hisobdan chiqarish — kontragentsiz, faqat tovar va miqdor (tannarx 1C qoldig'idan). */
@@ -66,7 +67,15 @@ class WriteFormFragment : CodeFragment() {
             c.addView(Ui.section(ctx, getString(if (kind == WriteKind.CLIENT_RETURN) R.string.wf_client else R.string.wf_supplier)))
             c.addView(tvParty)
             c.addView(tvDebt)
-            c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() })
+            val hist = Ui.button(ctx, getString(R.string.wf_history), outlined = true, icon = R.drawable.ic_history) { showHistory() }
+            btnHistory = hist
+            c.addView(
+                Ui.buttonRow(
+                    ctx,
+                    Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickParty() },
+                    hist,
+                ),
+            )
         }
         if (isGoods) {
             c.addView(Ui.section(ctx, getString(R.string.wf_goods)))
@@ -78,6 +87,22 @@ class WriteFormFragment : CodeFragment() {
             // v5.0.5: faqat so'm
             eCashSom = Ui.field(ctx, getString(R.string.wf_cash_som), Ui.NUMBER).also { c.addView(it.first) }.second
             eCardSom = Ui.field(ctx, getString(R.string.wf_card_som), Ui.NUMBER).also { c.addView(it.first) }.second
+            // v5.2 (A10b): summa yozilayotganda to'lovdan keyingi qoldiq darhol ko'rinadi
+            val live = object : android.text.TextWatcher {
+                override fun afterTextChanged(sx: android.text.Editable?) = render()
+                override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, cc: Int) = Unit
+                override fun onTextChanged(t: CharSequence?, a: Int, b: Int, cc: Int) = Unit
+            }
+            eCashSom?.addTextChangedListener(live)
+            eCardSom?.addTextChangedListener(live)
+            // "Qarzni to'liq yopish" — bir bosishda
+            c.addView(
+                Ui.button(ctx, getString(R.string.wf_pay_all), outlined = true, top = 4, icon = R.drawable.ic_check) {
+                    val sup = ServiceLocator.onec.state.value.suppliers?.list?.firstOrNull { it.name == party }
+                    val owe = sup?.oweSom ?: 0.0
+                    if (owe > 0.5) { eCashSom?.setText(com.ilxomjon.dur_novvot_dokon.core.Money.plain(owe)); render() } else snack(getString(R.string.wf_no_debt))
+                },
+            )
         }
         eNote = Ui.field(ctx, getString(R.string.wf_note), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE).also { c.addView(it.first) }.second
         tvTotal = Ui.title(ctx, "", 12).also { c.addView(it) }
@@ -101,13 +126,25 @@ class WriteFormFragment : CodeFragment() {
         tvParty.text = party.ifEmpty { getString(R.string.wf_not_chosen) }
         // v5.0.5: yuk beruvchiga to'lovda bizning qarzimiz ko'rinib tursin (1C'dagidek)
         val sup = if (party.isEmpty()) null else ServiceLocator.onec.state.value.suppliers?.list?.firstOrNull { it.name == party }
-        tvDebt.text = when {
-            sup == null -> ""
-            sup.oweSom > 0.5 -> getString(R.string.wf_we_owe, som(sup.oweSom))
-            sup.oweSom < -0.5 -> getString(R.string.wf_they_owe, som(-sup.oweSom))
-            else -> getString(R.string.wf_no_debt)
+        // v5.2 (A10b): qarz, to'lovdan keyingi qoldiq va bu kishi bilan oxirgi ishlar — hammasi ko'z oldida
+        val parts = ArrayList<String>(3)
+        if (sup != null) {
+            parts += when {
+                sup.oweSom > 0.5 -> getString(R.string.wf_we_owe, som(sup.oweSom))
+                sup.oweSom < -0.5 -> getString(R.string.wf_they_owe, som(-sup.oweSom))
+                else -> getString(R.string.wf_no_debt)
+            }
+            if (kind == WriteKind.SUPPLIER_PAY) {
+                val pay = num(eCashSom) + num(eCardSom)
+                if (pay > 0.0) parts += getString(R.string.wf_after_pay, som(sup.oweSom - pay))
+            }
+            if (isGoods && lines.isNotEmpty() && sup.oweSom > 0.5) {
+                parts += getString(R.string.wf_after_doc, som(sup.oweSom + lines.sumOf { it.sumSom }))
+            }
         }
+        tvDebt.text = parts.joinToString("\n")
         tvDebt.show(tvDebt.text.isNotEmpty())
+        btnHistory?.show(sup != null && sup.docs.isNotEmpty())
         if (isGoods) {
             linesBox.removeAllViews()
             lines.forEachIndexed { i, l ->
@@ -125,6 +162,31 @@ class WriteFormFragment : CodeFragment() {
         } else tvTotal.text = ""
     }
 
+    /** v5.2 (A10b): shu kishi bilan oxirgi ishlar — qachon yuk bergan, qachon to'lov qilingan. */
+    private fun showHistory() {
+        val sup = ServiceLocator.onec.state.value.suppliers?.list?.firstOrNull { it.name == party } ?: return
+        val docs = sup.docs.sortedByDescending { it.stamp }.take(40)
+        if (docs.isEmpty()) { snack(getString(R.string.wf_no_history)); return }
+        val rows = docs.map { d ->
+            Ui.Row(
+                docName(d.kind) + "  \u2116" + d.number,
+                uz.imsoft.shared.report.Stamp.formatDateTime(d.stamp) + (if (d.note.isBlank()) "" else " \u00B7 " + d.note),
+                money2(d.som, d.usd),
+                icon = if (d.kind == uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY) R.drawable.ic_payment else R.drawable.ic_receipt,
+            )
+        }
+        Ui.pickSearch(ctx, sup.name, rows, getString(R.string.wf_history_search), getString(R.string.close), keys = docs.map { it.haystack }) { }
+    }
+
+    private fun docName(kind: String): String = getString(
+        when (kind) {
+            uz.imsoft.shared.onec.OneCDoc.RECEIPT -> R.string.wf_d_receipt
+            uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY -> R.string.wf_d_pay
+            uz.imsoft.shared.onec.OneCDoc.SUPPLIER_RETURN -> R.string.wf_d_return
+            else -> R.string.wf_d_other
+        },
+    )
+
     private fun pickParty() {
         if (kind == WriteKind.CLIENT_RETURN) { StorePickerSheet.show(childFragmentManager, REQ_STORE); return }
         val list = ServiceLocator.onec.state.value.suppliers?.list.orEmpty()
@@ -137,12 +199,30 @@ class WriteFormFragment : CodeFragment() {
                 .setNegativeButton(R.string.cancel, null).show()
             return
         }
-        val names = list.map { it.name }.toTypedArray()
-        MaterialAlertDialogBuilder(ctx).setTitle(R.string.wf_supplier).setItems(names) { _, i ->
-            party = list[i].name
-            partyCode = list[i].code
+        // v5.2 (A10a): qidiruvli ro'yxat — har qatorda kod, qarz va oxirgi hujjat sanasi.
+        // Tartib: oxirgi ish qilinganlar tepada (shu bilan ko'p ishlatiladigani birinchi chiqadi).
+        val sorted = list.sortedByDescending { s -> s.docs.maxOfOrNull { it.stamp } ?: 0L }
+        val rows = sorted.map { s ->
+            val owe = money2(s.oweSom, s.oweUsd)
+            val last = s.docs.maxOfOrNull { it.stamp }?.takeIf { it > 0 }?.let { uz.imsoft.shared.report.Stamp.formatDate(it) }.orEmpty()
+            Ui.Row(
+                s.name,
+                listOfNotNull(
+                    getString(R.string.ad_product_code, s.code).takeIf { s.code.isNotBlank() },
+                    last.takeIf { it.isNotEmpty() }?.let { getString(R.string.wf_last_doc, it) },
+                ).joinToString(" \u00B7 "),
+                if (s.oweSom != 0.0 || s.oweUsd != 0.0) getString(R.string.wf_we_owe_short, owe) else "",
+                icon = R.drawable.ic_person,
+            )
+        }
+        Ui.pickSearch(
+            ctx, getString(R.string.wf_supplier), rows, getString(R.string.wf_supplier_search), getString(R.string.cancel),
+            keys = sorted.map { it.name + " " + it.code + " " + it.phone },
+        ) { i ->
+            party = sorted[i].name
+            partyCode = sorted[i].code
             render()
-        }.setNegativeButton(R.string.cancel, null).show()
+        }
     }
 
     private fun addLine() {
