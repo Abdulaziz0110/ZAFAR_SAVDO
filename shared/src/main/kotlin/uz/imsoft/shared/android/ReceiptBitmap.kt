@@ -30,7 +30,8 @@ object ReceiptBitmap {
     fun render(r0: Receipt, style: ReceiptStyle = ReceiptStyle.STANDARD, logo: Bitmap? = null): Bitmap {
         val st = style.normalized()
         // v5.0.2: 1C cheki — maketdagi ko'rinish (qog'oz eni, qoralik va oxiridagi bo'sh joy sozlamadan)
-        r0.chek?.let { return renderChek(it, st.width, if (st.logo) logo else null, st.dark, st.feed) }
+        // v5.2 (A3): chek 1C "Chek1" maketining AYNAN nusxasi — logo, sarlavha osti va boshqa qo'shimchalar yo'q.
+        r0.chek?.let { return renderChek(it, st.width, st.dark, st.feed) }
         val r = st.apply(r0)
         val width = st.width
         val k = width / 576f
@@ -182,7 +183,7 @@ object ReceiptBitmap {
      * tovar qatorlari Arial 9 ramkada, Summa 9/11, Chegirma va To'lov 10/11, pastda Tel Arial 12 markazda.
      * Hamma matn Arial qalin (maketdagidek), hech qanday qo'shimcha yozuv yo'q.
      */
-    fun renderChek(chek: uz.imsoft.shared.receipt.Chek, width: Int = 576, logo: Bitmap? = null, dark: Int = 140, feedMm: Int = 0): Bitmap {
+    fun renderChek(chek: uz.imsoft.shared.receipt.Chek, width: Int = 576, dark: Int = 140, feedMm: Int = 0): Bitmap {
         val k = width / 576f
         // 1C punkti 203 dpi printer nuqtasiga: 9pt -> 25 nuqta (80 mm qog'oz = 576 nuqta)
         fun pt(p: Float) = p * 203f / 72f * k
@@ -232,10 +233,6 @@ object ReceiptBitmap {
         fun rule(after: Float = 4f) { ops += Op((4 + after) * k) { c, y -> c.drawLine(pad, y + 2 * k, width - pad, y + 2 * k, line) } }
 
         gap(6f)
-        if (logo != null && logo.width > 0 && logo.height > 0) {
-            val lb = logoFor(logo, (width * 0.6f).toInt(), dark)
-            ops += Op(lb.height + 10 * k) { c, y -> c.drawBitmap(lb, ((width - lb.width) / 2).toFloat(), y, null) }
-        }
         val l = chek.labels
         // Вакт (chapda) va Сана (o'ngda) — bitta qator
         run {

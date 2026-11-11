@@ -30,6 +30,11 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var vm: HomeViewModel
 
+    // v5.2 (A8): holat xulosasi
+    private var lastDiag: com.ilxomjon.dur_novvot_dokon.data.repo.Diagnosis? = null
+    private var lastDiagAt = 0L
+    private var diagJob: kotlinx.coroutines.Job? = null
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
@@ -42,10 +47,15 @@ class HomeFragment : Fragment() {
             when (item.itemId) {
                 R.id.action_sync -> { vm.sync(); true }
                 R.id.action_barcodes -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment()); true }
-                R.id.action_menu -> { openMenu(); true }
+                R.id.action_boss -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment()); true }
+                R.id.action_stats -> { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); true }
                 else -> false
             }
         }
+        // Boss va Statistika faqat Adminda
+        val adminRole = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
+        binding.toolbar.menu.findItem(R.id.action_boss)?.isVisible = adminRole
+        binding.toolbar.menu.findItem(R.id.action_stats)?.isVisible = adminRole
         binding.btnLoad.setOnClickListener { vm.sync() }
         binding.btnRetry.setOnClickListener { vm.retryPending() }
         binding.btnQueue.setOnClickListener { navigator().push(OutboxFragment()) }
@@ -85,6 +95,9 @@ class HomeFragment : Fragment() {
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
         addCartsCard()
 
+        // v5.2 (A8): pastdagi holat kartasi
+        binding.btnDiagMore.setOnClickListener { com.ilxomjon.dur_novvot_dokon.ui.diag.DiagnosticsSheet.show(parentFragmentManager) }
+        binding.cardDiag.setOnClickListener { checkDiag(true) }
         launchOnStarted { vm.state.collect { render(it) } }
         launchOnStarted {
             vm.events.collect { e ->
@@ -147,32 +160,60 @@ class HomeFragment : Fragment() {
     }
 
     /** Uch nuqta: Boshqaruv, Boss, Statistika, Profil, Sozlamalar — ikonkalari bilan. */
-    private fun openMenu() {
-        val admin = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
-        val rows = ArrayList<uz.imsoft.shared.android.Ui.MenuRow>()
-        if (admin) {
-            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.ad_title), getString(R.string.ad_card_sub), R.drawable.ic_tune, 1) {
-                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment())
-            }
-            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.boss_title), getString(R.string.boss_card_sub), R.drawable.ic_trending, 1) {
-                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment())
-            }
-            rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.stt_title), getString(R.string.sg_stats_sub), R.drawable.ic_trending) {
-                navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment())
-            }
-        }
-        rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.menu_settings), "", R.drawable.ic_settings) {
-            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment())
-        }
-        rows += uz.imsoft.shared.android.Ui.MenuRow(getString(R.string.pf_title), "", R.drawable.ic_person) {
-            navigator().push(com.ilxomjon.dur_novvot_dokon.ui.settings.ProfileFragment())
-        }
-        uz.imsoft.shared.android.Ui.menuSheet(requireContext(), "", rows)
-    }
-
     override fun onResume() {
         super.onResume()
         vm.onResume()
+        checkDiag(false)
+    }
+
+    // ---------------- v5.2 (A8): pastda holat (diagnostika) xulosasi ----------------
+
+    /** [force] — tugma bosilganda; aks holda 2 daqiqada bir marta. */
+    private fun checkDiag(force: Boolean) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastDiagAt < 120_000L && lastDiag != null) { renderDiag(); return }
+        if (diagJob?.isActive == true) return
+        lastDiagAt = now
+        binding.tvDiagHead.text = getString(R.string.dg_checking)
+        diagJob = viewLifecycleOwner.lifecycleScope.launch {
+            val d = runCatching { ServiceLocator.diagnostics.run() }.getOrNull()
+            if (_binding == null) return@launch
+            lastDiag = d
+            renderDiag()
+        }
+    }
+
+    private fun renderDiag() {
+        val b = _binding ?: return
+        val ctx = requireContext()
+        val d = lastDiag
+        if (d == null) {
+            b.tvDiagHead.text = getString(R.string.err_unknown)
+            b.diagRows.removeAllViews()
+            return
+        }
+        val items = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.items(ctx, d)
+        val ok = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.allOk(items)
+        b.tvDiagHead.text = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.headline(ctx, items)
+        b.tvDiagHead.setTextColor(
+            if (ok) androidx.core.content.ContextCompat.getColor(ctx, R.color.brand_success)
+            else com.google.android.material.color.MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorError, 0),
+        )
+        b.diagRows.removeAllViews()
+        for (it in items) {
+            val tv = android.widget.TextView(ctx)
+            tv.textSize = 14f
+            tv.text = (when (it.state) { 1 -> "\u2705 "; 0 -> "\u274C "; else -> "\u2796 " }) + it.label +
+                (if (it.state == 0 && it.detail.isNotBlank()) " — " + it.detail else "")
+            tv.setTextColor(
+                com.google.android.material.color.MaterialColors.getColor(
+                    ctx,
+                    if (it.state == 0) com.google.android.material.R.attr.colorError else com.google.android.material.R.attr.colorOnSurfaceVariant, 0,
+                ),
+            )
+            tv.setPadding(0, uz.imsoft.shared.android.Ui.dp(ctx, 2), 0, uz.imsoft.shared.android.Ui.dp(ctx, 2))
+            b.diagRows.addView(tv)
+        }
     }
 
     /**
@@ -270,6 +311,7 @@ class HomeFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        diagJob?.cancel()
         super.onDestroyView()
         _binding = null
     }

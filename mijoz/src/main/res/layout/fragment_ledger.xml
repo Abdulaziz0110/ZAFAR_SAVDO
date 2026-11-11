@@ -34,6 +34,17 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- v5.2 (A2): yangilanish holati endi shu ikonkada (pastdagi uzun matn olib tashlandi) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSync"
+            style="?attr/materialIconButtonStyle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="2dp"
+            android:contentDescription="@string/lg_sync_title"
+            android:visibility="gone"
+            app:icon="@drawable/ic_sync" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
             style="?attr/materialIconButtonStyle"
@@ -65,6 +76,19 @@
                 app:singleLine="true"
                 app:singleSelection="true" />
 
+            <!-- v5.2 (A6): mijoz bo'yicha qidiruv -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipClient"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:checkable="true"
+                android:visibility="gone"
+                app:checkedIconVisible="false"
+                app:chipIcon="@drawable/ic_person"
+                app:chipIconVisible="true" />
+
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipPeriod"
                 style="@style/Widget.Material3.Chip.Filter"
@@ -77,24 +101,6 @@
                 app:chipIconVisible="true" />
         </LinearLayout>
     </HorizontalScrollView>
-
-    <TextView
-        android:id="@+id/tvSyncStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="16dp"
-        android:background="?attr/selectableItemBackground"
-        android:drawablePadding="8dp"
-        android:gravity="center_vertical"
-        android:minHeight="40dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:visibility="gone"
-        app:drawableStartCompat="@drawable/ic_sync" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardSummary"

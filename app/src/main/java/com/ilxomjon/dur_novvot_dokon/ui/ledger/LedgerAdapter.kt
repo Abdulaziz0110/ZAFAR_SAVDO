@@ -15,10 +15,13 @@ import uz.imsoft.shared.report.LedgerDoc
 class LedgerAdapter(private val onClick: (LedgerDoc) -> Unit) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private var rows: List<LedgerRow> = emptyList()
     private var searching = false
+    /** v5.2 (A4): hujjatda nom bo'lmasa sarlavhada shu mijoz nomi turadi. */
+    private var clientName = ""
 
-    fun submit(list: List<LedgerRow>, searching: Boolean) {
+    fun submit(list: List<LedgerRow>, searching: Boolean, clientName: String = "") {
         rows = list
         this.searching = searching
+        this.clientName = clientName
         notifyDataSetChanged()
     }
 
@@ -62,13 +65,13 @@ class LedgerAdapter(private val onClick: (LedgerDoc) -> Unit) : RecyclerView.Ada
             }
             b.kindBg.backgroundTintList = ColorStateList.valueOf(MaterialColors.getColor(ctx, bg, 0))
             b.ivKind.imageTintList = ColorStateList.valueOf(MaterialColors.getColor(ctx, fg, 0))
-            b.tvTitle.text = LedgerUi.docTitle(ctx, d)
+            b.tvTitle.text = LedgerUi.docTitle(ctx, d, clientName)
             b.tvAmount.text = LedgerUi.money(ctx, d.total)
             b.tvAmount.setTextColor(LedgerUi.amountColor(ctx, d.kind))
             val names = if (d.isGoods && d.goods.isNotEmpty()) d.goods.joinToString(", ") { it.product }
                 else d.comment.ifBlank { uz.imsoft.shared.report.LedgerOwner.plain(d.kindText) }
-            val owner = uz.imsoft.shared.report.LedgerOwner.of(d.kindText)?.second.orEmpty()
-            b.tvSub.text = listOf(LedgerUi.time(d.stamp), owner, names).filter { it.isNotBlank() }.joinToString(" · ")
+            // Nom endi sarlavhada — pastda vaqt, qo'shimcha belgi va tovar nomlari qoladi.
+            b.tvSub.text = listOf(LedgerUi.time(d.stamp), LedgerUi.docExtra(ctx, d), names).filter { it.isNotBlank() }.joinToString(" · ")
             // Qidiruvda mos kelgan qatorlar
             if (searching && h.lines.isNotEmpty() && d.isGoods) {
                 val sb = android.text.SpannableStringBuilder()

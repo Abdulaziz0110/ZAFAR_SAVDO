@@ -203,6 +203,8 @@ class LabelPrintSheet : BottomSheetDialogFragment() {
                     is LabelPrinterClient.Sent.Queued -> app.getString(R.string.lb_queued, r.count)
                 }
                 Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
+                // v5.2 (A1): chop etilgandan keyin tanlangan mahsulotlar ro'yxati bo'shaydi — keyingi to'plamga tayyor.
+                repo.clear()
                 dismiss()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

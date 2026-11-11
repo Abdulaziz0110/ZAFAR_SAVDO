@@ -26,12 +26,12 @@
     <string name="home_no_data">1-ilova hali ma\'lumot yubormagan</string>
     <string name="home_no_data_short">Ma\'lumot yo\'q</string>
     <string name="home_debt_unknown">Qarz ma\'lumoti yuborilmagan</string>
-    <string name="home_debt_at">Server ma\'lumoti: %1$s holatiga</string>
+    <string name="home_debt_at">Do\'kon ma\'lumoti: %1$s holatiga</string>
     <string name="home_debt_report_at">1C kartochkasi bo\'yicha: %1$s holatiga</string>
     <string name="home_report_balance">1C hisoboti bo\'yicha (%1$s oxiriga): %2$s</string>
     <string name="home_not_linked">Ulanmagan</string>
     <string name="home_sync">1-ilova yuborgan: %1$s · telefonga olingan: %2$s</string>
-    <string name="home_request_pending">Narx va qarzni serverdan yangilash ham so\'raldi (%1$s) — 1-ilova server ko\'ringanda (do\'kon tarmog\'ida) bajaradi.</string>
+    <string name="home_request_pending">Narx va qarzni do\'kondan yangilash ham so\'raldi (%1$s) — 1-ilova do\'kon tarmog\'iga ulanganda bajaradi.</string>
     <string name="home_no_reports">Hisobotlar hali import qilinmagan</string>
     <string name="home_coverage">Hisobot davrlari: %1$s</string>
     <string name="sum_bought">Olindi: %1$s (%2$d ta)</string>
@@ -82,7 +82,7 @@
     <string name="report_empty">Bu davrda yozuv yo\'q</string>
     <string name="day_bought">olindi %1$s</string>
     <string name="day_paid">to\'landi %1$s</string>
-    <string name="pdf_debt">Joriy qarz: %1$s (server, %2$s holatiga)</string>
+    <string name="pdf_debt">Joriy qarz: %1$s (do\'kon ma\'lumoti, %2$s holatiga)</string>
     <string name="col_time">Vaqt</string>
     <string name="col_what">Nima</string>
     <string name="col_qty">Soni</string>
@@ -320,7 +320,7 @@
     <string name="ed_failed">Yuborilmadi — internetni tekshiring</string>
     <string name="rq_home">To\'lov kiritish</string>
     <string name="rq_title">To\'lov va so\'rovlar</string>
-    <string name="rq_hint">To\'lovni kiriting — do\'kon egasi tasdiqlab serverga yozadi. Chek \"Tasdiqlandi\" bo\'lgandan keyin chiqadi.</string>
+    <string name="rq_hint">To\'lovni kiriting — do\'kon egasi tasdiqlab do\'kon kompyuteriga yozadi. Chek \"Tasdiqlandi\" bo\'lgandan keyin chiqadi.</string>
     <string name="rq_new_pay">Yangi to\'lov</string>
     <string name="rq_sum">Summa (so\'m)</string>
     <string name="rq_note">Izoh</string>
@@ -341,7 +341,7 @@
     <string name="rq_receipt">Chek</string>
     <string name="rq_st_sent">Yuborildi</string>
     <string name="rq_st_seen">Do\'kon egasi oldi</string>
-    <string name="rq_st_acc">Qabul qilindi — serverga yozilmoqda</string>
+    <string name="rq_st_acc">Qabul qilindi — do\'kon kompyuteriga yozilmoqda</string>
     <string name="rq_st_ok">Tasdiqlandi</string>
     <string name="rq_st_no">Rad etildi: %1$s</string>
     <string name="pos_title">Kassa</string>
@@ -366,7 +366,7 @@
     <string name="pos_total_line">Jami: %1$s</string>
     <string name="pos_save_print">Saqlash va chek</string>
     <string name="pos_save">Saqlash</string>
-    <string name="pos_local_hint">Kassa faqat shu telefonda: do\'kon egasiga va serverga bormaydi. Kunlik zaxiraga kiradi.</string>
+    <string name="pos_local_hint">Kassa faqat shu telefonda: do\'kon egasiga ham, kompyuterga ham bormaydi. Kunlik zaxiraga kiradi.</string>
     <string name="pos_err_discount">Chegirma summadan katta</string>
     <string name="pos_err_cash">Naqd savdoda to\'liq to\'lanishi kerak — mijozni tanlang (qarzga)</string>
     <string name="pos_saved">Saqlandi</string>
@@ -421,7 +421,7 @@
     <string name="rx_test">Sinov cheki</string>
     <string name="rx_test_item">Sinov</string>
     <string name="wg_desc">6 ta tugma — har birini o\'zingiz tanlaysiz</string>
-    <string name="home_pending_deals">Server qarziga keyingi %1$d ta savdo/to\'lov qo\'shildi: %2$s</string>
+    <string name="home_pending_deals">Do\'kon qarziga keyingi %1$d ta savdo/to\'lov qo\'shildi: %2$s</string>
     <string name="wg_no_data">Ma\'lumot yo\'q</string>
     <string name="nav_sale">Savdo</string>
     <string name="ms_new_sale">Yangi savdo</string>
@@ -602,6 +602,12 @@
     <string name="lg_rc_time">Vaqt</string>
     <string name="lg_rc_return">QAYTIB OLISH !!!</string>
     <string name="lg_rc_debt">Qarz qoldig\'i (So\'m)</string>
+    <string name="lg_sync_title">Yangilanish holati</string>
+    <string name="lg_party_cash">Naqd</string>
+    <string name="lg_client_all">Mijoz</string>
+    <string name="lg_client_all_rows">Hamma mijozlar</string>
+    <string name="lg_client_pick">Qaysi mijoz</string>
+    <string name="lg_client_search">Mijozni qidirish</string>
     <string name="dw_title">Telefon ro\'yxatga olindi</string>
     <string name="dw_text">Admin ilovasida ▸ Boshqaruv ▸ Qurilmalar\'da shu telefonni tanlab, kimligini belgilaydi. Shundan keyin ilova o\'zi ochiladi — hech narsa yozish shart emas.</string>
     <string name="dw_phone">%1$s\nTelefon kodi: %2$s</string>

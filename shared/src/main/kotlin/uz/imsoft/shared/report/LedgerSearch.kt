@@ -424,8 +424,14 @@ object LedgerQuery {
     private fun monthWordStartsWith(w: String) = MONTHS.keys.any { it.startsWith(w) && it.length > w.length }
 }
 
-/** Ro'yxatdagi qo'shimcha filtr (chip va davr). */
-data class LedgerFilter(val kinds: Set<EntryKind>? = null, val from: Long = 0L, val to: Long = Long.MAX_VALUE)
+/** Ro'yxatdagi qo'shimcha filtr (chip, davr va v5.2 — mijoz). */
+data class LedgerFilter(
+    val kinds: Set<EntryKind>? = null,
+    val from: Long = 0L,
+    val to: Long = Long.MAX_VALUE,
+    /** v5.2: faqat shu mijozning hujjatlari (bo'sh — hammasi). */
+    val party: String = "",
+)
 
 class DocHit(
     val doc: LedgerDoc,
@@ -465,7 +471,10 @@ class LedgerIndex(entries: List<LedgerEntry>) {
     fun byKey(key: String): LedgerDoc? = docs.firstOrNull { it.key == key }
 
     fun search(query: String, today: Long, filter: LedgerFilter = LedgerFilter(), fuzzy: Boolean = true): LedgerResult {
-        val base = docs.filter { (filter.kinds == null || it.kind in filter.kinds) && it.stamp >= filter.from && it.stamp <= filter.to }
+        val base = docs.filter {
+            (filter.kinds == null || it.kind in filter.kinds) && it.stamp >= filter.from && it.stamp <= filter.to &&
+                (filter.party.isEmpty() || LedgerOwner.of(it.kindText)?.second?.trim().equals(filter.party, ignoreCase = true))
+        }
         val parsed = LedgerQuery.parse(query, today)
         if (parsed.isEmpty) return result(base.map { DocHit(it, emptySet(), emptyMap(), false) }, false, false)
         val conds = if (fuzzy) parsed.conds else parsed.conds.map { noFuzzy(it) }

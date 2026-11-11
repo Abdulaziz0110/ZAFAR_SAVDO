@@ -364,18 +364,14 @@ abstract class SecretFragment : Fragment() {
         val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0) }
         fun field(h: String, v: String) = TextInputLayout(ctx).let { til ->
             til.hint = h
-            val e = TextInputEditText(til.context).apply {
-                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-                uz.imsoft.shared.android.NumInput.attach(this)
-                setText(v)
-            }
+            val e = TextInputEditText(til.context).apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL; setText(v) }
             til.addView(e); box.addView(til); e
         }
         val eRate = field(getString(R.string.lg_sx_rate), if (rate0 > 0) NumFmt.qty(rate0).replace(" ", "").replace("\u00A0", "") else "")
         val eUsd = field("$", "100")
         val out = TextView(ctx).apply { setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium); setPadding(0, dp(12), 0, 0) }
         box.addView(out)
-        fun num(e: TextInputEditText) = uz.imsoft.shared.NumText.parse(e.text?.toString())
+        fun num(e: TextInputEditText) = e.text?.toString().orEmpty().replace(" ", "").replace("\u00A0", "").replace(',', '.').toDoubleOrNull() ?: 0.0
         val upd = {
             val r = num(eRate); val u = num(eUsd)
             out.text = if (r > 0) "= " + NumFmt.qty(Math.round(u * r).toDouble()) + " " + getString(R.string.lg_unit_som) + "\n1 000 000 " + getString(R.string.lg_unit_som) + " = " + "%.2f".format(1_000_000 / r) + " $" else "—"

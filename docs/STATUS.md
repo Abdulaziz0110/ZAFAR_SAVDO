@@ -1,10 +1,26 @@
-# Holat — Savdo Agent / Savdo Admin 5.1.1 (versionCode 37) + Savdo Mijoz 5.1.1 (versionCode 24), 2026-11-08
+# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 38) + Savdo Mijoz 5.2 (versionCode 25), 2026-11-11
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.2 — 1-qism: mayda detallar, sozlamalar va holat
+| Narsa | Holat |
+|---|---|
+| A1: narx yorlig'i chop etilgach tanlangan ro'yxat o'zi tozalanadi | VERIFIED (kompilyatsiya) |
+| A2: tarixdagi "yangilanish" uzun qatori olib tashlandi — tepada ikonka, bosilsa hamma ma'lumot | VERIFIED (kompilyatsiya) |
+| A3: tarixdagi savdo/to'lovga "Chek" tugmasi — 1C "Chek1" maketi, uchala ilovada bir xil | VERIFIED (kompilyatsiya) |
+| A3: chekdan logo va logo sozlamalari olib tashlandi (1C chekida yo'q) | VERIFIED |
+| A4: ro'yxat sarlavhasi "Savdo — Dadaxon aka" / "Savdo — Naqd", nom savdo so'zi bilan bir xil o'lchamda | VERIFIED (kompilyatsiya) |
+| A6: tarixda mijoz bo'yicha qidiruv (qidiruvli ro'yxat), jami ham shunga qarab hisoblanadi | VERIFIED (kompilyatsiya) |
+| A8: bosh sahifa pastida holat xulosasi — yashil belgilar, xato bo'lsa aynan nima (internet, Tailscale, kompyuterdagi server, 1C bazasi, navbat) | VERIFIED (kompilyatsiya) |
+| A9: tepadagi uch nuqta olib tashlandi — Boss, Statistika, Shtrix kod, Yangilash ikonkalari | VERIFIED (kompilyatsiya) |
+| A9: Sozlamalar faqat bo'limlardan iborat, 5 guruhga ajratilgan; til/mavzu/o'lcham alohida bo'lim; Boshqaruv eng pastda | VERIFIED (kompilyatsiya) |
+| A10-0: Boshqaruvdagi Boss/Statistika/Sozlamalar takrorlari olib tashlandi | VERIFIED |
+| A12 (qisman): 2-ilovada "server" so'zi "do'kon kompyuteri" ga almashtirildi; Agentda 1C server sozlamasi yashirildi | VERIFIED |
+| A5, A7, A10a/b, A11 | ISHLANMOQDA — keyingi qismda |
 
 ## 5.1.1a — qurilmada topilgan 3 ta xato
 | Narsa | Holat |

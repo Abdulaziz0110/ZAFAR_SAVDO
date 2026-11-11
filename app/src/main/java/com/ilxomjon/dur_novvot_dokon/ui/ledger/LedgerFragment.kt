@@ -78,15 +78,27 @@ class LedgerFragment : Fragment() {
             b.edtSearch.setText("")
             vm.kind.value = KindFilter.ALL
             vm.period.value = PeriodFilter.ALL
+            vm.client.value = ""
         }
         if (host != null) launchOnStarted { host.ledgerData.collect { vm.setData(it) } }
-        // v3.6: holat qatori (Admin — serverdan yuklash)
+        // v5.2 (A2): yangilanish holati pastdagi uzun matn emas, tepadagi ikonka. Bosilsa — hamma ma'lumot.
         val status = host?.syncStatus
-        b.tvSyncStatus.show(status != null)
+        b.btnSync.show(status != null)
         if (host != null && status != null) {
-            b.tvSyncStatus.setOnClickListener { host.onSyncStatus(this) }
-            launchOnStarted { status.collect { t -> _b?.let { bb -> bb.tvSyncStatus.text = t; bb.tvSyncStatus.show(t.isNotEmpty()) } } }
+            b.btnSync.setOnClickListener { host.onSyncStatus(this) }
+            launchOnStarted {
+                status.collect { t ->
+                    val bb = _b ?: return@collect
+                    bb.btnSync.show(true)
+                    bb.btnSync.setIconResource(if (t.isBlank()) R.drawable.ic_sync else R.drawable.ic_sync_alt)
+                    val cd = t.ifBlank { getString(R.string.lg_sync_title) }
+                    bb.btnSync.contentDescription = cd
+                    bb.btnSync.tooltipText = cd
+                }
+            }
         }
+        // v5.2 (A6): mijoz bo'yicha qidiruv — ro'yxat ma'lumotning o'zidan quriladi
+        b.chipClient.setOnClickListener { pickClient() }
         launchOnStarted { vm.state.collect { last = it; render(it) } }
     }
 
@@ -100,8 +112,11 @@ class LedgerFragment : Fragment() {
         bb.chipPeriod.text = if (s.period == PeriodFilter.CUSTOM) Stamp.formatDate(s.from) + " – " + Stamp.formatDate(s.to)
         else getString(periods.first { it.first == s.period }.second)
         bb.chipPeriod.isChecked = s.period != PeriodFilter.ALL
+        bb.chipClient.show(s.clients.size > 1)
+        bb.chipClient.text = s.client.ifBlank { getString(R.string.lg_client_all) }
+        bb.chipClient.isChecked = s.client.isNotBlank()
         val searching = s.query.isNotBlank()
-        adapter.submit(s.rows, searching)
+        adapter.submit(s.rows, searching, s.clientName)
         val r = s.result
         bb.cardSummary.show(s.hasData && r != null && r.hits.isNotEmpty())
         if (r != null) {
@@ -122,6 +137,19 @@ class LedgerFragment : Fragment() {
         bb.tvEmpty.text = if (!s.hasData) ledgerHost()?.emptyText(ctx) ?: getString(R.string.lg_no_data) else getString(R.string.lg_nothing_found)
         bb.btnClearFilters.show(s.hasData && empty)
         bb.tilSearch.helperText = if (!searching && s.hasData) getString(R.string.lg_search_helper) else null
+    }
+
+    /** v5.2 (A6): mijozni qidiruvli ro'yxatdan tanlash — o'sha mijozning butun tarixi ko'rinadi. */
+    private fun pickClient() {
+        val ctx = requireContext()
+        val names = last.clients
+        if (names.isEmpty()) return
+        val rows = ArrayList<uz.imsoft.shared.android.Ui.Row>()
+        rows += uz.imsoft.shared.android.Ui.Row(getString(R.string.lg_client_all_rows), icon = R.drawable.ic_groups)
+        for (n in names) rows += uz.imsoft.shared.android.Ui.Row(n, icon = R.drawable.ic_person)
+        uz.imsoft.shared.android.Ui.pickSearch(
+            ctx, getString(R.string.lg_client_pick), rows, getString(R.string.lg_client_search), getString(R.string.lg_cancel),
+        ) { i -> vm.client.value = if (i == 0) "" else names[i - 1] }
     }
 
     private fun pickPeriod() {

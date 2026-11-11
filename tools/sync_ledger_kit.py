@@ -22,6 +22,8 @@ for f in sorted(os.listdir(SRC_JAVA)):
     if not f.endswith('.kt'):
         continue
     s = open(os.path.join(SRC_JAVA, f), encoding='utf-8').read().replace(SRC_PKG, DST_PKG)
+    # Har ilovaning o'z yagona hosti bor: 1-ilovada DokonLedgerHost, 2-ilovada MijozLedgerHost.
+    s = s.replace('ledgerhost.DokonLedgerHost', 'ledgerhost.MijozLedgerHost')
     s = s.replace('// DIQQAT: ui/ledger/ papkasi', '// NUSXA (tools/sync_ledger_kit.py) — o\'zgartirmang. ui/ledger/ papkasi')
     open(os.path.join(DST_JAVA, f), 'w', encoding='utf-8').write(s)
     n += 1

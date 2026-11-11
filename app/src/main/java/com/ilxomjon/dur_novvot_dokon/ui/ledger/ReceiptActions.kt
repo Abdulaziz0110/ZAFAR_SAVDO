@@ -36,14 +36,23 @@ object ReceiptActions {
         val ctx = f.requireContext()
         val style = host?.receiptStyle ?: uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
         val r = style.apply(LedgerUi.receipt(ctx, doc, host?.receiptHeader.orEmpty(), client, host?.receiptFooter.orEmpty(), host?.receiptStaff.orEmpty()))
+        preview(f, r, host, Stamp.formatDate(doc.stamp))
+    }
+
+    /**
+     * v5.2 (A3): tayyor chekni ko'rsatish — uchala ilovada BIR XIL 1C "Chek1" ko'rinishi.
+     * Tarixdagi savdo ham, 1C hujjati ham shu yerdan chiqadi.
+     */
+    fun preview(f: Fragment, r: Receipt, host: LedgerHost?, nameStamp: String) {
+        val ctx = f.requireContext()
+        val style = host?.receiptStyle ?: uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
         f.viewLifecycleOwner.lifecycleScope.launch {
-            val logo = host?.receiptLogo
-            val bmp = withContext(Dispatchers.Default) { ReceiptBitmap.render(r, style, logo) }
+            val bmp = withContext(Dispatchers.Default) { ReceiptBitmap.render(r, style) }
             val vb = DialogReceiptPreviewBinding.inflate(LayoutInflater.from(ctx))
             vb.image.setImageBitmap(bmp)
             val targets = host?.printTargets(ctx).orEmpty()
             val d = MaterialAlertDialogBuilder(ctx).setTitle(R.string.lg_receipt).setView(vb.root)
-                .setNegativeButton(R.string.lg_pdf) { _, _ -> printPdf(ctx, r, "Chek_" + Stamp.formatDate(doc.stamp)) }
+                .setNegativeButton(R.string.lg_pdf) { _, _ -> printPdf(ctx, r, "Chek_" + nameStamp) }
                 .setNeutralButton(R.string.lg_share_image) { _, _ -> f.viewLifecycleOwner.lifecycleScope.launch { shareImage(ctx, r, bmp) } }
             if (targets.isNotEmpty()) {
                 d.setPositiveButton(R.string.lg_print) { _, _ ->

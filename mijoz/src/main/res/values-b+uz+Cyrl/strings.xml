@@ -26,12 +26,12 @@
     <string name="home_no_data">1-илова ҳали маълумот юбормаган</string>
     <string name="home_no_data_short">Маълумот йўқ</string>
     <string name="home_debt_unknown">Қарз маълумоти юборилмаган</string>
-    <string name="home_debt_at">Сервер маълумоти: %1$s ҳолатига</string>
+    <string name="home_debt_at">Дўкон маълумоти: %1$s ҳолатига</string>
     <string name="home_debt_report_at">1К карточкаси бўйича: %1$s ҳолатига</string>
     <string name="home_report_balance">1К ҳисоботи бўйича (%1$s охирига): %2$s</string>
     <string name="home_not_linked">Уланмаган</string>
     <string name="home_sync">1-илова юборган: %1$s · телефонга олинган: %2$s</string>
-    <string name="home_request_pending">Нарх ва қарзни сервердан янгилаш ҳам сўралди (%1$s) — 1-илова сервер кўринганда (дўкон тармоғида) бажаради.</string>
+    <string name="home_request_pending">Нарх ва қарзни дўкондан янгилаш ҳам сўралди (%1$s) — 1-илова дўкон тармоғига уланганда бажаради.</string>
     <string name="home_no_reports">Ҳисоботлар ҳали импорт қилинмаган</string>
     <string name="home_coverage">Ҳисобот даврлари: %1$s</string>
     <string name="sum_bought">Олинди: %1$s (%2$d та)</string>
@@ -82,7 +82,7 @@
     <string name="report_empty">Бу даврда ёзув йўқ</string>
     <string name="day_bought">олинди %1$s</string>
     <string name="day_paid">тўланди %1$s</string>
-    <string name="pdf_debt">Жорий қарз: %1$s (сервер, %2$s ҳолатига)</string>
+    <string name="pdf_debt">Жорий қарз: %1$s (дўкон маълумоти, %2$s ҳолатига)</string>
     <string name="col_time">Вақт</string>
     <string name="col_what">Нима</string>
     <string name="col_qty">Сони</string>
@@ -320,7 +320,7 @@
     <string name="ed_failed">Юборилмади — интернетни текширинг</string>
     <string name="rq_home">Тўлов киритиш</string>
     <string name="rq_title">Тўлов ва сўровлар</string>
-    <string name="rq_hint">Тўловни киритинг — дўкон эгаси тасдиқлаб серверга ёзади. Чек \"Тасдиқланди\" бўлгандан кейин чиқади.</string>
+    <string name="rq_hint">Тўловни киритинг — дўкон эгаси тасдиқлаб дўкон компютерига ёзади. Чек \"Тасдиқланди\" бўлгандан кейин чиқади.</string>
     <string name="rq_new_pay">Янги тўлов</string>
     <string name="rq_sum">Сумма (сўм)</string>
     <string name="rq_note">Изоҳ</string>
@@ -341,7 +341,7 @@
     <string name="rq_receipt">Чек</string>
     <string name="rq_st_sent">Юборилди</string>
     <string name="rq_st_seen">Дўкон эгаси олди</string>
-    <string name="rq_st_acc">Қабул қилинди — серверга ёзилмоқда</string>
+    <string name="rq_st_acc">Қабул қилинди — дўкон компютерига ёзилмоқда</string>
     <string name="rq_st_ok">Тасдиқланди</string>
     <string name="rq_st_no">Рад этилди: %1$s</string>
     <string name="pos_title">Касса</string>
@@ -366,7 +366,7 @@
     <string name="pos_total_line">Жами: %1$s</string>
     <string name="pos_save_print">Сақлаш ва чек</string>
     <string name="pos_save">Сақлаш</string>
-    <string name="pos_local_hint">Касса фақат шу телефонда: дўкон эгасига ва серверга бормайди. Кунлик захирага киради.</string>
+    <string name="pos_local_hint">Касса фақат шу телефонда: дўкон эгасига ҳам, компютерга ҳам бормайди. Кунлик захирага киради.</string>
     <string name="pos_err_discount">Чегирма суммадан катта</string>
     <string name="pos_err_cash">Нақд савдода тўлиқ тўланиши керак — мижозни танланг (қарзга)</string>
     <string name="pos_saved">Сақланди</string>
@@ -421,7 +421,7 @@
     <string name="rx_test">Синов чеки</string>
     <string name="rx_test_item">Синов</string>
     <string name="wg_desc">6 та тугма — ҳар бирини ўзингиз танлайсиз</string>
-    <string name="home_pending_deals">Сервер қарзига кейинги %1$d та савдо/тўлов қўшилди: %2$s</string>
+    <string name="home_pending_deals">Дўкон қарзига кейинги %1$d та савдо/тўлов қўшилди: %2$s</string>
     <string name="wg_no_data">Маълумот йўқ</string>
     <string name="nav_sale">Савдо</string>
     <string name="ms_new_sale">Янги савдо</string>
@@ -602,6 +602,12 @@
     <string name="lg_rc_time">Вақт</string>
     <string name="lg_rc_return">ҚАЙТИБ ОЛИШ !!!</string>
     <string name="lg_rc_debt">Қарз қолдиғи (Сўм)</string>
+    <string name="lg_sync_title">Янгиланиш ҳолати</string>
+    <string name="lg_party_cash">Нақд</string>
+    <string name="lg_client_all">Мижоз</string>
+    <string name="lg_client_all_rows">Ҳамма мижозлар</string>
+    <string name="lg_client_pick">Қайси мижоз</string>
+    <string name="lg_client_search">Мижозни қидириш</string>
     <string name="dw_title">Телефон рўйхатга олинди</string>
     <string name="dw_text">Админ иловасида ▸ Бошқарув ▸ Қурилмаларъда шу телефонни танлаб, кимлигини белгилайди. Шундан кейин илова ўзи очилади — ҳеч нарса ёзиш шарт эмас.</string>
     <string name="dw_phone">%1$s\nТелефон коди: %2$s</string>

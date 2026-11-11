@@ -87,4 +87,11 @@ LEDGER = {
  'lg_from_app': "1-ilovadan (1C'da hali yo'q)",
  'lg_rc_sum': 'Summa', 'lg_rc_staff': 'Xodim', 'lg_rc_number': 'Chek №', 'lg_rc_time': 'Vaqt',
  'lg_rc_return': 'QAYTIB OLISH !!!', 'lg_rc_debt': "Qarz qoldig'i (So'm)",
+ # v5.2: A2 (yangilanish ikonkasi), A4 (sarlavhada kim), A6 (mijoz bo'yicha qidiruv)
+ 'lg_sync_title': 'Yangilanish holati',
+ 'lg_party_cash': 'Naqd',
+ 'lg_client_all': 'Mijoz',
+ 'lg_client_all_rows': 'Hamma mijozlar',
+ 'lg_client_pick': 'Qaysi mijoz',
+ 'lg_client_search': 'Mijozni qidirish',
 }

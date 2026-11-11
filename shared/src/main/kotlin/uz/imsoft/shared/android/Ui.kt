@@ -410,6 +410,45 @@ object Ui {
     }
 
     /** Bitta tanlanadigan tugmalar guruhi; [onPick] — tanlangan indeks. */
+    /**
+     * v5.2: qidiruvli ro'yxatdan tanlash oynasi — uzun ro'yxatlarda (mijozlar, yuk beruvchilar, guruhlar) kerak.
+     * [rows] — ko'rsatiladigan qatorlar, [keys] — qidiruv uchun matn (bo'sh bo'lsa sarlavhadan olinadi).
+     * Tanlanganda [onPick] ga ro'yxatdagi INDEKS keladi.
+     */
+    fun pickSearch(
+        ctx: Context,
+        title: CharSequence,
+        rows: List<Row>,
+        searchHint: CharSequence,
+        cancel: CharSequence,
+        keys: List<String> = emptyList(),
+        onPick: (Int) -> Unit,
+    ) {
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, 16), dp(ctx, 4), dp(ctx, 16), 0)
+        }
+        val norm = { t: String -> t.lowercase().replace('\u2019', '\'') }
+        val hay = rows.indices.map { i -> norm(keys.getOrNull(i) ?: (rows[i].title.toString() + " " + rows[i].sub)) }
+        var shown: List<Int> = rows.indices.toList()
+        var dialog: androidx.appcompat.app.AlertDialog? = null
+        val adapter = RowAdapter { i -> shown.getOrNull(i)?.let { k -> dialog?.dismiss(); onPick(k) } }
+        fun filter(q: String) {
+            val words = norm(q.trim()).split(' ').filter { it.isNotBlank() }
+            shown = if (words.isEmpty()) rows.indices.toList() else rows.indices.filter { i -> words.all { hay[i].contains(it) } }
+            adapter.submit(shown.map { rows[it] })
+        }
+        col.addView(search(ctx, searchHint) { filter(it) }.first)
+        val rv = androidx.recyclerview.widget.RecyclerView(ctx).apply {
+            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(ctx)
+            this.adapter = adapter
+        }
+        col.addView(rv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 360)))
+        filter("")
+        dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle(title).setView(col).setNegativeButton(cancel, null).show()
+    }
+
     fun toggle(ctx: Context, labels: List<CharSequence>, selected: Int, top: Int = 8, onPick: (Int) -> Unit): com.google.android.material.button.MaterialButtonToggleGroup {
         val g = com.google.android.material.button.MaterialButtonToggleGroup(ctx).apply {
             isSingleSelection = true

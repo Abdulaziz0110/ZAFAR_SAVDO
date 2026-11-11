@@ -50,13 +50,28 @@ object LedgerUi {
         else -> MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurface, 0)
     }
 
-    /** Ro'yxatdagi sarlavha: "Savdo · 4 xil tovar", "To'lov · Click". */
-    fun docTitle(ctx: Context, d: LedgerDoc): String = when {
+    /**
+     * v5.2 (A4): ro'yxatdagi sarlavha — amal turi va KIM bilan: "Savdo — Dadaxon aka", "To'lov — Dadaxon aka".
+     * Mijozi yo'q (do'kondagi oddiy savdo) bo'lsa — "Savdo — Naqd". Qolgan tafsilotlar pastki qatorda qoladi.
+     */
+    fun docTitle(ctx: Context, d: LedgerDoc, clientName: String = ""): String =
+        kindTitle(ctx, d.kind) + " — " + party(ctx, d, clientName)
+
+    /** Hujjat kimga tegishli: hujjatdagi nom, bo'lmasa tanlangan mijoz, u ham bo'lmasa "Naqd". */
+    fun party(ctx: Context, d: LedgerDoc, clientName: String = ""): String {
+        val own = uz.imsoft.shared.report.LedgerOwner.of(d.kindText)?.second.orEmpty().trim()
+        if (own.isNotEmpty()) return own
+        if (clientName.isNotBlank()) return clientName
+        return ctx.getString(R.string.lg_party_cash)
+    }
+
+    /** Pastki qator uchun qo'shimcha belgi: "1-ilovadan", "4 xil tovar", "Click". */
+    fun docExtra(ctx: Context, d: LedgerDoc): String = when {
         // 1-ilovada qilingan, 1C hisobotida hali yo'q savdo — tasdiqlangan deb ko'rsatilmaydi
-        uz.imsoft.shared.report.AppSale.isApp(d.kindText) -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_from_app)
-        d.isGoods && d.goods.isNotEmpty() -> kindTitle(ctx, d.kind) + " · " + ctx.getString(R.string.lg_items_n, d.goods.size)
-        d.comment.contains("click", ignoreCase = true) -> kindTitle(ctx, d.kind) + " · Click"
-        else -> kindTitle(ctx, d.kind)
+        uz.imsoft.shared.report.AppSale.isApp(d.kindText) -> ctx.getString(R.string.lg_from_app)
+        d.isGoods && d.goods.isNotEmpty() -> ctx.getString(R.string.lg_items_n, d.goods.size)
+        d.comment.contains("click", ignoreCase = true) -> "Click"
+        else -> ""
     }
 
     fun time(st: Long) = "%02d:%02d".format(Stamp.hour(st), Stamp.minute(st))

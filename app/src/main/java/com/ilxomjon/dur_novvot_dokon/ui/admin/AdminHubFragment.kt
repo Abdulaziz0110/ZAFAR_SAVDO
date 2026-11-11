@@ -85,10 +85,9 @@ class AdminHubFragment : CodeFragment() {
             Act(getString(R.string.sc_title), getString(R.string.sc_sub), R.drawable.ic_scale, 0, go { ScaleFragment() }),
             Act(getString(R.string.ad_barcodes), getString(R.string.ad_barcodes_sub), R.drawable.ic_qr, 0, go { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment() }),
         )
+        // v5.2 (A10): Boss, Statistika va Sozlamalar bu yerdan olib tashlandi — takrorlanmasin.
+        // Boss va Statistika bosh sahifaning tepasida, Sozlamalar esa alohida bo'limda.
         val app = listOf(
-            Act(getString(R.string.boss_title), getString(R.string.boss_card_sub), R.drawable.ic_trending, 1, go { BossFragment() }),
-            Act(getString(R.string.stt_title), getString(R.string.sg_stats_sub), R.drawable.ic_trending, 0, go { StatsFragment() }),
-            Act(getString(R.string.ad_settings), getString(R.string.ad_settings_sub), R.drawable.ic_settings, 0, go { com.ilxomjon.dur_novvot_dokon.ui.settings.SettingsHubFragment() }),
             Act(getString(R.string.au_title), getString(R.string.au_sub), R.drawable.ic_backup, 0, go { com.ilxomjon.dur_novvot_dokon.ui.settings.AutoUpdateFragment() }),
         )
         return listOf(

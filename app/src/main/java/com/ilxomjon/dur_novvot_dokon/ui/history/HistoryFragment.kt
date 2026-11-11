@@ -44,28 +44,7 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         vm = viewModel { HistoryViewModel(ServiceLocator.history) }
-        adapter = HistoryAdapter { row ->
-            val order = if (row.key.startsWith("o")) last.orders.firstOrNull { "o${it.id}" == row.key } else null
-            val b = MaterialAlertDialogBuilder(requireContext())
-                .setTitle(row.detailTitle)
-                .setMessage(row.detail)
-            if (order != null && order.lines.any { it.productId.isNotEmpty() }) {
-                b.setPositiveButton(R.string.repeat_action) { _, _ -> repeatOrder(order) }
-                b.setNegativeButton(R.string.close, null)
-            } else {
-                b.setPositiveButton(R.string.close, null)
-            }
-            if (row.shareText.isNotEmpty()) {
-                b.setNeutralButton(R.string.history_share) { _, _ ->
-                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_TEXT, row.shareText)
-                    }
-                    startActivity(android.content.Intent.createChooser(send, getString(R.string.share_chooser)))
-                }
-            }
-            b.show()
-        }
+        adapter = HistoryAdapter { row -> openRow(row) }
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
         // v4.0 "Yagona ro'yxat": birinchi — hammasi (1C + telefonda qilingan, 1C'ga ketayotgani belgisi bilan)
@@ -91,6 +70,29 @@ class HistoryFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledg
         })
         launchOnStarted { vm.state.collect { last = it; render() } }
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HISTORY)
+    }
+
+    /**
+     * v5.2: tarixdagi yozuv ochilganda — tafsilot, 1C ko'rinishidagi CHEK va (savdo bo'lsa) o'zgartirish/takrorlash.
+     * Chek uchala ilovada bir xil: [OrderReceipt].
+     */
+    private fun openRow(row: HistoryRow) {
+        val order = if (row.key.startsWith("o")) last.orders.firstOrNull { "o${it.id}" == row.key } else null
+        val payment = if (row.key.startsWith("p")) last.payments.firstOrNull { "p${it.id}" == row.key } else null
+        val b = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(row.detailTitle)
+            .setMessage(row.detail)
+        if (order != null) {
+            b.setPositiveButton(R.string.history_receipt) { _, _ -> OrderReceipt.show(this, OrderReceipt.of(order), order.sentAt) }
+            if (order.lines.any { it.productId.isNotEmpty() }) b.setNeutralButton(R.string.repeat_action) { _, _ -> repeatOrder(order) }
+            b.setNegativeButton(R.string.close, null)
+        } else if (payment != null) {
+            b.setPositiveButton(R.string.history_receipt) { _, _ -> OrderReceipt.show(this, OrderReceipt.of(payment), payment.sentAt) }
+            b.setNegativeButton(R.string.close, null)
+        } else {
+            b.setPositiveButton(R.string.close, null)
+        }
+        b.show()
     }
 
     override fun onResume() {

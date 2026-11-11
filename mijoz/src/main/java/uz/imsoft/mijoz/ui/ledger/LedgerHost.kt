@@ -78,13 +78,14 @@ interface LedgerHost {
     /** v3.6: holat qatori bosilganda (batafsil, hozir yangilash). */
     fun onSyncStatus(f: Fragment) = Unit
 
+
     /** v3.7: ma'lumot umuman yo'q bo'lganda matn (null — odatiy "Mijoz kartochkasi faylini yuklang"). */
     fun emptyText(ctx: android.content.Context): String? = null
 }
 
 /**
- * Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. 2-ilovada yagona host bor
- * (MijozLedgerHost) — daraxtda topilmasa (masalan "Narxlar" ekranidan ochilgan buyurtma oynasi) shunisi qaytadi.
+ * Fragment daraxti bo'ylab yuqoriga qarab LedgerHost ni topadi. Har ilovada yagona host bor —
+ * daraxtda topilmasa (masalan buyurtmalar varaqasidan ochilgan "Savatchaga" oynasi) o'sha host qaytadi.
  */
 fun Fragment.ledgerHost(): LedgerHost? {
     var f: Fragment? = this

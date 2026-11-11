@@ -47,6 +47,10 @@ class LedgerUiState(
     val hasData: Boolean = false,
     val loaded: Boolean = false,
     val clientName: String = "",
+    /** v5.2 (A6): tanlangan mijoz (bo'sh — hammasi). */
+    val client: String = "",
+    /** v5.2 (A6): ma'lumotda uchraydigan mijozlar (alifbo tartibida). */
+    val clients: List<String> = emptyList(),
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -56,6 +60,8 @@ class LedgerViewModel : ViewModel() {
     val period = MutableStateFlow(PeriodFilter.ALL)
     val custom = MutableStateFlow(0L to Long.MAX_VALUE)
     val fuzzy = MutableStateFlow(true)
+    /** v5.2 (A6): mijoz bo'yicha qidiruv — bo'sh bo'lsa hamma mijoz. */
+    val client = MutableStateFlow("")
     private val data = MutableStateFlow(LedgerData(emptyList(), "", -1L, false))
 
     private var index: LedgerIndex? = null
@@ -63,10 +69,14 @@ class LedgerViewModel : ViewModel() {
 
     fun setData(d: LedgerData) { data.value = d }
 
-    private data class Input(val d: LedgerData, val q: String, val k: KindFilter, val p: PeriodFilter, val c: Pair<Long, Long>, val fz: Boolean)
+    private data class Input(
+        val d: LedgerData, val q: String, val k: KindFilter, val p: PeriodFilter, val c: Pair<Long, Long>,
+        val fz: Boolean, val cl: String = "",
+    )
 
     val state: StateFlow<LedgerUiState> = combine(data, query.debounce(120), kind, period, custom) { d, q, k, p, c -> Input(d, q, k, p, c, true) }
         .combine(fuzzy) { i, fz -> i.copy(fz = fz) }
+        .combine(client) { i, cl -> i.copy(cl = cl) }
         .mapLatest { compute(it) }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LedgerUiState())
@@ -86,14 +96,19 @@ class LedgerViewModel : ViewModel() {
         PeriodFilter.CUSTOM -> custom
     }
 
+    /** Hujjat kimniki — nomi (bo'lmasa bo'sh). */
+    private fun party(kindText: String): String = uz.imsoft.shared.report.LedgerOwner.of(kindText)?.second.orEmpty().trim()
+
     private fun compute(i: Input): LedgerUiState {
         val cached = index
         val idx = if (cached == null || indexVersion != i.d.version) {
             LedgerIndex(i.d.entries).also { index = it; indexVersion = i.d.version }
         } else cached
+        val clients = idx.docs.mapNotNull { party(it.kindText).ifBlank { null } }.distinct().sorted()
         val today = today()
         val (from, to) = range(i.p, i.c, today)
-        val res = idx.search(i.q, today, LedgerFilter(i.k.kinds, from, to), i.fz)
+        // v5.2 (A6): mijoz bo'yicha qidiruv — tanlangan mijozning butun tarixi (jami ham shunga qarab hisoblanadi)
+        val res = idx.search(i.q, today, LedgerFilter(i.k.kinds, from, to, i.cl), i.fz)
         val rows = ArrayList<LedgerRow>(res.hits.size + 32)
         var curDay = -1L
         var dayStart = 0
@@ -108,7 +123,7 @@ class LedgerViewModel : ViewModel() {
             rows += LedgerRow.Doc(h)
         }
         if (curDay >= 0) rows[dayStart] = LedgerRow.Day(curDay, rows.size - dayStart - 1)
-        return LedgerUiState(rows, res, i.q, i.k, i.p, from, to, idx.docs.isNotEmpty(), i.d.loaded, i.d.clientName)
+        return LedgerUiState(rows, res, i.q, i.k, i.p, from, to, idx.docs.isNotEmpty(), i.d.loaded, i.d.clientName, i.cl, clients)
     }
 
     fun docByKey(key: String) = index?.byKey(key)
