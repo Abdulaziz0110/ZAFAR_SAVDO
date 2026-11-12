@@ -30,6 +30,9 @@ object LabelBitmap {
 
     private fun bold(): Typeface = font ?: Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
+    /** v5.2: oddiy (qalin emas) Arial — mahsulot ma'lumoti yorlig'i 1C'dagi kabi oddiy yoziladi. */
+    private fun plain(): Typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+
     /** Silliq chiziqlar uchun 3 baravar katta chiziladi, keyin printer nuqtalariga kichraytiriladi (v3.1). */
     private const val SS = 3
 
@@ -98,10 +101,10 @@ object LabelBitmap {
      * Bitta matn qatori (markazda). 1C'dagi o'lcham [size] dan boshlanadi; matn qutiga sig'masa FAQAT shu qator
      * kichrayadi (1C "Переносить" kabi, lekin hech narsa yo'qolmaydi).
      */
-    private fun lineOf(text: String, size: Float, boxW: Int, maxLines: Int): StaticLayout {
+    private fun lineOf(text: String, size: Float, boxW: Int, maxLines: Int, tf: Typeface = bold()): StaticLayout {
         var s = size
         while (true) {
-            val p = paint(s)
+            val p = paint(s, tf)
             val sl = StaticLayout.Builder.obtain(text, 0, text.length, p, boxW).setAlignment(Layout.Alignment.ALIGN_CENTER)
                 .setIncludePad(false).setLineSpacing(0f, 0.95f).setMaxLines(maxLines)
                 .setEllipsize(android.text.TextUtils.TruncateAt.END).build()
@@ -147,20 +150,16 @@ object LabelBitmap {
      * 58x40 etiketkaga Arial 10 bilan ~278 belgi sig'adi; uzunroq bo'lsa shrift sal kichrayadi.
      */
     private fun drawBio(c: Canvas, d: LabelData, w: Float, h: Float, dpi: Int) {
-        val left = w * 0.03f
-        val bw = (w * 0.94f).toInt().coerceAtLeast(10)
-        val gap = h * 0.02f
+        val left = w * 0.02f
+        val bw = (w * 0.96f).toInt().coerceAtLeast(10)
         var k = 1f
-        fun rows() = listOf(
-            lineOf(d.name, pt(11f, dpi) * k, bw, 2),
-            lineOf(d.bio, pt(10f, dpi) * k, bw, 20),
-        )
-        var list = rows()
-        while (list.sumOf { it.height } + gap > h * 0.97f && k > 0.55f) {
+        fun row() = lineOf(d.bio, pt(10f, dpi) * k, bw, 40, plain())
+        var sl = row()
+        while (sl.height > h * 0.98f && k > 0.5f) {
             k *= 0.95f
-            list = rows()
+            sl = row()
         }
-        stack(c, left, h, gap, list)
+        stack(c, left, h, 0f, listOf(sl))
     }
 
     /**

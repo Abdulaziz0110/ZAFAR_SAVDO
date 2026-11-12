@@ -47,13 +47,20 @@ class BioRepository(private val context: Context) {
         publishState(list)
     }
 
-    /** Matnni saqlash (yangi bo'lsa yaratiladi). @return yozuv id si. */
-    suspend fun save(id: String?, text: String, products: List<String> = emptyList()): String = lock.withLock {
+    /**
+     * Matnni saqlash (yangi bo'lsa yaratiladi).
+     * [text] — asosiy ma'lumot, chegarasiz (savdo paytida ko'rinadi).
+     * [printText] — yorliqqa chop etiladigan qisqa matn (58x40 ga moslangan, ortig'i kesiladi).
+     * @return yozuv id si.
+     */
+    suspend fun save(id: String?, text: String, printText: String = "", products: List<String> = emptyList()): String = lock.withLock {
         load0()
-        val clean = BioBook.clip(text)
+        val clean = text.trim()
+        val cleanPrint = BioBook.clip(printText)
         val now = System.currentTimeMillis()
         val cur = id?.let { x -> _state.value.firstOrNull { it.id == x } }
-        val b = cur?.copy(text = clean, at = now) ?: Bio(BioBook.newId(now), clean, now, products)
+        val b = cur?.copy(text = clean, at = now, printText = cleanPrint)
+            ?: Bio(BioBook.newId(now), clean, now, products, cleanPrint)
         var list = BioBook.upsert(_state.value, b)
         if (products.isNotEmpty()) list = BioBook.attach(list, b.id, products)
         write(list)

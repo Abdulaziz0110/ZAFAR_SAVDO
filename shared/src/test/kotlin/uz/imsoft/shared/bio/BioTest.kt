@@ -62,11 +62,41 @@ class BioTest {
 
     @Test
     fun limitIs278AndClipCuts() {
-        val ok = Bio("b", "x".repeat(278), 0L)
+        val ok = Bio("b", "", 0L, printText = "x".repeat(278))
         assertTrue(ok.fits)
         assertEquals(0, ok.left)
-        assertFalse(Bio("b", "x".repeat(279), 0L).fits)
+        assertFalse(Bio("b", "", 0L, printText = "x".repeat(279)).fits)
         assertEquals(278, BioBook.clip("x".repeat(400)).length)
+    }
+
+    /** Asosiy matn CHEGARASIZ: faqat yorliq matni 278 ga tekshiriladi. */
+    @Test
+    fun mainTextHasNoLimit() {
+        val long = "x".repeat(5000)
+        val b = Bio("b", long, 0L, printText = "qisqa")
+        assertTrue(b.fits)
+        assertEquals(5000, b.text.length)
+        assertTrue(b.hasPrint)
+        assertFalse(Bio("b", long, 0L).hasPrint)
+    }
+
+    /** Ikkita matn ham saqlanadi va qayta o'qiladi. */
+    @Test
+    fun packKeepsPrintText() {
+        val list = listOf(Bio("b1", "uzun asosiy matn", 5L, listOf("1001"), "yorliq matni"))
+        val back = BioBook.unpack(BioBook.pack(list))
+        assertEquals("uzun asosiy matn", back[0].text)
+        assertEquals("yorliq matni", back[0].printText)
+    }
+
+    /** Eski fayl (yorliq matni yo'q) ham ochiladi. */
+    @Test
+    fun unpackOldRecordWithoutPrintText() {
+        val back = BioBook.unpack("[{\"i\":\"b1\",\"t\":\"matn\",\"a\":1,\"p\":[\"1001\"]}]")
+        assertEquals(1, back.size)
+        assertEquals("matn", back[0].text)
+        assertEquals("", back[0].printText)
+        assertFalse(back[0].hasPrint)
     }
 
     @Test
@@ -83,26 +113,31 @@ class BioTest {
 class BioCsvTest {
     @Test
     fun writesHeaderAndQuotesSemicolons() {
-        val csv = BioBook.toCsv(listOf(Triple("1001", "Pista", "Immunitet; yurak")))
-        assertEquals("kod;nom;malumot", csv.lineSequence().first())
+        val csv = BioBook.toCsv(listOf(BioBook.CsvRow("1001", "Pista", "Immunitet; yurak", "qisqa")))
+        assertEquals("kod;nom;malumot;chop_matni", csv.lineSequence().first())
         assertTrue(csv.contains("\"Immunitet; yurak\""))
+        assertTrue(csv.trim().endsWith(";qisqa"))
     }
 
     @Test
     fun readsBackCodesAndTexts() {
-        val csv = "kod;nom;malumot\n1001;Pista;\"Immunitet; yurak\"\n1002;Bodom;Kunda 2max ochq\n"
+        val csv = "kod;nom;malumot;chop_matni\n1001;Pista;\"Immunitet; yurak\";qisqa\n1002;Bodom;Kunda 2max ochq\n"
         val rows = BioBook.fromCsv(csv)
         assertEquals(2, rows.size)
-        assertEquals("1001", rows[0].first)
-        assertEquals("Immunitet; yurak", rows[0].second)
-        assertEquals("Kunda 2max ochq", rows[1].second)
+        assertEquals("1001", rows[0].code)
+        assertEquals("Immunitet; yurak", rows[0].text)
+        assertEquals("qisqa", rows[0].printText)
+        assertEquals("Kunda 2max ochq", rows[1].text)
+        assertEquals("", rows[1].printText)
     }
 
+    /** Asosiy matn kesilmaydi, faqat yorliq ustuni 278 ga kesiladi. */
     @Test
-    fun skipsEmptyLinesAndClipsLongText() {
-        val rows = BioBook.fromCsv("\n1001;Pista;" + "x".repeat(400) + "\n;;bo'sh kod\n")
+    fun skipsEmptyLinesAndClipsOnlyPrintColumn() {
+        val rows = BioBook.fromCsv("\n1001;Pista;" + "x".repeat(400) + ";" + "y".repeat(400) + "\n;;bo'sh kod\n")
         assertEquals(1, rows.size)
-        assertEquals(278, rows[0].second.length)
+        assertEquals(400, rows[0].text.length)
+        assertEquals(278, rows[0].printText.length)
     }
 }
 

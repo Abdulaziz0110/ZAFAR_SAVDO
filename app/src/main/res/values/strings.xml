@@ -293,6 +293,13 @@
     <string name="pb_sub">Har bir mahsulot haqida qisqa ma\'lumot: foydasi, iste\'mol tartibi, kimga mumkin emas</string>
     <string name="bio_title">Mahsulot ma\'lumoti</string>
     <string name="bio_text">Ma\'lumot</string>
+    <string name="bio_text_main">Asosiy ma\'lumot (savdo paytida ko\'rinadi)</string>
+    <string name="bio_text_print">Yorliq matni (faqat chop etish uchun)</string>
+    <string name="bio_main_hint">Chegara yo\'q — hohlagancha yozing. Savdo oynasida va mijoz ilovasida shu matn ko\'rinadi.</string>
+    <string name="bio_print_hint">Etiketkaga sig\'adigan qisqa matn. Bo\'sh bo\'lsa chop etilmaydi.</string>
+    <string name="bio_from_main">Asosiydan olish</string>
+    <string name="bio_print_empty">Yorliq matni yozilmagan</string>
+    <string name="bio_main_count">%1$d belgi</string>
     <string name="bio_rules">Qisqa yozing: foydasi, iste\'mol tartibi, kimga mumkin emas. Masalan: \"Immunitet, yurak. Kunda 2max ochq, 200g suvga 1ch.q, 10daq kutib ichiladi. Homilador va 3 yoshgacha mumkin emas.\"</string>
     <string name="bio_count">%1$d / %2$d belgi</string>
     <string name="bio_save">Saqlash</string>

@@ -293,6 +293,13 @@
     <string name="pb_sub">Ҳар бир маҳсулот ҳақида қисқа маълумот: фойдаси, истеъмол тартиби, кимга мумкин эмас</string>
     <string name="bio_title">Маҳсулот маълумоти</string>
     <string name="bio_text">Маълумот</string>
+    <string name="bio_text_main">Асосий маълумот (савдо пайтида кўринади)</string>
+    <string name="bio_text_print">Ёрлиқ матни (фақат чоп этиш учун)</string>
+    <string name="bio_main_hint">Чегара йўқ — ҳоҳлаганча ёзинг. Савдо ойнасида ва мижоз иловасида шу матн кўринади.</string>
+    <string name="bio_print_hint">Этикеткага сиғадиган қисқа матн. Бўш бўлса чоп этилмайди.</string>
+    <string name="bio_from_main">Асосийдан олиш</string>
+    <string name="bio_print_empty">Ёрлиқ матни ёзилмаган</string>
+    <string name="bio_main_count">%1$d белги</string>
     <string name="bio_rules">Қисқа ёзинг: фойдаси, истеъмол тартиби, кимга мумкин эмас. Масалан: \"Иммунитет, юрак. Кунда 2мах очқ, 200г сувга 1ч.қ, 10дақ кутиб ичилади. Ҳомиладор ва 3 ёшгача мумкин эмас.\"</string>
     <string name="bio_count">%1$d / %2$d белги</string>
     <string name="bio_save">Сақлаш</string>

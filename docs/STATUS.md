@@ -21,12 +21,15 @@ Belgilar:
 | **A10a**: yuk beruvchi tanlash — qidiruvli ro'yxat (nom, kod, telefon), qarz va oxirgi hujjat sanasi, oxirgi ishlanganlar tepada | VERIFIED (kompilyatsiya) |
 | **A10b**: to'lovda qarz, to'lovdan keyingi qoldiq (yozayotganda darhol), "Qarzni to'liq yopish", "Tarixi" (oxirgi 40 hujjat, qidiruv bilan); kirimda hujjatdan keyingi qarz | VERIFIED (kompilyatsiya) |
 | **A10b**: yangi tovarda keyingi bo'sh PLU taklif qilinadi, eng katta kod ko'rsatiladi | VERIFIED (kompilyatsiya) |
-| **A7**: mahsulot ma'lumoti (bio) — matn ALOHIDA yozuv, tovarlar unga ulanadi; 278 belgi chegarasi (58x40, Arial 10) | VERIFIED (12 test) |
+| **A7**: mahsulot ma'lumoti (bio) — matn ALOHIDA yozuv, tovarlar unga ulanadi | VERIFIED (15 test) |
+| **A7b**: IKKITA maydon — asosiy matn CHEGARASIZ (savdo paytida ko'rinadi), yorliq matni 278 belgi (faqat chop etish uchun, doim saqlanadi) | VERIFIED (testlar + kompilyatsiya) |
+| A7b: "Asosiydan olish" tugmasi — yorliq matnini asosiydan to'ldirish (278 ga kesib) | VERIFIED (kompilyatsiya) |
+| A7b: eski yozuvlar (yorliq matni yo'q) ochiladi, chop etish tugmasi bo'sh matnda ogohlantiradi | VERIFIED (test) |
 | A7: Sozlamalar > Mahsulotlar — qidiruv, "ma'lumoti bor/yo'q" filtri, soni; internetsiz ishlaydi | VERIFIED (kompilyatsiya) |
 | A7: ko'chirish (kod almashsa), bir nechta mahsulotga ulash, uzish, boshqasidan olish | VERIFIED (testlar) |
 | A7: savdo oynasida INFO — bosilsa klaviatura yopilib matn tepada ochiladi; "avtomatik ochish" sozlamasi (3 ilovada) | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
-| A7: Xprinterdan chiqarish (Arial 10, 58x40) | IMPLEMENTED-UNVERIFIED — printerda sinash kerak |
-| A7: kompyuterda (Excel) yozish — CSV chiqarish/yuklash (kod;nom;malumot) | VERIFIED (3 test) |
+| A7: Xprinterdan chiqarish — 1C dagidek: ODDIY (qalin emas) Arial 10, NOM chop etilmaydi, faqat matn | IMPLEMENTED-UNVERIFIED — printerda sinash kerak |
+| A7: kompyuterda (Excel) yozish — CSV chiqarish/yuklash (kod;nom;malumot;chop_matni) | VERIFIED (3 test) |
 | A7: ma'lumot 2-ilovaga snapshot bilan, Agentga bulut orqali boradi | VERIFIED (kompilyatsiya) / ulanishda IMPLEMENTED-UNVERIFIED |
 | **A11**: ko'p tovarga birdan — nomdan belgi olib tashlash/almashtirish, matn qo'shish (bosh/oxir/indeks), maydon o'zgartirish | VERIFIED (8 Kotlin + 5 Python test) |
 | A11: qamrov (guruh, nomida, kodlar, hammasi), KO'RIB CHIQISH (nechta + 20 misol), tasdiq, bajarish | VERIFIED (testlar) |

@@ -108,7 +108,10 @@ class ProductsFragment : CodeFragment() {
 
     private fun exportCsv(uri: android.net.Uri) {
         val bio = ServiceLocator.bio
-        val rows = ServiceLocator.catalog.state.value.products.map { p -> Triple(p.id, p.name, bio.of(p.id)?.text.orEmpty()) }
+        val rows = ServiceLocator.catalog.state.value.products.map { p ->
+            val x = bio.of(p.id)
+            uz.imsoft.shared.bio.BioBook.CsvRow(p.id, p.name, x?.text.orEmpty(), x?.printText.orEmpty())
+        }
         launchUi {
             val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching {
@@ -129,9 +132,11 @@ class ProductsFragment : CodeFragment() {
             val known = ServiceLocator.catalog.state.value.products.map { it.id }.toSet()
             var done = 0
             var skipped = 0
-            for ((code, t) in rows) {
+            for (r in rows) {
+                val code = r.code
                 if (code !in known) { skipped++; continue }
-                if (t.isEmpty()) ServiceLocator.bio.detach(code) else ServiceLocator.bio.save(ServiceLocator.bio.of(code)?.id, t, listOf(code))
+                if (r.text.isEmpty()) ServiceLocator.bio.detach(code)
+                else ServiceLocator.bio.save(ServiceLocator.bio.of(code)?.id, r.text, r.printText, listOf(code))
                 done++
             }
             runCatching { ServiceLocator.bio.publish(ServiceLocator.secure.relayConfig, ServiceLocator.shareStore.secret) }

@@ -218,10 +218,10 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         var open = ServiceLocator.appPrefs.bioAuto
         b.tvBio.visibility = if (open) View.VISIBLE else View.GONE
         // v5.2 (A7): Adminda matnni shu yerdan Xprinterga yuborish mumkin (uzoq bosilsa)
-        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin && bio.hasPrint) {
             b.tvBio.setOnLongClickListener {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    val msg = runCatching { ServiceLocator.labels.printBio(productName, bio.text) }
+                    val msg = runCatching { ServiceLocator.labels.printBio(bio.printText) }
                         .getOrElse { e -> e.message ?: e.javaClass.simpleName }
                     val root = activity?.findViewById<View>(android.R.id.content)
                     if (root != null) com.google.android.material.snackbar.Snackbar.make(root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()

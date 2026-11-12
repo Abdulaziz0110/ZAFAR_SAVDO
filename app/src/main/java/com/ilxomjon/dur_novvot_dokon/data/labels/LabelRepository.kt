@@ -465,12 +465,13 @@ class LabelRepository(
     fun render(b: LabelBatch, d: LabelData) = LabelBitmap.render(d, b.kind, b.wPx, b.hPx, _state.value.dpi)
 
     /**
-     * v5.2 (A7): mahsulot ma'lumotini (bio) 58x40 etiketkaga chiqarish — Arial 10.
+     * v5.2 (A7): mahsulot ma'lumotini (bio) 58x40 etiketkaga chiqarish — Arial 10, oddiy shrift.
+     * Nom chop etilmaydi: etiketkada faqat matnning o'zi chiqadi (1C dagi kabi).
      * @return foydalanuvchiga ko'rsatiladigan natija matni.
      */
-    suspend fun printBio(name: String, text: String): String {
+    suspend fun printBio(text: String): String {
         val (w, h) = sizePx()
-        val b = LabelBatch(LabelKind.BIO, listOf(LabelData(name, "", bio = text)), emptyList(), w, h)
+        val b = LabelBatch(LabelKind.BIO, listOf(LabelData("", "", bio = text)), emptyList(), w, h)
         val r = print(b)
         return when (r) {
             is LabelPrinterClient.Sent.Printed -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_printed, r.count, r.printer.ifBlank { "Xprinter" })
