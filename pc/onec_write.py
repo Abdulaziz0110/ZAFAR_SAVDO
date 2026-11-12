@@ -56,8 +56,8 @@ EDITABLE_DOCS = {
     "b": ("Возврат_товара_поставщику", "Таблица"),
 }
 # v5.2 (A11): ko'p tovarga birdan amal
-BULK_FIELDS = {"bop", "bfind", "bto", "btxt", "bwhere", "bkey", "bval", "bgrp", "bmatch", "bcodes"}
-BULK_OPS = {"repl", "add", "field"}
+BULK_FIELDS = {"bop", "bfind", "bto", "btxt", "bwhere", "bkey", "bval", "bgrp", "bmatch", "bcodes", "bqty"}
+BULK_OPS = {"repl", "add", "field", "stock"}
 BULK_KEYS = {"grp", "brd", "unit", "vol", "pack", "nac", "scl", "p1", "p2", "p3", "p4", "pin"}
 BULK_MAX = 5000
 PHONE_RE = re.compile(r"[+0-9 ()-]{5,20}")
@@ -283,6 +283,12 @@ def problem(req):
                 return "maydon noto'g'ri"
             if not str(f.get("bval") or "").strip():
                 return "qiymat bo'sh"
+        if op == "stock":
+            try:
+                if _fnum(f.get("bqty")) < 0:
+                    return "qoldiq manfiy bo'lmaydi"
+            except Exception:  # noqa: BLE001 — son emas
+                return "qoldiq soni noto'g'ri"
     elif k == "de":
         # v5.2 (A5): hujjatni tahrirlash
         if req["dk"] not in EDITABLE_DOCS:
@@ -653,6 +659,8 @@ class Writer:
         """
         f = req["f"]
         op = str(f.get("bop") or "")
+        if op == "stock":
+            return self.bulk_stock(c, req)
         q = c.NewObject("Запрос")
         q.Текст = ("ВЫБРАТЬ Т.Ссылка КАК Ссылка, Т.Код КАК Код, Т.Наименование КАК Нм, ПРЕДСТАВЛЕНИЕ(Т.ГруппаТовара) КАК Грп "
                    "ИЗ Справочник.Товары КАК Т ГДЕ НЕ Т.ПометкаУдаления")
@@ -693,6 +701,45 @@ class Writer:
             "no": str(changed), "ref": "bulk", "doc": "ТоварларКуп", "seen": seen, "old_all": old_all,
             "e": "" if changed else "o'zgaradigan tovar topilmadi",
         }
+
+    def bulk_stock(self, c, req):
+        """
+        v5.2 (A11): qamrovdagi tovarlar qoldig'ini belgilangan songa TUSHIRISH — bitta "СписанияТоваров"
+        hujjati bilan (1C'dagi hisobdan chiqarish). Qoldig'i allaqachon shu songa teng yoki kam bo'lganlar
+        tegilmaydi; oshirish uchun kirim hujjati kerak, u bu yerda qilinmaydi va ro'yxati qaytariladi.
+        """
+        f = req["f"]
+        target = _fnum(f.get("bqty"))
+        store = c.Константы.Склад1.Получить()
+        q = c.NewObject("Запрос")
+        q.Текст = ("ВЫБРАТЬ Т.Ссылка КАК Ссылка, Т.Код КАК Код, Т.Наименование КАК Нм, ПРЕДСТАВЛЕНИЕ(Т.ГруппаТовара) КАК Грп "
+                   "ИЗ Справочник.Товары КАК Т ГДЕ НЕ Т.ПометкаУдаления")
+        sel = q.Выполнить().Выбрать()
+        pairs = []
+        need_up = []
+        seen = 0
+        while sel.Следующий():
+            code = str(sel.Код)
+            name = str(sel.Нм or "")
+            if not bulk_covers(f, code, name, str(sel.Грп or "")):
+                continue
+            seen += 1
+            have = self.stock(c, sel.Ссылка, store)[0]
+            if have > target + 1e-9:
+                pairs.append((sel.Ссылка, round(have - target, 3)))
+            elif have < target - 1e-9:
+                need_up.append(name)
+            if len(pairs) >= BULK_MAX:
+                break
+        if not pairs:
+            return {"id": req["id"], "ok": True, "st": "skip", "no": "0", "ref": "bulk", "doc": "ТоварларКуп",
+                    "seen": seen, "e": "qoldig'i kamaytiriladigan tovar topilmadi"}
+        note = "Qoldiq %s ga tushirildi (telefondan)" % ("%g" % target)
+        res = self.write_off_doc(c, pairs, note, req["id"])
+        res["seen"] = seen
+        if need_up:
+            res["e"] = "qoldig'i kam — kirim hujjati kerak: %s" % ", ".join(need_up[:10])[:200]
+        return res
 
     def doc_edit(self, c, req):
         """
@@ -1106,9 +1153,15 @@ class Writer:
         return 0.0, 0.0, 0.0
 
     def write_off(self, c, req):
+        """Telefondan kelgan ro'yxat bo'yicha hisobdan chiqarish."""
+        pairs = [(self.find_goods(c, ln["name"], ln["code"]), ln["q"]) for ln in req["lines"]]
+        return self.write_off_doc(c, pairs, req["note"], req["id"])
+
+    def write_off_doc(self, c, pairs, note, req_id):
         """СписанияТоваров: tannarx — o'rtacha (qoldiq summasi / qoldiq miqdori), qoldiq bo'lmasa — kirim narxi.
         1C hujjat modulida dollarli tovar uchun xato bor (Стр.ОстКол) — bunday hujjatda harakatlar shu yerda yoziladi
-        (modul bilan aynan bir xil: Товар — расход, Прибль — СписанияМахсулот)."""
+        (modul bilan aynan bir xil: Товар — расход, Прибль — СписанияМахсулот).
+        [pairs] — (tovar havolasi, miqdor) juftliklari."""
         store = c.Константы.Склад1.Получить()
         rate = c.Константы.Курс.Получить()
         obj = c.Документы.СписанияТоваров.СоздатьДокумент()
@@ -1116,16 +1169,14 @@ class Writer:
         obj.Склад = store
         obj.Курс = rate
         obj.Подбор = True
-        obj.Комментарий = ("Telefondan (Admin): " + req["note"]).strip()[:250]
+        obj.Комментарий = ("Telefondan (Admin): " + str(note or "")).strip()[:250]
         total_s = total_u = 0.0
         any_usd = False
         short = []
         rows = []
-        for ln in req["lines"]:
-            g = self.find_goods(c, ln["name"], ln["code"])
+        for g, qty in pairs:
             usd = self.goods_info(c, g)["cur"] == "Вал"
             bq, bs, bu = self.stock(c, g, store)
-            qty = ln["q"]
             avg_s = bs / bq if bq > 0 else float(g.ПриходЦена or 0)
             avg_u = bu / bq if bq > 0 else float(g.ПриходВал or 0)
             r = obj.Таблица.Добавить()
@@ -1179,7 +1230,7 @@ class Writer:
                 p.ПриходСумма = r.СуммаСум
                 p.ПриходВал = r.СуммаВал
             obj.Записать()
-        res = {"id": req["id"], "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, obj.Ссылка),
+        res = {"id": req_id, "ok": True, "st": "done", "no": str(obj.Номер).strip(), "ref": self.uuid_of(c, obj.Ссылка),
                "doc": "СписанияТоваров", "manual": manual}
         if short:
             res["e"] = "qoldiqdan ko'p chiqarildi: %s" % ", ".join(short)[:200]

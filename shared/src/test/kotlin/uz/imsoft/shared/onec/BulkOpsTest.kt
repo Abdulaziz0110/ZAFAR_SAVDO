@@ -87,3 +87,28 @@ class BulkOpsTest {
         assertEquals("Quruq meva", back?.fields?.get(BulkField.GROUP))
     }
 }
+
+/** v5.2 (A11): qoldiqni belgilangan songa tushirish. */
+class BulkStockTest {
+    private val items = listOf(
+        Triple("1001", "Pista", "Quruq meva"),
+        Triple("1002", "Bodom", "Quruq meva"),
+        Triple("1003", "Shakar", "Oziq-ovqat"),
+    )
+
+    @Test
+    fun validation() {
+        assertNull(BulkPlan.problem(mapOf(BulkField.OP to BulkOp.STOCK, BulkField.QTY to "0")))
+        assertNull(BulkPlan.problem(mapOf(BulkField.OP to BulkOp.STOCK, BulkField.QTY to "12,5")))
+        assertEquals("qty", BulkPlan.problem(mapOf(BulkField.OP to BulkOp.STOCK, BulkField.QTY to "-1")))
+        assertEquals("qty", BulkPlan.problem(mapOf(BulkField.OP to BulkOp.STOCK, BulkField.QTY to "")))
+    }
+
+    @Test
+    fun previewCountsScopeAndShowsTarget() {
+        val f = mapOf(BulkField.OP to BulkOp.STOCK, BulkField.QTY to "0", BulkField.GROUP to "Quruq meva")
+        val p = BulkPlan.preview(f, items)
+        assertEquals(2, p.changed)
+        assertEquals("0", p.samples[0].third)
+    }
+}

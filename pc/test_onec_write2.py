@@ -629,5 +629,21 @@ class BulkPureTest(unittest.TestCase):
         self.assertEqual("qiymat bo'sh", onec_write.problem(req({"bop": "field", "bkey": "grp", "bval": " "})))
 
 
+
+class BulkStockValidationTest(unittest.TestCase):
+    """v5.2 (A11): qoldiqni belgilangan songa tushirish — tekshiruv."""
+
+    def req(self, f):
+        return onec_write.parse_request("w1", {"k": "bk", "p": json.dumps({"f": f})})
+
+    def test_ok(self):
+        self.assertIsNone(onec_write.problem(self.req({"bop": "stock", "bqty": 0})))
+        self.assertIsNone(onec_write.problem(self.req({"bop": "stock", "bqty": "12.5"})))
+
+    def test_rejects_negative_and_text(self):
+        self.assertEqual("qoldiq manfiy bo'lmaydi", onec_write.problem(self.req({"bop": "stock", "bqty": -1})))
+        self.assertEqual("qoldiq soni noto'g'ri", onec_write.problem(self.req({"bop": "stock", "bqty": "ko'p"})))
+
+
 if __name__ == "__main__":
     unittest.main()

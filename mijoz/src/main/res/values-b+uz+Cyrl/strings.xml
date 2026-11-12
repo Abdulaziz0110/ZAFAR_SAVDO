@@ -283,6 +283,7 @@
     <string name="bio_auto_sub">Маҳсулотни танлаганда маълумот дарҳол кўринади</string>
     <string name="bio_title">Маҳсулот маълумоти</string>
     <string name="bio_none">Бу маҳсулот ҳақида маълумот йўқ</string>
+    <string name="cart_added">%1$s · %2$s саватчада</string>
     <string name="price_n2">2</string>
     <string name="price_n3">3</string>
     <string name="price_n4">4</string>

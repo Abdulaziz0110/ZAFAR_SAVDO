@@ -1,4 +1,4 @@
-# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 39) + Savdo Mijoz 5.2 (versionCode 26), 2026-11-12
+# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 40) + Savdo Mijoz 5.2 (versionCode 27), 2026-11-12
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -24,7 +24,7 @@ Belgilar:
 | A11: qamrov (guruh, nomida, kodlar, hammasi), KO'RIB CHIQISH (nechta + 20 misol), tasdiq, bajarish | VERIFIED (testlar) |
 | A11: kompyuter COM orqali bajaradi — telefon o'chsa ham davom etadi | VERIFIED (kompilyatsiya) / 1C'da IMPLEMENTED-UNVERIFIED |
 | A11: **QAYTARISH** — eski qiymatlar saqlanadi, Yozuvlar ro'yxatidan bitta tugma | VERIFIED (kod) / 1C'da IMPLEMENTED-UNVERIFIED |
-| A11: qoldiqni belgilangan songa o'zgartirish | NOT-IMPLEMENTED — 1C'dagi "qayta sanash" hujjatining aniq nomi kerak (sizdan so'raymiz) |
+| A11: **qoldiqni belgilangan songa tushirish** — 1C'dagi "СписанияТоваров" (hisobdan chiqarish) hujjati bilan, bitta hujjatda. Qoldig'i kam bo'lganlar tegilmaydi, ro'yxati natijada chiqadi | VERIFIED (2 Kotlin + 2 Python test) / 1C'da IMPLEMENTED-UNVERIFIED |
 | **A12**: 2-ilovada "server" -> "do'kon kompyuteri"; "kontragent" -> "mijoz / yuk beruvchi"; Agentda 1C server sozlamasi yashirildi | VERIFIED |
 | A12: qolgan soddalashtirish (kam ekran, qisqa savdo) | IMPLEMENTED-UNVERIFIED — qaysi joy qiyinligini aytsangiz aniq qilamiz |
 

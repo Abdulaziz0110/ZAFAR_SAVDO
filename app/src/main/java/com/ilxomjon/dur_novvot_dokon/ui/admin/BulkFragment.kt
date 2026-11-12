@@ -37,6 +37,7 @@ class BulkFragment : CodeFragment() {
     private var eText: TextInputEditText? = null
     private var eIndex: TextInputEditText? = null
     private var eValue: TextInputEditText? = null
+    private var eQty: TextInputEditText? = null
     private var eGroup: TextInputEditText? = null
     private var eMatch: TextInputEditText? = null
     private var eCodes: TextInputEditText? = null
@@ -49,10 +50,13 @@ class BulkFragment : CodeFragment() {
         c.addView(
             Ui.toggle(
                 ctx,
-                listOf(getString(R.string.bk_op_repl), getString(R.string.bk_op_add), getString(R.string.bk_op_field)),
+                listOf(
+                    getString(R.string.bk_op_repl), getString(R.string.bk_op_add),
+                    getString(R.string.bk_op_field), getString(R.string.bk_op_stock),
+                ),
                 0, 4,
             ) { i ->
-                op = listOf(BulkOp.REPLACE, BulkOp.ADD, BulkOp.FIELD)[i]
+                op = listOf(BulkOp.REPLACE, BulkOp.ADD, BulkOp.FIELD, BulkOp.STOCK)[i]
                 renderOp()
             },
         )
@@ -103,6 +107,11 @@ class BulkFragment : CodeFragment() {
                 til.first.visibility = View.GONE
                 box.addView(til.first)
             }
+            BulkOp.STOCK -> {
+                eQty = Ui.field(ctx, getString(R.string.bk_qty), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL)
+                    .also { box.addView(it.first) }.second
+                box.addView(Ui.hint(ctx, getString(R.string.bk_qty_hint), 0))
+            }
             else -> {
                 val keys = BulkField.FIELDS.toList()
                 box.addView(
@@ -146,6 +155,7 @@ class BulkFragment : CodeFragment() {
                 f[BulkField.TEXT] = txt(eText)
                 f[BulkField.WHERE] = if (where == "idx") txt(eIndex).ifEmpty { "0" } else where
             }
+            BulkOp.STOCK -> f[BulkField.QTY] = txt(eQty)
             else -> { f[BulkField.KEY] = fieldKey; f[BulkField.VALUE] = txt(eValue) }
         }
         f[BulkField.GROUP] = txt(eGroup)

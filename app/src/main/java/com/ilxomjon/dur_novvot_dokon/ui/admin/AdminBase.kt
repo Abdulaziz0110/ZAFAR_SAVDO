@@ -108,8 +108,15 @@ abstract class CodeFragment : Fragment() {
         }
         sb.append('\n').append(getString(R.string.oc_doc_total, money2(d.som, d.usd)))
         if (d.note.isNotBlank()) sb.append('\n').append(d.note)
-        MaterialAlertDialogBuilder(ctx).setTitle(d.party.ifEmpty { kindName(d.kind) }).setMessage(sb.toString())
-            .setPositiveButton(R.string.close, null).show()
+        val b = MaterialAlertDialogBuilder(ctx).setTitle(d.party.ifEmpty { kindName(d.kind) }).setMessage(sb.toString())
+        // v5.2 (A5): tovarli hujjatni shu yerdan ham o'zgartirsa bo'ladi
+        if (d.kind in uz.imsoft.shared.onec.DocField.EDITABLE && d.lines.isNotEmpty()) {
+            b.setPositiveButton(R.string.de_edit) { _, _ -> navigator().push(DocEditFragment.of(d.id)) }
+            b.setNegativeButton(R.string.close, null)
+        } else {
+            b.setPositiveButton(R.string.close, null)
+        }
+        b.show()
     }
 
     protected fun fmtQty(q: Double): String = if (q == Math.floor(q)) q.toLong().toString() else "%.3f".format(java.util.Locale.US, q).trimEnd('0').trimEnd('.')

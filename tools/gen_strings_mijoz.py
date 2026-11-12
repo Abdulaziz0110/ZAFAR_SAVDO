@@ -237,7 +237,8 @@ STRINGS.update({
  'bio_auto': "Savdo paytida ma'lumot o'zi ochilsin",
  'bio_auto_sub': "Mahsulotni tanlaganda ma'lumot darhol ko'rinadi",
  'bio_title': "Mahsulot ma'lumoti",
- 'bio_none': "Bu mahsulot haqida ma'lumot yo'q", 'price_n2': '2', 'price_n3': '3', 'price_n4': '4', 'price_usd': 'USD',
+ 'bio_none': "Bu mahsulot haqida ma'lumot yo'q",
+ 'cart_added': '%1$s · %2$s savatchada', 'price_n2': '2', 'price_n3': '3', 'price_n4': '4', 'price_usd': 'USD',
 })
 
 STRINGS.update({

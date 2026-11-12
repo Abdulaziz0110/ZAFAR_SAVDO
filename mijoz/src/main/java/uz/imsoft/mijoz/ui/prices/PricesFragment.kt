@@ -35,7 +35,12 @@ class PricesFragment : Fragment() {
     private var _b: FragmentPricesBinding? = null
     private val b get() = _b!!
     private lateinit var vm: PricesViewModel
-    private val adapter = Adapter({ row -> HistorySheet.show(childFragmentManager, row.item.name) }, { row -> askQty(row) })
+    // v5.2 (A12): "+" bir bosishda qo'shadi (savdo qisqaradi), uzoq bossa — miqdor oynasi
+    private val adapter = Adapter(
+        { row -> HistorySheet.show(childFragmentManager, row.item.name) },
+        { row -> quickAdd(row) },
+        { row -> askQty(row) },
+    )
     private var rendering = false
     private var groupsShown: List<String> = emptyList()
 
@@ -95,6 +100,22 @@ class PricesFragment : Fragment() {
         val p = Locator.prefs
         val usd = p.currency == "usd"
         return r.item.price(p.priceLevel, usd) to usd
+    }
+
+    /**
+     * v5.2 (A12): bir bosishda savatchaga. Savatchada bo'lsa — yana bitta qo'shiladi.
+     * Boshqa miqdor kerak bo'lsa — "+" ni uzoq bosing yoki pastdagi xabardagi "Miqdor" ni bosing.
+     */
+    private fun quickAdd(r: PriceRow) {
+        val cur = Locator.cart.qty(r.key)
+        val step = if (cur > 0) 1.0 else (r.last?.qty?.takeIf { it > 0 } ?: 1.0)
+        val (price, usd) = priceOf(r)
+        Locator.cart.set(OrderCart.Item(r.key, r.item.name, r.item.id, cur + step, price, usd))
+        val root = activity?.findViewById<View>(android.R.id.content) ?: return
+        com.google.android.material.snackbar.Snackbar
+            .make(root, getString(R.string.cart_added, r.item.name, Fmt.qty(cur + step)), com.google.android.material.snackbar.Snackbar.LENGTH_SHORT)
+            .setAction(R.string.cart_qty) { askQty(r) }
+            .show()
     }
 
     /** "+": miqdor so'raladi (oldingi olingan miqdor taklif qilinadi). 0 — savatchadan olib tashlaydi. */
@@ -191,7 +212,11 @@ class PricesFragment : Fragment() {
         _b = null
     }
 
-    private class Adapter(private val onClick: (PriceRow) -> Unit, private val onAdd: (PriceRow) -> Unit) : RecyclerView.Adapter<Adapter.VH>() {
+    private class Adapter(
+        private val onClick: (PriceRow) -> Unit,
+        private val onAdd: (PriceRow) -> Unit,
+        private val onLong: (PriceRow) -> Unit,
+    ) : RecyclerView.Adapter<Adapter.VH>() {
         private var rows: List<PriceRow> = emptyList()
         var ordersOn = false
             set(v) { if (field != v) { field = v; notifyDataSetChanged() } }
@@ -206,7 +231,7 @@ class PricesFragment : Fragment() {
             init {
                 b.root.setOnClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onClick) }
                 b.btnAdd.setOnClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onAdd) }
-                b.btnAdd.setOnLongClickListener { rows.getOrNull(bindingAdapterPosition)?.let { Locator.cart.remove(it.key) }; true }
+                b.btnAdd.setOnLongClickListener { rows.getOrNull(bindingAdapterPosition)?.let(onLong); true }
             }
 
             fun bind(r: PriceRow) {

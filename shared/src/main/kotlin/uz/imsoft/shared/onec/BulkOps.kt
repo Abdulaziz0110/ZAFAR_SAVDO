@@ -16,7 +16,13 @@ object BulkOp {
     /** Maydonni o'zgartirish (guruh, brend, o'lchov, hajm, shtuk, nac, narxlar). */
     const val FIELD = "field"
 
-    val ALL = setOf(REPLACE, ADD, FIELD)
+    /**
+     * Qoldiqni belgilangan songa tushirish — 1C'da "СписанияТоваров" (hisobdan chiqarish) hujjati bilan.
+     * Qoldig'i kam bo'lganlar tegilmaydi (oshirish uchun kirim hujjati kerak) va ro'yxati qaytariladi.
+     */
+    const val STOCK = "stock"
+
+    val ALL = setOf(REPLACE, ADD, FIELD, STOCK)
 }
 
 /** Amal maydonlari ([WriteRequest.fields]). */
@@ -33,6 +39,8 @@ object BulkField {
     /** FIELD: qaysi maydon ([GoodsField] kaliti) va qiymati. */
     const val KEY = "bkey"
     const val VALUE = "bval"
+    /** STOCK: qoldiq shu songa tushiriladi. */
+    const val QTY = "bqty"
     /** Qamrov: guruh nomi (bo'sh — hammasi). */
     const val GROUP = "bgrp"
     /** Qamrov: nomida shu matn bo'lganlar (bo'sh — hammasi). */
@@ -40,7 +48,7 @@ object BulkField {
     /** Qamrov: aniq kodlar, vergul bilan (bo'sh — hammasi). */
     const val CODES = "bcodes"
 
-    val ALL = setOf(OP, FIND, TO, TEXT, WHERE, KEY, VALUE, GROUP, MATCH, CODES)
+    val ALL = setOf(OP, FIND, TO, TEXT, WHERE, KEY, VALUE, QTY, GROUP, MATCH, CODES)
 
     /** FIELD amali uchun ruxsat etilgan maydonlar (1C kartochkasidagilar). */
     val FIELDS = setOf(
@@ -135,6 +143,10 @@ object BulkPlan {
                 f[BulkField.VALUE].orEmpty().isBlank() -> "value"
                 else -> null
             }
+            BulkOp.STOCK -> {
+                val q = f[BulkField.QTY]?.let { uz.imsoft.shared.NumText.parseOrNull(it) }
+                if (q == null || q < 0.0) "qty" else null
+            }
             else -> "op"
         }
     }
@@ -153,8 +165,8 @@ object BulkPlan {
     fun preview(f: Map<String, String>, items: List<Triple<String, String, String>>): BulkPreview {
         val scope = BulkScope.of(f)
         val inScope = items.filter { (code, name, grp) -> scope.covers(code, name, grp) }
-        if (f[BulkField.OP] == BulkOp.FIELD) {
-            val v = f[BulkField.VALUE].orEmpty()
+        if (f[BulkField.OP] == BulkOp.FIELD || f[BulkField.OP] == BulkOp.STOCK) {
+            val v = if (f[BulkField.OP] == BulkOp.STOCK) f[BulkField.QTY].orEmpty() else f[BulkField.VALUE].orEmpty()
             return BulkPreview(inScope.size, items.size, inScope.take(SAMPLES).map { Triple(it.first, it.second, v) })
         }
         val changed = ArrayList<Triple<String, String, String>>()
