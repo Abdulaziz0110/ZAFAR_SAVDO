@@ -138,6 +138,9 @@ class MijozPrefs(context: Context) {
     /** Chek qo'shimchalari (sarlavha — do'kon nomi — o'zgarmaydi): sarlavha ostidagi qatorlar, chek osti, rahmat matni. */
     var receiptSub: String get() = s("rc_sub"); set(v) = put("rc_sub", v)
     var receiptFooter: String get() = s("rc_footer"); set(v) = put("rc_footer", v)
+
+    /** v5.2 (A3): chekdagi "Agent" (sotuvchi) — 1C maketidagi maydon. */
+    var receiptStaff: String get() = s("rc_staff"); set(v) = put("rc_staff", v)
     var receiptThanks: String get() = s("rc_thanks"); set(v) = put("rc_thanks", v)
     /** Shu telefondan yuborilgan to'lov va tuzatish so'rovlari (id lar). */
     var myPays: String get() = s("my_pays"); set(v) = put("my_pays", v)

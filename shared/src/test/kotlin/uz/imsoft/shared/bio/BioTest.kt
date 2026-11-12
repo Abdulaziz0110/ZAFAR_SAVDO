@@ -105,3 +105,30 @@ class BioCsvTest {
         assertEquals(278, rows[0].second.length)
     }
 }
+
+/** v5.2 (A10b): avtomatik ichki shtrix kod — kompyuterdagi qoida bilan bir xil. */
+class ShopBarcodeTest {
+    @Test
+    fun startsWithTwoPadsCodeAndEndsWithCheckDigit() {
+        val bc = uz.imsoft.shared.barcode.Ean.shopBarcode("1042")
+        assertEquals(13, bc.length)
+        assertEquals("2000001042", bc.take(10))
+        assertEquals("00", bc.substring(10, 12))
+        assertTrue(uz.imsoft.shared.barcode.Ean.checkOk(bc))
+    }
+
+    @Test
+    fun sequenceChangesCodeAndStaysValid() {
+        val a = uz.imsoft.shared.barcode.Ean.shopBarcode("1042", 0)
+        val b = uz.imsoft.shared.barcode.Ean.shopBarcode("1042", 7)
+        assertTrue(a != b)
+        assertTrue(uz.imsoft.shared.barcode.Ean.checkOk(b))
+    }
+
+    @Test
+    fun keepsOnlyLastNineDigitsOfLongCode() {
+        val bc = uz.imsoft.shared.barcode.Ean.shopBarcode("AB-1234567890")
+        assertEquals("2234567890", bc.take(10))
+        assertTrue(uz.imsoft.shared.barcode.Ean.checkOk(bc))
+    }
+}

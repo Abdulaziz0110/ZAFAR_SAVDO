@@ -331,6 +331,7 @@
     <string name="bk_op_repl">Белгини олиб ташлаш</string>
     <string name="bk_op_add">Матн қўшиш</string>
     <string name="bk_op_field">Майдонни ўзгартириш</string>
+    <string name="ng_bc_preview">Штрих код тахминан шундай бўлади: %1$s (банд бўлса кейингиси олинади)</string>
     <string name="bk_op_stock">Қолдиқни ўзгартириш</string>
     <string name="bk_qty">Қолдиқ шу сонга тушсин</string>
     <string name="bk_qty_hint">1Къда \"Ҳисобдан чиқариш\" ҳужжати тузилади (ортиқчаси чиқарилади). Қолдиғи аллақачон кам бўлганлар тегилмайди — уларни ошириш учун кирим ҳужжати керак, рўйхати натижада кўринади.</string>

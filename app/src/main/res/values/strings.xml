@@ -331,6 +331,7 @@
     <string name="bk_op_repl">Belgini olib tashlash</string>
     <string name="bk_op_add">Matn qo\'shish</string>
     <string name="bk_op_field">Maydonni o\'zgartirish</string>
+    <string name="ng_bc_preview">Shtrix kod taxminan shunday bo\'ladi: %1$s (band bo\'lsa keyingisi olinadi)</string>
     <string name="bk_op_stock">Qoldiqni o\'zgartirish</string>
     <string name="bk_qty">Qoldiq shu songa tushsin</string>
     <string name="bk_qty_hint">1C\'da \"Hisobdan chiqarish\" hujjati tuziladi (ortiqchasi chiqariladi). Qoldig\'i allaqachon kam bo\'lganlar tegilmaydi — ularni oshirish uchun kirim hujjati kerak, ro\'yxati natijada ko\'rinadi.</string>

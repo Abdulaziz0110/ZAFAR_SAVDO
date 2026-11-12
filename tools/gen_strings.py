@@ -231,6 +231,7 @@ STRINGS = {
  'bk_op_repl': 'Belgini olib tashlash',
  'bk_op_add': "Matn qo'shish",
  'bk_op_field': "Maydonni o'zgartirish",
+ 'ng_bc_preview': 'Shtrix kod taxminan shunday bo\'ladi: %1$s (band bo\'lsa keyingisi olinadi)',
  'bk_op_stock': "Qoldiqni o'zgartirish",
  'bk_qty': 'Qoldiq shu songa tushsin',
  'bk_qty_hint': "1C'da \"Hisobdan chiqarish\" hujjati tuziladi (ortiqchasi chiqariladi). Qoldig'i allaqachon kam bo'lganlar tegilmaydi — ularni oshirish uchun kirim hujjati kerak, ro'yxati natijada ko'rinadi.",

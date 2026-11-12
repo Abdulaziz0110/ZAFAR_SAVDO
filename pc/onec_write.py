@@ -1021,7 +1021,8 @@ class Writer:
         return body12 + str((10 - total % 10) % 10)
 
     def _auto_barcode(self, c, code):
-        """v5.1: ichki shtrix kod — "2" bilan boshlanadi (do'kon ichidagi diapazon), bo'sh raqam tanlanadi."""
+        """v5.1: ichki shtrix kod — "2" bilan boshlanadi (do'kon ichidagi diapazon), bo'sh raqam tanlanadi.
+        Telefondagi Ean.shopBarcode AYNAN shu qoidani ishlatadi (ko'rsatish uchun)."""
         digits = "".join(ch for ch in str(code) if ch.isdigit())[-9:] or "0"
         for n in range(100):
             bc = self._ean13("2" + digits.rjust(9, "0") + ("%02d" % n))

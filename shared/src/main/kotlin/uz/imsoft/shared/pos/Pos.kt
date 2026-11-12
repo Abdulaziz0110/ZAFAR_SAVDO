@@ -84,6 +84,7 @@ object Pos {
     /** Chek (do'kon nomi — o'zgarmas brend, qolgani chek sozlamasidan). */
     fun receipt(
         shop: String, sale: PosSale, customer: PosCustomer?, balanceAfter: Double?, labels: Labels,
+        agent: String = "", phone: String = "",
     ): Receipt {
         val lines = sale.lines.map { l -> Receipt.Line(l.name, NumFmt.qty(l.qty) + " x " + NumFmt.som(l.price), NumFmt.som(l.sum)) }
         val totals = ArrayList<Receipt.Total>()
@@ -97,13 +98,19 @@ object Pos {
             after += Receipt.Total(labels.paid, NumFmt.som(sale.paid))
             if (balanceAfter != null) after += Receipt.Total(labels.debt, NumFmt.som(balanceAfter))
         }
+        // v5.2 (A3): chek 1C "Chek1" maketida chiqadi — uchala ilovada bir xil. Qolgan maydonlar
+        // (matn/HTML ulashish) eski ko'rinishda qoladi, ular chop etilmaydi.
+        val chek = uz.imsoft.shared.receipt.Chek.ofPos(
+            sale, shop, customer?.name.orEmpty(), agent, phone,
+            debtBefore = if (balanceAfter != null) balanceAfter - sale.debt else 0.0,
+        )
         return Receipt(
             shop, labels.title, customer?.name.orEmpty(), Stamp.formatDateTime(sale.stamp), lines, totals,
             if (sale.note.isNotBlank()) listOf(sale.note) else emptyList(),
             clientLabel = if (customer != null) labels.client else "", clientName = customer?.name.orEmpty(),
             info = listOf(labels.number to sale.number.toString(), labels.time to Stamp.formatDateTime(sale.stamp).substringAfter(' ')),
             date = Stamp.formatDate(sale.stamp), after = after,
-            infoKeys = listOf(Receipt.KEY_NUMBER, Receipt.KEY_TIME),
+            infoKeys = listOf(Receipt.KEY_NUMBER, Receipt.KEY_TIME), chek = chek,
         )
     }
 

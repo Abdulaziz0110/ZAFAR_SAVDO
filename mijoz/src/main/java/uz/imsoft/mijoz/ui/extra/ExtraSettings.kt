@@ -104,16 +104,15 @@ class ReceiptExtrasFragment : MFragment() {
         c.addView(Ui.hint(ctx, getString(R.string.rx_hint), 4))
         c.addView(Ui.section(ctx, getString(R.string.rx_brand)))
         c.addView(Ui.title(ctx, shop.ifBlank { "—" }, 4))
-        val (t1, e1) = Ui.field(ctx, getString(R.string.rx_sub), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, p.receiptSub, 12)
+        // v5.2 (A3): chek 1C "Chek1" maketida chiqadi — sarlavha osti va "rahmat" kabi qo'shimchalar yo'q.
+        // Maketdagi maydonlar: Agent (sotuvchi) va pastdagi telefonlar.
+        val (t1, e1) = Ui.field(ctx, getString(R.string.rx_staff), value = p.receiptStaff, top = 12)
         val (t2, e2) = Ui.field(ctx, getString(R.string.rx_footer), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, p.receiptFooter)
-        val (t3, e3) = Ui.field(ctx, getString(R.string.rx_thanks), value = p.receiptThanks)
-        c.addView(t1); c.addView(Ui.hint(ctx, getString(R.string.rx_sub_hint)))
+        c.addView(t1)
         c.addView(t2); c.addView(Ui.hint(ctx, getString(R.string.rx_footer_hint)))
-        c.addView(t3)
         c.addView(Ui.button(ctx, getString(R.string.rx_save), top = 12, icon = R.drawable.ic_check) {
-            p.receiptSub = e1.text?.toString()?.lines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.take(3)?.joinToString("\n").orEmpty()
+            p.receiptStaff = e1.text?.toString()?.trim().orEmpty().take(60)
             p.receiptFooter = e2.text?.toString()?.trim().orEmpty().take(200)
-            p.receiptThanks = e3.text?.toString()?.trim().orEmpty().take(120)
             snack(getString(R.string.rx_saved))
         })
         c.addView(Ui.button(ctx, getString(R.string.rx_test), outlined = true, icon = R.drawable.ic_print) {

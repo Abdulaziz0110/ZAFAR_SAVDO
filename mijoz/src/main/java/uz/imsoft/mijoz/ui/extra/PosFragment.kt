@@ -148,7 +148,7 @@ class PosFragment : MFragment() {
         val s = d.sales.firstOrNull { it.id == id } ?: return
         val c = d.customer(s.customerId)
         val shop = Locator.data.state.value.snapshot?.shopName.orEmpty().ifBlank { getString(R.string.app_name) }
-        printReceipt(Pos.receipt(shop, s, c, c?.let { d.balance(it.id) }, posLabels()))
+        printReceipt(Pos.receipt(shop, s, c, c?.let { d.balance(it.id) }, posLabels(), posAgent(), posPhone()))
     }
 
     private fun pickCustomer() {

@@ -28,6 +28,16 @@ object Ean {
         return checkDigit(code.dropLast(1)) == code.last() - '0'
     }
 
+    /**
+     * v5.2 (A10b): do'kon ichidagi avtomatik shtrix kod — kompyuterdagi qoida bilan AYNAN bir xil:
+     * "2" + tovar kodining oxirgi 9 ta raqami (chapdan nol bilan to'ldirilgan) + ketma-ket raqam + nazorat raqami.
+     * 1C'da shu kod band bo'lsa kompyuter keyingi [seq] ni oladi — shuning uchun telefonda ko'rsatilgani TAXMINIY.
+     */
+    fun shopBarcode(code: String, seq: Int = 0): String {
+        val body = "2" + digits(code).takeLast(9).ifEmpty { "0" }.padStart(9, '0') + "%02d".format(seq.coerceIn(0, 99))
+        return body + checkDigit(body)
+    }
+
     /** Tekshiruv raqamini hisoblaydi (o'ngdan: 3,1,3,1...). */
     fun checkDigit(body: String): Int {
         var sum = 0

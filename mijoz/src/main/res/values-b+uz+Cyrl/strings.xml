@@ -284,6 +284,7 @@
     <string name="bio_title">Маҳсулот маълумоти</string>
     <string name="bio_none">Бу маҳсулот ҳақида маълумот йўқ</string>
     <string name="cart_added">%1$s · %2$s саватчада</string>
+    <string name="rx_staff">Агент (сотувчи) — чекда чиқади</string>
     <string name="price_n2">2</string>
     <string name="price_n3">3</string>
     <string name="price_n4">4</string>

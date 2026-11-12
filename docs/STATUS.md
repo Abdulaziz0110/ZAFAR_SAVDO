@@ -1,10 +1,18 @@
-# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 40) + Savdo Mijoz 5.2 (versionCode 27), 2026-11-12
+# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 41) + Savdo Mijoz 5.2 (versionCode 28), 2026-11-12
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.2 — 3-qism: tekshiruvda topilgan kamchiliklar yopildi
+| Narsa | Holat |
+|---|---|
+| A3: 2-ilovaning O'Z kassa cheki ham 1C "Chek1" maketida (avval qo'lda yasalgan ko'rinishda edi) — endi uchala ilovada AYNAN bir xil | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
+| A3: 2-ilova chek sozlamasidan "sarlavha osti" va "rahmat" qo'shimchalari olib tashlandi; 1C maketidagi "Agent" maydoni qo'shildi | VERIFIED |
+| A7: savdo oynasidagi ma'lumot matnini uzoq bosib Xprinterdan chiqarish (Admin) | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
+| A10b: avtomatik shtrix kod yoqilganda qanday kod yasalishi ko'rsatiladi (kompyuterdagi qoida bilan aynan bir xil) | VERIFIED (3 test) |
 
 ## 5.2 — 2-qism: savdo tahriri, 1C shakllari, mahsulot ma'lumoti, ommaviy amallar
 | Narsa | Holat |

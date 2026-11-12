@@ -174,6 +174,31 @@ data class Chek(
         }
 
         /**
+         * v5.2 (A3): 2-ilovaning o'z savdosidan ([uz.imsoft.shared.pos.PosSale]) chek — AYNAN shu 1C maketida.
+         * Shunda uchala ilovada chek bir xil ko'rinishda chiqadi.
+         */
+        fun ofPos(
+            sale: uz.imsoft.shared.pos.PosSale, shop: String, client: String, agent: String, phone: String,
+            debtBefore: Double = 0.0, labels: Labels = Labels.LATIN,
+        ): Chek {
+            val (time, date) = ReceiptBuilder.timeAndDate(sale.stamp)
+            val rows = sale.lines.mapIndexed { i, x ->
+                Line(i + 1, x.name, "", qtyOf(x.qty), num(x.price), num(x.sum))
+            }
+            val gross = sale.lines.sumOf { it.sum }
+            val end = debtBefore + sale.total - sale.paid
+            val zero = NumFmt.usd(0.0)
+            return Chek(
+                time, date, sale.number.toString(), client.ifBlank { shop }, agent,
+                num(debtBefore), zero, rows,
+                num(gross), zero,
+                num(sale.discount), zero,
+                num(sale.paid), num(0.0), zero,
+                num(end), zero, phone, labels,
+            )
+        }
+
+        /**
          * 1C tarixidagi hujjatdan ([LedgerDoc]) chek. To'lov taqsimoti (naqd/plastik) 1C hisobotida yo'q —
          * savdoda to'langan summa naqd ustunida ko'rsatiladi.
          */

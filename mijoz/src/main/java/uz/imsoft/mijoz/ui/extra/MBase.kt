@@ -75,6 +75,13 @@ abstract class MFragment : Fragment() {
         }
     }
 
+    /** v5.2 (A3): chekdagi "Agent" — sozlamadagi sotuvchi nomi. */
+    protected fun posAgent(): String = Locator.prefs.receiptStaff
+
+    /** v5.2 (A3): chek ostidagi telefonlar (1C maketidagi "Tel :" qatori). */
+    protected fun posPhone(): String =
+        uz.imsoft.shared.receipt.Chek.phoneOf(Locator.prefs.receiptFooter.split('\n').map { it.trim() }.filter { it.isNotEmpty() })
+
     /** Kassa cheki matnlari. */
     protected fun posLabels() = uz.imsoft.shared.pos.Pos.Labels(
         getString(R.string.pos_receipt_title), getString(R.string.pos_client), getString(R.string.pos_sum), getString(R.string.pos_discount),

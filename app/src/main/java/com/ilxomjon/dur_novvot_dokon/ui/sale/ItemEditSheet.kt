@@ -57,7 +57,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.tvName.text = product.name
         binding.tvInfo.text = if (product.hasBlock) getString(R.string.block_info, Money.qtyDisplay(product.blockSize)) else ""
         binding.tvInfo.show(product.hasBlock)
-        bindBio(product.id)
+        bindBio(product.id, product.name)
         val showCost = args.getBoolean(ARG_COST)
         binding.tvCost.show(showCost)
         if (showCost) binding.tvCost.text = getString(R.string.item_cost, requireContext().money(vm.costPrice, vm.currency))
@@ -205,7 +205,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
      * parametrlar USTIDA ochiladi (kitob ochilgandek); yana bossa yopiladi.
      * Sozlamada "avtomatik ochish" yoqilgan bo'lsa — darhol ochiq, lekin klaviatura va kursor o'z holida qoladi.
      */
-    private fun bindBio(productId: String) {
+    private fun bindBio(productId: String, productName: String) {
         val bio = ServiceLocator.bio.of(productId)
         val b = _binding ?: return
         if (bio == null) {
@@ -217,6 +217,18 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         b.tvBio.text = bio.text
         var open = ServiceLocator.appPrefs.bioAuto
         b.tvBio.visibility = if (open) View.VISIBLE else View.GONE
+        // v5.2 (A7): Adminda matnni shu yerdan Xprinterga yuborish mumkin (uzoq bosilsa)
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            b.tvBio.setOnLongClickListener {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val msg = runCatching { ServiceLocator.labels.printBio(productName, bio.text) }
+                        .getOrElse { e -> e.message ?: e.javaClass.simpleName }
+                    val root = activity?.findViewById<View>(android.R.id.content)
+                    if (root != null) com.google.android.material.snackbar.Snackbar.make(root, msg, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show()
+                }
+                true
+            }
+        }
         b.btnBio.setOnClickListener { v ->
             open = !open
             b.tvBio.visibility = if (open) View.VISIBLE else View.GONE

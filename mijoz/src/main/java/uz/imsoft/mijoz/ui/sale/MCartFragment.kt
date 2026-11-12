@@ -115,7 +115,7 @@ class MCartFragment : MFragment() {
                 d.sales.firstOrNull { it.id == id }?.let { sale ->
                     val c = d.customer(sale.customerId)
                     val shop = Locator.data.state.value.snapshot?.shopName.orEmpty().ifBlank { getString(R.string.app_name) }
-                    printReceipt(Pos.receipt(shop, sale, c, c?.let { d.balance(it.id) }, posLabels()))
+                    printReceipt(Pos.receipt(shop, sale, c, c?.let { d.balance(it.id) }, posLabels(), posAgent(), posPhone()))
                 }
             }
             back()

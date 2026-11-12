@@ -104,8 +104,9 @@ class OneCFormFragment : CodeFragment() {
                     )
                     eBarcode = Ui.field(ctx, getString(R.string.of_barcode), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS).also { c.addView(it.first) }.second
                     c.addView(
-                        Ui.switch(ctx, getString(R.string.ng_auto_barcode), false, 4) { on ->
+                        Ui.switch(ctx, getString(R.string.ng_auto_barcode), autoBarcode, 4) { on ->
                             autoBarcode = on
+                            renderCard()
                             eBarcode?.isEnabled = !on
                             if (on) eBarcode?.setText("")
                         },
@@ -275,7 +276,12 @@ class OneCFormFragment : CodeFragment() {
             ePlu = null
         }
         if (kind == WriteKind.NEW_GOODS) {
+            val next = (lastCode().toIntOrNull()?.plus(1))?.toString().orEmpty()
             box.addView(Ui.hint(ctx, getString(R.string.ng_code_hint, lastCode()), 6))
+            // v5.2 (A10b): avtomatik shtrix kod yoqilgan bo'lsa — qanday kod yasalishi ko'rinadi
+            if (autoBarcode && next.isNotEmpty()) {
+                box.addView(Ui.hint(ctx, getString(R.string.ng_bc_preview, uz.imsoft.shared.barcode.Ean.shopBarcode(next)), 2))
+            }
         }
     }
 

@@ -37,6 +37,9 @@ object MijozLedgerHost : LedgerHost {
     override val receiptHeader: String get() = Locator.data.state.value.snapshot?.shopName.orEmpty()
     /** v3.2: chek osti (telefon) — 2-filial o'zinikini yozsa shu, aks holda do'kon egasiniki. Do'kon nomi o'zgarmaydi. */
     override val receiptFooter: String get() = Locator.prefs.receiptFooter.trim().ifEmpty { Locator.data.state.value.snapshot?.shopFooter.orEmpty() }
+
+    /** v5.2 (A3): 1C chekidagi "Agent" maydoni. */
+    override val receiptStaff: String get() = Locator.prefs.receiptStaff
     override val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle
         get() {
             val base = uz.imsoft.shared.receipt.ReceiptStyle.decode(Locator.data.state.value.snapshot?.receiptStyle)
