@@ -1,7 +1,7 @@
-# IMSOFT DOKON - Savdo Agent + Savdo Admin (app, flavors agent/admin) + Savdo Mijoz (mijoz)
+# IMSOFT DOKON - Savdo (app: one app, role by login) + Savdo Mijoz (mijoz)
 # Repo root: upload IMSOFT_DOKON-project.zip and commit. This workflow:
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
-#   2) builds three APKs - Agent, Admin, Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
+#   2) builds two APKs - Savdo (admin package), Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
 #   3) runs unit tests, lint, the PC script tests and the iPhone (web) agent tests; reports go to the "reports" artifact,
 #   4) publishes the iPhone agent (web/agent) to Cloudflare Pages (free, works with a private repo),
 #      and (v4.0) the new APKs + version.json to a hidden folder there - the apps update themselves.
@@ -168,7 +168,7 @@ jobs:
         shell: bash
         env:
           SHOP_CODE: ${{ secrets.SHOP_CODE }}
-        run: ./gradlew --no-daemon --stacktrace :app:assembleAgentDebug :app:assembleAdminDebug :mijoz:assembleDebug
+        run: ./gradlew --no-daemon --stacktrace :app:assembleAdminDebug :mijoz:assembleDebug
 
       - name: Collect APKs
         shell: bash
@@ -177,7 +177,6 @@ jobs:
           mkdir -p out
           AV=$(grep -m1 versionName app/build.gradle.kts | sed 's/[^0-9.]//g')
           MV=$(grep -m1 versionName mijoz/build.gradle.kts | sed 's/[^0-9.]//g')
-          cp app/build/outputs/apk/agent/debug/*.apk "out/SavdoAgent-$AV-${{ steps.sign.outputs.tag }}.apk"
           cp app/build/outputs/apk/admin/debug/*.apk "out/SavdoAdmin-$AV-${{ steps.sign.outputs.tag }}.apk"
           cp mijoz/build/outputs/apk/debug/*.apk "out/SavdoMijoz-$MV-${{ steps.sign.outputs.tag }}.apk"
           ls -la out
@@ -192,17 +191,25 @@ jobs:
           AV=$(grep -m1 versionName app/build.gradle.kts | sed 's/[^0-9.]//g')
           MVC=$(grep -m1 'versionCode = ' mijoz/build.gradle.kts | sed 's/[^0-9]//g')
           MV=$(grep -m1 versionName mijoz/build.gradle.kts | sed 's/[^0-9.]//g')
-          cp out/SavdoAgent-*.apk upd/agent.apk
           cp out/SavdoAdmin-*.apk upd/admin.apk
           cp out/SavdoMijoz-*.apk upd/mijoz.apk
           for f in upd/*.apk; do
             if [ "$(stat -c %s "$f")" -gt 26000000 ]; then echo "::warning::$f is larger than 25 MB (Cloudflare limit) - not published"; rm -f "$f"; fi
           done
+          # v5.3: the PC scripts update themselves too (pc.zip + pc.json with sha256)
+          (cd pc && zip -q -r ../upd/pc.zip . -x '*.ini' -x '*.json' -x '*.jsonl' -x '__pycache__/*' -x 'test_*' -x 'backup/*')
+          python3 - <<'PCJSON'
+          import hashlib, json
+          raw = open("upd/pc.zip", "rb").read()
+          v = int(open("pc/pc_version.txt").read().strip())
+          json.dump({"v": v, "zip": "pc.zip", "sha": hashlib.sha256(raw).hexdigest()}, open("upd/pc.json", "w"))
+          print("pc version", v, len(raw), "bytes")
+          PCJSON
           python3 - "$AVC" "$AV" "$MVC" "$MV" <<'PY'
           import json, os, sys
           avc, av, mvc, mv = sys.argv[1:5]
           out = {}
-          for key, vc, v in (("agent", avc, av), ("admin", avc, av), ("mijoz", mvc, mv)):
+          for key, vc, v in (("admin", avc, av), ("mijoz", mvc, mv)):
               f = "upd/%s.apk" % key
               if os.path.exists(f):
                   out[key] = {"vc": int(vc), "v": v, "apk": "%s.apk" % key, "size": os.path.getsize(f)}
@@ -236,13 +243,13 @@ jobs:
         id: tests
         continue-on-error: true
         shell: bash
-        run: ./gradlew --no-daemon :app:testAgentDebugUnitTest :mijoz:testDebugUnitTest
+        run: ./gradlew --no-daemon :app:testAdminDebugUnitTest :mijoz:testDebugUnitTest
 
       - name: Lint
         id: lint
         continue-on-error: true
         shell: bash
-        run: ./gradlew --no-daemon :app:lintAgentDebug :app:lintAdminDebug :mijoz:lintDebug
+        run: ./gradlew --no-daemon :app:lintAdminDebug :mijoz:lintDebug
 
       - name: PC script tests
         id: pctests
@@ -255,6 +262,8 @@ jobs:
           python3 pc/test_onec_data.py
           python3 pc/test_onec_scale.py
           python3 pc/test_onec_write2.py
+          python3 pc/test_relay.py
+          python3 pc/test_selfupdate.py
           if python3 -c "import PIL" 2>/dev/null; then python3 pc/test_label_printer.py; else pip install -q pillow && python3 pc/test_label_printer.py; fi
 
       - name: iPhone agent (web) tests
@@ -385,7 +394,7 @@ jobs:
           cat > smoke.sh <<'EOS'
           fail=0
           for a in apk/*.apk; do adb install -r "$a" || fail=1; done
-          for p in com.ibrohimjon.imsoft_dokon_som_val com.ibrohimjon.imsoft_dokon_som_val.admin com.ibrohimjon.imsoft_mijoz; do
+          for p in com.ibrohimjon.imsoft_dokon_som_val.admin com.ibrohimjon.imsoft_mijoz; do
             adb logcat -b crash -c || true
             adb shell monkey -p "$p" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
             sleep 15
