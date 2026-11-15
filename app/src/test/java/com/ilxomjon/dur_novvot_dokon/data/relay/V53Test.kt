@@ -115,6 +115,14 @@ class V53Test {
         assertEquals("server", r.api.fetchDebt("a", "s").first)
     }
 
+    @Test fun bothDownShowsServerError() = runBlocking {
+        val r = Rig().apply { direct.down = true; cloud.down = true }
+        try { r.api.fetchDebt("a", "s"); fail("xato kutilgan edi") } catch (e: ServerException) {
+            assertEquals("down", e.message)
+            assertEquals(1, e.suppressed.size)
+        }
+    }
+
     @Test fun noCloudMeansErrorsSurface() = runBlocking {
         val r = Rig().apply { cloudReady = false; direct.down = true }
         try { r.api.fetchDebt("a", "s"); fail("xato kutilgan edi") } catch (e: ServerException) { assertEquals(ServerError.CONNECT, e.kind) }

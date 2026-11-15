@@ -71,7 +71,15 @@ class AutoBackend(
             if (!cloudReady() || !unreachable(e)) throw e
             markDown()
             lastRoute = Route.CLOUD
-            block(cloud)
+            try {
+                block(cloud)
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                throw c
+            } catch (c: Exception) {
+                // ikkala yo'l ham ishlamadi — serverning o'z xatosi ko'rsatiladi (u aniqroq)
+                e.addSuppressed(c)
+                throw e
+            }
         }
     }
 

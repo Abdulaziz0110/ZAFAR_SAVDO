@@ -239,7 +239,9 @@ object ServiceLocator {
         com.ilxomjon.dur_novvot_dokon.data.remote.AutoBackend(
             direct = directApi, cloud = relayClient,
             directReady = { secure.serverConfig.isComplete },
-            cloudReady = { cloudReady },
+            // Admin bulut yo'lidan FAQAT kompyuter ko'prigi ishlab turganda foydalanadi: aks holda so'rovga javob
+            // beradigan hech kim yo'q (Admin o'ziga o'zi so'rov yuborib kutib qolardi)
+            cloudReady = { cloudReady && (!AppRole.isAdmin || relayHost.pcHost) },
             localNet = { network.state.value.let { it.wifi || it.vpn } },
         )
     }
@@ -293,7 +295,8 @@ object ServiceLocator {
     val history by lazy { HistoryRepository(historyDb) }
     val parked by lazy { ParkedCartRepository(localDb, draft, catalog) }
     val localReports by lazy { LocalReportRepository(historyDb) }
-    val diagnostics by lazy { DiagnosticsRepository(app, secure, api, network, outbox, historyDb, localDb) }
+    // v5.3: diagnostika serverni TO'G'RIDAN tekshiradi (bulut yo'li alohida) — xato aniq ko'rinsin
+    val diagnostics by lazy { DiagnosticsRepository(app, secure, directApi, network, outbox, historyDb, localDb) }
     val repeatSale by lazy { com.ilxomjon.dur_novvot_dokon.data.repo.RepeatSale(catalog, draft, parked) }
     val shareStore by lazy { ShareStore(app) }
     val share: ShareRepository by lazy {
