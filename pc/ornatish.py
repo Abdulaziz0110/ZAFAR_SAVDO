@@ -483,7 +483,9 @@ def step_autostart():
             except OSError:
                 pass
     path = os.path.join(startup, STARTUP_NAME)
-    with open(path, "w", encoding="ascii", errors="replace", newline="") as f:
+    # v5.3: UTF-16 (BOM bilan) — yo'lda kirill harflari bo'lsa ham (C:\Users\Администратор\...) to'g'ri o'qiladi.
+    # Avval ASCII edi: kirill harflari "?" bo'lib, kompyuter yonganda "Не удается найти указанный файл" chiqardi.
+    with open(path, "w", encoding="utf-16", newline="") as f:
         f.write(startup_vbs(pythonw(), EXPORT, HERE))
     ok("avtozapuskka qo'yildi: %s" % path)
     # Ehtiyot: har soatda tekshiruvchi vazifa — dastur to'xtab qolgan bo'lsa qayta ishga tushadi

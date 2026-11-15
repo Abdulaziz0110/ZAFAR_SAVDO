@@ -1429,6 +1429,10 @@ def loop(cfg):
     onec = OneC(cfg)
     writer = onec_write.Writer(cfg, cloud, onec, HERE, app_onec=OneCApp(cfg))
     inbox = cfg.inbox
+    try:
+        fix_startup()
+    except Exception as e:  # noqa: BLE001
+        log.warning("avtozapusk faylini tuzatib bo'lmadi: %s", e)
     waker = Waker(cfg, ["w/%s" % inbox, "p/%s/scale" % inbox, "p/%s/dreq" % inbox, "p/%s/creq" % inbox]).start()
     # v5.3: telefonlar ko'prigi - alohida oqimda (1C band bo'lsa ham telefonlar kutib qolmaydi)
     if getattr(cfg, "relay_on", True):
@@ -1608,6 +1612,47 @@ def safe_status(cloud, text, ok):
         cloud.status(text, ok)
     except Exception as e:
         log.warning("holat yozilmadi: %s", e)
+
+
+STARTUP_NAME = "IMSOFT_1C_kodlar.vbs"
+
+
+def startup_text(py_w, script, workdir):
+    return ("' IMSOFT: 1C <-> telefonlar (fonda, oynasiz). Dastur o'zi yozadi.\r\n"
+            'Set sh = CreateObject("WScript.Shell")\r\n'
+            'sh.CurrentDirectory = "%s"\r\n'
+            'sh.Run """%s"" ""%s""", 0, False\r\n') % (workdir, py_w, script)
+
+
+def fix_startup(startup_dir=None, py_w=None, script=None, workdir=None):
+    """v5.3: avtozapusk faylini o'zi tuzatadi. Eski fayl ASCII'da yozilgan edi — yo'ldagi kirill harflari
+    ("Администратор") "?" bo'lib qolib, kompyuter yonganda "Не удается найти указанный файл" chiqardi.
+    Endi UTF-16'da, hozir ishlayotgan Python va shu papkaga qarab qayta yoziladi. @return yozildimi."""
+    if startup_dir is None:
+        if os.name != "nt":
+            return False
+        startup_dir = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup")
+    if not os.path.isdir(startup_dir):
+        return False
+    if py_w is None:
+        w = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+        py_w = w if os.path.exists(w) else sys.executable
+    script = script or os.path.abspath(__file__)
+    workdir = workdir or HERE
+    want = startup_text(py_w, script, workdir)
+    path = os.path.join(startup_dir, STARTUP_NAME)
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+        cur = raw.decode("utf-16") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else None
+        if cur == want:
+            return False
+    except OSError:
+        pass
+    with open(path, "w", encoding="utf-16", newline="") as f:
+        f.write(want)
+    log.info("avtozapusk fayli tuzatildi: %s", path)
+    return True
 
 
 def main():

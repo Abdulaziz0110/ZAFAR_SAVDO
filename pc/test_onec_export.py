@@ -380,6 +380,22 @@ class Codes(unittest.TestCase):
         items, _ = O(self.cfg, conn=object()).goods_codes(s)
         self.assertEqual(items[0]["b"], ["111", "222"])
 
+    def test_fix_startup_writes_cyrillic_path_as_utf16(self):
+        import tempfile
+        d = tempfile.mkdtemp()
+        old = os.path.join(d, self.m.STARTUP_NAME)
+        # eski buzuq fayl: ASCII, kirill harflari "?"
+        with open(old, "w", encoding="ascii", errors="replace") as f:
+            f.write(self.m.startup_text(r"C:\Users\Администратор\Python\pythonw.exe", r"D:\imsoft\onec_export.py", r"D:\imsoft"))
+        py = r"C:\Users\Администратор\AppData\Local\Programs\Python\Python312\pythonw.exe"
+        self.assertTrue(self.m.fix_startup(d, py, r"D:\imsoft\onec_export.py", r"D:\imsoft"))
+        raw = open(old, "rb").read()
+        self.assertEqual(raw[:2], b"\xff\xfe")
+        self.assertIn("Администратор", raw.decode("utf-16"))
+        # ikkinchi marta - o'zgarmaydi
+        self.assertFalse(self.m.fix_startup(d, py, r"D:\imsoft\onec_export.py", r"D:\imsoft"))
+        self.assertFalse(self.m.fix_startup(os.path.join(d, "yoq")))
+
     def test_shop_config(self):
         """Do'kondagi haqiqiy tuzilish (discover.txt): Справочник.Товары, Справочник.Штрих, РегистрСведений.ПлуКод (КодПлу va плу)."""
         m = self.m
