@@ -42,10 +42,38 @@ class AgentSecretFragment : SecretFragment() {
         l += SecretItem("🕰️", getString(R.string.sx_hours), getString(R.string.sx_hours_sub)) { hours() }
         l += SecretItem("⚡", getString(R.string.sx_turbo), getString(R.string.sx_turbo_sub)) { turbo() }
         l += SecretItem("🔑", getString(R.string.sx_cloud), getString(R.string.sx_cloud_sub)) { cloudPassport() }
+        // v5.3: server manzili va hamma parollar FAQAT shu yerda (oddiy sozlamalarda yo'q), ochiq ko'rinadi
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            l += SecretItem("🔐", getString(R.string.sx_pass), getString(R.string.sx_pass_sub)) { passwords() }
+            l += SecretItem("🖥️", getString(R.string.sx_server), getString(R.string.sx_server_sub)) { navigator().push(ServerSettingsFragment()) }
+        }
         if (ServiceLocator.share.currentClient()?.queueKey?.isNotEmpty() == true) {
             l += SecretItem("🧾", getString(R.string.sx_test_receipt), getString(R.string.sx_test_receipt_sub, ServiceLocator.share.currentClient()?.name.orEmpty())) { testReceipt() }
         }
         return l
+    }
+
+    private fun passwords() {
+        val cfg = ServiceLocator.secure.serverConfig
+        val st = ServiceLocator.shareStore
+        val rows = listOf(
+            getString(R.string.sx_p_host) to cfg.host,
+            getString(R.string.sx_p_db) to cfg.database,
+            getString(R.string.sx_p_login) to cfg.login,
+            getString(R.string.sx_p_password) to cfg.password,
+            getString(R.string.sx_p_cloud) to st.dbUrl,
+            getString(R.string.sx_p_secret) to st.secret,
+            getString(R.string.sx_p_inbox) to st.inboxKey,
+            getString(R.string.sx_p_agents) to st.agentKey,
+        )
+        val text = rows.joinToString("\n\n") { (k, v) -> k + ":\n" + v.ifEmpty { "—" } }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.sx_pass).setMessage(text)
+            .setPositiveButton(R.string.close, null)
+            .setNeutralButton(R.string.sx_copy) { _, _ ->
+                val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("imsoft", text))
+            }.show()
     }
 
     private fun stats() {

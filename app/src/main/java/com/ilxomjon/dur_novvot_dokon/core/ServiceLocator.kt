@@ -98,24 +98,24 @@ object ServiceLocator {
                 if (shareStore.isConfigured) ShareWorker.schedule(app)
             }
             runCatching { com.ilxomjon.dur_novvot_dokon.data.extras.Extras.onAppStart(app) }
-            // v5.0.3: dollar kursi internetdagi bozor kursidan (1C'ga qaralmaydi). Qo'lda yozilgani almashtirilmaydi.
+            // v5.3: dollar kursi har kuni Markaziy bank kursidan (qo'lda yozilgani ham almashtiriladi)
             appScope.launch(Dispatchers.IO) { runCatching { refreshRate() } }
         }
     }
 
     /**
-     * Kursni internetdan yangilash: kuniga bir marta, faqat qo'lda yozilmagan bo'lsa.
-     * Bozorga yaqin (bank) kursi birinchi, bo'lmasa javob bergan birinchi manba.
+     * v5.3: dollar kursi — HAR KUNI O'ZI, Markaziy bankning rasmiy kursidan (qo'lda yozish yo'q; avval qo'lda
+     * yozilgan son ham almashtiriladi). Markaziy bank javob bermasa — bank kursi; internet yo'q bo'lsa oxirgisi qoladi.
      */
-    suspend fun refreshRate() {
+    suspend fun refreshRate(force: Boolean = false) {
         val p = appPrefs
-        if (p.localRateManual) return
-        if (p.localRate > 0 && System.currentTimeMillis() - p.localRateAt < 12 * 3_600_000L) return
+        if (!force && !p.localRateManual && p.localRate > 0 && System.currentTimeMillis() - p.localRateAt < 6 * 3_600_000L) return
         val list = rateOnline.load()
-        val market = list.firstOrNull { q -> uz.imsoft.shared.android.RateOnline.SOURCES.firstOrNull { it.title == q.source }?.market == true }
-        val v = (market ?: list.firstOrNull())?.value ?: return
+        val official = list.firstOrNull { q -> uz.imsoft.shared.android.RateOnline.SOURCES.firstOrNull { it.title == q.source }?.market == false }
+        val v = (official ?: list.firstOrNull())?.value ?: return
         if (v < 1000 || v > 1_000_000) return
         p.localRate = v
+        p.localRateManual = false
         runCatching { catalog.load() }
     }
 
@@ -387,6 +387,8 @@ object ServiceLocator {
         com.ilxomjon.dur_novvot_dokon.data.onec.OneCRepository(app, shareStore).also { it.scope = appScope }
     }
     /** v5.0: dollar kursi internetdan (bozorga yaqin bank kursi + rasmiy kurs). */
+    /** v5.3: mahsulot rasmlari (faqat shu telefonda). */
+    val images by lazy { com.ilxomjon.dur_novvot_dokon.data.images.ProductImages(app) }
     val rateOnline: uz.imsoft.shared.android.RateOnline by lazy { uz.imsoft.shared.android.RateOnline(app) }
 
     /** v5.2 (A7): mahsulot ma'lumotlari (bio) — internetsiz ham ochiladi. */

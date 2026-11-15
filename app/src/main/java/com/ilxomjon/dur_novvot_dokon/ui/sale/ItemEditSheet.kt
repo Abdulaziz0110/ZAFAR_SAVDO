@@ -58,6 +58,7 @@ class ItemEditSheet : BottomSheetDialogFragment() {
         binding.tvInfo.text = if (product.hasBlock) getString(R.string.block_info, Money.qtyDisplay(product.blockSize)) else ""
         binding.tvInfo.show(product.hasBlock)
         bindBio(product.id, product.name)
+        bindPhoto(product.id)
         val showCost = args.getBoolean(ARG_COST)
         binding.tvCost.show(showCost)
         if (showCost) binding.tvCost.text = getString(R.string.item_cost, requireContext().money(vm.costPrice, vm.currency))
@@ -205,6 +206,36 @@ class ItemEditSheet : BottomSheetDialogFragment() {
      * parametrlar USTIDA ochiladi (kitob ochilgandek); yana bossa yopiladi.
      * Sozlamada "avtomatik ochish" yoqilgan bo'lsa — darhol ochiq, lekin klaviatura va kursor o'z holida qoladi.
      */
+    /** v5.3: mahsulot rasmi (telefonda saqlangan bo'lsa) — nom ostida. Bosilsa kattalashadi. */
+    private fun bindPhoto(productId: String) {
+        if (!ServiceLocator.images.has(productId)) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bmp = ServiceLocator.images.full(productId) ?: return@launch
+            val b = _binding ?: return@launch
+            val parent = b.tvBio.parent as? android.view.ViewGroup ?: return@launch
+            val ctx = requireContext()
+            val small = uz.imsoft.shared.android.Ui.dp(ctx, 140)
+            val iv = android.widget.ImageView(ctx).apply {
+                setImageBitmap(bmp)
+                scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(v: View, o: android.graphics.Outline) { o.setRoundRect(0, 0, v.width, v.height, uz.imsoft.shared.android.Ui.dp(v.context, 14).toFloat()) }
+                }
+                var big = false
+                setOnClickListener {
+                    big = !big
+                    scaleType = if (big) android.widget.ImageView.ScaleType.FIT_CENTER else android.widget.ImageView.ScaleType.CENTER_CROP
+                    layoutParams = layoutParams.apply { height = if (big) uz.imsoft.shared.android.Ui.dp(ctx, 320) else small }
+                }
+            }
+            parent.addView(
+                iv, parent.indexOfChild(b.tvBio),
+                android.view.ViewGroup.MarginLayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, small).apply { bottomMargin = uz.imsoft.shared.android.Ui.dp(ctx, 8) },
+            )
+        }
+    }
+
     private fun bindBio(productId: String, productName: String) {
         val bio = ServiceLocator.bio.of(productId)
         val b = _binding ?: return

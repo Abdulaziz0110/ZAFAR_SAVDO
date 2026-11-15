@@ -216,10 +216,9 @@ class MainActivity : AppCompatActivity(), Navigator {
             "stats" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment()); return }
             "clients" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.ClientsStatsFragment()); return }
             "boss" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment()); return }
-            "admin" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment()); return }
+            "admin" -> { openTab(R.id.nav_last); return }
             "labels" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment()); return }
             "scale" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment()); return }
-            "rate" -> { openTab(R.id.nav_home); push(com.ilxomjon.dur_novvot_dokon.ui.admin.RateFragment()); return }
             // v5.1.1: buyurtma bildirishnomasi bosilganda
             "orders" -> { openTab(R.id.nav_home); com.ilxomjon.dur_novvot_dokon.ui.share.OrdersSheet.show(supportFragmentManager); return }
         }

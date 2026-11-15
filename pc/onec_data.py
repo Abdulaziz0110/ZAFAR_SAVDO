@@ -235,6 +235,36 @@ def suppliers_payload(onec, d_from, d_to, now_ms):
     out = {"v": 1, "f": ymd(d_from), "t": ymd(d_to), "at": now_ms, "list": build_suppliers(people, balances, docs), "err": errors}
     out["ops"] = cash_ops(onec)
     out["refs"] = catalog_refs(onec)
+    out["tel"] = party_phones(onec)
+    return out
+
+
+# v5.3: hamma kontragentlarning telefoni (mijozlar ro'yxatida va qarzdorlarda ko'rsatish uchun)
+PHONES_Q = ("ВЫБРАТЬ К.Код КАК Код, К.Наименование КАК Имя, К.Тел КАК Тел ИЗ Справочник.Контрагенты КАК К "
+            "ГДЕ НЕ К.ПометкаУдаления И НЕ К.ЭтоГруппа")
+
+
+def party_phones(onec):
+    """[[kod, nomi, telefon], ...] - faqat telefoni borlar. Xato bo'lsa bo'sh."""
+    rows = None
+    for q in (PHONES_Q, PHONES_Q.replace(" И НЕ К.ЭтоГруппа", "")):
+        try:
+            rows = onec.query(q, ["Код", "Имя", "Тел"])
+            break
+        except Exception as e:  # noqa: BLE001 - bazada bu rekvizit bo'lmasligi mumkin
+            log.debug("kontragent telefonlari: %s", e)
+    out = []
+    for r in rows or []:
+        tel = text(r.get("Тел")).strip()
+        name = text(r.get("Имя")).strip()
+        if not tel or not name:
+            continue
+        code = r.get("Код")
+        if isinstance(code, float) and code == int(code):
+            code = int(code)
+        out.append([str(code if code is not None else "").strip(), name, tel[:40]])
+        if len(out) >= 5000:
+            break
     return out
 
 

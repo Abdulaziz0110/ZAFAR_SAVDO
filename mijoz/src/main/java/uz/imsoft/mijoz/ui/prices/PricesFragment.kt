@@ -137,7 +137,7 @@ class PricesFragment : Fragment() {
         val bio = uz.imsoft.mijoz.ui.MijozBio.of(Locator.data.state.value.snapshot?.bio, r.item.id)
         if (bio != null) {
             val auto = Locator.prefs.bioAuto
-            val tvBio = uz.imsoft.shared.android.Ui.text(ctx, bio.text).apply {
+            val tvBio = uz.imsoft.shared.android.Ui.text(ctx, bio.text, com.google.android.material.R.style.TextAppearance_Material3_BodyLarge).apply {
                 setPadding(uz.imsoft.shared.android.Ui.dp(ctx, 12), uz.imsoft.shared.android.Ui.dp(ctx, 8), uz.imsoft.shared.android.Ui.dp(ctx, 12), uz.imsoft.shared.android.Ui.dp(ctx, 8))
                 setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceVariant))
                 visibility = if (auto) View.VISIBLE else View.GONE

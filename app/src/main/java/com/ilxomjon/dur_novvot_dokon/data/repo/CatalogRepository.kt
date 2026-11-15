@@ -102,6 +102,19 @@ class CatalogRepository(
     }
 
     /**
+     * v5.3: to'lov qabul qilindi — ro'yxatdagi qarz DARHOL kamayadi (server tasdiqlagach haqiqiy qiymat keladi).
+     * Faqat ko'rinish uchun: to'lovning o'zi navbat orqali serverga boradi.
+     */
+    suspend fun noteDebtPaid(storeId: String, paidSom: Double) {
+        val s = storeById(storeId) ?: return
+        val left = Money.round2((s.debtSom - paidSom).coerceAtLeast(0.0))
+        mutex.withLock {
+            withContext(Dispatchers.IO) { dao.updateDebt(storeId, Money.plain(left), Money.plain(s.debtUsd)) }
+            reload()
+        }
+    }
+
+    /**
      * Qarzning oxirgi ma'lum qiymati va vaqti: serverdan alohida so'ralgan bo'lsa shu, aks holda oxirgi sinxron (katalog) vaqti.
      * Lokal yuborilmagan to'lovlar bu yerga QO'SHILMAYDI.
      */

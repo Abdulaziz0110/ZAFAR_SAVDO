@@ -126,7 +126,7 @@ class BossFragment : CodeFragment() {
         val stores = ServiceLocator.catalog.state.value.stores
         val owing = stores.filter { it.debtSom > 0 || it.debtUsd > 0 }.sortedByDescending { it.debtSom + it.debtUsd * rate }
         row(debts, getString(R.string.boss_debt_total, owing.size), getString(R.string.boss_debt_sub), money2(owing.sumOf { it.debtSom }, owing.sumOf { it.debtUsd }), R.drawable.ic_request_quote, 3) {
-            navigator().push(DebtorsFragment())
+            navigator().push(PartiesFragment.of(PartiesFragment.CLIENTS))
         }
         // v4.0: qarz "yoshi" — oxirgi to'lovdan beri necha kun (30 kundan oshsa qizil)
         val lastPay = HashMap<String, Long>()

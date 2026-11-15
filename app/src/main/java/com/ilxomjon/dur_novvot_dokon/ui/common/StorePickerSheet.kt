@@ -64,7 +64,87 @@ class StorePickerSheet : BottomSheetDialogFragment() {
             recentIds = ServiceLocator.history.recentStoreIds()
             applyFilter(lastQuery)
         }
+        // v5.3: yangi mijozni SHU YERNING O'ZIDA qo'shish (savdodan chiqib, sozlamalarga borish shart emas)
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            (binding.chipDebtors.parent as? android.widget.LinearLayout)?.let { col ->
+                val ctx = requireContext()
+                val b = uz.imsoft.shared.android.Ui.button(ctx, getString(R.string.sn_new), outlined = true, top = 0, icon = R.drawable.ic_person_add) { newClient() }
+                val pad = uz.imsoft.shared.android.Ui.dp(ctx, 16)
+                col.addView(b, col.indexOfChild(binding.chipDebtors) + 1, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(pad, 0, pad, pad / 2) })
+                btnNew = b
+            }
+        }
     }
+
+    private var btnNew: com.google.android.material.button.MaterialButton? = null
+
+    private fun newClient() {
+        val ctx = requireContext()
+        if (!ServiceLocator.onec.ready) { toast(getString(R.string.oc_no_cloud)); return }
+        val (tilN, eN) = uz.imsoft.shared.android.Ui.field(ctx, getString(R.string.kf_name), value = lastQuery.trim())
+        val (tilP, eP) = uz.imsoft.shared.android.Ui.field(ctx, getString(R.string.kf_phone), android.text.InputType.TYPE_CLASS_PHONE)
+        val box = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val p = uz.imsoft.shared.android.Ui.dp(ctx, 20)
+            setPadding(p, 0, p, 0)
+            addView(tilN); addView(tilP)
+        }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx).setTitle(R.string.sn_new).setMessage(R.string.sn_hint).setView(box)
+            .setPositiveButton(R.string.sn_add) { _, _ ->
+                val name = eN.text?.toString()?.trim()?.replace(Regex("\\s+"), " ").orEmpty()
+                val phone = eP.text?.toString()?.trim().orEmpty()
+                if (name.length < 2) { toast(getString(R.string.kf_err_name)); return@setPositiveButton }
+                createClient(name, phone)
+            }.setNegativeButton(R.string.cancel, null).show()
+    }
+
+    /** 1C'ga yuboradi, kiritilishini kutadi (90 soniyagacha), katalogni yangilaydi va yangi mijozni tanlab beradi. */
+    private fun createClient(name: String, phone: String) {
+        val fields = LinkedHashMap<String, String>()
+        fields[uz.imsoft.shared.onec.PartyField.NAME] = name
+        if (phone.isNotEmpty()) fields[uz.imsoft.shared.onec.PartyField.PHONE] = phone
+        fields[uz.imsoft.shared.onec.PartyField.GROUP] = uz.imsoft.shared.onec.PartyField.CLIENTS
+        val req = uz.imsoft.shared.onec.WriteRequest(uz.imsoft.shared.onec.WriteCodec.newId(), uz.imsoft.shared.onec.WriteKind.PARTY_NEW, System.currentTimeMillis(), "", "", fields = fields)
+        if (req.problem() != null) { toast(getString(R.string.kf_err_other)); return }
+        btnNew?.isEnabled = false
+        btnNew?.text = getString(R.string.sn_wait)
+        viewLifecycleOwner.lifecycleScope.launch {
+            var found: Store? = null
+            var failed = ""
+            try {
+                ServiceLocator.onec.submit(req, "Admin")
+                val key = com.ilxomjon.dur_novvot_dokon.core.Translit.key(name)
+                var i = 0
+                while (i < 18 && found == null && failed.isEmpty()) {
+                    kotlinx.coroutines.delay(5_000)
+                    runCatching { ServiceLocator.onec.refreshResults() }
+                    val w = ServiceLocator.onec.state.value.writes.firstOrNull { it.req.id == req.id }
+                    if (w?.result?.ok == false) failed = w.result.error
+                    if (w?.result?.ok == true) {
+                        runCatching { ServiceLocator.catalog.sync() }
+                        found = ServiceLocator.catalog.state.value.stores.firstOrNull { it.searchKey == key }
+                    }
+                    i++
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failed = e.message ?: "?"
+            }
+            val st = found
+            if (st != null && _binding != null) {
+                parentFragmentManager.setFragmentResult(requireArguments().getString(ARG_KEY).orEmpty(), Bundle().apply { putString(KEY_ID, st.id) })
+                toast(getString(R.string.sn_done, st.name))
+                dismiss()
+                return@launch
+            }
+            btnNew?.isEnabled = true
+            btnNew?.text = getString(R.string.sn_new)
+            toast(if (failed.isNotEmpty()) getString(R.string.sn_failed, failed.take(120)) else getString(R.string.sn_later))
+        }
+    }
+
+    private fun toast(text: String) = android.widget.Toast.makeText(requireContext(), text, android.widget.Toast.LENGTH_LONG).show()
 
     private val index by lazy { uz.imsoft.shared.SearchIndex(all, { it.name }, { it.id }, { it.regionName }) }
 
@@ -88,6 +168,7 @@ class StorePickerSheet : BottomSheetDialogFragment() {
     }
 
     override fun onDestroyView() {
+        btnNew = null
         super.onDestroyView()
         _binding = null
     }

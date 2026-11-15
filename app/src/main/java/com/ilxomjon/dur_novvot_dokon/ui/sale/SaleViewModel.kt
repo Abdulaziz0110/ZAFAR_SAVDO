@@ -227,11 +227,29 @@ class SaleViewModel(
         val allowed: Set<String>? = if (f == ListFilter.All) null else base.mapTo(HashSet()) { it.id }
         val pop = popularity
         val opts = SearchOptions(fuzzy = prefs.fFuzzySearch, layoutFix = prefs.fLayoutFix)
-        val hits = indexFor(all).search(q, opts, popularity = { pop[it.id] ?: 0.0 })
+        // v5.3: bitta maydonda kod, nom va narx. Raqam bo'laklari ajratiladi; nom qismi — avvalgi qidiruv bilan.
+        val parsed = uz.imsoft.shared.SmartQuery.parse(q)
+        val nameQuery = if (parsed.numbers.isEmpty()) q else parsed.text
+        val hits = (if (nameQuery.isBlank()) emptyList() else indexFor(all).search(nameQuery, opts, popularity = { pop[it.id] ?: 0.0 }))
             .filter { allowed == null || it.item.id in allowed }
         val hl = HashMap<String, List<IntRange>>(hits.size * 2)
         for (h in hits) if (h.ranges.isNotEmpty()) hl[h.item.id] = h.ranges
-        return ListState(products = hits.map { it.item }, highlights = hl, approximate = hits.isNotEmpty() && hits.all { it.approximate })
+        if (parsed.numbers.isEmpty()) {
+            return ListState(products = hits.map { it.item }, highlights = hl, approximate = hits.isNotEmpty() && hits.all { it.approximate })
+        }
+        // Narx — savdoda HOZIR tanlangan narx turi (1/2/3/4) va valyutada
+        val d = draftRepo.state.value
+        val rate = catalog.state.value.rate
+        var byName = hits.map { it.item }
+        // faqat raqam yozilganda nomida shu raqam bor tovarlar ham oxirida ko'rinsin ("7" -> "7 UP")
+        if (parsed.onlyNumbers) {
+            byName = indexFor(all).search(q, opts, popularity = { pop[it.id] ?: 0.0 }).map { it.item }.filter { allowed == null || it.id in allowed }
+        }
+        val out = uz.imsoft.shared.SmartQuery.refine(
+            parsed, byName, base, { it.id }, { it.name },
+            { com.ilxomjon.dur_novvot_dokon.domain.Pricing.unitPrice(it, d.level, d.currency, rate) },
+        )
+        return ListState(products = out.take(400), highlights = hl)
     }
 
     /** Qidiruvsiz ro'yxat tartibi (Sozlamalar ▸ Qulayliklar). Taklif/savatcha filtrlarida o'z tartibi saqlanadi. */

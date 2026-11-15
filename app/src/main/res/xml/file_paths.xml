@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="share" path="share/" />
+    <!-- v5.3: mahsulot rasmi uchun kamera vaqtinchalik fayli -->
+    <cache-path name="camera" path="camera/" />
 </paths>

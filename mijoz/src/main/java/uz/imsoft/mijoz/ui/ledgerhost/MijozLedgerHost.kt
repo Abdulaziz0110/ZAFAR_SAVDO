@@ -42,7 +42,7 @@ object MijozLedgerHost : LedgerHost {
     override val receiptStaff: String get() = Locator.prefs.receiptStaff
     override val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle
         get() {
-            val base = uz.imsoft.shared.receipt.ReceiptStyle.decode(Locator.data.state.value.snapshot?.receiptStyle)
+            val base = uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
             val p = Locator.prefs
             val sub = p.receiptSub.trim()
             val thanks = p.receiptThanks.trim()

@@ -93,8 +93,14 @@ data class Suppliers(
     val from: Long, val to: Long, val at: Long, val list: List<Supplier>,
     val errors: List<String> = emptyList(), val ops: List<CashOp> = emptyList(),
     val refs: Map<String, List<String>> = emptyMap(),
+    /** v5.3: kontragent telefonlari: kalit — 1C kodi va (zaxira) kichik harfli nomi. */
+    val phones: Map<String, String> = emptyMap(),
 ) {
+    /** Mijoz/ta'minotchi telefoni: avval kodi, bo'lmasa nomi bo'yicha. */
+    fun phoneOf(code: String, name: String): String = phones[code.trim()] ?: phones[nameKey(name)].orEmpty()
+
     companion object {
+        fun nameKey(name: String): String = "n:" + name.trim().lowercase()
         const val GROUPS = "grp"
         const val BRANDS = "brd"
         const val UNITS = "unit"
@@ -166,7 +172,15 @@ object OneCCodec {
             val names = (v as? List<*>)?.mapNotNull { n -> s(n).trim().takeIf { it.isNotEmpty() } }.orEmpty()
             if (key.isNotEmpty() && names.isNotEmpty()) refs[key] = names
         }
-        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops, refs)
+        val phones = HashMap<String, String>()
+        for (x in o.arr("tel")) {
+            val l = x as? List<Any?> ?: continue
+            val tel = s(l.getOrNull(2)).trim()
+            if (tel.isEmpty()) continue
+            s(l.getOrNull(0)).trim().takeIf { it.isNotEmpty() }?.let { phones[it] = tel }
+            s(l.getOrNull(1)).trim().takeIf { it.isNotEmpty() }?.let { phones[Suppliers.nameKey(it)] = tel }
+        }
+        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops, refs, phones)
     }
 
     fun lineToList(l: OneCLine): List<Any?> = listOf(l.name, l.code, l.qty, l.priceSom, l.sumSom, l.priceUsd, l.sumUsd)

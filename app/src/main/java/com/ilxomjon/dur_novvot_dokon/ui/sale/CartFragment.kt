@@ -28,8 +28,10 @@ import com.ilxomjon.dur_novvot_dokon.ui.viewModel
 import uz.imsoft.shared.android.NumInput
 
 /**
- * v5.0 Savatcha: tovarlar ro'yxati va to'lov bitta ekranda — yakunlash uchun alohida oyna ochilmaydi.
- * "Yakunlash" tugmasini uzoq (3 soniya) bosib tursangiz — savatchani butunlay tozalash taklif qilinadi.
+ * v5.3 Savatcha — IKKI QADAM, bir-biriga aralashmaydi:
+ *   1) "Mahsulotlar" — faqat ro'yxat: bosilsa miqdor/narx, UZOQ bosilsa aynan shu mahsulot olib tashlanadi (qaytarsa bo'ladi);
+ *   2) "To'lov" — chegirma, naqd/plastik, chek printeri, qarz.
+ * Tepada axlat qutisi — hammasini tozalash (tasdiq bilan). Pastdagi tugma: 1-qadamda "To'lovga o'tish", 2-qadamda "Yakunlash".
  * Chek tanlovi: Printer 1 (do'kon), Printer 1+2, Printer 2 (filial), Cheksiz.
  */
 class CartFragment : Fragment() {
@@ -39,6 +41,10 @@ class CartFragment : Fragment() {
     private lateinit var vm: FinishViewModel
     private var updating = false
     private var shown: List<com.ilxomjon.dur_novvot_dokon.domain.CartLine> = emptyList()
+    /** 0 — mahsulotlar, 1 — to'lov. */
+    private var step = 0
+    private var steps: com.google.android.material.button.MaterialButtonToggleGroup? = null
+    private var tvHint: View? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCartBinding.inflate(inflater, container, false)
@@ -48,7 +54,20 @@ class CartFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         cart = viewModel { CartViewModel(ServiceLocator.draft) }
         vm = viewModel { FinishViewModel(ServiceLocator.draft, ServiceLocator.orders, ServiceLocator.appPrefs) }
-        binding.toolbar.setNavigationOnClickListener { navigator().pop() }
+        binding.toolbar.setNavigationOnClickListener { if (step == 1) setStep(0) else navigator().pop() }
+        binding.toolbar.inflateMenu(R.menu.clear_menu)
+        binding.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.action_clear) { confirmClear(); true } else false }
+        step = savedInstanceState?.getInt(KEY_STEP) ?: 0
+        // Qadam tanlagichi ro'yxat tepasida
+        (binding.lines.parent as? android.widget.LinearLayout)?.let { col ->
+            val g = uz.imsoft.shared.android.Ui.toggle(requireContext(), listOf(getString(R.string.cart_step_goods), getString(R.string.cart_step_pay)), step, 4) { i -> setStep(i) }
+            val pad = uz.imsoft.shared.android.Ui.dp(requireContext(), 16)
+            col.addView(g, 0, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(pad, pad / 4, pad, pad / 2) })
+            steps = g
+            val hint = uz.imsoft.shared.android.Ui.hint(requireContext(), getString(R.string.cart_long_hint), 8).apply { setPadding(pad, 0, pad, 0) }
+            col.addView(hint, col.indexOfChild(binding.lines) + 1)
+            tvHint = hint
+        }
         for (e in listOf(binding.edtDiscountAmount, binding.edtDiscountPercent, binding.edtCash, binding.edtCard)) NumInput.attach(e)
 
         val s0 = vm.state.value
@@ -95,12 +114,45 @@ class CartFragment : Fragment() {
         binding.tvStoreDebt.text = if (debt.isEmpty()) "" else getString(R.string.finish_store_debt, debt)
         binding.tvStoreDebt.show(debt.isNotEmpty())
 
-        binding.btnCheckout.setOnClickListener { ServiceLocator.kpi.tap(); onSend() }
-        // v5.0: tozalash tugmasi olib tashlandi — "Yakunlash"ni uzoq bosib turish bilan tozalanadi
-        binding.btnCheckout.setOnLongClickListener { confirmClear(); true }
+        binding.btnCheckout.setOnClickListener {
+            ServiceLocator.kpi.tap()
+            if (step == 0) setStep(1) else onSend()
+        }
 
         launchOnStarted { cart.state.collect { renderCart(it) } }
         launchOnStarted { vm.state.collect { render(it) } }
+    }
+
+    // ---------------- qadamlar ----------------
+
+    private fun setStep(i: Int) {
+        step = i
+        steps?.let { g -> (g.getChildAt(i) as? com.google.android.material.button.MaterialButton)?.let { if (!it.isChecked) g.check(it.id) } }
+        if (i == 0) {
+            // klaviatura to'lov maydonidan qolgan bo'lsa yopiladi
+            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
+        }
+        applyStep()
+    }
+
+    private fun applyStep() {
+        val b = _binding ?: return
+        val has = shown.isNotEmpty()
+        b.lines.show(step == 0)
+        b.tvEmpty.show(step == 0 && !has)
+        tvHint?.show(step == 0 && has)
+        b.payBox.show(step == 1 && has)
+        b.warnBox.show(step == 1 && vm.state.value.warnings.isNotEmpty())
+        b.btnCheckout.setText(if (step == 0) R.string.cart_to_pay else R.string.finish_send)
+        val s = vm.state.value
+        b.btnCheckout.isEnabled = if (step == 0) has else (!s.sending && !s.invalid && !s.sent && has)
+        b.toolbar.menu.findItem(R.id.action_clear)?.isVisible = has
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(KEY_STEP, step)
     }
 
     // ---------------- tovarlar ----------------
@@ -126,8 +178,10 @@ class CartFragment : Fragment() {
                 binding.lines.addView(row.root)
             }
         }
-        binding.tvEmpty.show(d.lines.isEmpty())
-        binding.payBox.show(d.lines.isNotEmpty())
+        (steps?.getChildAt(0) as? com.google.android.material.button.MaterialButton)?.text =
+            if (d.lines.isEmpty()) getString(R.string.cart_step_goods) else getString(R.string.cart_step_goods_n, d.lines.size)
+        if (d.lines.isEmpty() && step == 1) step = 0
+        applyStep()
         binding.tvCount.text = getString(R.string.sale_items_count, d.itemCount)
         binding.tvTotal.text = requireContext().money(d.total, d.currency)
     }
@@ -236,8 +290,7 @@ class CartFragment : Fragment() {
         binding.tvError.show(err != null || s.invalid)
         if (err != null) binding.tvError.text = getString(R.string.finish_failed) + "\n" + ctx.describeError(err)
         else if (s.invalid) binding.tvError.setText(R.string.amount_invalid)
-        binding.btnCheckout.isEnabled = !s.sending && !s.invalid && !s.sent && shown.isNotEmpty()
-        binding.warnBox.show(s.warnings.isNotEmpty())
+        applyStep()
         if (s.warnings.isNotEmpty()) binding.tvWarnings.text = CheckerSupport.text(ctx, ServiceLocator.draft.state.value, s.warnings)
         if (s.sent) {
             Toast.makeText(ctx, getString(R.string.finish_queued_receipt, s.receipt), Toast.LENGTH_LONG).show()
@@ -249,6 +302,10 @@ class CartFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        steps = null
+        tvHint = null
         _binding = null
     }
+
+    private companion object { const val KEY_STEP = "cart_step" }
 }

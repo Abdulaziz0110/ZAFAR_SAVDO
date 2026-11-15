@@ -276,7 +276,8 @@ class ShareRepository(
     fun setReceiptStaff(v: String) { store.receiptStaff = v.trim().take(40) }
 
     /** Chek ko'rinishi: hozirgi uslub (buzilgan bo'lsa standart). */
-    val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle get() = uz.imsoft.shared.receipt.ReceiptStyle.decode(store.receiptStyle)
+    /** v5.3: chek ko'rinishi sozlamasi olib tashlandi — hamma joyda BITTA standart chek (kompyuterdagi kabi). */
+    val receiptStyle: uz.imsoft.shared.receipt.ReceiptStyle get() = uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
     fun setReceiptStyle(v: uz.imsoft.shared.receipt.ReceiptStyle) {
         val t = v.normalized().encode()
         if (t != store.receiptStyle) { store.receiptStyle = t; store.markAllDirty(); publishState() }
@@ -710,7 +711,7 @@ class ShareRepository(
             System.currentTimeMillis(), c.id, c.name, cat.rate, debt,
             items.sortedBy { it.name.lowercase() }, (base + mirrorEntries).let { l -> editHook?.invoke(c.id, l) ?: l }, b.coverage, cat.lastSyncAt, reportBalance = b.balance,
             features = features, shopName = store.receiptHeader, shopFooter = store.receiptFooter,
-            receiptStyle = store.receiptStyle, receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
+            receiptStyle = "", receiptLogo = store.receiptLogo?.let { B64.encode(it) }.orEmpty(),
             // v5.2 (A7): mahsulot ma'lumotlari 2-ilovaga ham boradi
             bio = uz.imsoft.shared.bio.BioBook.pack(com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.bio.state.value),
         )

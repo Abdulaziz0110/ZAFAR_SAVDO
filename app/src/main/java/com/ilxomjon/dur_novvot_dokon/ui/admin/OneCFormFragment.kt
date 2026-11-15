@@ -43,6 +43,10 @@ class OneCFormFragment : CodeFragment() {
     // v5.1: yangi tovar kartochkasi (1C'dagi maydonlar)
     private val card = HashMap<String, String>()
     private var cardBox: LinearLayout? = null
+    /** v5.3: tur tanlangandagi maydonlar (tarozi: PLU va tarozi; avtomatik: kod namunasi). */
+    private var typeBox: LinearLayout? = null
+    /** v5.3: kam ishlatiladigan kartochka maydonlari (brend, o'lchov birligi). */
+    private var extraCardBox: LinearLayout? = null
     private var eVolume: TextInputEditText? = null
     private var ePack: TextInputEditText? = null
     private var eMarkup: TextInputEditText? = null
@@ -73,47 +77,63 @@ class OneCFormFragment : CodeFragment() {
                 else -> R.string.of_new_goods_hint
             },
         ), 4))
-        c.addView(Ui.section(ctx, getString(
+        val isNew = kind == WriteKind.NEW_GOODS
+        // v5.3: yangi tovarda "namuna" tanlash kamdan-kam kerak — u "Qo'shimcha" ichida; qolgan shakllarda tepada
+        val extra = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        val head: LinearLayout = if (isNew) extra else c
+        head.addView(Ui.section(ctx, getString(
             when {
                 kind == WriteKind.CLIENT_PAY -> R.string.wf_client
                 isCash -> R.string.of_op
-                kind == WriteKind.NEW_GOODS -> R.string.ng_sample_opt
+                isNew -> R.string.ng_sample_opt
                 else -> R.string.of_product
             },
         )))
-        tvWho = Ui.title(ctx, "", 4).also { c.addView(it) }
-        tvInfo = Ui.hint(ctx, "", 2).also { c.addView(it) }
-        c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = if (isGoods) R.drawable.ic_search else R.drawable.ic_person) { pick() })
+        tvWho = Ui.title(ctx, "", 4).also { head.addView(it) }
+        tvInfo = Ui.hint(ctx, "", 2).also { head.addView(it) }
+        head.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = if (isGoods) R.drawable.ic_search else R.drawable.ic_person) { pick() })
         when {
             isGoods -> {
-                if (kind == WriteKind.NEW_GOODS) {
-                    c.addView(Ui.section(ctx, getString(R.string.of_new_name_sec)))
-                    c.addView(Ui.hint(ctx, getString(R.string.ng_code_auto), 0))
-                    eName = Ui.field(ctx, getString(R.string.of_new_name)).also { c.addView(it.first) }.second
+                if (isNew) {
+                    // v5.3: ASOSIY maydonlar tepada, tartib bilan: guruh, nom, hajm, narxlar, turi.
+                    // 90% hollarda to'ldirilmaydigan qolgan hammasi — pastdagi "Qo'shimcha maydonlar" ichida.
                     cardBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                     c.addView(cardBox)
+                    eName = Ui.field(ctx, getString(R.string.of_new_name)).also { c.addView(it.first) }.second
                     eVolume = Ui.field(ctx, getString(R.string.ng_volume), Ui.NUMBER).also { c.addView(it.first) }.second
-                    ePack = Ui.field(ctx, getString(R.string.ng_pack), Ui.NUMBER).also { c.addView(it.first) }.second
-                    eMarkup = Ui.field(ctx, getString(R.string.ng_markup), Ui.NUMBER).also { c.addView(it.first) }.second
-                    c.addView(Ui.text(ctx, getString(R.string.ng_type), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 12))
-                    c.addView(
-                        Ui.toggle(ctx, listOf(getString(R.string.ng_type_goods), getString(R.string.ng_type_weighed)), 0, 4) { i ->
-                            weighed = i == 1
-                            renderCard()
-                        },
-                    )
-                    eBarcode = Ui.field(ctx, getString(R.string.of_barcode), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS).also { c.addView(it.first) }.second
-                    c.addView(
-                        Ui.switch(ctx, getString(R.string.ng_auto_barcode), autoBarcode, 4) { on ->
-                            autoBarcode = on
-                            renderCard()
-                            eBarcode?.isEnabled = !on
-                            if (on) eBarcode?.setText("")
-                        },
-                    )
                 }
                 goodsBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                 c.addView(goodsBox)
+                if (isNew) {
+                    c.addView(Ui.section(ctx, getString(R.string.ng_type)))
+                    val bcTil = Ui.field(ctx, getString(R.string.ng_barcode_scan), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
+                    eBarcode = bcTil.second
+                    typeBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                    c.addView(
+                        Ui.toggle(ctx, listOf(getString(R.string.ng_t_barcode), getString(R.string.ng_t_auto), getString(R.string.ng_t_weighed)), 0, 4) { i ->
+                            weighed = i == 2
+                            autoBarcode = i == 1
+                            bcTil.first.visibility = if (i == 0) View.VISIBLE else View.GONE
+                            if (i != 0) eBarcode?.setText("")
+                            renderCard()
+                        },
+                    )
+                    c.addView(bcTil.first)
+                    c.addView(typeBox)
+                    // Qo'shimcha: brend, o'lchov, upakovka, ustama, namuna
+                    extraCardBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                    extra.addView(extraCardBox, 0)
+                    ePack = Ui.field(ctx, getString(R.string.ng_pack), Ui.NUMBER).also { extra.addView(it.first, 1) }.second
+                    eMarkup = Ui.field(ctx, getString(R.string.ng_markup), Ui.NUMBER).also { extra.addView(it.first, 2) }.second
+                    val bExtra = Ui.button(ctx, getString(R.string.ng_extra_show), outlined = true, top = 14, icon = R.drawable.ic_expand_more) {}
+                    bExtra.setOnClickListener {
+                        val open = extra.visibility != View.VISIBLE
+                        extra.visibility = if (open) View.VISIBLE else View.GONE
+                        bExtra.setText(if (open) R.string.ng_extra_hide else R.string.ng_extra_show)
+                    }
+                    c.addView(bExtra)
+                    c.addView(extra)
+                }
             }
             else -> {
                 c.addView(Ui.section(ctx, getString(R.string.wf_amounts)))
@@ -122,7 +142,7 @@ class OneCFormFragment : CodeFragment() {
                 for (k in keys) money[k] = Ui.field(ctx, getString(moneyLabel(k)), Ui.NUMBER).also { c.addView(it.first) }.second
             }
         }
-        eNote = Ui.field(ctx, getString(R.string.wf_note), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE).also { c.addView(it.first) }.second
+        eNote = Ui.field(ctx, getString(R.string.wf_note), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE).also { (if (isNew) extra else c).addView(it.first) }.second
         c.addView(Ui.button(ctx, getString(R.string.wf_confirm), top = 12, icon = R.drawable.ic_check) { confirm() })
         c.addView(Ui.hint(ctx, getString(R.string.wf_safety), 8))
         return p.root
@@ -257,31 +277,39 @@ class OneCFormFragment : CodeFragment() {
         )
     }
 
-    /** Kartochka qatorlari: guruh, brend, o'lchov birligi va (tarozi bo'lsa) PLU hamda tarozi. */
+    /**
+     * Kartochka qatorlari. v5.3: tepada faqat GURUH; tur bo'yicha maydonlar (tarozi: tarozi va PLU; avtomatik:
+     * kod namunasi) tur tanlagichi ostida; brend va o'lchov birligi — "Qo'shimcha maydonlar" ichida.
+     */
     private fun renderCard() {
         val box = cardBox ?: return
         box.removeAllViews()
         refRow(box, uz.imsoft.shared.onec.Suppliers.GROUPS, R.string.ng_group, R.drawable.ic_category)
-        refRow(box, uz.imsoft.shared.onec.Suppliers.BRANDS, R.string.ng_brand, R.drawable.ic_label)
-        refRow(box, uz.imsoft.shared.onec.Suppliers.UNITS, R.string.ng_unit, R.drawable.ic_calculate)
+        extraCardBox?.let { x ->
+            x.removeAllViews()
+            refRow(x, uz.imsoft.shared.onec.Suppliers.BRANDS, R.string.ng_brand, R.drawable.ic_label)
+            refRow(x, uz.imsoft.shared.onec.Suppliers.UNITS, R.string.ng_unit, R.drawable.ic_calculate)
+        }
+        val t = typeBox ?: box
+        if (t !== box) t.removeAllViews()
         if (weighed) {
-            refRow(box, uz.imsoft.shared.onec.Suppliers.SCALES, R.string.ng_scale, R.drawable.ic_scale)
+            refRow(t, uz.imsoft.shared.onec.Suppliers.SCALES, R.string.ng_scale, R.drawable.ic_scale)
             // v5.2 (A10b): PLU bo'sh bo'lsa eng oxirgisidan keyingisi taklif qilinadi — qo'lda qidirish shart emas
             val cur = ePlu?.text?.toString().orEmpty().ifBlank { nextPlu() }
             val til = Ui.field(ctx, getString(R.string.of_plu), InputType.TYPE_CLASS_NUMBER, cur)
             ePlu = til.second
-            box.addView(til.first)
-            box.addView(Ui.hint(ctx, getString(R.string.ng_plu_hint, nextPlu(), usedPlu()), 2))
+            t.addView(til.first)
+            t.addView(Ui.hint(ctx, getString(R.string.ng_plu_hint, nextPlu(), usedPlu()), 2))
         } else {
             ePlu = null
         }
         if (kind == WriteKind.NEW_GOODS) {
             val next = (lastCode().toIntOrNull()?.plus(1))?.toString().orEmpty()
-            box.addView(Ui.hint(ctx, getString(R.string.ng_code_hint, lastCode()), 6))
             // v5.2 (A10b): avtomatik shtrix kod yoqilgan bo'lsa — qanday kod yasalishi ko'rinadi
             if (autoBarcode && next.isNotEmpty()) {
-                box.addView(Ui.hint(ctx, getString(R.string.ng_bc_preview, uz.imsoft.shared.barcode.Ean.shopBarcode(next)), 2))
+                t.addView(Ui.hint(ctx, getString(R.string.ng_bc_preview, uz.imsoft.shared.barcode.Ean.shopBarcode(next)), 2))
             }
+            t.addView(Ui.hint(ctx, getString(R.string.ng_code_hint, lastCode()), 6))
         }
     }
 

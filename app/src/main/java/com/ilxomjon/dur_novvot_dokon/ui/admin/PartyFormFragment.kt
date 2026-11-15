@@ -47,8 +47,9 @@ class PartyFormFragment : CodeFragment() {
                 Ui.button(ctx, getString(R.string.kf_pick_supplier), outlined = true, top = 0, icon = R.drawable.ic_truck) { pickSupplier() },
             ))
         } else {
+            arguments?.getString(ARG_GROUP)?.let { group = it }
             c.addView(Ui.section(ctx, getString(R.string.kf_group)))
-            c.addView(Ui.toggle(ctx, listOf(getString(R.string.kf_clients), getString(R.string.kf_suppliers)), 0, 4) { i ->
+            c.addView(Ui.toggle(ctx, listOf(getString(R.string.kf_clients), getString(R.string.kf_suppliers)), if (group == PartyField.SUPPLIERS) 1 else 0, 4) { i ->
                 group = if (i == 1) PartyField.SUPPLIERS else PartyField.CLIENTS
             })
         }
@@ -66,6 +67,11 @@ class PartyFormFragment : CodeFragment() {
         if (isEdit) c.addView(Ui.hint(ctx, getString(R.string.kf_edit_note), 8))
         c.addView(Ui.button(ctx, getString(R.string.wf_confirm), top = 14, icon = R.drawable.ic_check) { confirm() })
         c.addView(Ui.hint(ctx, getString(R.string.wf_safety), 8))
+        // v5.3: ro'yxatdan kelgan bo'lsa — kontragent tayyor tanlangan
+        val presetName = arguments?.getString(ARG_NAME).orEmpty()
+        if (isEdit && presetName.isNotEmpty() && party.isEmpty()) {
+            choose(presetName, arguments?.getString(ARG_CODE).orEmpty(), arguments?.getString(ARG_REGION).orEmpty(), arguments?.getString(ARG_PHONE).orEmpty())
+        }
         render()
         return p.root
     }
@@ -175,7 +181,26 @@ class PartyFormFragment : CodeFragment() {
         private const val ARG_KIND = "kind"
         private const val REQ_STORE = "kf_store"
 
+        private const val ARG_GROUP = "group"
+        private const val ARG_NAME = "p_name"
+        private const val ARG_CODE = "p_code"
+        private const val ARG_REGION = "p_region"
+        private const val ARG_PHONE = "p_phone"
+
         fun of(kind: String) = PartyFormFragment().apply { arguments = Bundle().apply { putString(ARG_KIND, kind) } }
+
+        /** v5.3: yangi mijoz yoki yuk beruvchi — guruhi oldindan tanlangan. */
+        fun new(group: String) = PartyFormFragment().apply {
+            arguments = Bundle().apply { putString(ARG_KIND, WriteKind.PARTY_NEW); putString(ARG_GROUP, group) }
+        }
+
+        /** v5.3: ro'yxatdan tanlangan kontragentni tahrirlash — qayta qidirish shart emas. */
+        fun edit(name: String, code: String, region: String, phone: String) = PartyFormFragment().apply {
+            arguments = Bundle().apply {
+                putString(ARG_KIND, WriteKind.PARTY_EDIT); putString(ARG_NAME, name); putString(ARG_CODE, code)
+                putString(ARG_REGION, region); putString(ARG_PHONE, phone)
+            }
+        }
     }
 }
 

@@ -147,7 +147,7 @@ class SaleMirror(private val context: Context, private val store: ShareStore) {
     /** Navbat kaliti chek id siga bog'liq — qayta yuborilsa ham bitta nusxa (dublikat chek chiqmaydi). */
     private fun send(c: ShareClient, s: AppSale) {
         val r = receipt(c, s)
-        val style = uz.imsoft.shared.receipt.ReceiptStyle.decode(store.receiptStyle)
+        val style = uz.imsoft.shared.receipt.ReceiptStyle.STANDARD
         val bytes = ReceiptBitmap.toEscPos(ReceiptBitmap.render(r, style, uz.imsoft.shared.android.LogoCache.get(store.receiptLogo)), style.dark)
         val key = "a" + s.at + "_" + s.id.filter { it.isLetterOrDigit() }
         val db = cloud()

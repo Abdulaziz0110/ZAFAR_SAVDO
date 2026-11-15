@@ -117,6 +117,63 @@ object Ui {
         return box
     }
 
+    /**
+     * v5.3: KATTA plitkalar — sozlamalar va bo'limlar uchun. Ikonka 52dp, nom yirik (TitleMedium), ostida bir-ikki
+     * qatorli izoh ([Tile.help]) — kirgan odam o'qimasdan ham nima ekanini tushunsin.
+     */
+    fun bigTiles(ctx: Context, items: List<Tile>, columns: Int = 2, top: Int = 8): LinearLayout {
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = lp(top = dp(ctx, top))
+        }
+        val gap = dp(ctx, 10)
+        for (row in items.chunked(columns)) {
+            val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            for ((i, t) in row.withIndex()) {
+                r.addView(bigTileView(ctx, t), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                    if (i > 0) marginStart = gap
+                    bottomMargin = gap
+                })
+            }
+            repeat(columns - row.size) { r.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap }) }
+            box.addView(r)
+        }
+        return box
+    }
+
+    private fun bigTileView(ctx: Context, t: Tile): View {
+        val card = MaterialCardView(ctx, null, com.google.android.material.R.attr.materialCardViewFilledStyle).apply {
+            radius = dp(ctx, 20).toFloat()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { t.onClick() }
+            minimumHeight = dp(ctx, 132)
+        }
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = dp(ctx, 16)
+            setPadding(p, p, p, p)
+        }
+        if (t.icon != 0) col.addView(badge(ctx, t.icon, t.tone, 52))
+        col.addView(
+            text(ctx, t.title, com.google.android.material.R.style.TextAppearance_Material3_TitleMedium, 12).apply {
+                maxLines = 2
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+        )
+        if (t.help.isNotEmpty()) {
+            col.addView(
+                text(ctx, t.help, com.google.android.material.R.style.TextAppearance_Material3_BodyMedium, 4).apply {
+                    maxLines = 3
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant))
+                },
+            )
+        }
+        card.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        return card
+    }
+
     private fun tileView(ctx: Context, t: Tile, onHelp: ((Tile) -> Unit)?): View {
         val card = MaterialCardView(ctx, null, com.google.android.material.R.attr.materialCardViewOutlinedStyle).apply {
             radius = dp(ctx, 16).toFloat()
@@ -324,10 +381,23 @@ object Ui {
         return ListPage(root, tb, header, rv, adapter, empty)
     }
 
-    data class Row(val title: CharSequence, val sub: CharSequence = "", val value: CharSequence = "", val value2: CharSequence = "", val icon: Int = 0, val tone: Int = 0)
+    /**
+     * [actions] — v5.3: qator o'ngidagi tez amal tugmalari (ikonka resurslari, eng ko'pi 3 ta): to'lov, qaytarish va h.k.
+     * [image] — ikonka o'rniga rasm (mahsulot rasmi).
+     */
+    data class Row(
+        val title: CharSequence, val sub: CharSequence = "", val value: CharSequence = "", val value2: CharSequence = "",
+        val icon: Int = 0, val tone: Int = 0,
+        val actions: List<Int> = emptyList(), val image: android.graphics.Bitmap? = null,
+    )
 
     class RowAdapter(private val onRow: (Int) -> Unit) : androidx.recyclerview.widget.RecyclerView.Adapter<RowAdapter.VH>() {
         private var rows: List<Row> = emptyList()
+
+        /** v5.3: tez amal tugmasi bosildi: (qator, tugma tartibi). */
+        var onAction: ((Int, Int) -> Unit)? = null
+        /** v5.3: qator uzoq bosildi. */
+        var onLong: ((Int) -> Unit)? = null
 
         @android.annotation.SuppressLint("NotifyDataSetChanged")
         fun submit(list: List<Row>) { rows = list; notifyDataSetChanged() }
@@ -338,6 +408,8 @@ object Ui {
             androidx.recyclerview.widget.RecyclerView.ViewHolder(root) {
             var badge: FrameLayout? = null
             var badgeKey = 0L
+            var photo: android.widget.ImageView? = null
+            val acts = ArrayList<android.widget.ImageButton>()
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -374,6 +446,29 @@ object Ui {
             root.addView(right, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(ctx, 8) })
             val vh = VH(root, t, s, v, v2)
             root.setOnClickListener { val p = vh.bindingAdapterPosition; if (p != androidx.recyclerview.widget.RecyclerView.NO_POSITION) onRow(p) }
+            root.setOnLongClickListener {
+                val p = vh.bindingAdapterPosition
+                val l = onLong
+                if (l != null && p != androidx.recyclerview.widget.RecyclerView.NO_POSITION) { l(p); true } else false
+            }
+            // Tez amal tugmalari (3 tagacha) — kerak bo'lganda ko'rinadi
+            for (i in 0 until MAX_ACTIONS) {
+                val b = android.widget.ImageButton(ctx).apply {
+                    val tv = TypedValue()
+                    ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true)
+                    setBackgroundResource(tv.resourceId)
+                    imageTintList = android.content.res.ColorStateList.valueOf(MaterialColors.getColor(root, com.google.android.material.R.attr.colorPrimary))
+                    val pad = dp(ctx, 10)
+                    setPadding(pad, pad, pad, pad)
+                    visibility = View.GONE
+                    setOnClickListener {
+                        val p = vh.bindingAdapterPosition
+                        if (p != androidx.recyclerview.widget.RecyclerView.NO_POSITION) onAction?.invoke(p, i)
+                    }
+                }
+                root.addView(b, LinearLayout.LayoutParams(dp(ctx, 44), dp(ctx, 44)))
+                vh.acts += b
+            }
             return vh
         }
 
@@ -385,6 +480,28 @@ object Ui {
             holder.value.text = r.value
             holder.value2.text = r.value2
             holder.value2.visibility = if (r.value2.isEmpty()) View.GONE else View.VISIBLE
+            for ((i, b) in holder.acts.withIndex()) {
+                val icon = r.actions.getOrNull(i)
+                if (icon == null) b.visibility = View.GONE else { b.setImageResource(icon); b.visibility = View.VISIBLE }
+            }
+            // v5.3: rasm bo'lsa — ikonka o'rnida rasm
+            if (r.image != null) {
+                holder.badge?.visibility = View.GONE
+                val iv = holder.photo ?: android.widget.ImageView(holder.root.context).apply {
+                    scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                    clipToOutline = true
+                    outlineProvider = object : android.view.ViewOutlineProvider() {
+                        override fun getOutline(v: View, o: android.graphics.Outline) { o.setRoundRect(0, 0, v.width, v.height, dp(v.context, 10).toFloat()) }
+                    }
+                    val c = holder.root.context
+                    holder.root.addView(this, 0, LinearLayout.LayoutParams(dp(c, 48), dp(c, 48)).apply { marginEnd = dp(c, 12) })
+                    holder.photo = this
+                }
+                iv.setImageBitmap(r.image)
+                iv.visibility = View.VISIBLE
+                return
+            }
+            holder.photo?.visibility = View.GONE
             // v3.12: ikonka (doira) — faqat o'zgarganda qayta chiziladi
             val key = (r.icon.toLong() shl 8) or r.tone.toLong()
             if (r.icon == 0) holder.badge?.visibility = View.GONE
@@ -397,6 +514,8 @@ object Ui {
             } else holder.badge?.visibility = View.VISIBLE
         }
     }
+
+    const val MAX_ACTIONS = 3
 
     /** Qidiruv maydoni (har harfda [onChange]). */
     fun search(ctx: Context, hint: CharSequence, onChange: (String) -> Unit): Pair<TextInputLayout, TextInputEditText> {

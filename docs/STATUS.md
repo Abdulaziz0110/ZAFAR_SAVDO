@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 43) + Savdo Mijoz 5.3 (versionCode 30), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 44) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -22,6 +22,28 @@ Belgilar:
 | Mijoz: printer ulanishi bilan bo'lim ochiladi, ruxsat so'raladi, servis yonadi va navbat chiqadi; holat servis o'chiq bo'lsa ham to'g'ri; sinov cheki servisiz ham; boshqa sinfdagi printerlar ham topiladi | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
 | Veb-agent: "Do'kon kodi" (IMSHOP1) ham qabul qilinadi, kod atrofidagi matn e'tiborsiz | VERIFIED (test) |
 | Agent yorliq chop etishi (lb navbati) — hali faqat Admin telefoni orqali | NOT-IMPLEMENTED (kompyuterga ko'chirilmagan) |
+
+## 5.3 — 2-qism: keraksizlar olib tashlandi, bir xil ishlar bitta joyda
+| Narsa | Holat |
+|---|---|
+| **Boshqaruv/Sozlamalar** — katta plitkalar (2 ustun, planshetda 3): katta ikonka, yirik nom, izoh; bo'lim har doim plitka, ish ekrani har doim ish ekrani | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| **Mahsulotlar markazi**: qidiruv (kod/nom/narx), qatorda tez amallar (tahrirlash, ma'lumot, rasm), bosilsa hamma amal; yangi tovar, ko'p tovarga birdan, hisobdan chiqarish, fayl — shu yerda | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| **Mahsulot rasmi** (faqat telefonda): kamera yoki galereya, ro'yxatda va savdo oynasida ko'rinadi | VERIFIED (3 test + kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| **Mijozlar va Yuk beruvchilar markazi**: nom + telefon + qarz, qatorda tez amallar (to'lov, qaytarish, kirim, tahrirlash), bosilsa tarixi | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| Kontragent telefonlari 1C'dan (kompyuter yuboradi) | VERIFIED (Python testlar o'tadi) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| **"Qarzni to'liq yopish"**: bir marta tasdiq, to'lov darhol navbatga, ro'yxatga qaytadi, qarz darhol nol ko'rinadi. Dollar qarzi yopilmaydi (ogohlantiradi) | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| **Aqlli qidiruv** (savdo va mahsulotlar): raqam — kod, keyin narx; harf — nom; harf+raqam — nom va narx; narx tanlangan narx turi bo'yicha | VERIFIED (9 test) |
+| **Savatcha ikki qadam**: Mahsulotlar / To'lov; tepada "hammasini tozalash"; uzoq bosish — faqat shu mahsulot | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| **Yangi tovar**: tepada guruh, nom, hajm, narxlar, turi (shtrix kodli / kodni yaratish / tarozili); qolgani "Qo'shimcha maydonlar" ichida | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| Yangi tovarda "qoldiq me'yori" va "fayl" maydonlari | NOT-IMPLEMENTED (1C'dagi rekvizit nomi kerak) |
+| Savdoda mijoz tanlash oynasida "Yangi mijoz qo'shish" (1C'ga qo'shiladi, tayyor bo'lgach o'zi tanlanadi) | VERIFIED (kompilyatsiya) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Dollar kursi: har kuni Markaziy bankdan, qo'lda yozilgani ham almashtiriladi; sozlamasi olib tashlandi | VERIFIED (kompilyatsiya) |
+| Olib tashlandi: Agent ilovasi, chek ko'rinishi (bitta standart chek), dollar kursi, kassa kirim/chiqim, sozlamalardagi "mijozdan to'lov"/"mijoz qaytargan tovar", narx belgilash (tahrirlashga qo'shildi), agentlar ko'prigi va server sozlamasi (server — faqat sirli menyuda) | VERIFIED (kompilyatsiya) |
+| Sirli menyu (versiyani uzoq bosish): server sozlamasi va hamma parollar ochiq ko'rinadi | VERIFIED (kompilyatsiya) |
+| Bio matni savdoda yirikroq (ikkala ilovada) | VERIFIED (kompilyatsiya) |
+| Kompyuterdagi "Panel"ni telefondan o'zgartirish | NOT-IMPLEMENTED (1C'da Panel qayerda saqlanishi noma'lum) |
+| Xodim (agent) ko'rinishini alohida soddalashtirish, statistika, Mijoz ilovasi dizayni, veb-agentni ilova bilan bir xil qilish | NOT-IMPLEMENTED (keyingi qism) |
+| Sensor savdo oynasi (monoblok) | NOT-IMPLEMENTED (oxirgi bosqich) |
 
 ## 5.2 — 3-qism: tekshiruvda topilgan kamchiliklar yopildi
 | Narsa | Holat |

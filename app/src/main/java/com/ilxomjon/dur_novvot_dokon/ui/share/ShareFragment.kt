@@ -99,12 +99,12 @@ class ShareFragment : Fragment(), com.ilxomjon.dur_novvot_dokon.ui.ledger.Ledger
         binding.btnReceiptPreview.show(!admin)
         binding.tvReceiptStyleHint.show(admin)
         binding.btnReceiptStyle.show(admin)
-        binding.btnReceiptStyle.setOnClickListener { navigator().push(ReceiptStyleFragment()) }
+        binding.btnReceiptStyle.visibility = View.GONE
         // v3.0 Admin: agentlar ko'prigi
         binding.tvRelaySection.show(admin)
         binding.cardRelay.show(admin)
         binding.tvRelay.text = getString(if (ServiceLocator.shareStore.relayOn) R.string.rl_on_short else R.string.rl_off_short)
-        binding.btnRelay.setOnClickListener { navigator().push(RelayFragment()) }
+        binding.btnRelay.visibility = View.GONE
         if (!admin) {
             binding.edtHeader.setText(ServiceLocator.shareStore.receiptHeader)
             binding.edtHeader.setOnFocusChangeListener { _, focus -> if (!focus) repo.setReceiptHeader(binding.edtHeader.text?.toString().orEmpty()) }

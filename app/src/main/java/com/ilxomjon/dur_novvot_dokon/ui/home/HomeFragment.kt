@@ -128,11 +128,12 @@ class HomeFragment : Fragment() {
             Slot("queue", getString(R.string.queue_title), R.drawable.ic_sync, false, go { OutboxFragment() }),
             Slot("labels", getString(R.string.home_labels), R.drawable.ic_label, true, go { com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment() }),
             Slot("scale", getString(R.string.sc_title), R.drawable.ic_scale, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment() }),
-            Slot("priceset", getString(R.string.ps_title), R.drawable.ic_calculate, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PriceSetFragment() }),
-            Slot("rate", getString(R.string.rt_title), R.drawable.ic_currency, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.RateFragment() }),
             Slot("boss", getString(R.string.boss_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment() }),
             Slot("stats", getString(R.string.stt_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment() }),
-            Slot("admin", getString(R.string.ad_title), R.drawable.ic_tune, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.AdminHubFragment() }),
+            Slot("clients", getString(R.string.hub_clients), R.drawable.ic_person, false, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.CLIENTS) }),
+            Slot("suppliers", getString(R.string.sp_title), R.drawable.ic_truck, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.SUPPLIERS) }),
+            Slot("products", getString(R.string.pb_title), R.drawable.ic_shopping_bag, false, go { com.ilxomjon.dur_novvot_dokon.ui.admin.ProductsFragment() }),
+            Slot("writes", getString(R.string.wr_home), R.drawable.ic_computer, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.WritesFragment() }),
             Slot("onecsales", getString(R.string.ad_sales), R.drawable.ic_receipt, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.OneCSalesFragment() }),
         ).filter { com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin || !it.admin }
     }
@@ -165,6 +166,8 @@ class HomeFragment : Fragment() {
         super.onResume()
         vm.onResume()
         checkDiag(false)
+        // v5.3: dollar kursi har kuni o'zi yangilanadi (6 soatda bir marta tekshiradi)
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { ServiceLocator.refreshRate() } }
     }
 
     // ---------------- v5.2 (A8): pastda holat (diagnostika) xulosasi ----------------
