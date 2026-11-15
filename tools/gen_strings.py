@@ -1344,6 +1344,10 @@ STRINGS.update({
  'wr_cleared': "%1$d ta yozuv o'chirildi",
  'wr_resend_all': 'Xatolarni qayta yuborish', 'wr_resent': '%1$d ta qayta yuborildi',
  'wr_retry_info': '%1$d-urinish · birinchi: %2$s',
+ 'wr_send_err': 'Sabab: %1$s',
+ 'wr_net_hint': "Telefon bulutga (Firebase) ulana olmadi. VPN yoqilgan bo'lsa — o'chiring, internetni tekshiring. Internet tiklansa o'zi qayta yuboriladi.",
+ 'pn_line': '%1$d-tugma: %2$s',
+ 'pn_line_clear': "%1$d-tugma: bo'shatiladi",
  'wr_filter_empty': "Bu bo'limda yozuv yo'q",
  'wr_home': "1C navbati", 'wr_home_sub': 'Kutmoqda: %1$d · Xato: %2$d',
  # Mijoz so'rovlari

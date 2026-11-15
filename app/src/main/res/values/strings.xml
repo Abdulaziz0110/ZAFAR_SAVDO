@@ -1804,6 +1804,10 @@
     <string name="wr_resend_all">Xatolarni qayta yuborish</string>
     <string name="wr_resent">%1$d ta qayta yuborildi</string>
     <string name="wr_retry_info">%1$d-urinish · birinchi: %2$s</string>
+    <string name="wr_send_err">Sabab: %1$s</string>
+    <string name="wr_net_hint">Telefon bulutga (Firebase) ulana olmadi. VPN yoqilgan bo\'lsa — o\'chiring, internetni tekshiring. Internet tiklansa o\'zi qayta yuboriladi.</string>
+    <string name="pn_line">%1$d-tugma: %2$s</string>
+    <string name="pn_line_clear">%1$d-tugma: bo\'shatiladi</string>
     <string name="wr_filter_empty">Bu bo\'limda yozuv yo\'q</string>
     <string name="wr_home">1C navbati</string>
     <string name="wr_home_sub">Kutmoqda: %1$d · Xato: %2$d</string>

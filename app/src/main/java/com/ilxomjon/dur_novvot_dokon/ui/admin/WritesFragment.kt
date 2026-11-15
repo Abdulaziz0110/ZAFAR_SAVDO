@@ -156,9 +156,10 @@ class WritesFragment : CodeFragment() {
                 WriteKind.RATE -> w.req.fields[uz.imsoft.shared.onec.GoodsField.RATE].orEmpty()
                 WriteKind.DOC_EDIT -> "\u2116" + w.req.fields[uz.imsoft.shared.onec.DocField.NUMBER].orEmpty()
                 WriteKind.BULK -> w.req.fields[uz.imsoft.shared.onec.BulkField.OP].orEmpty()
+                WriteKind.PANEL -> w.req.lines.joinToString(", ") { it.name.ifEmpty { "—" } }.take(60)
                 else -> w.req.party
             }
-            val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF, WriteKind.BULK) ||
+            val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF, WriteKind.BULK, WriteKind.PANEL) ||
                 w.req.kind in WriteKind.GOODS
             // Ro'yxatda xato matni qisqa (to'lig'i — bosganda); qayta yuborilgan bo'lsa urinish soni ko'rinadi
             val st = status(w).let { if (w.isError && it.length > 70) it.take(70).trimEnd() + "…" else it }
@@ -171,9 +172,18 @@ class WritesFragment : CodeFragment() {
         val sb = StringBuilder()
         sb.append(status(w)).append("\n")
         if (w.tries > 1) sb.append(getString(R.string.wr_retry_info, w.tries, formatDateTime(w.createdAt))).append('\n')
+        // v5.3: yuborilmaganda aniq sabab ko'rinsin (avval faqat "internet" deyilar edi)
+        if (w.result == null && w.sendError.isNotEmpty()) {
+            sb.append(getString(R.string.wr_send_err, w.sendError)).append("\n\n").append(getString(R.string.wr_net_hint)).append('\n')
+        }
         sb.append('\n')
         if (w.req.party.isNotEmpty()) sb.append(w.req.party).append('\n')
         w.req.lines.forEachIndexed { i, l ->
+            if (w.req.kind == WriteKind.PANEL) {
+                val slot = l.qty.toInt()
+                sb.append(if (l.name.isEmpty() && l.code.isEmpty()) getString(R.string.pn_line_clear, slot) else getString(R.string.pn_line, slot, l.name)).append('\n')
+                return@forEachIndexed
+            }
             val price = if (l.priceSom > 0) som(l.priceSom) else usd(l.priceUsd)
             sb.append("${i + 1}) ${l.name} — ${fmtQty(l.qty)} × $price\n")
         }

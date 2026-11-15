@@ -1804,6 +1804,10 @@
     <string name="wr_resend_all">Хатоларни қайта юбориш</string>
     <string name="wr_resent">%1$d та қайта юборилди</string>
     <string name="wr_retry_info">%1$d-уриниш · биринчи: %2$s</string>
+    <string name="wr_send_err">Сабаб: %1$s</string>
+    <string name="wr_net_hint">Телефон булутга (Firebase) улана олмади. VPN ёқилган бўлса — ўчиринг, интернетни текширинг. Интернет тикланса ўзи қайта юборилади.</string>
+    <string name="pn_line">%1$d-тугма: %2$s</string>
+    <string name="pn_line_clear">%1$d-тугма: бўшатилади</string>
     <string name="wr_filter_empty">Бу бўлимда ёзув йўқ</string>
     <string name="wr_home">1К навбати</string>
     <string name="wr_home_sub">Кутмоқда: %1$d · Хато: %2$d</string>
