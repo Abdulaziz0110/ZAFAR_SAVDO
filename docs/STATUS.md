@@ -1,10 +1,30 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 48) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 5) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## Kompyuter 5.4 — kassa (sensor) oynasi monoblokda, RDP'siz
+
+| Ish | Holat |
+|---|---|
+| Kompyuterda kassa sayti (http://IP:8077): bitta 1C oqimi, navbat, brauzerga parolsiz ma'lumot | VERIFIED (test_kassa.py, soxta 1C bilan; HTTP marshrutlari) |
+| Kirish 1C xodim paroli bilan (Сотрудники.Пароль, bo'shatilgan — yo'q) | VERIFIED (test) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Shtrix kod tahlili 1C ПолеТекПриИзменении kabi (29 tarozi, 28 dona, 21, 25, "0") — Python va JS bir xil | VERIFIED (300 tasodifiy holat solishtirildi, node + python testlari) |
+| Narx turi 1–4, $ tovar narxi × kurs, qoldiqdan ortiq sotmaslik (ПродажаБезОстатков), savatni qayta narxlash | VERIFIED (test) |
+| To'lov: naqd/plastik/click, chegirma, qaytim, mijozsiz qarz taqiqlangan, qarz to'lovi, qaytarish | VERIFIED (kassa_core + logic.js testlari) |
+| ПродажаРозница yozish (РасчетНажатие / ВозвратНажатие maydonlari: Ост, ОстСумма, УртачаНарх, ДтКт, Лимит, Сотрудник, ДоляСот) | VERIFIED (soxta 1C) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Qaytarishda tannarx: 1C'ning yopiq (shifrlangan) ОхиргиУртачаНархиниАниклаш o'rniga qoldiqdagi o'rtacha yoki kirim narxi | IMPLEMENTED-UNVERIFIED |
+| COM'da baza moduli ishlamasa — 1C oynasi orqali yozish (kassa ishlatilayotganda yopilmaydi) | VERIFIED (test) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Bir sotuv ikki marta yozilmaydi (so'rov raqami, kassa_done.jsonl) | VERIFIED (test) |
+| Panel 8×42 (тов1..тов336), qidiruv (nom/kod/narx), raqam paneli (miqdor ×, kod), tanlangan qatorni +/−/o'chirish | VERIFIED (Playwright skrinshot, soxta 1C) |
+| Chek 80 mm, so'ramasdan chop etish (--kiosk-printing) | IMPLEMENTED-UNVERIFIED (brauzerda ko'rindi, printerda sinalmagan) |
+| Monoblok o'rnatish fayli (Chrome/Edge kiosk, avtozapusk) | IMPLEMENTED-UNVERIFIED (Windows'da sinalmagan) |
+| Brandmauer 8077-port (dastur o'zi; bo'lmasa allow_firewall.bat) | IMPLEMENTED-UNVERIFIED |
+| Admin ilovasi: Kompyuter ekranida kassa manzili va monoblok ko'rsatmasi | VERIFIED (kompilyatsiya) |
+| Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish | NOT-IMPLEMENTED |
 
 ## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova
 | Narsa | Holat |

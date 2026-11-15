@@ -22,6 +22,8 @@ class PcFragment : CodeFragment() {
     private lateinit var tvStatus: TextView
     private lateinit var tvWork: TextView
     private lateinit var tvBridge: TextView
+    private lateinit var tvKassa: TextView
+    private var kassaUrl = ""
     private val minutes = listOf(0, 1, 5, 15, 30, 60)
     private val hours = listOf(1, 2, 3)
     private val days = listOf(7, 14, 30)
@@ -66,6 +68,15 @@ class PcFragment : CodeFragment() {
             if (!base.startsWith("https://")) { snack(getString(R.string.pc_prog_none)); return@button }
             ImportUi.shareText(ctx, getString(R.string.pc_prog_text, base.trimEnd('/') + "/pc.zip"))
         })
+
+        // v5.4: kassa (sensor) oynasi — monoblok brauzerda kompyuterdagi manzilni ochadi
+        c.addView(Ui.section(ctx, getString(R.string.kassa_title)))
+        tvKassa = Ui.text(ctx, getString(R.string.kassa_wait), top = 4).also { c.addView(it) }
+        c.addView(Ui.hint(ctx, getString(R.string.kassa_hint)))
+        c.addView(Ui.button(ctx, getString(R.string.kassa_share), outlined = true, icon = R.drawable.ic_share) {
+            if (kassaUrl.isEmpty()) { snack(getString(R.string.kassa_none)); return@button }
+            ImportUi.shareText(ctx, getString(R.string.kassa_text, kassaUrl))
+        })
         return p.root
     }
 
@@ -87,7 +98,22 @@ class PcFragment : CodeFragment() {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { ServiceLocator.relayHost.syncPc() } }
             tvBridge.text = getString(if (ServiceLocator.relayHost.pcHost) R.string.pc_bridge_on else R.string.pc_bridge_off)
         }
+        launchUi {
+            val k = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { readKassa() }
+            kassaUrl = k?.first.orEmpty()
+            tvKassa.text = if (k == null) getString(R.string.kassa_none) else getString(R.string.kassa_url, k.first, formatDateTime(k.second))
+        }
     }
+
+    /** Kompyuter dasturi ishga tushganda e'lon qilgan kassa manzili (p/{inbox}/kassa) yoki null. */
+    private fun readKassa(): Pair<String, Long>? = runCatching {
+        val st = ServiceLocator.shareStore
+        if (!st.isCloudReady || st.inboxKey.isEmpty()) return null
+        val m = uz.imsoft.shared.CloudDb(st.dbUrl, st.secret).get("p/${st.inboxKey}/kassa") as? Map<*, *> ?: return null
+        val url = (m["url"] as? String).orEmpty()
+        if (!url.startsWith("http://")) return null
+        url to ((m["at"] as? Number)?.toLong() ?: 0L)
+    }.getOrNull()
 
     private fun save(minutes: Int = ServiceLocator.shareStore.pcMinutes, hours: Int = ServiceLocator.shareStore.pcHours, days: Int = ServiceLocator.shareStore.pcDays) {
         launchUi {

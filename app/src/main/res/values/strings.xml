@@ -1787,6 +1787,13 @@
     <string name="pc_prog_none">Yangilanish manzili yo\'q (ilova GitHub\'da SHOP_CODE bilan yig\'ilmagan)</string>
     <string name="pc_prog_text">Kompyuter dasturi (bir marta): shu faylni yuklab, ichidagilarni dastur papkasiga ko\'chiring va ORNATISH.bat ni oching.\n%1$s</string>
     <string name="pc_bridge_on">Telefonlar ko\'prigi: kompyuterda ishlayapti (VPN kerak emas)</string>
+    <string name="kassa_title">Kassa oynasi (sensor monoblok)</string>
+    <string name="kassa_wait">Tekshirilmoqda…</string>
+    <string name="kassa_url">Manzil: %1$s (kompyuter e\'lon qilgan: %2$s)</string>
+    <string name="kassa_none">Kompyuter dasturi hali 5.4 ga yangilanmagan yoki ishga tushmagan — yangilangach manzil shu yerda chiqadi</string>
+    <string name="kassa_hint">Monoblokda RDP kerak emas: brauzerda shu manzilni oching, kirish oynasi pastidagi \"Monoblokka o\'rnatish\" faylini oching — kassa to\'liq ekranda ochiladi va har kuni o\'zi ishga tushadi. Kirish — 1C\'dagi xodim paroli. Sotuv 1C\'ga ПродажаРозница bo\'lib yoziladi; eski 1C oynasi ham ishlayveradi.</string>
+    <string name="kassa_share">Monoblok uchun ko\'rsatma</string>
+    <string name="kassa_text">IMSOFT kassa oynasi (monoblok):\n1) Monoblok do\'kon tarmog\'ida bo\'lsin (kompyuter yoqiq).\n2) Chrome yoki Edge\'da oching: %1$s\n3) Kirish oynasi pastidagi \"Monoblokka o\'rnatish\" ni bosing, yuklangan IMSOFT_kassa.bat faylini oching.\n4) Kassa to\'liq ekranda ochiladi va Windows yoqilganda o\'zi ochiladi. Chiqish: Alt+F4.\n5) Chek printeri monoblokda \"По умолчанию\" bo\'lsin — chek so\'ramasdan chiqadi.</string>
     <string name="pc_bridge_off">Telefonlar ko\'prigi: kompyuterda hali ishlamayapti (dastur yangilanmagan yoki kompyuter o\'chiq)</string>
     <string name="wr_resend">Qayta yuborish</string>
     <string name="wr_f_all">Hammasi</string>

@@ -57,7 +57,7 @@ STATE = os.path.join(HERE, "export_state.json")
 OUT_DIR = os.path.join(HERE, "export")
 DISCOVER = os.path.join(HERE, "discover.txt")
 CODES_OUT = os.path.join(HERE, "codes.json")
-PC_VERSION = "5.3"                # kompyuter dasturi versiyasi (pc_version.txt bilan birga yangilanadi)
+PC_VERSION = "5.4"                # kompyuter dasturi versiyasi (pc_version.txt bilan birga yangilanadi)
 TICK_SEC = 30                     # jadval, telefon so'rovlari va 1C'ga yozish navbati shuncha vaqtda bir tekshiriladi
 
 MAX_FILE = 8 * 1024 * 1024        # bitta Excel shundan katta bo'lsa yuborilmaydi (jurnalga yoziladi)
@@ -1441,6 +1441,12 @@ def loop(cfg):
             relay.start(cfg, cloud, HERE, lambda paths: Waker(cfg, paths).start(), getattr(cfg, "sql", None), PC_VERSION)
         except Exception as e:  # noqa: BLE001
             log.warning("telefonlar ko'prigi ishga tushmadi: %s", e)
+    # v5.4: kassa (sensor) oynasi - do'kon tarmog'idagi monoblok brauzerda ochadi (o'z oqimi va 1C ulanishi bilan)
+    try:
+        import kassa
+        kassa.start(cfg, HERE, cloud, OneC, OneCApp)
+    except Exception as e:  # noqa: BLE001
+        log.warning("kassa oynasi ishga tushmadi: %s", e)
 
     def do_writes():
         """1C'ga yozish navbati (Admin tasdiqlagan). Tovar o'zgargan bo'lsa — kodlar/narxlar darhol telefonlarga."""

@@ -64,7 +64,7 @@ Yangi (v5.3) - ENG MUHIM O'ZGARISH:
  2) 1C KONFIGURATORSIZ. "Ошибка инициализации модуля ... Переменная не определена (мМобилАпп)" xatosi chiqsa,
     dastur o'zi "1C oynasi orqali" yozishga o'tadi (ko'rinmas 1C oynasi ochiladi) va buni eslab qoladi
     (onec_mode.txt). 4.1 bo'limdagi Konfigurator ishi endi SHART EMAS.
-    Majburlash: onec.ini [1c] mode = app (yoki com, yoki auto).
+    Majburlash: onec.ini [onec] mode = app (yoki com, yoki auto).
     Eslatma: oyna orqali yozishda 1C litsenziyasidan bitta o'rin 3 daqiqagacha band bo'ladi.
     Agar yozuv "kutmoqda"da qotib qolsa - kompyuterda 1C biror savol oynasini ko'rsatayotgan bo'lishi mumkin:
     Vazifalar menejerida 1cv8.exe ni yoping va oynaning rasmini yuboring.
@@ -74,3 +74,25 @@ Yangi (v5.3) - ENG MUHIM O'ZGARISH:
     Admin ilovasi > Kompyuter > "Yuklab olish havolasini yuborish" > faylni shu papkaga oching > ORNATISH.bat.
  4) Shtrix kodlar: tovarning asosiy kodi, qo'shimcha kodlar ro'yxati va "Штрих" ma'lumotnomasi - HAMMASI
     telefonga boradi (avval faqat bittasi o'qilar, qo'shimcha kodni skaner "topilmadi" der edi).
+
+
+Yangi (v5.4) - KASSA (SENSOR) OYNASI MONOBLOKDA, RDP'SIZ:
+ 1) Shu dastur kompyuterda kichik "kassa sayti"ni ochadi: http://<kompyuter IP>:8077
+    Manzil Admin ilovasida ko'rinadi: Kompyuter > "Kassa oynasi (sensor monoblok)".
+ 2) Monoblokda (do'kon tarmog'ida): Chrome yoki Edge'da shu manzilni oching > kirish oynasi pastidagi
+    "Monoblokka o'rnatish" > yuklangan IMSOFT_kassa.bat ni oching. Kassa to'liq ekranda ochiladi va
+    Windows yoqilganda o'zi ochiladi. Chiqish: Alt+F4. Chek - monoblokdagi standart (По умолчанию) printerga.
+ 3) Kirish - 1C'dagi xodim paroli (Справочник.Сотрудники > Пароль), bo'shatilgan xodim kira olmaydi.
+ 4) Sotuv 1C'ga ПродажаРозница bo'lib yoziladi - РеализацияСенсор1 bilan bir xil: narx turi (Narx 1-4),
+    qoldiq, o'rtacha tannarx, mijoz qarzi, naqd / plastik / click, chegirma, qaytarish, qarz to'lovi.
+    Panel tugmalari - 1C'dagi "Paneli" (тов1..тов336), shtrix kodlar - Справочник.Штрих (+ tarozi 29/28).
+ 5) Eski 1C kassa oynasi o'zgarmaydi - yangisi sinovdan o'tguncha ikkalasi yonma-yon ishlaydi.
+ 6) Brandmauer: dastur 8077-portni o'zi ochadi. Monoblokdan ochilmasa - allow_firewall.bat ni
+    administrator sifatida ishga tushiring.
+ 7) Sozlama (ixtiyoriy) - onec.ini:
+        [kassa]
+        title = Do'kon nomi (chek tepasida)
+        port = 8077
+        refresh = 5        ; tovar/narx/mijozlar necha daqiqada yangilanadi (qoldiq - har daqiqada)
+        enabled = 0        ; o'chirish
+    Bir xil sotuv ikki marta yozilmaydi (internet uzilib qayta bosilsa ham) - kassa_done.jsonl.

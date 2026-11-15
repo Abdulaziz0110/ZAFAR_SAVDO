@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0f5132">
+<title>Kassa</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- KIRISH -->
+<section id="login" class="screen">
+  <div class="login-card">
+    <div class="brand" id="loginTitle">Kassa</div>
+    <div class="login-hint">Parolingizni kiriting</div>
+    <input id="pw" type="password" inputmode="none" autocomplete="off" aria-label="Parol">
+    <div class="pad login-pad" id="loginPad">
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="C" class="muted">C</button><button data-k="0">0</button><button data-k="B" class="muted">⌫</button>
+    </div>
+    <button id="loginBtn" class="big primary">Kirish</button>
+    <div class="login-err" id="loginErr" role="alert"></div>
+    <a class="setup" href="/monoblok.bat">Monoblokka o'rnatish (to'liq ekran, avtozapusk)</a>
+  </div>
+</section>
+
+<!-- SAVDO -->
+<section id="main" class="screen hidden">
+  <header class="top">
+    <div class="who">
+      <div class="store" id="storeName">Kassa</div>
+      <div class="cashier"><span id="cashierName"></span> · <span id="clock"></span></div>
+    </div>
+    <div class="seg" id="ptypes" role="group" aria-label="Narx turi">
+      <button data-p="Цена1">Narx 1</button><button data-p="Цена2">Narx 2</button>
+      <button data-p="Цена3">Narx 3</button><button data-p="Цена4">Narx 4</button>
+    </div>
+    <div class="seg mode" role="group" aria-label="Amal">
+      <button id="modeSale" class="on">Sotuv</button><button id="modeRet">Qaytarish</button>
+    </div>
+    <div class="top-actions">
+      <span class="dot" id="dataDot" title="Ma'lumot holati"></span>
+      <button id="refreshBtn" class="icon" title="1C'dan yangilash" aria-label="Yangilash"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
+      <button id="logoutBtn" class="icon" title="Chiqish" aria-label="Chiqish"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M13 3h-2v10h2V3zm4.83 2.17-1.42 1.42A6.92 6.92 0 0 1 19 12a7 7 0 1 1-11.42-5.42L6.17 5.17A8.93 8.93 0 0 0 3 12a9 9 0 0 0 18 0c0-2.74-1.23-5.18-3.17-6.83z"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="left">
+      <div class="scanbar">
+        <input id="q" type="text" inputmode="none" autocomplete="off" placeholder="Shtrix kod, kod, nom yoki narx…" aria-label="Qidiruv">
+        <button id="kbBtn" class="icon" title="Klaviatura" aria-label="Klaviatura">⌨</button>
+        <button id="qClear" class="icon" aria-label="Tozalash">✕</button>
+      </div>
+      <div class="cart" id="cart" role="list"></div>
+      <div class="cart-empty" id="cartEmpty">Savat bo'sh — tovarni skanerlang yoki paneldan tanlang</div>
+      <div class="sel-bar hidden" id="selBar">
+        <button id="selMinus" class="sq">−</button>
+        <div class="sel-qty" id="selQty"></div>
+        <button id="selPlus" class="sq">+</button>
+        <button id="selDel" class="sq danger" aria-label="O'chirish"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+      </div>
+      <div class="totals">
+        <div class="tot-row"><span id="cartCount">0 ta</span><span class="tot" id="cartTotal">0</span></div>
+        <div class="tot-btns">
+          <button id="clearBtn" class="big muted">Tozalash</button>
+          <button id="payBtn" class="big primary">To'lov</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="tabs" id="tabs"></div>
+      <div class="grid" id="grid"></div>
+      <div class="padrow">
+        <div class="mult" id="multBox"><span class="mult-l">Miqdor</span><span id="mult">—</span></div>
+        <div class="pad main-pad" id="mainPad">
+          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="B" class="muted">⌫</button>
+          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="muted">C</button>
+          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="." class="muted">,</button>
+          <button data-k="0">0</button><button data-k="00">00</button><button id="setQtyBtn" class="act">× Miqdor</button><button id="codeBtn" class="act">Kod</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TO'LOV -->
+<div class="modal hidden" id="payModal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+  <div class="sheet pay">
+    <div class="sheet-head">
+      <div class="sheet-title" id="payTitle">To'lov</div>
+      <button class="icon" id="payClose" aria-label="Yopish">✕</button>
+    </div>
+    <div class="pay-body">
+      <div class="pay-left">
+        <div class="pay-sum"><span>Jami</span><b id="pTotal">0</b></div>
+        <div class="pay-sum disc"><span>Chegirma</span><b id="pDiscount">0</b></div>
+        <div class="pay-sum due"><span id="pDueLabel">To'lanadi</span><b id="pDue">0</b></div>
+
+        <div class="fields">
+          <button class="field" data-f="cash"><span>Naqd</span><b id="fCash">0</b></button>
+          <button class="field" data-f="card"><span>Plastik</span><b id="fCard">0</b></button>
+          <button class="field" data-f="click"><span>Click</span><b id="fClick">0</b></button>
+          <button class="field" data-f="discount"><span>Chegirma</span><b id="fDiscount">0</b></button>
+        </div>
+        <div class="quick">
+          <button data-all="cash">Hammasi naqd</button>
+          <button data-all="card">Hammasi plastik</button>
+          <button data-all="click">Hammasi Click</button>
+        </div>
+        <div class="pay-result" id="pResult"></div>
+
+        <div class="client-box">
+          <div class="client-sel" id="clientSel">Mijoz: <b id="clientName">tanlanmagan</b> <span id="clientDebt"></span></div>
+          <button id="clientClear" class="link hidden">olib tashlash</button>
+        </div>
+        <input id="clientQ" type="text" inputmode="text" autocomplete="off" placeholder="Mijoz: ism yoki telefon…" aria-label="Mijoz qidirish">
+        <div class="client-list" id="clientList"></div>
+      </div>
+      <div class="pay-right">
+        <div class="pay-display"><span id="padTarget">Naqd</span><b id="padVal">0</b></div>
+        <div class="pad pay-pad" id="payPad">
+          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+          <button data-k="000">000</button><button data-k="0">0</button><button data-k="B" class="muted">⌫</button>
+        </div>
+        <label class="check"><input type="checkbox" id="printChk"> Chek chiqarish</label>
+        <div class="pay-err" id="payErr" role="alert"></div>
+        <button id="payOk" class="big primary">Tasdiqlash</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NATIJA -->
+<div class="modal hidden" id="doneModal" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+  <div class="sheet done">
+    <div class="done-ok">✓</div>
+    <div class="sheet-title" id="doneTitle">1C'ga yozildi</div>
+    <div class="done-info" id="doneInfo"></div>
+    <div class="done-change" id="doneChange"></div>
+    <div class="done-btns">
+      <button id="donePrint" class="big muted">Chek chiqarish</button>
+      <button id="doneNew" class="big primary">Yangi savdo</button>
+    </div>
+  </div>
+</div>
+
+<!-- XABAR -->
+<div class="toast hidden" id="toast" role="status"></div>
+<div class="busy hidden" id="busy"><div class="spin"></div><div id="busyText">1C'ga yozilmoqda…</div></div>
+
+<!-- CHEK (faqat chop etishda) -->
+<div id="receipt" aria-hidden="true"></div>
+
+<script src="logic.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
