@@ -51,9 +51,14 @@ object WriteKind {
      * o'zgartirish). Maydonlar: [BulkField]. Kompyuter COM orqali bajaradi, eski qiymatlar jurnalda qoladi.
      */
     const val BULK = "bk"
+    /**
+     * v5.3: kassadagi savdo oynasining "Paneli" (tez tovar tugmalari; 1C'da Константы.тов1 … тов336).
+     * Qatorlar: miqdor = tugma raqami, tovar nomi va kodi; ikkalasi bo'sh — tugma bo'shatiladi.
+     */
+    const val PANEL = "pn"
 
     val ALL = listOf(RECEIPT, SUPPLIER_PAY, SUPPLIER_RETURN, CLIENT_RETURN, BARCODE, UNDO, CLIENT_PAY, CASH_IN, CASH_OUT, GOODS_EDIT, NEW_GOODS, RATE,
-        PARTY_NEW, PARTY_EDIT, WRITE_OFF, DOC_EDIT, BULK)
+        PARTY_NEW, PARTY_EDIT, WRITE_OFF, DOC_EDIT, BULK, PANEL)
     val MONEY = setOf(SUPPLIER_PAY, CLIENT_PAY, CASH_IN, CASH_OUT)
     val GOODS = setOf(GOODS_EDIT, NEW_GOODS)
 }
@@ -105,8 +110,11 @@ object GoodsField {
     /** "1" bo'lsa shtrix kodni 1C tomoni o'zi yaratadi. */
     const val AUTO_BARCODE = "abc"
 
+    /** v5.3: qoldiq me'yori (НормаОст) — odatda 1. */
+    const val MIN_STOCK = "nrm"
+
     val PRICES = listOf(P1, P2, P3, P4, COST)
-    val CARD = setOf(GROUP, BRAND, UNIT, VOLUME, PACK, MARKUP, TYPE, SCALE)
+    val CARD = setOf(GROUP, BRAND, UNIT, VOLUME, PACK, MARKUP, TYPE, SCALE, MIN_STOCK)
     val ALL = setOf(P1, P2, P3, P4, COST, PLU, NAME, CUR, BARCODE, RATE, AUTO_BARCODE) + CARD
 }
 
@@ -203,7 +211,7 @@ data class WriteRequest(
         if (kind == WriteKind.NEW_GOODS && f[GoodsField.NAME].isNullOrBlank()) return "name"
         f[GoodsField.BARCODE]?.takeIf { it.isNotEmpty() }?.let { if (it.length !in 4..40 || !it.all { c -> c.isLetterOrDigit() && c.code < 128 }) return "barcode" }
         // v5.1: kartochka maydonlari
-        for (k in listOf(GoodsField.VOLUME, GoodsField.PACK, GoodsField.MARKUP)) {
+        for (k in listOf(GoodsField.VOLUME, GoodsField.PACK, GoodsField.MARKUP, GoodsField.MIN_STOCK)) {
             val v = f[k]?.takeIf { it.isNotEmpty() } ?: continue
             val d = v.toDoubleOrNull() ?: return k
             if (d < 0 || d.isNaN() || d > 1_000_000) return k
@@ -237,6 +245,12 @@ data class WriteRequest(
             else -> null
         }
         WriteKind.UNDO -> if (target.isBlank()) "target" else null
+        WriteKind.PANEL -> when {
+            lines.isEmpty() -> "lines"
+            lines.any { it.qty != Math.floor(it.qty) || it.qty < 1.0 || it.qty > Panel.SLOTS } -> "line"
+            lines.map { it.qty }.distinct().size != lines.size -> "line"
+            else -> null
+        }
         WriteKind.CLIENT_PAY -> {
             val v = listOf(cashSom, cashUsd, cardSom, cardUsd, clickSom, clickUsd, discountSom, discountUsd)
             when {
@@ -327,5 +341,68 @@ object WriteCodec {
         val o = JObj(value as? Map<String, Any?> ?: return null)
         val st = o.str("st").ifEmpty { if (o.bool("ok")) WriteResult.DONE else WriteResult.ERROR }
         return WriteResult(id, o.long("at"), o.bool("ok"), st, o.str("no"), o.str("ref"), o.str("e"))
+    }
+}
+
+
+/**
+ * v5.3: kassadagi savdo oynasining "Paneli" — tez sotiladigan tovarlar tugmalari.
+ * 1C'da 336 ta joy (8 sahifa x 42 tugma), har biri bitta tovar yoki bo'sh.
+ */
+class Panel(val slots: List<Slot>) {
+    class Slot(val code: String, val name: String) {
+        val isEmpty: Boolean get() = code.isEmpty() && name.isEmpty()
+    }
+
+    fun page(index: Int): List<Slot> = slots.drop(index * PAGE).take(PAGE)
+
+    /** Paneldagi tovar kodlari (takrorlarsiz). */
+    val codes: Set<String> get() = slots.mapNotNullTo(HashSet()) { it.code.takeIf { c -> c.isNotEmpty() } }
+
+    /** Bo'sh joylar (1 dan boshlab raqamlangan), [fromPage] sahifasidan boshlab. */
+    fun freeSlots(fromPage: Int = 0): List<Int> {
+        val all = slots.indices.filter { slots[it].isEmpty }.map { it + 1 }
+        val start = fromPage * PAGE
+        return all.filter { it > start } + all.filter { it <= start }
+    }
+
+    companion object {
+        const val SLOTS = 336
+        const val PAGE = 42
+        const val PAGES = SLOTS / PAGE
+        val EMPTY = Slot("", "")
+
+        /** Kompyuterdan kelgan ro'yxat: [[kod, nom], ...]. Uzunligi noto'g'ri bo'lsa — null (panel kelmagan). */
+        fun parse(list: List<Any?>): Panel? {
+            if (list.size != SLOTS) return null
+            return Panel(list.map { x ->
+                val l = x as? List<*>
+                val code = l?.getOrNull(0)?.toString()?.trim().orEmpty().let { c -> c.removeSuffix(".0") }
+                val name = l?.getOrNull(1)?.toString()?.trim().orEmpty()
+                if (name.isEmpty()) EMPTY else Slot(code, name)
+            })
+        }
+
+        /** O'zgarishlar (tugma raqami -> yangi tovar yoki bo'sh) -> 1C'ga yuboriladigan qatorlar. */
+        fun lines(changes: Map<Int, Slot>): List<WriteLine> =
+            changes.entries.sortedBy { it.key }.map { (slot, s) -> WriteLine(s.name, s.code, slot.toDouble(), 0.0, 0.0) }
+
+        /**
+         * Tavsiya: eng ko'p sotilgan, lekin panelda YO'Q tovarlar — bo'sh joylarga ketma-ket.
+         * [top] — kodlar, ko'p sotilgandan kamiga. @return tugma raqami -> tovar kodi.
+         */
+        fun suggest(panel: Panel, top: List<String>, fromPage: Int = 0, limit: Int = PAGE): Map<Int, String> {
+            val have = panel.codes
+            val free = panel.freeSlots(fromPage)
+            val out = LinkedHashMap<Int, String>()
+            var i = 0
+            for (code in top) {
+                if (i >= free.size || out.size >= limit) break
+                if (code in have || code in out.values) continue
+                out[free[i]] = code
+                i++
+            }
+            return out
+        }
     }
 }

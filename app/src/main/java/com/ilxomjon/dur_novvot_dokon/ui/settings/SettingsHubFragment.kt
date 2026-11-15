@@ -98,6 +98,7 @@ object HubTiles {
             shop += tile(f, R.string.wr_title, R.string.hub_writes_sub, R.drawable.ic_computer, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.WritesFragment() })
             shop += tile(f, R.string.hub_reports, R.string.hub_reports_sub, R.drawable.ic_trending, 0, open(f) { SubHubFragment.of(REPORTS) })
             shop += tile(f, R.string.hub_labels, R.string.hub_labels_sub, R.drawable.ic_label, 0, open(f) { SubHubFragment.of(LABELS) })
+            shop += tile(f, R.string.pn_title, R.string.hub_panel_sub, R.drawable.ic_widgets, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.PanelFragment() })
         } else {
             shop += tile(f, R.string.hub_clients, R.string.hub_clients_sub_staff, R.drawable.ic_person, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.CLIENTS) })
             shop += tile(f, R.string.sg_queue, R.string.hub_queue_sub, R.drawable.ic_sync_alt, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.outbox.OutboxFragment() })

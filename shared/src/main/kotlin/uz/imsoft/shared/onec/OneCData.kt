@@ -95,6 +95,8 @@ data class Suppliers(
     val refs: Map<String, List<String>> = emptyMap(),
     /** v5.3: kontragent telefonlari: kalit — 1C kodi va (zaxira) kichik harfli nomi. */
     val phones: Map<String, String> = emptyMap(),
+    /** v5.3: kassadagi savdo oynasining "Paneli" (kelmagan bo'lsa null). */
+    val panel: Panel? = null,
 ) {
     /** Mijoz/ta'minotchi telefoni: avval kodi, bo'lmasa nomi bo'yicha. */
     fun phoneOf(code: String, name: String): String = phones[code.trim()] ?: phones[nameKey(name)].orEmpty()
@@ -180,7 +182,7 @@ object OneCCodec {
             s(l.getOrNull(0)).trim().takeIf { it.isNotEmpty() }?.let { phones[it] = tel }
             s(l.getOrNull(1)).trim().takeIf { it.isNotEmpty() }?.let { phones[Suppliers.nameKey(it)] = tel }
         }
-        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops, refs, phones)
+        return Suppliers(stampOf(o.map["f"]), stampOf(o.map["t"]), o.long("at"), list, o.arr("err").map { s(it) }, ops, refs, phones, Panel.parse(o.arr("pnl")))
     }
 
     fun lineToList(l: OneCLine): List<Any?> = listOf(l.name, l.code, l.qty, l.priceSom, l.sumSom, l.priceUsd, l.sumUsd)

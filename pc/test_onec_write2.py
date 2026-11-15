@@ -645,6 +645,92 @@ class BulkStockValidationTest(unittest.TestCase):
         self.assertEqual("qoldiq soni noto'g'ri", onec_write.problem(self.req({"bop": "stock", "bqty": "ko'p"})))
 
 
+class PanelWriteTest(unittest.TestCase):
+    """v5.3: Paneli tugmalarini telefondan o'zgartirish (Константы.товN)."""
+
+    class Ref:
+        def __init__(self, code):
+            self.Код = code
+
+        def Пустая(self):
+            return self.Код is None
+
+    class Const:
+        def __init__(self, ref):
+            self.ref = ref
+
+        def Получить(self):
+            return self.ref
+
+        def Установить(self, ref):
+            self.ref = ref
+
+    def make(self):
+        R, K = self.Ref, self.Const
+        goods = {1042: R(1042), 7: R(7)}
+
+        class Cat:
+            def НайтиПоКоду(self, code):
+                return goods.get(code, R(None))
+
+            def НайтиПоНаименованию(self, name, exact):
+                return R(None)
+
+            def ПустаяСсылка(self):
+                return R(None)
+
+        class Consts:
+            pass
+        consts = Consts()
+        setattr(consts, "тов1", K(R(7)))
+        setattr(consts, "тов2", K(R(None)))
+        setattr(consts, "тов336", K(R(None)))
+
+        class C:
+            pass
+        c = C()
+        c.Константы = consts
+        c.Справочники = C()
+        c.Справочники.Товары = Cat()
+        import tempfile
+
+        class Cfg:
+            write_on = True
+            require_backup = False
+        w = onec_write.Writer(Cfg(), None, None, tempfile.mkdtemp())
+        return w, c, consts
+
+    def req(self, lines):
+        return {"id": "r1", "k": "pn", "lines": [{"name": n, "code": cd, "q": float(q), "ps": 0.0, "pu": 0.0} for n, cd, q in lines], "f": {}}
+
+    def test_sets_and_clears_and_remembers_old(self):
+        w, c, consts = self.make()
+        res = w.panel(c, self.req([("Fuse", "1042", 2), ("", "", 1)]))
+        self.assertTrue(res["ok"])
+        self.assertEqual(getattr(consts, "тов2").ref.Код, 1042)
+        self.assertIsNone(getattr(consts, "тов1").ref.Код)
+        self.assertEqual(res["old"], {"2": "", "1": "7"})
+        w.panel_restore(c, res["old"])
+        self.assertEqual(getattr(consts, "тов1").ref.Код, 7)
+        self.assertIsNone(getattr(consts, "тов2").ref.Код)
+
+    def test_bad_slot_or_unknown_product_changes_nothing(self):
+        w, c, consts = self.make()
+        with self.assertRaises(onec_write.WriteError):
+            w.panel(c, self.req([("Fuse", "1042", 2), ("X", "9999", 1)]))
+        self.assertIsNone(getattr(consts, "тов2").ref.Код)
+        with self.assertRaises(onec_write.WriteError):
+            w.panel(c, self.req([("Fuse", "1042", 337)]))
+        with self.assertRaises(onec_write.WriteError):
+            w.panel(c, self.req([]))
+
+    def test_parse_accepts_panel_kind(self):
+        import json
+        r = onec_write.parse_request("abc", {"k": "pn", "p": json.dumps({"l": [["Fuse", "1042", 5, 0, 0]]})})
+        self.assertEqual(r["k"], "pn")
+        self.assertEqual(r["lines"][0]["q"], 5.0)
+
+
 class AppModeTest(unittest.TestCase):
     """v5.3: tovar moduli COM'da ishlamasa - 1C oynasi orqali qayta (Konfiguratorsiz)."""
 

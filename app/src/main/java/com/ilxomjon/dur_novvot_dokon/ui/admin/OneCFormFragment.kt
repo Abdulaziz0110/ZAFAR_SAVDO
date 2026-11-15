@@ -48,6 +48,7 @@ class OneCFormFragment : CodeFragment() {
     /** v5.3: kam ishlatiladigan kartochka maydonlari (brend, o'lchov birligi). */
     private var extraCardBox: LinearLayout? = null
     private var eVolume: TextInputEditText? = null
+    private var eMinStock: TextInputEditText? = null
     private var ePack: TextInputEditText? = null
     private var eMarkup: TextInputEditText? = null
     private var ePlu: TextInputEditText? = null
@@ -100,7 +101,9 @@ class OneCFormFragment : CodeFragment() {
                     cardBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                     c.addView(cardBox)
                     eName = Ui.field(ctx, getString(R.string.of_new_name)).also { c.addView(it.first) }.second
-                    eVolume = Ui.field(ctx, getString(R.string.ng_volume), Ui.NUMBER).also { c.addView(it.first) }.second
+                    eVolume = Ui.field(ctx, getString(R.string.ng_volume), Ui.NUMBER, "1").also { c.addView(it.first) }.second
+                    // v5.3: qoldiq me'yori — 1C kartochkasidagi kabi, odatda 1
+                    eMinStock = Ui.field(ctx, getString(R.string.ng_min_stock), Ui.NUMBER, "1").also { c.addView(it.first) }.second
                 }
                 goodsBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                 c.addView(goodsBox)
@@ -352,7 +355,7 @@ class OneCFormFragment : CodeFragment() {
             card[uz.imsoft.shared.onec.Suppliers.GROUPS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.GROUP] = it }
             card[uz.imsoft.shared.onec.Suppliers.BRANDS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.BRAND] = it }
             card[uz.imsoft.shared.onec.Suppliers.UNITS]?.takeIf { it.isNotEmpty() }?.let { out[GoodsField.UNIT] = it }
-            for ((k, e) in listOf(GoodsField.VOLUME to eVolume, GoodsField.PACK to ePack, GoodsField.MARKUP to eMarkup)) {
+            for ((k, e) in listOf(GoodsField.VOLUME to eVolume, GoodsField.PACK to ePack, GoodsField.MARKUP to eMarkup, GoodsField.MIN_STOCK to eMinStock)) {
                 Money.parseUser(e?.text?.toString())?.takeIf { it > 0 }?.let { out[k] = Money.plain(it) }
             }
             out[GoodsField.TYPE] = if (weighed) GoodsField.TYPE_WEIGHED else GoodsField.TYPE_GOODS
@@ -383,7 +386,7 @@ class OneCFormFragment : CodeFragment() {
                 GoodsField.P1 to R.string.of_p1, GoodsField.P2 to R.string.of_p2, GoodsField.P3 to R.string.of_p3, GoodsField.P4 to R.string.of_p4,
                 GoodsField.COST to R.string.of_cost, GoodsField.PLU to R.string.of_plu, GoodsField.NAME to R.string.of_name, GoodsField.BARCODE to R.string.of_barcode,
                 GoodsField.GROUP to R.string.ng_group, GoodsField.BRAND to R.string.ng_brand, GoodsField.UNIT to R.string.ng_unit,
-                GoodsField.VOLUME to R.string.ng_volume, GoodsField.PACK to R.string.ng_pack, GoodsField.MARKUP to R.string.ng_markup,
+                GoodsField.VOLUME to R.string.ng_volume, GoodsField.PACK to R.string.ng_pack, GoodsField.MARKUP to R.string.ng_markup, GoodsField.MIN_STOCK to R.string.ng_min_stock,
                 GoodsField.SCALE to R.string.ng_scale,
             )
             if (kind == WriteKind.NEW_GOODS) {

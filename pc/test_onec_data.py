@@ -451,5 +451,36 @@ class WriteTest(unittest.TestCase):
         self.assertIn("o'chiq", self.result("w1")["e"])
 
 
+class PanelTest(unittest.TestCase):
+    """v5.3: savdo oynasidagi Paneli (Константы.тов1..336)."""
+
+    def test_reads_all_slots_in_page_queries(self):
+        calls = []
+
+        class O:
+            def query(self, text, fields, **p):
+                calls.append(text)
+                r = {f: None for f in fields}
+                if "К.тов1.Код" in text and "К.тов42.Код" in text:
+                    r["C1"] = 1042.0
+                    r["N1"] = "Fuse Tea 0.5 L"
+                    r["C42"] = 7.0
+                    r["N42"] = "Non"
+                return [r]
+        p = onec_data.panel(O())
+        self.assertEqual(len(p), 336)
+        self.assertEqual(len(calls), 8)
+        self.assertEqual(p[0], ["1042", "Fuse Tea 0.5 L"])
+        self.assertEqual(p[41], ["7", "Non"])
+        self.assertEqual(p[1], ["", ""])
+        self.assertIn("ИЗ Константы КАК К", calls[0])
+
+    def test_missing_constants_give_empty(self):
+        class O:
+            def query(self, text, fields, **p):
+                raise RuntimeError("Поле не найдено")
+        self.assertEqual(onec_data.panel(O()), [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

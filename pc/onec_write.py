@@ -30,18 +30,20 @@ import shutil
 
 log = logging.getLogger("onec_export")
 
-KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk", "ke", "wo", "undo", "de", "bk"}
+KINDS = {"in", "sp", "rs", "rc", "bc", "cp", "ci", "ce", "ge", "ng", "rt", "nk", "ke", "wo", "undo", "de", "bk", "pn"}
 DOC_OF = {"in": "Поступления", "sp": "ЮкБерувчигаТулов", "rs": "Возврат_товара_поставщику", "rc": "Возврат_товара_от_клиента",
           "cp": "Оплата_Клента", "ci": "КассаПриход", "ce": "КассаРасход"}
 # ge / ng: telefon yuboradigan maydonlar (f) — boshqasi qabul qilinmaydi
 GOODS_FIELDS = {"p1", "p2", "p3", "p4", "pin", "plu", "nm", "cur", "bc", "rate",
                 # v5.1: yangi tovar kartochkasi (1C'dagi maydonlar)
-                "grp", "brd", "unit", "vol", "pack", "nac", "typ", "scl", "abc"}
+                "grp", "brd", "unit", "vol", "pack", "nac", "typ", "scl", "abc", "nrm"}
 
 # v5.1: telefondagi kalit -> 1C ma'lumotnomasi (yangi tovar kartochkasi)
 CARD_REFS = {"grp": "ГруппаТовара", "brd": "Бренд", "unit": "ЕдИзм", "scl": "Весы"}
 # son maydonlari
-CARD_NUMS = {"vol": "Обьём", "pack": "Шт", "nac": "Нац"}
+CARD_NUMS = {"vol": "Обьём", "pack": "Шт", "nac": "Нац", "nrm": "НормаОст"}
+# v5.3: bu rekvizit bazada boshqacha nomlangan bo'lishi mumkin - topilmasa yozuv to'xtamaydi, shunchaki o'tkaziladi
+CARD_OPTIONAL = {"nrm"}
 # v4.1: nk / ke — kontragent maydonlari (grp: "c" mijozlar, "s" ta'minotchilar)
 PARTY_FIELDS = {"nm", "tel", "tel2", "adr", "reg", "grp", "inn", "lim"}
 PARTY_ATTR = {"nm": "Наименование", "tel": "Тел", "tel2": "Тел2", "adr": "Адрес", "inn": "ИНН"}
@@ -571,6 +573,8 @@ class Writer:
                 return self.doc_edit(c, req)
             if k == "bk":
                 return self.bulk(c, req)
+            if k == "pn":
+                return self.panel(c, req)
             return self.document(c, req)
         except WriteError as e:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)}
@@ -1048,8 +1052,14 @@ class Writer:
         for key, attr in CARD_NUMS.items():
             if key not in f or str(f[key]).strip() == "":
                 continue
-            old[attr] = getattr(go, attr)
-            setattr(go, attr, _fnum(f[key]))
+            try:
+                old[attr] = getattr(go, attr)
+                setattr(go, attr, _fnum(f[key]))
+            except Exception:  # noqa: BLE001
+                if key not in CARD_OPTIONAL:
+                    raise
+                old.pop(attr, None)
+                log.info("rekvizit yo'q, o'tkazildi: %s", attr)
         if f.get("typ"):
             kind = "Весовой" if str(f["typ"]) == "w" else "Товар"
             try:
@@ -1302,6 +1312,39 @@ class Writer:
         return res
 
     # --- v4.0: dollar kursi ---
+    # --- v5.3: savdo oynasidagi "Paneli" (tez tovar tugmalari) ---
+    PANEL_SLOTS = 336       # Константы.тов1 … тов336 (8 sahifa x 42 tugma), qiymati - Справочник.Товары havolasi
+
+    def panel(self, c, req):
+        """Qatorlar: miqdor = tugma raqami (1..336), tovar kodi/nomi; ikkalasi bo'sh - tugma bo'shatiladi."""
+        if not req["lines"]:
+            raise WriteError("panel: o'zgarish yo'q")
+        plan = []
+        for ln in req["lines"]:
+            slot = int(ln["q"]) if ln["q"] == int(ln["q"]) else 0
+            if slot < 1 or slot > self.PANEL_SLOTS:
+                raise WriteError("panel: tugma raqami noto'g'ri (%s)" % ln["q"])
+            ref = self.find_goods(c, ln["name"], ln["code"]) if (ln["name"] or ln["code"]) else c.Справочники.Товары.ПустаяСсылка()
+            plan.append((slot, ref))
+        old = {}
+        for slot, ref in plan:       # avval hammasi tekshirildi, endi yoziladi
+            const = getattr(c.Константы, "тов%d" % slot)
+            cur = const.Получить()
+            try:
+                code = None if cur is None or cur.Пустая() else self._plain(cur.Код)
+                if isinstance(code, float) and code == int(code):
+                    code = int(code)
+                old[str(slot)] = "" if code is None else str(code)
+            except Exception:  # noqa: BLE001
+                old[str(slot)] = ""
+            const.Установить(ref)
+        return {"id": req["id"], "ok": True, "st": "done", "no": str(len(plan)), "ref": "panel", "doc": "Панель", "old": old}
+
+    def panel_restore(self, c, old):
+        for slot, code in (old or {}).items():
+            ref = self.find_goods(c, "", code) if code else c.Справочники.Товары.ПустаяСсылка()
+            getattr(c.Константы, "тов%d" % int(slot)).Установить(ref)
+
     def set_rate(self, c, req):
         rate = round(_fnum(req["f"].get("rate")), 2)
         old = c.Константы.Курс.Получить()
@@ -1328,6 +1371,10 @@ class Writer:
                 c.Константы.Курс.Установить(old)
             self.journal.add(dict(t, st="undone", undone_by=req["id"]))
             return {"id": req["id"], "ok": True, "st": "done", "no": str(old or ""), "ref": "rate"}
+        if doc == "Панель":
+            self.panel_restore(c, t.get("old"))
+            self.journal.add(dict(t, st="undone", undone_by=req["id"]))
+            return {"id": req["id"], "ok": True, "st": "done", "no": t.get("no", ""), "ref": "panel"}
         if doc == "ТоварларКуп":
             # v5.2 (A11): ko'p tovarga qilingan amalni qaytarish — har tovarga eski qiymatlari yoziladi
             back = 0

@@ -84,6 +84,7 @@ class WritesFragment : CodeFragment() {
             WriteKind.WRITE_OFF -> R.string.wo_title
             WriteKind.DOC_EDIT -> R.string.de_title
             WriteKind.BULK -> R.string.bk_title
+            WriteKind.PANEL -> R.string.pn_title
             else -> R.string.wr_undo
         },
     )
@@ -99,6 +100,7 @@ class WritesFragment : CodeFragment() {
         WriteKind.GOODS_EDIT -> R.drawable.ic_price
         WriteKind.NEW_GOODS -> R.drawable.ic_add_box
         WriteKind.RATE -> R.drawable.ic_currency
+        WriteKind.PANEL -> R.drawable.ic_widgets
         WriteKind.PARTY_NEW -> R.drawable.ic_person_add
         WriteKind.PARTY_EDIT -> R.drawable.ic_person_search
         WriteKind.WRITE_OFF -> R.drawable.ic_assignment_return

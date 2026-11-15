@@ -236,6 +236,43 @@ def suppliers_payload(onec, d_from, d_to, now_ms):
     out["ops"] = cash_ops(onec)
     out["refs"] = catalog_refs(onec)
     out["tel"] = party_phones(onec)
+    out["pnl"] = panel(onec)
+    return out
+
+
+# v5.3: savdo oynasidagi "Paneli" - Константы.тов1 … тов336 (har biri Справочник.Товары havolasi), 8 sahifa x 42
+PANEL_SLOTS = 336
+PANEL_PAGE = 42
+
+
+def panel_query(first, count):
+    cols = []
+    for i in range(first, first + count):
+        cols.append("К.тов%d.Код КАК C%d" % (i, i))
+        cols.append("К.тов%d.Наименование КАК N%d" % (i, i))
+    return "ВЫБРАТЬ " + ", ".join(cols) + " ИЗ Константы КАК К"
+
+
+def panel(onec):
+    """[[kod, nomi], ...] - aynan 336 ta (bo'sh tugma: ["", ""]). O'qib bo'lmasa - bo'sh ro'yxat."""
+    out = []
+    try:
+        for first in range(1, PANEL_SLOTS + 1, PANEL_PAGE):
+            fields = []
+            for i in range(first, first + PANEL_PAGE):
+                fields += ["C%d" % i, "N%d" % i]
+            rows = onec.query(panel_query(first, PANEL_PAGE), fields)
+            r = rows[0] if rows else {}
+            for i in range(first, first + PANEL_PAGE):
+                code = r.get("C%d" % i)
+                name = text(r.get("N%d" % i)).strip()
+                if isinstance(code, float) and code == int(code):
+                    code = int(code)
+                code = str(code if code is not None else "").strip()
+                out.append([code, name] if name else ["", ""])
+    except Exception as e:  # noqa: BLE001 - bu bazada panel konstantalari yo'q
+        log.warning("panel o'qilmadi: %s", e)
+        return []
     return out
 
 

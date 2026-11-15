@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 44) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 45) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -35,13 +35,15 @@ Belgilar:
 | **Aqlli qidiruv** (savdo va mahsulotlar): raqam — kod, keyin narx; harf — nom; harf+raqam — nom va narx; narx tanlangan narx turi bo'yicha | VERIFIED (9 test) |
 | **Savatcha ikki qadam**: Mahsulotlar / To'lov; tepada "hammasini tozalash"; uzoq bosish — faqat shu mahsulot | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
 | **Yangi tovar**: tepada guruh, nom, hajm, narxlar, turi (shtrix kodli / kodni yaratish / tarozili); qolgani "Qo'shimcha maydonlar" ichida | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
-| Yangi tovarda "qoldiq me'yori" va "fayl" maydonlari | NOT-IMPLEMENTED (1C'dagi rekvizit nomi kerak) |
+| Yangi tovarda "Qoldiq me'yori" (НормаОст, odatda 1) | VERIFIED (kompilyatsiya; rekvizit nomi baza kodidan) |
+| Yangi tovarda "Fayl" (РасмНоми — kompyuterdagi rasm fayli nomi) | NOT-IMPLEMENTED (rasm telefonda alohida saqlanadi) |
 | Savdoda mijoz tanlash oynasida "Yangi mijoz qo'shish" (1C'ga qo'shiladi, tayyor bo'lgach o'zi tanlanadi) | VERIFIED (kompilyatsiya) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | Dollar kursi: har kuni Markaziy bankdan, qo'lda yozilgani ham almashtiriladi; sozlamasi olib tashlandi | VERIFIED (kompilyatsiya) |
 | Olib tashlandi: Agent ilovasi, chek ko'rinishi (bitta standart chek), dollar kursi, kassa kirim/chiqim, sozlamalardagi "mijozdan to'lov"/"mijoz qaytargan tovar", narx belgilash (tahrirlashga qo'shildi), agentlar ko'prigi va server sozlamasi (server — faqat sirli menyuda) | VERIFIED (kompilyatsiya) |
 | Sirli menyu (versiyani uzoq bosish): server sozlamasi va hamma parollar ochiq ko'rinadi | VERIFIED (kompilyatsiya) |
 | Bio matni savdoda yirikroq (ikkala ilovada) | VERIFIED (kompilyatsiya) |
-| Kompyuterdagi "Panel"ni telefondan o'zgartirish | NOT-IMPLEMENTED (1C'da Panel qayerda saqlanishi noma'lum) |
+| **Kassa paneli telefondan** (1C: Константы.тов1…тов336, 8 sahifa x 42): tugmaga tovar qo'yish/bo'shatish, "ko'p sotilganlar bilan to'ldirish", bitta so'rov bilan saqlash, bekor qilsa eski holat qaytadi | VERIFIED (6 Kotlin + 5 Python test) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| 1C baza kodi (BaseOld.zip) o'qildi: savdo oynasi (РеализацияСенсор1) ПродажаРозница hujjatini qanday to'ldirishi, Товары rekvizitlari, dastur moduli (мМобилАпп) tasdiqlandi | VERIFIED (manba o'qildi) |
 | Xodim (agent) ko'rinishini alohida soddalashtirish, statistika, Mijoz ilovasi dizayni, veb-agentni ilova bilan bir xil qilish | NOT-IMPLEMENTED (keyingi qism) |
 | Sensor savdo oynasi (monoblok) | NOT-IMPLEMENTED (oxirgi bosqich) |
 

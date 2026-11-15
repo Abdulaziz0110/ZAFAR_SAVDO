@@ -845,12 +845,8 @@ class OneCApp(OneC):
             app.Visible = False
         except Exception:  # noqa: BLE001
             pass
-        # Baza modullari "telefon ilovasidan" ekanini bilsin (savol oynalari chiqmasin) - bor bo'lsa
-        for name in ("мМобилАпп",):
-            try:
-                setattr(app, name, True)
-            except Exception:  # noqa: BLE001
-                pass
+        # Baza kodi tekshirildi: 1C oynasi ochilganda dastur moduli мМобилАпп ni O'ZI o'rnatadi
+        # (Константы.МобилАпп qiymatidan) - xuddi kassir oynasidagidek. Shuning uchun bu yerda tegilmaydi.
         self.c = app
         return self
 
