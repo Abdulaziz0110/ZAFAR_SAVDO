@@ -122,14 +122,15 @@ class PrintService : Service() {
     }
 
     private fun drain() {
-        val (db, qk) = db() ?: run { PrinterHub.update { it.copy(lastError = getString(R.string.pr_err_no_link)) }; return }
-        val prefs = Locator.prefs
+        // v5.3: printer holati ulanish kodi bo'lmasa ham ko'rinadi (avval "topilmadi" deb turar edi)
         val ready = UsbPrinter.ready(this)
         PrinterHub.update { it.copy(ready = ready) }
         if (ready == UsbPrinter.Ready.NO_PERMISSION && !askedPermission) {
             askedPermission = true
             UsbPrinter.requestPermission(this)
         }
+        val (db, qk) = db() ?: run { PrinterHub.update { it.copy(lastError = getString(R.string.pr_err_no_link)) }; return }
+        val prefs = Locator.prefs
         val keys = db.keys("q/$qk")
         val unknown = prefs.inflight
         if (unknown.isNotEmpty() && unknown !in keys) prefs.inflight = ""

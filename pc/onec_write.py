@@ -309,8 +309,14 @@ def problem(req):
 
 # 1C konfiguratsiyasidagi Товары / Контрагенты modullari faqat 1C oynasida bor global o'zgaruvchi va funksiyalarga
 # murojaat qiladi (мМобилАпп, Вигрузит_док1 ...). Kompyuter dasturi (COM) ulanganda ular yo'q — 1C bir martalik sozlashni so'raydi.
-COM_SETUP_HINT = ("1C'da bir martalik sozlash kerak: Konfigurator > Konfiguratsiya > \"Модуль внешнего соединения\" "
-                  "(OQING.txt, 4.1 bo'limi)")
+COM_SETUP_HINT = ("1C oynasi orqali ham yozib bo'lmadi. Kompyuterda 1C bir marta qo'lda ochilib, xato oynasi "
+                  "yo'qligini tekshiring (OQING.txt, 5.3 bo'limi)")
+
+
+def needs_app(text):
+    """Xato baza modulining COM ulanishida ishlamasligidanmi (yozuv boshlanmasdan chiqadi - qayta urinish xavfsiz)."""
+    return bool(re.search(r"(?i)(ошибка инициализации модуля|переменная не определена|"
+                          r"процедура или функция с указанным именем не определена)", str(text or "")))
 
 
 def explain_1c_error(text):
@@ -374,10 +380,14 @@ class Journal:
 # ---------------------------------------------------------------- 1C
 
 class Writer:
-    def __init__(self, cfg, cloud, onec, here, now=None):
+    def __init__(self, cfg, cloud, onec, here, now=None, app_onec=None):
         self.cfg = cfg
         self.cloud = cloud
         self.onec = onec
+        # v5.3: "oyna orqali" ulanish (Konfiguratorsiz yo'l). mode: auto | com | app
+        self.app_onec = app_onec
+        self.mode_file = os.path.join(here, "onec_mode.txt")
+        self.mode = self._load_mode()
         self.here = here
         self.now = now or dt.datetime.now
         self.journal = Journal(os.path.join(here, "write_journal.jsonl"))
@@ -440,7 +450,51 @@ class Writer:
                 self.onec.close()
             self._opened = False
 
+    def _load_mode(self):
+        want = str(getattr(self.cfg, "onec_mode", "auto") or "auto").lower()
+        if want in ("com", "app"):
+            return want
+        try:
+            with open(self.mode_file, "r", encoding="utf-8") as f:
+                if f.read().strip() == "app" and self.app_onec is not None:
+                    return "app"
+        except OSError:
+            pass
+        return "com"
+
+    def _use_app(self):
+        """COM bilan tovar moduli ishlamadi - bundan keyin oyna orqali (eslab qolinadi)."""
+        self.mode = "app"
+        try:
+            with open(self.mode_file, "w", encoding="utf-8") as f:
+                f.write("app")
+        except OSError:
+            pass
+        log.info("1C: tovar moduli COM'da ishlamadi - endi 1C oynasi orqali yoziladi (Konfigurator kerak emas)")
+
+    def can_switch(self):
+        return (self.mode == "com" and self.app_onec is not None
+                and str(getattr(self.cfg, "onec_mode", "auto") or "auto").lower() == "auto")
+
+    def idle(self):
+        if self.app_onec is not None:
+            try:
+                self.app_onec.idle()
+            except Exception as e:  # noqa: BLE001
+                log.debug("1C oynasini yopish: %s", e)
+
+    def quit(self):
+        """Dastur to'xtashidan oldin: 1C oynasi ochiq qolmasin."""
+        if self.app_onec is not None:
+            try:
+                self.app_onec.quit()
+            except Exception as e:  # noqa: BLE001
+                log.debug("1C oynasini yopish: %s", e)
+
     def conn(self):
+        if self.mode == "app" and self.app_onec is not None:
+            self.app_onec.connect()
+            return self.app_onec.c
         if getattr(self.onec, "c", None) is None:
             self.onec.connect()
             self._opened = True
@@ -474,6 +528,15 @@ class Writer:
         return done, errs
 
     def apply(self, req):
+        self.last_error = ""
+        res = self._apply(req)
+        # v5.3: baza moduli COM ulanishida ishlamasa (hech narsa yozilmagan) - 1C oynasi orqali qayta
+        if not res.get("ok") and self.can_switch() and needs_app(self.last_error or res.get("e")):
+            self._use_app()
+            res = self._apply(req)
+        return res
+
+    def _apply(self, req):
         rid = req["id"]
         if getattr(self.cfg, "write_on", True) is False:
             return {"id": rid, "ok": False, "st": "err", "e": "kompyuterda 1C'ga yozish o'chiq ([write] enabled = 0)"}
@@ -515,6 +578,7 @@ class Writer:
             return {"id": rid, "ok": False, "st": "err", "e": str(e)[:250]}
         except Exception as e:  # noqa: BLE001 — 1C xatosi matni telefonga
             log.exception("1C'ga yozishda xato")
+            self.last_error = str(e)
             return {"id": rid, "ok": False, "st": "err", "e": "1C: %s" % explain_1c_error(str(e))[:290]}
 
     # --- yordamchilar ---

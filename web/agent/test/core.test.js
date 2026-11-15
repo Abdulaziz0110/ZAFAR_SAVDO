@@ -58,6 +58,11 @@ test('ulanish kodi', () => {
   const code = 'IMSAG1:' + Buffer.from('my-db.firebaseio.com\nabcdefghijkmnpqrstuvwxyzABCD').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   assert.deepStrictEqual(Core.decodeCode('  ' + code + '\n'), { dbUrl: 'https://my-db.firebaseio.com', key: 'abcdefghijkmnpqrstuvwxyzABCD' });
   assert.strictEqual(Core.decodeCode('IMSAG1:xxx'), null);
+  // v5.3: "Do'kon kodi" (IMSHOP1) ham qabul qilinadi; atrofidagi matn e'tiborsiz
+  const shop = 'IMSHOP1:' + Buffer.from('https://my-db.firebaseio.com\nabcdefghijkmnpqrstuvwxyzABCD\nZYXWVUTSRQPNMLKJHGFEDCBAzyxw').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  assert.deepStrictEqual(Core.decodeCode(shop), { dbUrl: 'https://my-db.firebaseio.com', key: 'abcdefghijkmnpqrstuvwxyzABCD' });
+  assert.deepStrictEqual(Core.decodeCode('Mana kod: ' + code + '. Shuni joylang!'), { dbUrl: 'https://my-db.firebaseio.com', key: 'abcdefghijkmnpqrstuvwxyzABCD' });
+  assert.deepStrictEqual(Core.decodeCode('https://x.pages.dev/#c=' + code), { dbUrl: 'https://my-db.firebaseio.com', key: 'abcdefghijkmnpqrstuvwxyzABCD' });
 });
 
 test('pul formati', () => {

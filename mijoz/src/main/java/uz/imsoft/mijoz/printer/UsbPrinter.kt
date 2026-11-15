@@ -28,11 +28,13 @@ object UsbPrinter {
     fun find(ctx: Context): Found? {
         val um = manager(ctx) ?: return null
         val devices = runCatching { um.deviceList.values.toList() }.getOrDefault(emptyList())
-        for (cls in intArrayOf(UsbConstants.USB_CLASS_PRINTER, UsbConstants.USB_CLASS_VENDOR_SPEC)) {
+        // v5.3: avval printer sinfi (7), keyin vendor (255), oxirida — ma'lumot yozsa bo'ladigan boshqa har qanday
+        // qurilma (ba'zi arzon printerlar o'zini boshqa sinf deb ko'rsatadi). Sichqoncha, fleshka, hub — hech qachon.
+        for (cls in intArrayOf(UsbConstants.USB_CLASS_PRINTER, UsbConstants.USB_CLASS_VENDOR_SPEC, ANY_CLASS)) {
             for (d in devices) {
                 for (i in 0 until d.interfaceCount) {
                     val itf = d.getInterface(i)
-                    if (itf.interfaceClass != cls) continue
+                    if (!classFits(itf.interfaceClass, cls)) continue
                     for (e in 0 until itf.endpointCount) {
                         val ep = itf.getEndpoint(e)
                         if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.direction == UsbConstants.USB_DIR_OUT) return Found(d, itf, ep)
@@ -41,6 +43,21 @@ object UsbPrinter {
             }
         }
         return null
+    }
+
+    private const val ANY_CLASS = -1
+
+    /** Printer bo'la olmaydigan sinflar: tovush(1), HID(3), rasm(6), xotira(8), hub(9), video(14), simsiz(224). */
+    private val NOT_PRINTER = setOf(1, 3, 6, 8, 9, 14, 224)
+
+    fun classFits(interfaceClass: Int, wanted: Int): Boolean =
+        if (wanted == ANY_CLASS) interfaceClass !in NOT_PRINTER else interfaceClass == wanted
+
+    /** Topilgan printer nomi (ekranda ko'rsatish uchun); yo'q bo'lsa bo'sh. */
+    fun name(ctx: Context): String {
+        val f = find(ctx) ?: return ""
+        val n = runCatching { f.device.productName }.getOrNull().orEmpty().trim()
+        return n.ifEmpty { "USB %04x:%04x".format(f.device.vendorId, f.device.productId) }
     }
 
     fun ready(ctx: Context): Ready {

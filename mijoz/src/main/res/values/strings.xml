@@ -107,6 +107,7 @@
     <string name="pr_ready_ok">Printer: ulangan</string>
     <string name="pr_ready_perm">Printer: USB ruxsati kerak (\"Hozir tekshirish\" ni bosing)</string>
     <string name="pr_ready_nohost">Bu telefon USB printerni qo\'llamaydi (OTG yo\'q)</string>
+    <string name="pr_found">Printer: %1$s</string>
     <string name="pr_ready_none">Printer: ulanmagan</string>
     <string name="pr_queue">Navbatda: %1$d ta chek</string>
     <string name="pr_offline">Internet yo\'q — cheklar bulutda kutib turadi</string>

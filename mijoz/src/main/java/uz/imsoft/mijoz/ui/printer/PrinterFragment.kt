@@ -47,8 +47,12 @@ class PrinterFragment : Fragment() {
         b.btnCheck.setOnClickListener {
             UsbPrinter.requestPermission(requireContext())
             PrinterHub.nudge()
+            render(PrinterHub.state.value)
         }
-        b.btnTest.setOnClickListener { PrinterHub.commands.trySend(PrinterHub.Command.TestPage); PrinterHub.nudge() }
+        // v5.3: sinov cheki servis yoqilmagan bo'lsa ham chiqadi (printer ishlashini darhol ko'rish uchun)
+        b.btnTest.setOnClickListener {
+            if (PrinterHub.state.value.running) { PrinterHub.commands.trySend(PrinterHub.Command.TestPage); PrinterHub.nudge() } else testDirect()
+        }
         b.btnReprint.setOnClickListener { PrinterHub.commands.trySend(PrinterHub.Command.ReprintUnknown); PrinterHub.nudge() }
         b.btnDrop.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.pr_drop).setMessage(R.string.pr_drop_msg)
@@ -63,6 +67,47 @@ class PrinterFragment : Fragment() {
                 .setMessage(UsbPrinter.describeAll(requireContext())).setPositiveButton(R.string.close, null).show()
         }
         launchOnStarted { PrinterHub.state.collect { render(it); refreshPending(it.queue) } }
+    }
+
+    /** Printer ulandi/uzildi/ruxsat berildi — ekran darhol yangilanadi (servis ishlamayotgan bo'lsa ham). */
+    private val usbReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: android.content.Context, i: Intent) {
+            if (_b != null) render(PrinterHub.state.value)
+            PrinterHub.nudge()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val f = android.content.IntentFilter().apply {
+            addAction(UsbPrinter.ACTION_PERMISSION)
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
+        }
+        androidx.core.content.ContextCompat.registerReceiver(requireContext(), usbReceiver, f, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        if (_b != null) render(PrinterHub.state.value)
+    }
+
+    override fun onStop() {
+        runCatching { requireContext().unregisterReceiver(usbReceiver) }
+        super.onStop()
+    }
+
+    private fun testDirect() {
+        val ctx = requireContext().applicationContext
+        when (UsbPrinter.ready(ctx)) {
+            UsbPrinter.Ready.NO_PERMISSION -> { UsbPrinter.requestPermission(ctx); return }
+            UsbPrinter.Ready.OK -> Unit
+            else -> { com.google.android.material.snackbar.Snackbar.make(b.root, R.string.pr_ready_none, com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show(); return }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val lines = listOf("IMSOFT Mijoz", "Sinov cheki / Test", java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(java.util.Date()), "OK")
+            val err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try { UsbPrinter.send(ctx, uz.imsoft.mijoz.printer.EscPos.testPage(lines)); null } catch (e: UsbPrinter.SendException) { e.message ?: "?" }
+            }
+            PrinterHub.log(err?.let { "! $it" } ?: getString(R.string.pr_log_test_ok))
+            PrinterHub.update { it.copy(lastError = err.orEmpty()) }
+        }
     }
 
     private var pendingFor = Int.MIN_VALUE
@@ -111,8 +156,11 @@ class PrinterFragment : Fragment() {
         val bb = _b ?: return
         val lines = ArrayList<String>()
         lines += getString(if (s.running) R.string.pr_st_running else R.string.pr_st_stopped)
+        // Printer holati shu yerda, hozir tekshiriladi — servis o'chiq bo'lsa ham to'g'ri ko'rinadi
+        val ready = UsbPrinter.ready(requireContext())
+        UsbPrinter.name(requireContext()).takeIf { it.isNotEmpty() }?.let { lines += getString(R.string.pr_found, it) }
         lines += getString(
-            when (s.ready) {
+            when (ready) {
                 UsbPrinter.Ready.OK -> R.string.pr_ready_ok
                 UsbPrinter.Ready.NO_PERMISSION -> R.string.pr_ready_perm
                 UsbPrinter.Ready.NO_USB_HOST -> R.string.pr_ready_nohost
@@ -124,8 +172,8 @@ class PrinterFragment : Fragment() {
         if (s.lastError.isNotEmpty()) lines += "⚠ " + s.lastError
         bb.tvState.text = lines.joinToString("\n")
         bb.btnToggle.setText(if (s.running) R.string.pr_stop else R.string.pr_start)
-        bb.btnTest.isEnabled = s.running
-        bb.btnCheck.isEnabled = s.running
+        bb.btnTest.isEnabled = true
+        bb.btnCheck.isEnabled = true
         bb.cardUnknown.show(s.unknownKey.isNotEmpty())
         bb.tvLog.text = s.log.joinToString("\n")
     }

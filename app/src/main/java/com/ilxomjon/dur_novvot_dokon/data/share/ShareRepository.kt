@@ -816,7 +816,7 @@ class ShareRepository(
         // v5.2 (A7): mahsulot ma'lumotlari agentlarga ham borsin
         runCatching {
             com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.bio.publish(
-                com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.secure.relayConfig, store.secret,
+                com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.cloudConfig, store.secret,
             )
         }
         runCatching { mirror.retryPending() }

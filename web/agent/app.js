@@ -359,7 +359,7 @@
   function vSetup() {
     return header('Savdo Agent') + '<main>' +
       '<div class="card"><div class="label">Ulanish</div>' +
-      '<p>Admin ilovasidan <b>agent ulanish kodini</b> oling (Admin ▸ Boshqaruv ▸ Agentlar ko\'prigi ▸ "Kodni yuborish") va shu yerga joylang. Kod <b>IMSAG1:</b> bilan boshlanadi.</p>' +
+      '<p>Admin ilovasidan <b>agent ulanish kodini</b> oling (Admin ▸ Boshqaruv ▸ Agentlar ko\'prigi ▸ "Kodni yuborish") va shu yerga joylang. Kod <b>IMSAG1:</b> yoki <b>IMSHOP1:</b> bilan boshlanadi.</p>' +
       '<textarea id="code" placeholder="IMSAG1:..." autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>' +
       '<button class="btn" data-act="setup">Ulash</button><div id="msg" class="err"></div></div>' +
       installHint() + '</main>';
@@ -878,7 +878,7 @@
   async function doSetup() {
     var c = C.decodeCode(document.getElementById('code').value);
     var msg = document.getElementById('msg');
-    if (!c) { msg.textContent = "Kod noto'g'ri. Admin bergan IMSAG1:... kodini to'liq joylang."; return; }
+    if (!c) { msg.textContent = "Kod noto'g'ri. Admin bergan kodni (IMSAG1:... yoki IMSHOP1:...) to'liq joylang."; return; }
     S.cfg = c; LS.set('cfg', c);
     msg.textContent = '';
     try { await heartbeat(); } catch (e) { /* */ }

@@ -36,6 +36,9 @@ class RelayClient(
     /** v4.0: shu telefonning qurilma id'si (savdo bilan boradi — Admin bloklagan telefondan qabul qilmaydi). */
     @Volatile var deviceId: () -> String = { "" }
 
+    /** v5.3: shu telefon Admin (o'z savdosining ko'zgusini o'zi qiladi — ko'prik takrorlamasin). */
+    @Volatile var own: () -> Boolean = { false }
+
     /** Admin yuborgan 1C kodlari (PLU/shtrix/narx turlari) — yorliqlar uchun. */
     var onCodes: (suspend (ByteArray) -> Unit)? = null
 
@@ -201,6 +204,7 @@ class RelayClient(
         val item = linkedMapOf<String, Any?>("at" to CloudDb.SERVER_TIME, "u" to userId, "t" to type, "p" to payload)
         saleFile(oid)?.takeIf { it.isFile }?.let { f -> runCatching { f.readText() }.getOrNull()?.let { item["m"] = it } }
         deviceId().takeIf { it.isNotEmpty() }?.let { item["d"] = it }
+        if (own()) { item["d"] = RelayCodec.OWN_DEVICE; item.remove("m") }
         try {
             try {
                 io { db.put(c.path("ob/$oid"), item) }

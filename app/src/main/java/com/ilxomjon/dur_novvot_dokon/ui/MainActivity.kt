@@ -80,6 +80,14 @@ class MainActivity : AppCompatActivity(), Navigator {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // v5.3: kompyuter ko'prigi sozlamasi (SQL manzili, yangilanish manzili) — Admin ochilganda bir marta yuboriladi
+        if (com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val st = ServiceLocator.shareStore
+                if (st.isCloudReady && st.agentKey.isEmpty()) st.agentKey = uz.imsoft.shared.CloudDb.newKey()
+                runCatching { ServiceLocator.relayHost.syncPc() }
+            }
+        }
         // v4.0: katta shriftda tugma yozuvlari sig'sin (barcha ekranlarda)
         uz.imsoft.shared.android.FitText.install(this)
         if (savedInstanceState == null) com.ilxomjon.dur_novvot_dokon.ui.ledger.SecretPrefs.countLaunch(this)
@@ -169,9 +177,8 @@ class MainActivity : AppCompatActivity(), Navigator {
         val before = d.cached()
         val a = runCatching { d.sync() }.getOrElse { return }
         if (!ServiceLocator.deviceMode || !loggedIn) return
-        val current = ServiceLocator.catalog.state.value.agent?.id.orEmpty()
-        // Eski usulda kirgan agent (hali biriktirilmagan) — chiqarib yuborilmaydi; Admin biriktirgach shu qoida ishlaydi
-        val kick = if (a == null) before != null else a.blocked || (a.agentId.isNotEmpty() && a.agentId != current)
+        // v5.3: xodim o'z raqami va paroli bilan kiradi — faqat Admin BLOKLAGAN telefon chiqarib yuboriladi
+        val kick = a?.blocked == true || (a == null && before?.blocked == true)
         if (kick) {
             runCatching { ServiceLocator.auth.logout() }
             onLoggedOut()
@@ -371,8 +378,8 @@ class MainActivity : AppCompatActivity(), Navigator {
 
     private fun showLogin() {
         clearAll()
-        // v4.0: kalitsiz (Admin biriktiradi) — kirish oynasi o'rniga kutish ekrani
-        val f: Fragment = if (ServiceLocator.deviceMode) com.ilxomjon.dur_novvot_dokon.ui.login.DeviceWaitFragment() else LoginFragment()
+        // v5.3: hamma telefon raqami va parol bilan kiradi (egasi — Admin, boshqalar — xodim)
+        val f: Fragment = LoginFragment()
         supportFragmentManager.beginTransaction().setReorderingAllowed(true)
             .replace(R.id.container, f, TAG_LOGIN).commit()
         updateChrome()

@@ -64,9 +64,20 @@ class DevicesFragment : CodeFragment() {
         else -> R.drawable.ic_person
     }
 
-    private fun render(list: List<DeviceInfo>) {
+    private fun render(all: List<DeviceInfo>) {
         if (!::box.isInitialized) return
         box.removeAllViews()
+        // v5.3: qayta o'rnatishdan qolgan eski yozuvlar yashiriladi (bitta telefon — bitta qator)
+        val tidy = uz.imsoft.shared.DeviceList.tidy(all)
+        val list = tidy.shown
+        if (tidy.stale.isNotEmpty()) {
+            box.addView(Ui.button(ctx, getString(R.string.dv_clean, tidy.stale.size), outlined = true, icon = R.drawable.ic_delete, top = 4) {
+                MaterialAlertDialogBuilder(ctx).setMessage(getString(R.string.dv_clean_q, tidy.stale.size))
+                    .setPositiveButton(R.string.dv_remove) { _, _ ->
+                        launchUi { for (d in tidy.stale) admin.remove(d.id); snack(getString(R.string.dv_done)) }
+                    }.setNegativeButton(R.string.cancel, null).show()
+            })
+        }
         val groups = listOf(
             R.string.dv_new to list.filter { it.assignment == null && it.role != DeviceCodes.ROLE_ADMIN },
             R.string.dv_agents to list.filter { it.assignment?.blocked == false && it.assignment.agent.isNotEmpty() },
@@ -89,6 +100,7 @@ class DevicesFragment : CodeFragment() {
                     d.version.takeIf { it.isNotEmpty() }?.let { "v$it" },
                     if (d.seenAt > 0) getString(R.string.dv_seen, formatDateTime(d.seenAt)) else null,
                     if (d.crashAt > 0) getString(R.string.dv_crash) else null,
+                    tidy.extra[d.id]?.let { getString(R.string.dv_older, it) },
                 ).joinToString(" · ")
                 val tone = when {
                     a?.blocked == true -> 3

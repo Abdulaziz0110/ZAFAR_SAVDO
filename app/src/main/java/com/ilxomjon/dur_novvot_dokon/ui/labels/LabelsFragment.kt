@@ -213,7 +213,7 @@ class LabelsFragment : Fragment() {
 
     private fun printerLine(s: LabelState): String {
         val i = s.info
-        if (ServiceLocator.isRelay) return getString(R.string.lb_printer_admin)
+        if (ServiceLocator.viaCloudAgent) return getString(R.string.lb_printer_admin)
         if (s.lpd) return if (s.host.isBlank()) getString(R.string.lb_printer_none) else getString(R.string.lb_printer_lpd, s.queue, s.host)
         return when {
             s.host.isNotBlank() && i != null && s.infoError.isEmpty() -> getString(R.string.lb_printer_lan, i.printer.ifBlank { "?" }, i.host.ifBlank { s.host })

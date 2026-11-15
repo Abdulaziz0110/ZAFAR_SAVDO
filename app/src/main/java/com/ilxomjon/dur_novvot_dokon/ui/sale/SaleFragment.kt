@@ -46,6 +46,8 @@ class SaleFragment : Fragment() {
     private var rendering = false
     private var autoPicked = false
     private var setupOpen = false
+    /** Sozlash oynasidan "do'kon tanlash"ga o'tildi — tanlangach oyna qayta ochiladi. */
+    private var setupReturn = false
     /** Oxirgi takliflar (tepadagi yozuv va "nega" oynasi uchun). */
     private var lastSuggest: List<com.ilxomjon.dur_novvot_dokon.domain.Suggestion> = emptyList()
     /** Tepadagi kichik yozuv hozir taklif haqidami (bosilsa oyna chiqadi) yoki kurs ogohlantirishimi. */
@@ -94,8 +96,13 @@ class SaleFragment : Fragment() {
 
         childFragmentManager.setFragmentResultListener(REQ_STORE, viewLifecycleOwner) { _, bundle ->
             val id = bundle.getString(StorePickerSheet.KEY_ID).orEmpty()
-            vm.storeById(id)?.let { vm.setStore(it) }
-            focusSearch()
+            val store = vm.storeById(id)
+            store?.let { vm.setStore(it) }
+            // v5.3: do'kon sozlash oynasidan tanlangan bo'lsa — oyna qayta ochiladi (narx turi va boshqalar davom ettiriladi)
+            if (setupReturn) {
+                setupReturn = false
+                openSetup(store)
+            } else focusSearch()
         }
         binding.btnSetup.setOnClickListener { openSetup() }
         binding.tvContext.setOnClickListener { openSetup() }
@@ -147,9 +154,10 @@ class SaleFragment : Fragment() {
     // ---------------- sozlash oynasi ----------------
 
     /** Do'kon, narx turi, valyuta, savdo/qaytarish va kelgan narx — bitta oynada. Yopilgach kursor qidiruvga o'tadi. */
-    private fun openSetup() {
+    private fun openSetup(picked: com.ilxomjon.dur_novvot_dokon.domain.Store? = null) {
         if (setupOpen) return
         setupOpen = true
+        setupReturn = false
         val ctx = requireContext()
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -160,12 +168,13 @@ class SaleFragment : Fragment() {
         val d = lastDraft
         col.addView(Ui.text(ctx, getString(R.string.sale_store_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge))
         col.addView(
-            Ui.button(ctx, d.store?.name ?: getString(R.string.sale_select_store), outlined = true, top = 4, icon = R.drawable.ic_store) {
+            Ui.button(ctx, (picked ?: d.store)?.name ?: getString(R.string.sale_select_store), outlined = true, top = 4, icon = R.drawable.ic_store) {
                 pickStore = true
                 (it.tag as? android.app.Dialog)?.dismiss()
             },
         )
-        val fixed4 = d.store != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == d.store?.id }
+        val storeNow = picked ?: d.store
+        val fixed4 = storeNow != null && ServiceLocator.shareStore.clients().any { it.storeId.isNotEmpty() && it.storeId == storeNow.id }
         col.addView(Ui.text(ctx, getString(R.string.sale_price_label), com.google.android.material.R.style.TextAppearance_Material3_LabelLarge, 14))
         var level = d.level
         col.addView(
@@ -197,6 +206,9 @@ class SaleFragment : Fragment() {
             .setOnDismissListener {
                 setupOpen = false
                 if (pickStore) {
+                    // tanlab bo'lingan narx turi / rejim yo'qolmasin
+                    applySetup(level, currency, mode, cost)
+                    setupReturn = true
                     StorePickerSheet.show(childFragmentManager, REQ_STORE)
                 } else {
                     applySetup(level, currency, mode, cost)

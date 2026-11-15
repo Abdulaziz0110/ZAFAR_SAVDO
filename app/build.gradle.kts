@@ -20,8 +20,8 @@ android {
         applicationId = "com.ibrohimjon.imsoft_dokon_som_val"
         minSdk = 23
         targetSdk = 35
-        versionCode = 42
-        versionName = "5.2"
+        versionCode = 43
+        versionName = "5.3"
 
         // v4.0: kalitsiz ishlash va o'zi yangilanish — GitHub secret SHOP_CODE (Admin ▸ Qurilmalar) va build skripti beradi.
         // Bo'sh bo'lsa ilova eskicha ishlaydi (ulanish kodi so'raladi, yangilanish tekshirilmaydi).
@@ -34,13 +34,10 @@ android {
         }
     }
 
-    // v3.0: bitta kod — ikki ilova. "agent" — ishchilar uchun (asl applicationId va imzo, hozirgi ilova shu bo'lib yangilanadi);
-    // "admin" — egasi uchun, hamma imkoniyat (alohida ilova, yonma-yon o'rnatiladi). Rol AppRole.isAdmin orqali.
+    // v5.3: BITTA ilova (avval "agent" va "admin" ikki ilova edi). Rol kirishdan aniqlanadi: egasining raqami — Admin,
+    // boshqalar — xodim (core/AppRole). applicationId avvalgi Admin ilovasiniki (".admin") — ustiga yangilanadi.
     flavorDimensions += "role"
     productFlavors {
-        create("agent") {
-            dimension = "role"
-        }
         create("admin") {
             dimension = "role"
             applicationIdSuffix = ".admin"

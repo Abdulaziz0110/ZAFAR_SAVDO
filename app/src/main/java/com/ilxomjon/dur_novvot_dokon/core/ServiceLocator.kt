@@ -64,7 +64,7 @@ object ServiceLocator {
         // v3.1: 1- va 2-narx 1C'dan (kompyuter yuborgan kodlar fayli)
         com.ilxomjon.dur_novvot_dokon.domain.Pricing.level12 = { id, level -> labels.priceForLevel(id, level) }
         // v4.0: kelgan narx — oxirgi kirim (Admin: 1C kirimlaridan; Agent: Admin yuborgan)
-        com.ilxomjon.dur_novvot_dokon.domain.Pricing.lastCost = { id -> if (AppRole.isAdmin) onec.lastCost(id) else if (isRelay) relayClient.lastCosts[id] else null }
+        com.ilxomjon.dur_novvot_dokon.domain.Pricing.lastCost = { id -> if (AppRole.isAdmin) onec.lastCost(id) else if (cloudReady) relayClient.lastCosts[id] else null }
         // Keystore va baza obyektlari asosiy oqimni to'sib qo'ymasligi uchun IO'da oldindan yaratiladi.
         appScope.launch(Dispatchers.IO) {
             // Navbat bazasi yangi versiyaga o'tishidan OLDIN fayl nusxasi olinadi (rollback uchun).
@@ -167,7 +167,7 @@ object ServiceLocator {
 
     /** v4.0: ilova o'zi yangilanadi (build'dagi yashirin manzildan). */
     val updater by lazy {
-        uz.imsoft.shared.android.AppUpdater(app, com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL, if (AppRole.isAdmin) "admin" else "agent",
+        uz.imsoft.shared.android.AppUpdater(app, com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL, "admin",
             com.ilxomjon.dur_novvot_dokon.BuildConfig.VERSION_CODE.toLong())
     }
 
@@ -209,19 +209,49 @@ object ServiceLocator {
     /** To'g'ridan-to'g'ri SQL server (Admin har doim shu; Agent "Server" rejimida). */
     val directApi by lazy { ServerApi(server) }
     /** v3.0 Agent "Admin orqali": faqat internet, server ishini Admin bajaradi. */
+    /**
+     * v5.3: bulut yo'li sozlamasi. Admin — o'z buluti (agentlar guruhi kaliti); agent — build'dagi do'kon kodi yoki
+     * Admin bergan ulanish kodi.
+     */
+    val cloudConfig: com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config?
+        get() = if (AppRole.isAdmin) {
+            com.ilxomjon.dur_novvot_dokon.data.relay.RelayCodec.Config(uz.imsoft.shared.CloudDb.normalizeUrl(shareStore.dbUrl), shareStore.agentKey)
+                .takeIf { shareStore.isCloudReady && it.isValid }
+        } else secure.relayConfig
+
     val relayClient: com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient by lazy {
-        com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient({ secure.relayConfig }, saleDir = java.io.File(app.filesDir, "relay_sales")).also { r ->
-            r.onCodes = { bytes -> labels.applyCodes(bytes) }
+        com.ilxomjon.dur_novvot_dokon.data.relay.RelayClient(
+            { cloudConfig },
+            cloud = { url -> if (AppRole.isAdmin) uz.imsoft.shared.CloudDb(url, shareStore.secret) else uz.imsoft.shared.CloudDb(url) },
+            saleDir = java.io.File(app.filesDir, "relay_sales"),
+        ).also { r ->
+            r.onCodes = { bytes -> if (!AppRole.isAdmin) labels.applyCodes(bytes) }
             r.deviceId = { if (deviceMode) device()?.id.orEmpty() else "" }
+            r.own = { AppRole.isAdmin }
         }
     }
-    /** Agent Admin orqali ishlayaptimi (Admin ilovada hech qachon). */
-    val isRelay: Boolean get() = !AppRole.isAdmin && secure.relayMode && secure.relayConfig != null
-    val api: com.ilxomjon.dur_novvot_dokon.data.remote.Backend by lazy {
-        com.ilxomjon.dur_novvot_dokon.data.remote.SwitchingBackend(directApi, relayClient) { isRelay }
+
+    /** v5.3: bulut yo'li bormi (kompyuter ko'prigi orqali — VPN kerak emas). */
+    val cloudReady: Boolean get() = cloudConfig != null
+
+    /** v5.3: yo'lni ilova o'zi tanlaydi: do'kon Wi-Fi'sida to'g'ridan serverga, bo'lmasa bulut orqali. */
+    val autoApi: com.ilxomjon.dur_novvot_dokon.data.remote.AutoBackend by lazy {
+        com.ilxomjon.dur_novvot_dokon.data.remote.AutoBackend(
+            direct = directApi, cloud = relayClient,
+            directReady = { secure.serverConfig.isComplete },
+            cloudReady = { cloudReady },
+            localNet = { network.state.value.let { it.wifi || it.vpn } },
+        )
     }
 
-    val network by lazy { NetworkMonitor(app) }
+    /** Hozir bulut orqali ishlayaptimi (agent yorlig'i, filial cheki kabi "Admin orqali" imkoniyatlar uchun). */
+    val isRelay: Boolean get() = cloudReady && autoApi.usingCloud
+    val api: com.ilxomjon.dur_novvot_dokon.data.remote.Backend get() = autoApi
+
+    /** Agent telefoni bulut orqali ulangan: yorliq va filial cheki kabi ishlar Admin/kompyuter orqali o'tadi. */
+    val viaCloudAgent: Boolean get() = !AppRole.isAdmin && cloudReady
+
+    val network by lazy { NetworkMonitor(app).also { n -> n.onWifiChanged = { autoApi.retryDirect(); outbox.kick() } } }
     val catalog by lazy { CatalogRepository(catalogDao, api, appPrefs, historyDb) }
     val draft by lazy { DraftRepository(cartDao, catalog, app.getSharedPreferences("user", Context.MODE_PRIVATE), appScope) }
     val outbox by lazy {
@@ -236,20 +266,20 @@ object ServiceLocator {
             }
         }
     }
-    val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) { isRelay } }
+    val auth by lazy { AuthRepository(api, catalogDao, secure, catalog, draft) { cloudReady } }
     val kpi by lazy { KpiTracker(historyDb, appPrefs) }
     val orders: OrderRepository by lazy {
         OrderRepository(catalog, draft, outbox, kpi).also { r ->
             // v2.6: savdo -> mijozning 2-ilovasi (sozlanmagan bo'lsa onSale hech narsa qilmaydi)
             r.onOrderQueued = { s, id, code ->
-                if (!isRelay) appScope.launch(Dispatchers.IO) {
+                if (AppRole.isAdmin || !cloudReady) appScope.launch(Dispatchers.IO) {
                     runCatching { share.onSale(s, id, code) }
                     // v3.4: Admin — server qabul qilgach qarz va 1C tarixi 2-ilovaga o'zi
                     afterDealSent(s.storeId, id)
                 }
             }
             // Admin orqali: chek ko'zgusi savdo bilan birga Admin'ga boradi (Admin 2-filialga yuboradi)
-            r.onOrderPayload = { agentId, payload, s, code -> if (isRelay) relayClient.rememberSale(agentId, payload, s, code) }
+            r.onOrderPayload = { agentId, payload, s, code -> if (!AppRole.isAdmin && cloudReady) relayClient.rememberSale(agentId, payload, s, code) }
             // v3.2: Admin'da qabul qilingan to'lov — 2-ilovada darhol, qarz esa server qabul qilgach yangilanadi
             r.onPaymentQueued = { p, id, code ->
                 if (AppRole.isAdmin) appScope.launch(Dispatchers.IO) {
@@ -373,7 +403,7 @@ object ServiceLocator {
      */
     suspend fun queueBarcodes(items: List<com.ilxomjon.dur_novvot_dokon.data.barcode.BarcodeBatch.Item>): Int {
         if (items.isEmpty()) return 0
-        if (isRelay) return relayClient.sendBarcodes(items.map { it.productId to it.code })
+        if (!AppRole.isAdmin && cloudReady) return relayClient.sendBarcodes(items.map { it.productId to it.code })
         if (!AppRole.isAdmin || !onec.ready) return -1
         val byId = catalog.state.value.productsById
         val reqs = items.map { i ->
@@ -400,7 +430,7 @@ object ServiceLocator {
     /** Admin: 1C'ga yozish navbatiga; Agent "Admin orqali": Admin'ga yuboradi; Agent to'g'ridan — faqat telefonda qoladi. */
     suspend fun queueBarcode(productId: String, code: String, fromAgent: Boolean): Boolean {
         val name = catalog.state.value.productsById[productId]?.name.orEmpty()
-        if (isRelay) return runCatching { relayClient.sendBarcode(productId, name, code) }.getOrDefault(false)
+        if (!AppRole.isAdmin && cloudReady) return runCatching { relayClient.sendBarcode(productId, name, code) }.getOrDefault(false)
         if (!AppRole.isAdmin || !onec.ready) return false
         val req = uz.imsoft.shared.onec.WriteRequest(
             uz.imsoft.shared.onec.WriteCodec.newId(), uz.imsoft.shared.onec.WriteKind.BARCODE, System.currentTimeMillis(),
@@ -411,7 +441,7 @@ object ServiceLocator {
     }
     val labels: com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository by lazy {
         com.ilxomjon.dur_novvot_dokon.data.labels.LabelRepository(app, catalog, barcodes, shareStore).also { l ->
-            l.relayActive = { isRelay }
+            l.relayActive = { !AppRole.isAdmin && cloudReady }
             l.relayPrint = { data, copies -> relayClient.printLabels(data, copies) }
             l.relayRefreshCodes = { catalog.sync() }
         }
@@ -435,6 +465,14 @@ object ServiceLocator {
                 }
                 override suspend fun barcode(productId: String, name: String, code: String): Boolean = queueBarcode(productId, code, fromAgent = true)
                 override fun blockedDevice(deviceId: String): Boolean = deviceId in deviceAdmin.blockedIds()
+                override fun blockedDevices(): List<String> = deviceAdmin.blockedIds().toList()
+                override fun productIds(): List<String> = catalog.state.value.products.map { it.id }
+                override fun updateUrl(): String = com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL
+                override fun pcLink(): Pair<String, Map<String, String>>? {
+                    val cfg = secure.serverConfig
+                    if (!cfg.isComplete || shareStore.inboxKey.isEmpty()) return null
+                    return shareStore.inboxKey to linkedMapOf("host" to cfg.host, "database" to cfg.database, "user" to cfg.login, "password" to cfg.password)
+                }
                 override fun lastCosts(): Map<String, Pair<Double, Double>> = onec.lastCosts()
                 override fun written(agentId: String, type: String, payload: String) = agentStats.record(agentId, type, payload)
                 override fun branchStores(): List<String> = shareStore.clients().filter { it.queueKey.isNotEmpty() && it.storeId.isNotEmpty() }.map { it.storeId }

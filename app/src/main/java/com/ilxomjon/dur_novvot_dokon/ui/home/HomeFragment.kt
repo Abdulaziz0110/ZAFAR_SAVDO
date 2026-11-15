@@ -94,6 +94,7 @@ class HomeFragment : Fragment() {
         com.ilxomjon.dur_novvot_dokon.ui.share.Tour.show(this, com.ilxomjon.dur_novvot_dokon.ui.share.Tour.HOME)
         binding.btnContinue.setOnClickListener { navigator().openTab(R.id.nav_sale) }
         addCartsCard()
+        if (adminRole) addWritesCard()
 
         // v5.2 (A8): pastdagi holat kartasi
         binding.btnDiagMore.setOnClickListener { com.ilxomjon.dur_novvot_dokon.ui.diag.DiagnosticsSheet.show(parentFragmentManager) }
@@ -272,6 +273,34 @@ class HomeFragment : Fragment() {
             }
         }
         viewLifecycleOwner.lifecycleScope.launch { runCatching { ServiceLocator.parked.refresh() } }
+    }
+
+    /** v5.3 (Admin): 1C'ga kiritish navbati — bosh sahifadan bir bosishda; kutayotgan va xato sonlari ko'rinib turadi. */
+    private fun addWritesCard() {
+        val anchor = binding.quickRow1
+        val parent = anchor.parent as? android.view.ViewGroup ?: return
+        val ctx = requireContext()
+        val (card, col) = uz.imsoft.shared.android.Ui.card(ctx, 0)
+        parent.addView(
+            card, parent.indexOfChild(anchor),
+            android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = uz.imsoft.shared.android.Ui.dp(ctx, 12) },
+        )
+        launchOnStarted {
+            ServiceLocator.onec.state.collect { st ->
+                val wait = st.writes.count { it.isWaiting }
+                val err = st.writes.count { it.isError }
+                col.removeAllViews()
+                col.addView(
+                    uz.imsoft.shared.android.Ui.item(
+                        ctx, getString(R.string.wr_home), getString(R.string.wr_home_sub, wait, err),
+                        icon = R.drawable.ic_computer, tone = if (err > 0) 3 else if (wait > 0) 0 else 1,
+                    ) { navigator().push(com.ilxomjon.dur_novvot_dokon.ui.admin.WritesFragment()) },
+                )
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch { runCatching { ServiceLocator.onec.load() } }
     }
 
     private fun resumeCart(id: Long) {

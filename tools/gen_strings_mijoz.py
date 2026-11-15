@@ -94,6 +94,7 @@ STRINGS = {
  'pr_ready_ok': 'Printer: ulangan',
  'pr_ready_perm': "Printer: USB ruxsati kerak (\"Hozir tekshirish\" ni bosing)",
  'pr_ready_nohost': "Bu telefon USB printerni qo'llamaydi (OTG yo'q)",
+ 'pr_found': 'Printer: %1$s',
  'pr_ready_none': 'Printer: ulanmagan',
  'pr_queue': 'Navbatda: %1$d ta chek',
  'pr_offline': "Internet yo'q — cheklar bulutda kutib turadi",

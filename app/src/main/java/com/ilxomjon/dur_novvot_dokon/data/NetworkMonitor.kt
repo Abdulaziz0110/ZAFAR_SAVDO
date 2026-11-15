@@ -17,6 +17,9 @@ class NetworkMonitor(private val context: Context) {
     val state: StateFlow<NetState> = _state.asStateFlow()
     @Volatile private var started = false
 
+    /** v5.3: Wi-Fi ulandi/uzildi — ulanish yo'li qayta tanlansin. */
+    @Volatile var onWifiChanged: (() -> Unit)? = null
+
     fun start() {
         if (started) return
         started = true
@@ -43,7 +46,9 @@ class NetworkMonitor(private val context: Context) {
                 vpn = vpn,
             )
         }.getOrDefault(NetState())
+        val wifiChanged = _state.value.wifi != s.wifi
         _state.value = s
+        if (wifiChanged) runCatching { onWifiChanged?.invoke() }
         return s
     }
 }

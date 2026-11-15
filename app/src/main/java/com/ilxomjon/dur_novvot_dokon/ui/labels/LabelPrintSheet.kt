@@ -94,7 +94,7 @@ class LabelPrintSheet : BottomSheetDialogFragment() {
         val s = repo.state.value
         val cloudOk = s.cloud && ServiceLocator.shareStore.isCloudReady
         val pr = s.info?.printer?.ifBlank { null } ?: "—"
-        if (com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.isRelay) return getString(R.string.lb_printer_admin)
+        if (com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.viaCloudAgent) return getString(R.string.lb_printer_admin)
         if (s.lpd) return if (s.host.isBlank()) getString(R.string.lb_route_none) else getString(R.string.lb_printer_lpd, s.queue, s.host)
         return when {
             s.host.isNotBlank() && cloudOk -> getString(R.string.lb_route_lan_cloud, pr, s.host)

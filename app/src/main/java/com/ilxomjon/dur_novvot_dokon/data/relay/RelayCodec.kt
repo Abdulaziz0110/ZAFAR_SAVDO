@@ -35,6 +35,9 @@ import javax.crypto.spec.PBEKeySpec
 object RelayCodec {
     const val CODE_PREFIX = "IMSAG1:"
 
+    /** v5.3: Admin'ning o'z savdosi bulut orqali ketganda qurilma o'rnida shu yoziladi (ko'zgusi takrorlanmaydi). */
+    const val OWN_DEVICE = "admin"
+
     data class Config(val dbUrl: String, val key: String) {
         val isValid: Boolean get() = dbUrl.startsWith("https://") && CloudDb.isKey(key)
         fun path(sub: String) = "g/$key/$sub"

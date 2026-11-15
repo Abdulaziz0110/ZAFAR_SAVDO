@@ -205,8 +205,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Printer ulanganda ilova ochilsa — servis darhol tekshiradi. */
+    /**
+     * v5.3: printer ulanishi bilan hammasi o'zi sozlanadi: Printer bo'limi ochiladi, USB ruxsati so'raladi va
+     * (ulanish kodi bor bo'lsa) servis ishga tushib, navbatdagi cheklarni chiqaradi.
+     */
     private fun handleUsb(i: Intent?) {
-        if (i?.action == UsbManager.ACTION_USB_DEVICE_ATTACHED) PrinterHub.nudge()
+        if (i?.action != UsbManager.ACTION_USB_DEVICE_ATTACHED) return
+        if (uz.imsoft.mijoz.printer.UsbPrinter.find(this) == null) return
+        val p = Locator.prefs
+        if (!p.printerSection) { p.printerSection = true; runCatching { updatePrinterTab() } }
+        if (uz.imsoft.mijoz.printer.UsbPrinter.ready(this) == uz.imsoft.mijoz.printer.UsbPrinter.Ready.NO_PERMISSION) {
+            uz.imsoft.mijoz.printer.UsbPrinter.requestPermission(this)
+        }
+        if (!p.link?.queueKey.isNullOrEmpty() && !PrinterHub.state.value.running) runCatching { PrintService.start(this) }
+        PrinterHub.nudge()
+        runCatching { binding.bottomNav.selectedItemId = R.id.nav_printer }
     }
 
     /**

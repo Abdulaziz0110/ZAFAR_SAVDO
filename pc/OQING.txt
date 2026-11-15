@@ -46,3 +46,31 @@ Yangi (v4.1):
    Shundan keyin kompyuter dasturi tovar va kontragentlarni 1C oynasidagidek yozadi.
    (oxirgi qator - 1C oynasidagidek narx/kontragent o'zgarishi telefonlar bazasiga (SQL) ham yoziladi).
    F7 dan keyin xato chiqsa - 4-qadamni qaytaring va oynaning rasmini yuboring.
+
+
+Yangi (v5.3) - ENG MUHIM O'ZGARISH:
+ 1) TELEFONLAR KO'PRIGI ENDI SHU KOMPYUTERDA (relay.py). VPN (Tailscale) kerak emas, Admin telefoni yoniq turishi
+    shart emas. Kompyuter yoniq va internetda bo'lsa:
+      - tovar, narx, qoldiq, mijoz va qarzlar bulutga o'zi qo'yiladi (telefonlar istalgan internetdan oladi);
+      - telefondan kelgan savdo/to'lov SQL serverga shu yerda yoziladi.
+    Sozlash kerak emas: SQL manzili va kalitni Admin ilovasi o'zi yuboradi (relay.json da saqlanadi).
+    Qo'lda yozmoqchi bo'lsangiz - onec.ini ga:
+        [sql]
+        host = 127.0.0.1
+        database = <baza nomi>
+        user = <login>
+        password = <parol>
+    O'chirish: [sql] enabled = 0
+ 2) 1C KONFIGURATORSIZ. "Ошибка инициализации модуля ... Переменная не определена (мМобилАпп)" xatosi chiqsa,
+    dastur o'zi "1C oynasi orqali" yozishga o'tadi (ko'rinmas 1C oynasi ochiladi) va buni eslab qoladi
+    (onec_mode.txt). 4.1 bo'limdagi Konfigurator ishi endi SHART EMAS.
+    Majburlash: onec.ini [1c] mode = app (yoki com, yoki auto).
+    Eslatma: oyna orqali yozishda 1C litsenziyasidan bitta o'rin 3 daqiqagacha band bo'ladi.
+    Agar yozuv "kutmoqda"da qotib qolsa - kompyuterda 1C biror savol oynasini ko'rsatayotgan bo'lishi mumkin:
+    Vazifalar menejerida 1cv8.exe ni yoping va oynaning rasmini yuboring.
+ 3) DASTUR O'ZI YANGILANADI (selfupdate.py): soatiga bir marta tekshiradi, yangi versiya bo'lsa yuklab,
+    o'zini qayta ishga tushiradi. Sozlama fayllariga (*.ini, *.json) tegmaydi.
+    Shu versiyani BIR MARTA qo'lda qo'yish kerak (eski dasturda yangilanish yo'q edi):
+    Admin ilovasi > Kompyuter > "Yuklab olish havolasini yuborish" > faylni shu papkaga oching > ORNATISH.bat.
+ 4) Shtrix kodlar: tovarning asosiy kodi, qo'shimcha kodlar ro'yxati va "Штрих" ma'lumotnomasi - HAMMASI
+    telefonga boradi (avval faqat bittasi o'qilar, qo'shimcha kodni skaner "topilmadi" der edi).

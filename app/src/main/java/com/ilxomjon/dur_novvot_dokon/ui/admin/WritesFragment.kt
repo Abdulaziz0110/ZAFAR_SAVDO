@@ -3,7 +3,6 @@ package com.ilxomjon.dur_novvot_dokon.ui.admin
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.TextView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
@@ -20,17 +19,39 @@ import uz.imsoft.shared.onec.WriteResult
 /** v3.2 Admin: 1C'ga yozish navbati va natijalari. "1C'ga kiritildi" faqat kompyuter hujjat raqamini qaytargach. */
 class WritesFragment : CodeFragment() {
     private lateinit var lp: Ui.ListPage
-    private lateinit var tvInfo: TextView
     private var shown: List<WriteItem> = emptyList()
+    private var filter = 0
+    private var tabs: com.google.android.material.button.MaterialButtonToggleGroup? = null
+    private var bResend: View? = null
 
     override fun build(inflater: LayoutInflater): View {
         lp = listPage(R.string.wr_title) { i -> shown.getOrNull(i)?.let { details(it) } }
-        tvInfo = Ui.hint(ctx, getString(R.string.wr_hint), 4).also { lp.header.addView(it) }
-        val bNew = Ui.button(ctx, getString(R.string.ad_new_receipt), top = 6, icon = R.drawable.ic_inventory) { navigator().push(WriteFormFragment.of(WriteKind.RECEIPT, "", "")) }
-        val bRefresh = Ui.button(ctx, getString(R.string.sp_refresh), outlined = true, top = 6, icon = R.drawable.ic_sync) { launchUi { ServiceLocator.onec.refreshResults() } }
-        lp.header.addView(Ui.buttonRow(ctx, bNew, bRefresh, top = 0))
+        // v5.3: saralash — hammasi / kutmoqda / xato / kiritildi (har birida soni)
+        tabs = Ui.toggle(ctx, listOf(getString(R.string.wr_f_all), getString(R.string.wr_f_wait), getString(R.string.wr_f_err), getString(R.string.wr_f_done)), filter, 4) { i ->
+            filter = i
+            render()
+        }.also { lp.header.addView(it) }
+        val bAll = Ui.button(ctx, getString(R.string.wr_resend_all), top = 6, icon = R.drawable.ic_sync) {
+            launchUi { snack(getString(R.string.wr_resent, ServiceLocator.onec.resendAllFailed())) }
+        }
+        bResend = bAll
+        val bClear = Ui.button(ctx, getString(R.string.wr_clear), outlined = true, top = 6, icon = R.drawable.ic_close) { clearDialog() }
+        lp.header.addView(Ui.buttonRow(ctx, bAll, bClear, top = 0))
         lp.empty.text = getString(R.string.wr_empty)
         return lp.root
+    }
+
+    private fun clearDialog() {
+        val rows = listOf(
+            Ui.MenuRow(getString(R.string.wr_clear_err), icon = R.drawable.ic_close, tone = 3) { clear(errors = true, done = false) },
+            Ui.MenuRow(getString(R.string.wr_clear_done), icon = R.drawable.ic_check, tone = 1) { clear(errors = false, done = true) },
+            Ui.MenuRow(getString(R.string.wr_clear_all), getString(R.string.wr_clear_note), icon = R.drawable.ic_list) { clear(errors = true, done = true) },
+        )
+        Ui.menuSheet(ctx, getString(R.string.wr_clear_title), rows)
+    }
+
+    private fun clear(errors: Boolean, done: Boolean) {
+        launchUi { snack(getString(R.string.wr_cleared, ServiceLocator.onec.clear(errors, done))) }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -106,7 +127,22 @@ class WritesFragment : CodeFragment() {
 
     private fun render() {
         if (!::lp.isInitialized) return
-        shown = ServiceLocator.onec.state.value.writes
+        val all = ServiceLocator.onec.state.value.writes
+        val counts = listOf(all.size, all.count { it.isWaiting }, all.count { it.isError }, all.count { it.result?.ok == true })
+        val names = listOf(R.string.wr_f_all, R.string.wr_f_wait, R.string.wr_f_err, R.string.wr_f_done)
+        tabs?.let { g ->
+            for (i in 0 until minOf(g.childCount, 4)) {
+                (g.getChildAt(i) as? com.google.android.material.button.MaterialButton)?.text = getString(R.string.wr_f_count, getString(names[i]), counts[i])
+            }
+        }
+        bResend?.visibility = if (counts[2] > 0) View.VISIBLE else View.GONE
+        shown = when (filter) {
+            1 -> all.filter { it.isWaiting }
+            2 -> all.filter { it.isError }
+            3 -> all.filter { it.result?.ok == true }
+            else -> all
+        }
+        lp.empty.text = getString(if (all.isEmpty()) R.string.wr_empty else R.string.wr_filter_empty)
         lp.empty.visibility = if (shown.isEmpty()) View.VISIBLE else View.GONE
         lp.adapter.submit(shown.map { w ->
             val what = when (w.req.kind) {
@@ -122,13 +158,18 @@ class WritesFragment : CodeFragment() {
             }
             val noMoney = w.req.kind in setOf(WriteKind.BARCODE, WriteKind.UNDO, WriteKind.RATE, WriteKind.PARTY_NEW, WriteKind.PARTY_EDIT, WriteKind.WRITE_OFF, WriteKind.BULK) ||
                 w.req.kind in WriteKind.GOODS
-            Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + status(w), if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
+            // Ro'yxatda xato matni qisqa (to'lig'i — bosganda); qayta yuborilgan bo'lsa urinish soni ko'rinadi
+            val st = status(w).let { if (w.isError && it.length > 70) it.take(70).trimEnd() + "…" else it }
+            val retry = if (w.tries > 1) "\n" + getString(R.string.wr_retry_info, w.tries, formatDateTime(w.createdAt)) else ""
+            Ui.Row(title(w) + ": " + what, formatDateTime(w.sentAt) + " · " + st + retry, if (noMoney) "" else money2(w.req.totalSom, w.req.totalUsd), icon = icon(w), tone = tone(w))
         })
     }
 
     private fun details(w: WriteItem) {
         val sb = StringBuilder()
-        sb.append(status(w)).append("\n\n")
+        sb.append(status(w)).append("\n")
+        if (w.tries > 1) sb.append(getString(R.string.wr_retry_info, w.tries, formatDateTime(w.createdAt))).append('\n')
+        sb.append('\n')
         if (w.req.party.isNotEmpty()) sb.append(w.req.party).append('\n')
         w.req.lines.forEachIndexed { i, l ->
             val price = if (l.priceSom > 0) som(l.priceSom) else usd(l.priceUsd)

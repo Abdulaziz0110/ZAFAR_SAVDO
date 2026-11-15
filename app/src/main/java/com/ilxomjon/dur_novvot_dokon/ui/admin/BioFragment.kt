@@ -132,7 +132,7 @@ class BioFragment : CodeFragment() {
 
     /** Admin yozgan ma'lumot agentlarga ham borsin. */
     private suspend fun publish() {
-        runCatching { ServiceLocator.bio.publish(ServiceLocator.secure.relayConfig, ServiceLocator.shareStore.secret) }
+        runCatching { ServiceLocator.bio.publish(ServiceLocator.cloudConfig, ServiceLocator.shareStore.secret) }
     }
 
     private fun attachMore() {

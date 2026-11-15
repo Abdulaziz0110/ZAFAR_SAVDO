@@ -165,7 +165,7 @@ class CartFragment : Fragment() {
             // Server (1C) uchun: "1" — do'kon printeri, "3" — chiqarmaslik
             vm.setPrinter(if (c == "1" || c == "12") "1" else "3")
             val branch = if (storeId.isEmpty()) null else (c == "2" || c == "12")
-            if (ServiceLocator.isRelay) ServiceLocator.relayClient.nextBranch = branch?.let { storeId to it }
+            if (ServiceLocator.viaCloudAgent) ServiceLocator.relayClient.nextBranch = branch?.let { storeId to it }
             else ServiceLocator.share.nextBranchPrint = branch?.let { storeId to it }
         }
         b.chipPrinter.check(

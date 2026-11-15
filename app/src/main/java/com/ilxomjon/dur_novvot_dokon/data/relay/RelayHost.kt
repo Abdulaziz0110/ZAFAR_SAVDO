@@ -59,6 +59,17 @@ class RelayHost(
         fun blockedDevice(deviceId: String): Boolean = false
         /** v3.10: 1- va 2-narx (so'm, 1C'dan) — iPhone (veb) agentlar uchun: tovar id -> [1-narx, 2-narx]. */
         fun level12(productIds: List<String>): Map<String, List<Double>> = emptyMap()
+        /** v5.3: telefondagi katalogdagi tovar id'lari (1/2-narxni qo'shish uchun). */
+        fun productIds(): List<String> = emptyList()
+        /** v5.3: bloklangan qurilmalar id'si — kompyuter ko'prigi ham ulardan qabul qilmasin. */
+        fun blockedDevices(): List<String> = emptyList()
+        /**
+         * v5.3: kompyuter ko'prigi sozlamasi: (kirish qutisi kaliti, {key, host, database, user, password}).
+         * Kompyuter shu bilan SQL serverga o'zi ulanadi — Admin telefoni o'chiq bo'lsa ham agentlar ishlaydi.
+         */
+        fun pcLink(): Pair<String, Map<String, String>>? = null
+        /** v5.3: yangilanish manzili — kompyuter dasturi ham o'zi yangilanadi. */
+        fun updateUrl(): String = ""
     }
 
     class Stats(val at: Long = 0L, val requests: Int = 0, val written: Int = 0, val labels: Int = 0, val error: String = "", val catalogAt: Long = 0L)
@@ -74,6 +85,12 @@ class RelayHost(
     @Volatile private var levelHash = 0
     @Volatile private var codesSent = 0L
     @Volatile private var cleanedAt = 0L
+    @Volatile private var auxHash = 0
+    @Volatile private var linkHash = 0
+
+    /** v5.3: ko'prikni hozir do'kon kompyuteri yurityaptimi (oxirgi tekshiruv natijasi). */
+    @Volatile var pcHost: Boolean = false
+        private set
 
     val isConfigured: Boolean get() = config()?.isValid == true
 
@@ -89,8 +106,13 @@ class RelayHost(
         var done = 0
         var req = 0; var wrote = 0; var lab = 0
         var error = ""
+        // v5.3: kompyuter ko'prigi ishlab turgan bo'lsa — so'rov, savdo va katalogni U bajaradi (ikki joydan yozilmasin).
+        // Kompyuter o'chiq/uyquda bo'lsa (holati eskirgan) — Admin o'zi bajaradi, avvalgidek.
+        runCatching { publishLink(db, c) }
+        val pc = runCatching { pcAlive(map(db, c.path("hb"))) }.getOrDefault(false)
+        pcHost = pc
         // 1) so'rovlar
-        for ((id, v) in map(db, c.path("rq"))) {
+        if (!pc) for ((id, v) in map(db, c.path("rq"))) {
             val o = (v as? Map<*, *>) ?: continue
             val at = (o["at"] as? Number)?.toLong() ?: 0L
             if (at in 1 until now() - 10 * 60_000L) { runCatching { io { db.delete(c.path("rq/$id")) } }; continue } // eskirgan
@@ -109,7 +131,7 @@ class RelayHost(
         }
         // 2) savdo va to'lovlar -> server (savollar jadvali), dublikatsiz
         // Agentlar yaratgan tartibda (Firebase vaqti bo'yicha) — savdo va to'lov serverga ketma-ket tushsin
-        val queue = map(db, c.path("ob")).entries.sortedBy { ((it.value as? Map<*, *>)?.get("at") as? Number)?.toLong() ?: Long.MAX_VALUE }
+        val queue = if (pc) emptyList() else map(db, c.path("ob")).entries.sortedBy { ((it.value as? Map<*, *>)?.get("at") as? Number)?.toLong() ?: Long.MAX_VALUE }
         for ((oid, v) in queue) {
             val o = (v as? Map<*, *>) ?: continue
             try {
@@ -137,13 +159,37 @@ class RelayHost(
             res["at"] = CloudDb.SERVER_TIME
             runCatching { io { db.put(c.path("lbr/$id"), res); db.delete(c.path("lb/$id")) } }.onSuccess { lab++; done++ }
         }
+        // 3a) v5.3: kompyuter yozgan savdo/to'lovlarning izi — statistika, 2-ilova tarixi va filial cheki
+        for ((oid, v) in map(db, c.path("mr"))) {
+            val o = (v as? Map<*, *>) ?: continue
+            runCatching {
+                afterWritten(o["u"]?.toString().orEmpty(), o["t"]?.toString().orEmpty(), o["p"]?.toString().orEmpty(), o["m"]?.toString(), oid)
+                io { db.delete(c.path("mr/$oid")) }
+            }.onSuccess { done++ }.onFailure { e -> if (e is CancellationException) throw e }
+        }
+        // 3b) v5.3: agent yuborgan shtrix kodlar (kompyuter saqlab qo'ygan) — 1C'ga yozish navbatiga
+        for ((id, v) in map(db, c.path("bq"))) {
+            val o = (v as? Map<*, *>) ?: continue
+            val ok = try {
+                answer(o["op"]?.toString().orEmpty(), o["p"]?.toString().orEmpty()).let { it == true || ((it as? Number)?.toInt() ?: 0) > 0 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+            if (ok) runCatching { io { db.delete(c.path("bq/$id")) } }.onSuccess { done++ }
+        }
+        // 3c) v5.3: kompyuter ko'prigi uchun qo'shimcha ma'lumot (filial do'konlari, oxirgi kirim narxi, bloklanganlar)
+        runCatching { publishAux(db, c) }
         // 4) katalog: agent so'rasa yoki 20 daqiqada bir
         val asked = (runCatching { io { db.get(c.path("creq")) } }.getOrNull() as? Number)?.toLong() ?: 0L
-        if (forceCatalog || asked > catalogAt || now() - catalogAt > catalogPeriodMs()) {
+        if (!pc && (forceCatalog || asked > catalogAt || now() - catalogAt > catalogPeriodMs())) {
             runCatching { publishCatalog(db, c) }.onFailure { e -> if (e is CancellationException) throw e; error = (e.message ?: "catalog").take(200) }
         }
+        // 4a) v5.3: kompyuter katalog qo'yganda 1/2-narx (veb-agent uchun) Admin'dan qo'shiladi
+        if (pc && now() - levelAt > 10 * 60_000L) runCatching { publishLevels(db, c) }.onSuccess { levelAt = now() }
         // 5) 1C kodlari (kompyuterdan Admin'ga kelgani)
-        hooks.codes()?.let { (at, bytes) ->
+        if (!pc) hooks.codes()?.let { (at, bytes) ->
             if (at > codesSent) runCatching {
                 io { db.update(c.path("codes"), linkedMapOf("at" to at, "b" to B64.encode(B64.gzip(bytes)))) }
                 codesSent = at
@@ -153,7 +199,7 @@ class RelayHost(
         if (now() - cleanedAt > 86_400_000L) runCatching { cleanup(db, c) }.onSuccess { cleanedAt = now() }
         // 7) holat
         val left = runCatching { io { db.keys(c.path("ob")) }.size }.getOrDefault(0)
-        runCatching { io { db.put(c.path("hb"), linkedMapOf("at" to CloudDb.SERVER_TIME, "q" to left, "e" to error, "v" to version)) } }
+        if (!pc) runCatching { io { db.put(c.path("hb"), linkedMapOf("at" to CloudDb.SERVER_TIME, "q" to left, "e" to error, "v" to version)) } }
         val s = stats
         stats = Stats(now(), s.requests + req, s.written + wrote, s.labels + lab, error, catalogAt)
         done
@@ -184,9 +230,16 @@ class RelayHost(
         }
         io { db.put(c.path("obr/$oid"), linkedMapOf("at" to CloudDb.SERVER_TIME, "st" to "ok", "id" to id)) }
         io { db.delete(c.path("ob/$oid")) }
+        // Admin'ning o'z savdosi (bulut orqali ketgan) — ko'zgusi o'sha paytda qilingan
+        if (dev != RelayCodec.OWN_DEVICE) afterWritten(u, t, p, o["m"]?.toString(), oid)
+        return true
+    }
+
+    /** Savdo/to'lov serverga yozilgandan keyin: statistika, 2-filial cheki va 2-ilova tarixi. */
+    private suspend fun afterWritten(u: String, t: String, p: String, m: String?, oid: String) {
         runCatching { hooks.written(u, t, p) }
         // 2-filial cheki ko'zgusi (savdo bo'lsa)
-        o["m"]?.toString()?.let { RelayCodec.saleFromJson(it) }?.let { sale ->
+        m?.let { RelayCodec.saleFromJson(it) }?.let { sale ->
             runCatching { hooks.mirrorSale(sale, "r" + oid.take(16)) }
         }
         // v3.2: to'lov — 2-ilova tarixida va qarz yangilanishi (protokol: agent^do'kon^naqd^0^vaqt^kurs^izoh^naqd^o'tkazma^click^printer~)
@@ -196,7 +249,62 @@ class RelayHost(
             val store = f.getOrNull(1).orEmpty()
             if (store.isNotEmpty()) hooks.mirrorPayment(store, d(7).takeIf { f.size > 7 } ?: d(2), d(8), d(9), f.getOrNull(6).orEmpty(), "r" + oid.take(16))
         }
-        return true
+    }
+
+    @Volatile private var levelAt = 0L
+
+    /**
+     * v5.3: kompyuter ko'prigi uchun sozlama va qo'shimcha ma'lumotni yuborish (ko'prik xizmati o'chiq bo'lsa ham).
+     * Admin ilovasi ochilganda chaqiriladi — o'zgarmagan bo'lsa hech narsa yubormaydi.
+     */
+    suspend fun syncPc() {
+        val c = config() ?: return
+        val db = cloud(c.dbUrl)
+        runCatching { publishLink(db, c) }.onFailure { if (it is CancellationException) throw it }
+        runCatching { publishAux(db, c) }.onFailure { if (it is CancellationException) throw it }
+        pcHost = runCatching { pcAlive(map(db, c.path("hb"))) }.getOrDefault(false)
+    }
+
+    /** Kompyuter ko'prigi tirikmi: holatini O'ZI yozgan va 4 daqiqadan eski emas. */
+    fun pcAlive(hb: Map<String, Any?>): Boolean {
+        if (hb["h"]?.toString() != HOST_PC) return false
+        val at = (hb["at"] as? Number)?.toLong() ?: return false
+        return kotlin.math.abs(now() - at) < PC_FRESH_MS
+    }
+
+    private suspend fun publishAux(db: CloudDb, c: RelayCodec.Config) {
+        val lc = hooks.lastCosts()
+        val aux = linkedMapOf<String, Any?>(
+            "br" to hooks.branchStores(),
+            "lc" to lc.entries.sortedBy { it.key }.associate { (k, v) -> k to listOf(v.first, v.second) },
+            "bl" to hooks.blockedDevices().sorted(),
+        )
+        val h = uz.imsoft.shared.Json.write(aux).hashCode()
+        if (h == auxHash) return
+        io { db.put(c.path("ax"), aux) }
+        auxHash = h
+    }
+
+    private suspend fun publishLink(db: CloudDb, c: RelayCodec.Config) {
+        val (inbox, link) = hooks.pcLink() ?: return
+        if (!CloudDb.isKey(inbox)) return
+        val url = hooks.updateUrl()
+        val all = LinkedHashMap<String, String>(link).also { it["key"] = c.key }
+        val h = (all.toString() + url).hashCode()
+        if (h == linkHash) return
+        io {
+            db.put("p/$inbox/rl", all)
+            if (url.startsWith("https://")) db.put("p/$inbox/upd", url)
+        }
+        linkHash = h
+    }
+
+    private suspend fun publishLevels(db: CloudDb, c: RelayCodec.Config) {
+        val ids = hooks.productIds()
+        if (ids.isEmpty()) return
+        val l12 = hooks.level12(ids)
+        val q = withContext(Dispatchers.Default) { RelayCodec.pack(uz.imsoft.shared.Json.write(l12)) }
+        if (q.hashCode() != levelHash) { io { db.update(c.path("cat"), linkedMapOf("q" to q)) }; levelHash = q.hashCode() }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -249,6 +357,11 @@ class RelayHost(
     }
 
     @Suppress("UNCHECKED_CAST")
+    companion object {
+        const val HOST_PC = "pc"
+        const val PC_FRESH_MS = 4 * 60_000L
+    }
+
     private suspend fun cleanup(db: CloudDb, c: RelayCodec.Config) {
         val old = now() - 30L * 86_400_000L
         for (path in listOf("obr", "lbr", "rs")) {

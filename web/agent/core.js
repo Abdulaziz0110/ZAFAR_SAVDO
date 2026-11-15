@@ -187,15 +187,20 @@
     return u.replace(/^http:\/\//, 'https://');
   }
 
-  /** Admin beradigan "Agent ulanish kodi": IMSAG1:<base64url(url \n kalit)>. */
+  /**
+   * Admin beradigan kod. Ikki xili ham qabul qilinadi:
+   *   IMSAG1:<base64url(url \n kalit)>            - "Agent ulanish kodi"
+   *   IMSHOP1:<base64url(url \n kalit \n ...)>    - "Do'kon kodi" (undan kerakli qismi olinadi)
+   * Atrofidagi matn (xabar, havola, nuqta) e'tiborsiz: faqat kodning o'zi olinadi.
+   */
   function decodeCode(text) {
     var t = String(text || '').replace(/\s/g, '');
-    var i = t.indexOf('IMSAG1:');
-    if (i < 0) return null;
+    var m = /(IMSAG1|IMSHOP1):([A-Za-z0-9_\-]+)/.exec(t);
+    if (!m) return null;
     try {
-      var raw = new TextDecoder().decode(unb64(t.slice(i + 7)));
+      var raw = new TextDecoder().decode(unb64(m[2]));
       var p = raw.split('\n');
-      if (p.length !== 2) return null;
+      if (m[1] === 'IMSAG1' ? p.length !== 2 : p.length < 3) return null;
       var c = { dbUrl: normalizeUrl(p[0]), key: p[1].trim() };
       return /^https:\/\//.test(c.dbUrl) && isKey(c.key) ? c : null;
     } catch (e) { return null; }

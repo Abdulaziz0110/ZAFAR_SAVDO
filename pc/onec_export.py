@@ -57,6 +57,7 @@ STATE = os.path.join(HERE, "export_state.json")
 OUT_DIR = os.path.join(HERE, "export")
 DISCOVER = os.path.join(HERE, "discover.txt")
 CODES_OUT = os.path.join(HERE, "codes.json")
+PC_VERSION = "5.3"                # kompyuter dasturi versiyasi (pc_version.txt bilan birga yangilanadi)
 TICK_SEC = 30                     # jadval, telefon so'rovlari va 1C'ga yozish navbati shuncha vaqtda bir tekshiriladi
 
 MAX_FILE = 8 * 1024 * 1024        # bitta Excel shundan katta bo'lsa yuborilmaydi (jurnalga yoziladi)
@@ -176,6 +177,12 @@ class Config:
         da = cp["data"] if cp.has_section("data") else {}
         gd = lambda k, d="": (da.get(k, d) or d).strip()  # noqa: E731
         self.data_on = gd("enabled", "1") not in ("0", "no", "false", "yoq")
+        # v5.3: telefonlar ko'prigi (relay.py) - SQL server. Odatda bo'sh: Admin ilovasi bulut orqali yuboradi
+        sq = cp["sql"] if cp.has_section("sql") else {}
+        self.sql = {k: (sq.get(k, "") or "").strip() for k in ("key", "host", "database", "user", "password")}
+        self.relay_on = (sq.get("enabled", "1") or "1").strip() not in ("0", "no", "false", "yoq")
+        # v5.3: 1C'ga ulanish usuli: auto (avval COM, tovar moduli xato bersa - 1C oynasi orqali), com, app
+        self.onec_mode = g("mode", "auto").lower()
         self.sales_days = max(1, min(400, int(gd("sales_days", "30") or 30)))
         self.supp_days = max(1, min(400, int(gd("supp_days", "90") or 90)))
 
@@ -496,9 +503,16 @@ class OneC:
                     log.info("tovarlar ma'lumotnomasi: Справочник.%s", alt)
                     self.cfg.goods = alt
                     break
+        tabs = []
         if cat is not None:
             for a in self.items(cat.Реквизиты):
                 goods.append({"name": a.Имя, "syn": str(a.Синоним), "types": self._type_names(a)})
+            # v5.3: tovarning jadval qismlari (qo'shimcha shtrix kodlar ro'yxati shu yerda bo'lishi mumkin)
+            try:
+                for t in self.items(cat.ТабличныеЧасти):
+                    tabs.append({"name": t.Имя, "fields": [{"name": f.Имя} for f in self.items(t.Реквизиты)]})
+            except Exception:  # noqa: BLE001
+                pass
         regs = []
         for r in self.items(md.РегистрыСведений):
             fields = []
@@ -526,7 +540,7 @@ class OneC:
             except Exception:
                 pass
             cats.append({"name": c.Имя, "syn": str(c.Синоним), "owners": owners, "fields": fields})
-        return {"goods_name": self.cfg.goods, "goods_found": cat is not None, "goods": goods, "regs": regs, "cats": cats}
+        return {"goods_name": self.cfg.goods, "goods_found": cat is not None, "goods": goods, "regs": regs, "cats": cats, "tabs": tabs}
 
     def goods_codes(self, summary=None):
         """[{c, n, p, b}] — har tovar: 1C kodi, nomi, PLU, shtrix kodlar. Faqat o'qiydi."""
@@ -568,27 +582,41 @@ class OneC:
                 plu = best[0]
                 for code, name, v in best[1]:
                     item(code, name)["p"] = v
-        if bc and bc[0] == "cat":
-            for r in self.query(cat_query(bc), ["Код", "Наименование", "Знач"]):
+        def bc_rows(src):
+            if src[0] == "cat":
+                return self.query(cat_query(src), ["Код", "Наименование", "Знач"])
+            if src[0] == "attr":
+                return self._goods_rows("Т.%s КАК Знач" % src[1])
+            if src[0] == "tab":
+                return self.query(tab_query(src, goods), ["Код", "Наименование", "Знач"])
+            return self.query(reg_query(src, goods, summary), ["Код", "Наименование", "Знач"])
+
+        def add_bc(rows):
+            n = 0
+            for r in rows:
                 v = str(r["Знач"] or "").strip()
                 if v:
                     it = item(r["Код"], r["Наименование"])
                     if v not in it["b"]:
                         it["b"].append(v)
-        elif bc and bc[0] == "attr":
-            for r in self._goods_rows("Т.%s КАК Знач" % bc[1]):
-                v = str(r["Знач"] or "").strip()
-                if v:
-                    it = item(r["Код"], r["Наименование"])
-                    if v not in it["b"]:
-                        it["b"].append(v)
-        elif bc:
-            for r in self.query(reg_query(bc, goods, summary), ["Код", "Наименование", "Знач"]):
-                v = str(r["Знач"] or "").strip()
-                if v:
-                    it = item(r["Код"], r["Наименование"])
-                    if v not in it["b"]:
-                        it["b"].append(v)
+                        n += 1
+            return n
+
+        if bc:
+            add_bc(bc_rows(bc))
+        # v5.3: shtrix kod BIR NECHTA joyda bo'ladi: tovarning asosiy kodi (rekvizit), qo'shimcha kodlar ro'yxati
+        # (jadval qismi) va alohida ma'lumotnoma (Штрих). Avval faqat bittasi o'qilar edi - qo'shimcha kodlar
+        # telefonga bormas, skaner "topilmadi" der edi. Endi hammasi birlashtiriladi.
+        bc_all = [src_text(bc)] if bc else []
+        if not self.cfg.barcode_src:
+            for extra in barcode_sources(summary):
+                if extra == bc:
+                    continue
+                try:
+                    if add_bc(bc_rows(extra)):
+                        bc_all.append(src_text(extra))
+                except Exception as e:  # noqa: BLE001 - bu manba bu bazada ishlamadi: qolganlari bilan davom
+                    log.debug("qo'shimcha shtrix manbasi (%s): %s", extra, e)
         # Narxlar (barcha narx turlari) — yorliqda qaysi biri chiqishini telefonda tanlaysiz
         pr = parse_price_src(self.cfg.price_src) or pick_price(summary)
         types = []
@@ -615,7 +643,7 @@ class OneC:
                     if t not in types:
                         types.append(t)
                     item(r["Код"], r["Наименование"])["pr"][t] = v
-        src = {"plu": src_text(plu), "bc": src_text(bc), "price": price_src_text(pr), "types": types}
+        src = {"plu": src_text(plu), "bc": " + ".join(x for x in bc_all if x) or src_text(bc), "price": price_src_text(pr), "types": types}
         out = []
         for it in items.values():
             if it["p"] or it["b"] or it["pr"]:
@@ -775,6 +803,81 @@ class OneC:
         except Exception as e:
             w("== Tovar kodlari ==\n(o'qilmadi: %s)" % str(e)[:200])
         return "\n".join(str(x) for x in out)
+
+
+
+class OneCApp(OneC):
+    """v5.3: 1C'ga "oyna orqali" ulanish (V83.Application) - Konfiguratorda hech narsa o'zgartirmasdan.
+
+    Do'kon bazasidagi tovar/kontragent modullari faqat 1C oynasida bor o'zgaruvchilarga tayanadi, shuning uchun
+    oddiy COM ulanishida "Ошибка инициализации модуля" beradi. Bu yerda 1C ko'rinmas oyna bo'lib ochiladi -
+    modullar xuddi kassir oynasidagidek ishlaydi. Ulanish bir necha daqiqa ochiq turadi (har safar 10-20 soniya
+    kutmaslik uchun), keyin o'zi yopiladi."""
+
+    KEEP_SEC = 180
+
+    def __init__(self, cfg, conn=None):
+        super().__init__(cfg, conn)
+        self.used_at = 0.0
+
+    def connect(self):
+        self.used_at = time.time()
+        if self.c is not None:
+            return self
+        try:
+            import pythoncom  # noqa: F401  (pywin32)
+            import win32com.client
+        except ImportError:
+            raise SystemExit("pywin32 o'rnatilmagan: pip install pywin32")
+        pythoncom.CoInitialize()
+        try:
+            app = win32com.client.Dispatch("V83.Application")
+        except Exception as e:
+            raise SystemExit("1C oynasini ochib bo'lmadi (V83.Application): %s" % str(e)[:200])
+        log.info("1C ga oyna orqali ulanilmoqda…")
+        try:
+            ok = app.Connect(self.cfg.conn_string())
+        except Exception as e:
+            raise SystemExit("1C ga ulanib bo'lmadi: %s" % str(e)[:200])
+        if ok is False:
+            raise SystemExit("1C ga ulanib bo'lmadi (foydalanuvchi yoki parol)")
+        try:
+            app.Visible = False
+        except Exception:  # noqa: BLE001
+            pass
+        # Baza modullari "telefon ilovasidan" ekanini bilsin (savol oynalari chiqmasin) - bor bo'lsa
+        for name in ("мМобилАпп",):
+            try:
+                setattr(app, name, True)
+            except Exception:  # noqa: BLE001
+                pass
+        self.c = app
+        return self
+
+    def close(self):
+        """Darhol yopilmaydi: oxirgi ishdan KEEP_SEC o'tgach [idle] yopadi."""
+        self.used_at = time.time()
+
+    def idle(self):
+        if self.c is not None and time.time() - self.used_at > self.KEEP_SEC:
+            self.quit()
+
+    def quit(self):
+        app, self.c = self.c, None
+        if app is None:
+            return
+        for call in (lambda: app.ЗавершитьРаботуСистемы(False), lambda: app.Exit(False)):
+            try:
+                call()
+                break
+            except Exception:  # noqa: BLE001
+                continue
+        del app
+        try:
+            import gc
+            gc.collect()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 # ---------------------------------------------------------------- eksport
@@ -957,6 +1060,28 @@ def pick_barcode_cat(summary):
     return None
 
 
+def barcode_sources(summary):
+    """Shtrix kod bo'lishi mumkin bo'lgan HAMMA joy: tovar rekviziti, tovarning jadval qismlari, alohida ma'lumotnoma."""
+    out = []
+    for a in summary.get("goods", []):
+        if BC_FIELD.match(a["name"]):
+            out.append(("attr", a["name"]))
+    for t in summary.get("tabs", []):
+        f = next((x["name"] for x in t.get("fields", []) if BC_FIELD.match(x["name"]) or re.match(r"(?i)^штрих", x["name"])), None)
+        if f:
+            out.append(("tab", t["name"], f))
+    c = pick_barcode_cat(summary)
+    if c:
+        out.append(c)
+    return out
+
+
+def tab_query(src, goods):
+    _, tab, f = src
+    return ("ВЫБРАТЬ Т.Ссылка.Код КАК Код, Т.Ссылка.Наименование КАК Наименование, Т.%s КАК Знач ИЗ Справочник.%s.%s КАК Т "
+            "ГДЕ НЕ Т.Ссылка.ПометкаУдаления" % (f, goods, tab))
+
+
 def cat_query(src):
     _, cat, gf, vf = src
     return ("ВЫБРАТЬ Ш.%s.Код КАК Код, Ш.%s.Наименование КАК Наименование, Ш.%s КАК Знач ИЗ Справочник.%s КАК Ш ГДЕ НЕ Ш.ПометкаУдаления"
@@ -1108,6 +1233,8 @@ def src_text(src):
         return "rekvizit " + src[1]
     if src[0] == "cat":
         return "Справочник.%s (%s -> %s)" % (src[1], src[2], src[3])
+    if src[0] == "tab":
+        return "jadval qismi %s.%s" % (src[1], src[2])
     return "РегистрСведений.%s (%s -> %s)" % (src[1], src[2], src[3])
 
 
@@ -1304,9 +1431,16 @@ def loop(cfg):
         raise SystemExit("onec_data.py va onec_write.py onec_export.py yonida bo'lishi kerak (%s)" % e)
     cloud = Cloud(cfg)
     onec = OneC(cfg)
-    writer = onec_write.Writer(cfg, cloud, onec, HERE)
+    writer = onec_write.Writer(cfg, cloud, onec, HERE, app_onec=OneCApp(cfg))
     inbox = cfg.inbox
     waker = Waker(cfg, ["w/%s" % inbox, "p/%s/scale" % inbox, "p/%s/dreq" % inbox, "p/%s/creq" % inbox]).start()
+    # v5.3: telefonlar ko'prigi - alohida oqimda (1C band bo'lsa ham telefonlar kutib qolmaydi)
+    if getattr(cfg, "relay_on", True):
+        try:
+            import relay
+            relay.start(cfg, cloud, HERE, lambda paths: Waker(cfg, paths).start(), getattr(cfg, "sql", None), PC_VERSION)
+        except Exception as e:  # noqa: BLE001
+            log.warning("telefonlar ko'prigi ishga tushmadi: %s", e)
 
     def do_writes():
         """1C'ga yozish navbati (Admin tasdiqlagan). Tovar o'zgargan bo'lsa — kodlar/narxlar darhol telefonlarga."""
@@ -1316,6 +1450,7 @@ def loop(cfg):
                 safe_status(cloud, "1C'ga yozildi: %d ta%s" % (done, ", xato: %d" % errs if errs else ""), errs == 0)
         except Exception as e:  # noqa: BLE001
             log.warning("1C'ga yozish navbati: %s", e)
+        writer.idle()
         # (hisobot tuzilayotgan payt — ulanish band: kodlar keyingi aylanishda)
         if writer.goods_changed and cfg.codes_on and getattr(onec, "c", None) is None:
             writer.goods_changed = False
@@ -1333,7 +1468,19 @@ def loop(cfg):
     last_codes = 0.0
     last_live = 0.0
     last_final_day = ""
+    last_upd = 0.0
     while True:
+        # v5.3: dastur o'zi yangilanadi (soatiga bir marta tekshiradi; yozish navbati bo'sh paytda)
+        if time.time() - last_upd >= 3600:
+            last_upd = time.time()
+            try:
+                import selfupdate
+                if selfupdate.check(cloud, inbox, HERE):
+                    safe_status(cloud, "Kompyuter dasturi yangilandi", True)
+                    writer.quit()
+                    selfupdate.restart()
+            except Exception as e:  # noqa: BLE001
+                log.warning("yangilanishni tekshirib bo'lmadi: %s", e)
         # v3.12: avval yozish navbati — Admin kutib qolmasin
         do_writes()
         try:

@@ -139,7 +139,7 @@ class ProductsFragment : CodeFragment() {
                 else ServiceLocator.bio.save(ServiceLocator.bio.of(code)?.id, r.text, r.printText, listOf(code))
                 done++
             }
-            runCatching { ServiceLocator.bio.publish(ServiceLocator.secure.relayConfig, ServiceLocator.shareStore.secret) }
+            runCatching { ServiceLocator.bio.publish(ServiceLocator.cloudConfig, ServiceLocator.shareStore.secret) }
             render()
             snack(getString(R.string.pb_imported, done, skipped))
         }

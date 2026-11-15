@@ -23,9 +23,21 @@ import uz.imsoft.shared.onec.WriteResult
 import java.io.File
 
 /** Admin'dagi 1C yozuvi: so'rov va (kelgan bo'lsa) kompyuter natijasi. "Kiritildi" faqat natija ok bo'lsa. */
-data class WriteItem(val req: WriteRequest, val sentAt: Long, val result: WriteResult? = null, val sendError: String = "") {
+data class WriteItem(
+    val req: WriteRequest, val sentAt: Long, val result: WriteResult? = null, val sendError: String = "",
+    /** v5.3: birinchi marta yuborilgan vaqt (qayta yuborilganda o'zgarmaydi). 0 — [sentAt] bilan bir xil. */
+    val firstAt: Long = 0L,
+    /** v5.3: necha marta yuborilgan (1 — bir marta). */
+    val tries: Int = 1,
+) {
     val isDone: Boolean get() = result?.ok == true && result.state != WriteResult.UNDONE
     val isFinal: Boolean get() = result != null
+    val isError: Boolean get() = result?.ok == false || (result == null && sendError.isNotEmpty())
+    val isWaiting: Boolean get() = result == null && sendError.isEmpty()
+    val createdAt: Long get() = if (firstAt > 0) firstAt else sentAt
+
+    /** Bir xil ish (turi va mazmuni) — qayta yuborilgan nusxalarni tanish uchun. */
+    val sameKey: String get() = req.kind + "\u0001" + WriteCodec.payload(req)
 }
 
 data class OneCState(
@@ -263,10 +275,41 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         for (w in _state.value.writes.filter { it.sendError.isNotEmpty() && it.result == null }) push(w)
     }
 
-    /** Xato bilan qaytgan yozuvni yangi id bilan qayta yuboradi. */
+    /**
+     * Xato bilan qaytgan yozuvni qayta yuboradi. v5.3: ro'yxatda YANGI qator paydo bo'lmaydi — o'sha qatorning o'zi
+     * yangilanadi (kompyuter uchun id yangi, shuning uchun eski natija emas, yangisi kutiladi). Muvaffaqiyatli bo'lsa
+     * qator yashilga aylanadi; "qayta yuborilgan" vaqti va urinishlar soni saqlanadi.
+     */
     suspend fun resend(id: String): WriteItem? {
+        load()
         val w = _state.value.writes.firstOrNull { it.req.id == id } ?: return null
-        return submit(w.req.copy(id = WriteCodec.newId(), at = System.currentTimeMillis()), "Admin")
+        val req = w.req.copy(id = WriteCodec.newId(), at = System.currentTimeMillis())
+        if (req.problem() != null) return null
+        val item = WriteItem(req, System.currentTimeMillis(), firstAt = w.createdAt, tries = w.tries + 1)
+        update { l -> l.filter { it.req.id != id && it.req.id != req.id } + item }
+        return push(item)
+    }
+
+    /** Hamma xato qaytganlarni birdan qayta yuborish. @return nechta yuborildi. */
+    suspend fun resendAllFailed(): Int {
+        load()
+        var n = 0
+        for (w in _state.value.writes.filter { it.result?.ok == false }) if (resend(w.req.id) != null) n++
+        return n
+    }
+
+    /** Ro'yxatni tozalash: [errors] — xatolar, [done] — kiritilganlar. Kutilayotganlar hech qachon o'chirilmaydi. */
+    suspend fun clear(errors: Boolean, done: Boolean): Int {
+        load()
+        var n = 0
+        update { l ->
+            l.filter { w ->
+                val drop = (errors && w.result?.ok == false) || (done && w.result?.ok == true)
+                if (drop) n++
+                !drop
+            }
+        }
+        return n
     }
 
     /** Kiritilgan hujjatni bekor qilish (1C'da o'chirish belgisi). */
@@ -312,7 +355,7 @@ class OneCRepository(private val context: Context, private val store: ShareStore
     fun pendingCount(): Int = _state.value.writes.count { it.result == null }
 
     private suspend fun update(f: (List<WriteItem>) -> List<WriteItem>) = mutex.withLock {
-        val l = f(_state.value.writes).sortedByDescending { it.sentAt }.take(500)
+        val l = compact(f(_state.value.writes)).sortedByDescending { it.sentAt }.take(500)
         _state.value = _state.value.copy(writes = l)
         withContext(Dispatchers.IO) { saveWrites(l) }
     }
@@ -323,6 +366,7 @@ class OneCRepository(private val context: Context, private val store: ShareStore
         val arr = l.map { w ->
             linkedMapOf<String, Any?>(
                 "id" to w.req.id, "k" to w.req.kind, "c" to w.req.at, "p" to WriteCodec.payload(w.req), "s" to w.sentAt, "se" to w.sendError,
+                "f" to w.firstAt, "n" to w.tries,
                 "r" to w.result?.let { r -> linkedMapOf("at" to r.at, "ok" to r.ok, "st" to r.state, "no" to r.number, "ref" to r.ref, "e" to r.error) },
             )
         }
@@ -339,7 +383,31 @@ class OneCRepository(private val context: Context, private val store: ShareStore
             val o = JObj(x as? Map<String, Any?> ?: return@mapNotNull null)
             val req = WriteCodec.fromCloud(o.str("id"), mapOf("k" to o.str("k"), "p" to o.str("p"), "c" to o.long("c"))) ?: return@mapNotNull null
             val r = o.obj("r")?.let { WriteCodec.resultFromCloud(req.id, it.map) }
-            WriteItem(req, o.long("s"), r, o.str("se"))
+            WriteItem(req, o.long("s"), r, o.str("se"), o.long("f"), o.long("n").toInt().coerceAtLeast(1))
         }
-    }.getOrDefault(emptyList())
+    }.getOrDefault(emptyList()).let(::compact)
+}
+
+/**
+ * v5.3: ro'yxatni ixchamlash. Avval har "Qayta yuborish" yangi qator qo'shar edi — bitta xato 5-6 marta takrorlanib
+ * ro'yxat to'lib ketardi. Qoida: XATO (yoki yuborilmagan) qatordan KEYIN aynan shu ish yana yuborilgan bo'lsa —
+ * eski xato qator olib tashlanadi, yangisi uning birinchi vaqtini va urinishlar sonini oladi.
+ * Muvaffaqiyatli kiritilgan qatorlar hech qachon birlashtirilmaydi (bir xil to'lov ikki marta bo'lishi mumkin).
+ */
+fun compact(items: List<WriteItem>): List<WriteItem> {
+    if (items.size < 2) return items
+    val out = ArrayList<WriteItem>(items.size)
+    val newest = HashMap<String, Int>()      // sameKey -> out ichidagi o'rni (eng yangi qator)
+    for (w in items.sortedByDescending { it.sentAt }) {
+        val key = w.sameKey
+        val at = newest[key]
+        if (at != null && w.isError) {
+            val keep = out[at]
+            out[at] = keep.copy(firstAt = minOf(keep.createdAt, w.createdAt), tries = keep.tries + w.tries)
+            continue
+        }
+        if (at == null) newest[key] = out.size
+        out += w
+    }
+    return out
 }

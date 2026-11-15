@@ -107,6 +107,7 @@
     <string name="pr_ready_ok">Принтер: уланган</string>
     <string name="pr_ready_perm">Принтер: USB рухсати керак (\"Ҳозир текшириш\" ни босинг)</string>
     <string name="pr_ready_nohost">Бу телефон USB принтерни қўлламайди (OTG йўқ)</string>
+    <string name="pr_found">Принтер: %1$s</string>
     <string name="pr_ready_none">Принтер: уланмаган</string>
     <string name="pr_queue">Навбатда: %1$d та чек</string>
     <string name="pr_offline">Интернет йўқ — чеклар булутда кутиб туради</string>

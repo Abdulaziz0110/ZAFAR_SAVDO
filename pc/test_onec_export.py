@@ -334,6 +334,52 @@ class Codes(unittest.TestCase):
         self.assertEqual(by["2555"]["pr"], {"1-narx": 60000.0, "Optom": 55000.0})
         self.assertNotIn("77", by)  # narxi 0 — kerak emas
 
+    def test_all_barcode_sources_are_merged(self):
+        """v5.3: asosiy kod (rekvizit) + qo'shimcha kodlar (jadval qismi) + Штрих ma'lumotnomasi - hammasi telefonga boradi."""
+        m = self.m
+        s = {"goods_name": "Товары", "goods_found": True,
+             "goods": [F("ШтрихКод", "Строка"), F("Цена1", "Число")],
+             "tabs": [{"name": "ТабШтрихкодов", "fields": [{"name": "ШтрихКод"}, {"name": "ДатаПоступ"}]}],
+             "regs": [],
+             "cats": [{"name": "Штрих", "syn": "", "owners": ["Справочник.Товары"], "fields": []}]}
+        self.assertEqual(m.barcode_sources(s), [("attr", "ШтрихКод"), ("tab", "ТабШтрихкодов", "ШтрихКод"), ("cat", "Штрих", "Владелец", "Наименование")])
+        self.assertIn("Справочник.Товары.ТабШтрихкодов", m.tab_query(("tab", "ТабШтрихкодов", "ШтрихКод"), "Товары"))
+
+        class O(m.OneC):
+            def query(self, text, fields, **p):
+                if "ТабШтрихкодов" in text:
+                    return [{"Код": "1042", "Наименование": "Fuse Tea", "Знач": "4780000000022"}, {"Код": "1042", "Наименование": "Fuse Tea", "Знач": "4780000000015"}]
+                if "Справочник.Штрих" in text:
+                    return [{"Код": "1042", "Наименование": "Fuse Tea", "Знач": "4780000000039"}]
+                if "Т.ШтрихКод КАК Знач" in text:
+                    return [{"Код": "1042", "Наименование": "Fuse Tea", "Знач": "4780000000015"}]
+                if "Т.Цена1" in text:
+                    return []
+                raise AssertionError(text)
+        self.cfg.goods = "Товары"
+        items, src = O(self.cfg, conn=object()).goods_codes(s)
+        self.assertEqual(items[0]["b"], ["4780000000015", "4780000000022", "4780000000039"])
+        self.assertIn("+", src["bc"])
+
+    def test_one_broken_barcode_source_does_not_stop_others(self):
+        m = self.m
+        s = {"goods_name": "Товары", "goods_found": True, "goods": [F("ШтрихКод", "Строка")],
+             "tabs": [{"name": "ТабШтрихкодов", "fields": [{"name": "ШтрихКод"}]}], "regs": [],
+             "cats": [{"name": "Штрих", "syn": "", "owners": ["Справочник.Товары"], "fields": []}]}
+
+        class O(m.OneC):
+            def query(self, text, fields, **p):
+                if "ТабШтрихкодов" in text:
+                    raise RuntimeError("jadval yo'q")
+                if "Справочник.Штрих" in text:
+                    return [{"Код": "7", "Наименование": "A", "Знач": "222"}]
+                if "Т.ШтрихКод КАК Знач" in text:
+                    return [{"Код": "7", "Наименование": "A", "Знач": "111"}]
+                return []
+        self.cfg.goods = "Товары"
+        items, _ = O(self.cfg, conn=object()).goods_codes(s)
+        self.assertEqual(items[0]["b"], ["111", "222"])
+
     def test_shop_config(self):
         """Do'kondagi haqiqiy tuzilish (discover.txt): Справочник.Товары, Справочник.Штрих, РегистрСведений.ПлуКод (КодПлу va плу)."""
         m = self.m

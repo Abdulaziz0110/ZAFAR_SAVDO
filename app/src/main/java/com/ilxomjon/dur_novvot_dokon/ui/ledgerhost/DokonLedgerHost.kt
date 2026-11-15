@@ -77,9 +77,9 @@ object DokonLedgerHost : LedgerHost {
         ServiceLocator.appScope.launch {
             var n = 0
             while (true) {
-                runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, false) }
+                runCatching { ServiceLocator.historyShare.sync(ServiceLocator.cloudConfig, false) }
                 // v5.2 (A7): mahsulot ma'lumotlari — kamroq, 5 daqiqada bir (kichik fayl, kam o'zgaradi)
-                if (n % 10 == 0) runCatching { ServiceLocator.bio.sync(ServiceLocator.secure.relayConfig) }
+                if (n % 10 == 0) runCatching { ServiceLocator.bio.sync(ServiceLocator.cloudConfig) }
                 n++
                 kotlinx.coroutines.delay(30_000L)
             }
@@ -116,7 +116,7 @@ object DokonLedgerHost : LedgerHost {
     override fun onSyncStatus(f: androidx.fragment.app.Fragment) {
         if (admin) { HistoryStatusDialog.show(f); return }
         f.view?.let { com.google.android.material.snackbar.Snackbar.make(it, R.string.ah_agent_syncing, com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show() }
-        ServiceLocator.appScope.launch { runCatching { ServiceLocator.historyShare.sync(ServiceLocator.secure.relayConfig, true) } }
+        ServiceLocator.appScope.launch { runCatching { ServiceLocator.historyShare.sync(ServiceLocator.cloudConfig, true) } }
     }
 
     override val receiptHeader: String get() = ServiceLocator.shareStore.receiptHeader

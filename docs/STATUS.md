@@ -1,10 +1,27 @@
-# Holat — Savdo Agent / Savdo Admin 5.2 (versionCode 41) + Savdo Mijoz 5.2 (versionCode 28), 2026-11-12
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 43) + Savdo Mijoz 5.3 (versionCode 30), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
 - **IMPLEMENTED-UNVERIFIED** — kod yozilgan va kompilyatsiya bo'ladi, lekin haqiqiy qurilma/printer/1C'da sinalmagan.
 - **NOT-IMPLEMENTED** — qilinmagan.
 
+
+## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova
+| Narsa | Holat |
+|---|---|
+| **Telefonlar ko'prigi kompyuterda** (pc/relay.py): katalog bulutga o'zi qo'yiladi, savdo/to'lov SQL serverga kompyuterda yoziladi, kirish/qarz/hisobot so'rovlariga javob — Admin telefoni va VPN kerak emas | VERIFIED (15 Python test, soxta SQL/bulut) / haqiqiy SQL serverda IMPLEMENTED-UNVERIFIED |
+| Yo'lni ilova o'zi tanlaydi (AutoBackend): do'kon Wi-Fi'sida to'g'ridan serverga, bo'lmasa bulut orqali; server ko'rinmasa 2–16 daqiqa bulutda qoladi; dublikat yo'q | VERIFIED (9 test) |
+| Kompyuter ko'prigi tirik bo'lsa Admin chetda turadi, o'chiq bo'lsa (4 daqiqa jim) Admin o'zi bajaradi; kompyuter yozgan savdoning ko'zgusi (statistika, 2-ilova tarixi, filial cheki) Admin ochilganda bajariladi | VERIFIED (5 test) |
+| **Bitta ilova**: Agent ilovasi olib tashlandi; rol kirishdan — egasining raqami (+998907788510) Admin, boshqalar xodim; avvalgi Admin ustiga yangilansa Admin qoladi | VERIFIED (test + kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| **1C Konfiguratorsiz**: tovar moduli COM'da "Ошибка инициализации модуля" bersa — 1C oynasi (V83.Application) orqali qayta yoziladi va eslab qolinadi | VERIFIED (4 test, soxta ulanish) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| **Kompyuter dasturi o'zi yangilanadi** (pc.zip + sha256, sozlama fayllariga tegmaydi, buzuq kod o'rnatilmaydi) | VERIFIED (7 test) / kompyuterda IMPLEMENTED-UNVERIFIED. Birinchi marta qo'lda qo'yiladi |
+| Shtrix kod: asosiy kod + qo'shimcha kodlar ro'yxati + "Штрих" ma'lumotnomasi — hammasi telefonga boradi (avval faqat bittasi) | VERIFIED (2 test) / haqiqiy bazada IMPLEMENTED-UNVERIFIED |
+| 1C navbati: qayta yuborish o'sha qatorni yangilaydi (urinish soni, birinchi vaqt), eski takrorlar o'zi birlashadi; saralash (hammasi/kutmoqda/xato/kiritildi); tozalash; hamma xatoni birdan qayta yuborish; bosh sahifada karta | VERIFIED (6 test + kompilyatsiya) |
+| Savdo sozlash oynasi: do'kon tanlangach oyna qayta ochiladi, tanlangan narx turi yo'qolmaydi | VERIFIED (kompilyatsiya) / ekranda IMPLEMENTED-UNVERIFIED |
+| Qurilmalar: bitta telefon — bitta qator (qayta o'rnatishdan qolgan eski yozuvlar yashiriladi, bir bosishda o'chiriladi), oxirgi ko'ringani tepada | VERIFIED (5 test) |
+| Mijoz: printer ulanishi bilan bo'lim ochiladi, ruxsat so'raladi, servis yonadi va navbat chiqadi; holat servis o'chiq bo'lsa ham to'g'ri; sinov cheki servisiz ham; boshqa sinfdagi printerlar ham topiladi | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
+| Veb-agent: "Do'kon kodi" (IMSHOP1) ham qabul qilinadi, kod atrofidagi matn e'tiborsiz | VERIFIED (test) |
+| Agent yorliq chop etishi (lb navbati) — hali faqat Admin telefoni orqali | NOT-IMPLEMENTED (kompyuterga ko'chirilmagan) |
 
 ## 5.2 — 3-qism: tekshiruvda topilgan kamchiliklar yopildi
 | Narsa | Holat |

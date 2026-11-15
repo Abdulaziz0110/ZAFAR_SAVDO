@@ -104,7 +104,13 @@ class LoginFragment : Fragment() {
         }
         binding.tvError.text = message
         binding.tvError.show(message != null)
-        if (s.loggedIn) navigator().onLoggedIn()
+        if (s.loggedIn) {
+            // v5.3: rol kirishdan aniqlanadi (egasi — Admin, boshqalar — xodim); o'zgarsa ilova yangi rolda qayta ochiladi
+            val ctx = requireContext()
+            if (com.ilxomjon.dur_novvot_dokon.core.AppRole.onLogin(ctx, binding.edtPhone.text?.toString().orEmpty())) {
+                com.ilxomjon.dur_novvot_dokon.core.AppRole.restart(ctx)
+            } else navigator().onLoggedIn()
+        }
     }
 
     override fun onDestroyView() {

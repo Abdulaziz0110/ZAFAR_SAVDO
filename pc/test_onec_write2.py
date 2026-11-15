@@ -479,7 +479,7 @@ class V41Test(unittest.TestCase):
         self.assertEqual((doc.ВсегоСум, doc.ВсегоВал), (6000, 12))
 
     def test_com_setup_hint(self):
-        self.assertIn("Модуль внешнего соединения", onec_write.explain_1c_error("{Справочник.Товары.МодульОбъекта(125)}: Переменная не определена (мМобилАпп)"))
+        self.assertIn("1C oynasi orqali", onec_write.explain_1c_error("{Справочник.Товары.МодульОбъекта(125)}: Переменная не определена (мМобилАпп)"))
         self.assertEqual(onec_write.explain_1c_error("boshqa xato"), "boshqa xato")
 
 
@@ -643,6 +643,91 @@ class BulkStockValidationTest(unittest.TestCase):
     def test_rejects_negative_and_text(self):
         self.assertEqual("qoldiq manfiy bo'lmaydi", onec_write.problem(self.req({"bop": "stock", "bqty": -1})))
         self.assertEqual("qoldiq soni noto'g'ri", onec_write.problem(self.req({"bop": "stock", "bqty": "ko'p"})))
+
+
+class AppModeTest(unittest.TestCase):
+    """v5.3: tovar moduli COM'da ishlamasa - 1C oynasi orqali qayta (Konfiguratorsiz)."""
+
+    class Cfg:
+        write_on = True
+        require_backup = False
+        onec_mode = "auto"
+
+    class AppOneC:
+        def __init__(self):
+            self.c = None
+            self.connects = 0
+
+        def connect(self):
+            self.connects += 1
+            self.c = "APP"
+            return self
+
+        def idle(self):
+            pass
+
+    def make(self, mode="auto"):
+        import tempfile
+        tmp = tempfile.mkdtemp()
+        cfg = self.Cfg()
+        cfg.onec_mode = mode
+        app = self.AppOneC()
+
+        class Com:
+            c = "COM"
+
+            def connect(self):
+                return self
+
+            def close(self):
+                pass
+        w = onec_write.Writer(cfg, None, Com(), tmp, app_onec=app)
+        w.daily_backup = lambda: (True, "")
+        calls = []
+
+        def goods_edit(c, req):
+            calls.append(c)
+            if c == "COM":
+                raise Exception("Ошибка инициализации модуля: Справочник.Товары.МодульОбъекта(125)}: Переменная не определена (мМобилАпп)")
+            return {"id": req["id"], "ok": True, "st": "done"}
+        w.goods_edit = goods_edit
+        return w, calls, tmp
+
+    def test_needs_app(self):
+        self.assertTrue(onec_write.needs_app("Ошибка инициализации модуля: Справочник.Товары"))
+        self.assertTrue(onec_write.needs_app("Переменная не определена (мМобилАпп)"))
+        self.assertFalse(onec_write.needs_app("bu nomli tovar 1C'da bor"))
+
+    def test_switches_once_and_remembers(self):
+        w, calls, tmp = self.make()
+        res = w.apply({"id": "r1", "k": "ge"})
+        self.assertTrue(res["ok"])
+        self.assertEqual(calls, ["COM", "APP"])
+        self.assertEqual(w.mode, "app")
+        w.apply({"id": "r2", "k": "ge"})
+        self.assertEqual(calls, ["COM", "APP", "APP"])
+        # qayta ishga tushganda ham eslab qoladi
+        w2 = onec_write.Writer(w.cfg, None, w.onec, tmp, app_onec=w.app_onec)
+        self.assertEqual(w2.mode, "app")
+
+    def test_forced_com_never_switches(self):
+        w, calls, _ = self.make("com")
+        res = w.apply({"id": "r1", "k": "ge"})
+        self.assertFalse(res["ok"])
+        self.assertEqual(calls, ["COM"])
+        self.assertIn("1C oynasi orqali", res["e"])
+
+    def test_other_errors_do_not_switch(self):
+        w, calls, _ = self.make()
+
+        def bad(c, req):
+            calls.append(c)
+            raise onec_write.WriteError("tovar topilmadi")
+        w.goods_edit = bad
+        res = w.apply({"id": "r1", "k": "ge"})
+        self.assertFalse(res["ok"])
+        self.assertEqual(calls, ["COM"])
+        self.assertEqual(w.mode, "com")
 
 
 if __name__ == "__main__":

@@ -109,6 +109,35 @@ data class DeviceInfo(val id: String, val model: String, val role: String, val v
     }
 }
 
+/**
+ * v5.3: qurilmalar ro'yxatini ixchamlash. Ilova qayta o'rnatilganda telefon YANGI id oladi — bitta telefon ro'yxatda
+ * 5-6 marta ko'rinardi. Qoida: turi va modeli bir xil yozuvlardan eng oxirgi ko'ringani qoladi; qolganlari
+ * "eski" — agar biriktirilmagan bo'lsa yoki aynan o'sha kishiga biriktirilgan bo'lsa. Boshqa kishiga biriktirilgan
+ * bir xil modeldagi telefon (ikkita bir xil telefon) — alohida qoladi.
+ */
+object DeviceList {
+    class Tidy(val shown: List<DeviceInfo>, val stale: List<DeviceInfo>, /** ko'rsatilgan id -> yashirilgan eski yozuvlari soni */ val extra: Map<String, Int>)
+
+    private fun owner(d: DeviceInfo): String = d.assignment?.let { a -> if (a.agentId.isNotEmpty()) "a:" + a.agentId else if (a.link.isNotEmpty()) "l:" + a.link else "" }.orEmpty()
+
+    fun tidy(list: List<DeviceInfo>): Tidy {
+        val shown = ArrayList<DeviceInfo>()
+        val stale = ArrayList<DeviceInfo>()
+        val extra = HashMap<String, Int>()
+        for ((_, group) in list.groupBy { it.role + "\u0001" + it.model.trim().lowercase() }) {
+            val kept = ArrayList<DeviceInfo>()
+            for (d in group.sortedByDescending { it.seenAt }) {
+                val o = owner(d)
+                // bloklangan yozuv hech qachon yashirilmaydi (blok o'z kuchida qolishi ko'rinib tursin)
+                val twin = if (d.assignment?.blocked == true) null else kept.firstOrNull { k -> o.isEmpty() || owner(k) == o }
+                if (twin == null) kept += d else { stale += d; extra[twin.id] = (extra[twin.id] ?: 0) + 1 }
+            }
+            shown += kept
+        }
+        return Tidy(shown.sortedByDescending { it.seenAt }, stale, extra)
+    }
+}
+
 /** Telefon tomoni: ro'yxatdan o'tish, biriktirishni o'qish, xato hisobotini yuborish. Tarmoq — chaqiruvchi IO oqimida. */
 class DeviceClient(private val dev: DeviceCodes.Dev, val deviceId: String, private val db: CloudDb = CloudDb(dev.dbUrl)) {
     fun register(model: String, role: String, version: String, versionCode: Long, sdk: Int) {

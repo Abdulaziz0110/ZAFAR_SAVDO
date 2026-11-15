@@ -21,6 +21,7 @@ import uz.imsoft.shared.sched.WorkHours
 class PcFragment : CodeFragment() {
     private lateinit var tvStatus: TextView
     private lateinit var tvWork: TextView
+    private lateinit var tvBridge: TextView
     private val minutes = listOf(0, 1, 5, 15, 30, 60)
     private val hours = listOf(1, 2, 3)
     private val days = listOf(7, 14, 30)
@@ -55,6 +56,16 @@ class PcFragment : CodeFragment() {
             launchUi { ServiceLocator.labels.requestCodes(); snack(getString(R.string.oc_request_sent)) }
         })
         c.addView(Ui.hint(ctx, getString(R.string.pc_write_hint), 12))
+
+        // v5.3: kompyuter dasturi o'zi yangilanadi; birinchi marta (eski dasturda yangilanish yo'q) — havola orqali
+        c.addView(Ui.section(ctx, getString(R.string.pc_prog)))
+        tvBridge = Ui.text(ctx, "", top = 4).also { c.addView(it) }
+        c.addView(Ui.hint(ctx, getString(R.string.pc_prog_hint)))
+        c.addView(Ui.button(ctx, getString(R.string.pc_prog_link), outlined = true, icon = R.drawable.ic_share) {
+            val base = com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL
+            if (!base.startsWith("https://")) { snack(getString(R.string.pc_prog_none)); return@button }
+            ImportUi.shareText(ctx, getString(R.string.pc_prog_text, base.trimEnd('/') + "/pc.zip"))
+        })
         return p.root
     }
 
@@ -72,6 +83,10 @@ class PcFragment : CodeFragment() {
         tvWork.text = if (w.on) getString(R.string.pc_work_on, WorkHours.format(w.start), WorkHours.format(w.end), WorkHours.format(w.finalMinute))
         else getString(R.string.pc_work_off)
         launchUi { ServiceLocator.share.refreshPcStatus() }
+        launchUi {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { ServiceLocator.relayHost.syncPc() } }
+            tvBridge.text = getString(if (ServiceLocator.relayHost.pcHost) R.string.pc_bridge_on else R.string.pc_bridge_off)
+        }
     }
 
     private fun save(minutes: Int = ServiceLocator.shareStore.pcMinutes, hours: Int = ServiceLocator.shareStore.pcHours, days: Int = ServiceLocator.shareStore.pcDays) {

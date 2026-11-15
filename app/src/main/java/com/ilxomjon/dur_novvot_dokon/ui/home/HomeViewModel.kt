@@ -120,7 +120,7 @@ class HomeViewModel(
                 draft.load()
                 // v4.0.2: Agent — Admin yuborgan savdolar tarixi ham darhol (2 daqiqa kutmasdan)
                 if (!com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin) {
-                    runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.historyShare.sync(com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.secure.relayConfig, true) }
+                    runCatching { com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.historyShare.sync(com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.cloudConfig, true) }
                 }
                 _events.tryEmit(HomeEvent.SyncOk)
             } catch (e: Exception) {
