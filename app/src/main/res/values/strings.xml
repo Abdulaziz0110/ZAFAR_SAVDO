@@ -230,6 +230,7 @@
     <string name="dg_recheck">Qayta tekshirish</string>
     <string name="dg_no_internet">internet yo\'q</string>
     <string name="dg_no_vpn">Tailscale (VPN) ulanmagan</string>
+    <string name="dg_vpn_optional">O\'chiq — shart emas (kompyuter orqali ishlaydi)</string>
     <string name="dg_no_local">kompyuterda server o\'chiq yoki boshqa tarmoqda</string>
     <string name="dg_no_remote">masofaviy manzilga ulanmadi (Tailscale yoki kompyuter o\'chiq)</string>
     <string name="dg_queue">Navbat</string>

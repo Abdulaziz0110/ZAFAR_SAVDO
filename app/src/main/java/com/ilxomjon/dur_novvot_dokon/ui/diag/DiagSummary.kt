@@ -22,8 +22,9 @@ object DiagSummary {
         if (d.remoteConfigured) {
             out += Item(
                 ctx.getString(R.string.diag_vpn),
-                if (d.net.vpn) 1 else 0,
-                if (d.net.vpn) "" else ctx.getString(R.string.dg_no_vpn),
+                // v5.3: VPN shart emas (kompyuter bulut orqali ishlaydi) — o'chiq bo'lsa xato emas
+                if (d.net.vpn) 1 else -1,
+                if (d.net.vpn) "" else ctx.getString(R.string.dg_vpn_optional),
             )
         }
         out += Item(

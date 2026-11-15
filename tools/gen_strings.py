@@ -123,6 +123,7 @@ STRINGS = {
  'dg_recheck': 'Qayta tekshirish',
  'dg_no_internet': "internet yo'q",
  'dg_no_vpn': "Tailscale (VPN) ulanmagan",
+ 'dg_vpn_optional': "O'chiq — shart emas (kompyuter orqali ishlaydi)",
  'dg_no_local': "kompyuterda server o'chiq yoki boshqa tarmoqda",
  'dg_no_remote': "masofaviy manzilga ulanmadi (Tailscale yoki kompyuter o'chiq)",
  'dg_queue': 'Navbat',

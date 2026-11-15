@@ -230,6 +230,7 @@
     <string name="dg_recheck">Қайта текшириш</string>
     <string name="dg_no_internet">интернет йўқ</string>
     <string name="dg_no_vpn">Tailscale (VPN) уланмаган</string>
+    <string name="dg_vpn_optional">Ўчиқ — шарт эмас (компютер орқали ишлайди)</string>
     <string name="dg_no_local">компютерда сервер ўчиқ ёки бошқа тармоқда</string>
     <string name="dg_no_remote">масофавий манзилга уланмади (Tailscale ёки компютер ўчиқ)</string>
     <string name="dg_queue">Навбат</string>

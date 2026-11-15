@@ -110,7 +110,7 @@ object Ui {
                 })
             }
             repeat(columns - row.size) { i ->
-                r.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap })
+                r.addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = gap })
             }
             box.addView(r)
         }
@@ -135,7 +135,7 @@ object Ui {
                     bottomMargin = gap
                 })
             }
-            repeat(columns - row.size) { r.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f).apply { marginStart = gap }) }
+            repeat(columns - row.size) { r.addView(View(ctx), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = gap }) }
             box.addView(r)
         }
         return box
