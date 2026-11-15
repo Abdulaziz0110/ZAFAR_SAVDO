@@ -264,6 +264,9 @@ jobs:
           python3 pc/test_onec_write2.py
           python3 pc/test_relay.py
           python3 pc/test_selfupdate.py
+          python3 pc/test_kassa_core.py
+          python3 pc/test_kassa.py
+          node pc/test_kassa_logic.js
           if python3 -c "import PIL" 2>/dev/null; then python3 pc/test_label_printer.py; else pip install -q pillow && python3 pc/test_label_printer.py; fi
 
       - name: iPhone agent (web) tests
