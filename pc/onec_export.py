@@ -1813,12 +1813,20 @@ def app_test(cfg, out_path=None):
         admin = None
     say("1C oynasi sinovi  %s  (Python %s, %d-bit, administrator: %s)" % (
         dt.datetime.now().strftime("%d.%m.%Y %H:%M"), sys.version.split()[0], 64 if sys.maxsize > 2 ** 32 else 32, admin))
+    for prog, kind in (("V83.COMConnector", "InprocServer32"), ("V83.Application", "LocalServer32")):
+        try:
+            say("   %s: %s" % (prog, _clsid_server(prog, kind)))
+        except OSError as e:
+            say("   %s: ro'yxatda yo'q (%s)" % (prog, e))
     say("1) 1C oynasi ochilmoqda (10-40 soniya)...")
     app = OneCApp(cfg)
+    t0 = time.time()
     try:
         app.connect()
     except SystemExit as e:
-        say("   XATO: %s" % e)
+        say("   XATO (%.0f s): %s" % (time.time() - t0, e))
+        for line in crash_info():
+            say("   " + line)
         return False
     say("   OK - 1C ochildi")
     ok = True
@@ -1833,6 +1841,32 @@ def app_test(cfg, out_path=None):
         app.quit()
         say("3) 1C yopildi. Natija: %s" % ("HAMMASI ISHLAYDI" if ok else "XATO BOR"))
     return ok
+
+
+def crash_info():
+    """1cv8.exe yiqilgan bo'lsa: Windows jurnalidagi oxirgi xatolar va 1C dump fayllari (dasturchiga)."""
+    out = []
+    try:
+        import subprocess
+        r = subprocess.run(["wevtutil", "qe", "Application", "/c:6", "/rd:true", "/f:text",
+                            "/q:*[System[(Level=1 or Level=2)]]"], capture_output=True, timeout=30,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        text = r.stdout.decode("cp866", "replace")
+        keep = [ln.strip() for ln in text.splitlines()
+                if re.search(r"(?i)1cv8|date:|source:|faulting|exception code|описание|имя сбойного|код исключения", ln)]
+        out.append("Windows jurnali (oxirgi xatolar):")
+        out.extend(keep[:30] or ["  (1C xatosi yo'q)"])
+    except Exception as e:  # noqa: BLE001
+        out.append("Windows jurnali o'qilmadi: %s" % e)
+    for base in (os.environ.get("APPDATA", ""), os.environ.get("LOCALAPPDATA", "")):
+        d = os.path.join(base, "1C", "1cv8", "dumps")
+        try:
+            files = sorted((os.path.join(d, f) for f in os.listdir(d)), key=os.path.getmtime, reverse=True)[:3]
+        except OSError:
+            continue
+        for f in files:
+            out.append("1C dump: %s (%s)" % (f, dt.datetime.fromtimestamp(os.path.getmtime(f)).strftime("%d.%m %H:%M")))
+    return out
 
 
 def main():
