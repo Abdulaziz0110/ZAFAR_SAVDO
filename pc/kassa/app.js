@@ -65,6 +65,15 @@
     return svg;
   }
 
+  /** Savatdagi miqdor: birliksiz, nuqta bilan — donali "1", "2"; kiloli "0.122", "1.5". */
+  function qtyText(m) {
+    var neg = m < 0; m = Math.abs(m);
+    var t = String(Math.floor(m / 1000));
+    var f = m % 1000;
+    if (f) t += '.' + String(f + 1000).slice(1).replace(/0+$/, '');
+    return (neg ? '-' : '') + t;
+  }
+
   function emptyWin() { return { lines: [], mode: 'sale', dmode: 'sum', dval: 0, id: '' }; }
 
   var S = {
@@ -560,7 +569,7 @@
       var nm = el('span', 'nm', l.name);
       if (!S.byCode[l.code] && S.data) nm.appendChild(el('i', '', "1C'da yo'q"));
       row.appendChild(nm);
-      row.appendChild(el('span', '', L.fmtQty(l.milli) + (l.unit ? ' ' + l.unit : '')));
+      row.appendChild(el('span', '', qtyText(l.milli)));
       row.appendChild(el('span', '', money(l.price)));
       row.appendChild(el('span', 'sm', money(L.lineSum(l.price, l.milli))));
       c.appendChild(row);
@@ -576,8 +585,8 @@
     if (s) {
       var g = S.byCode[s.code];
       info.appendChild(el('b', '', s.name));
-      info.appendChild(el('span', '', L.fmtQty(s.milli) + ' × ' + money(s.price) + ' = ' + money(L.lineSum(s.price, s.milli)) +
-        (g ? ' · qoldiq: ' + L.fmtQty(L.milli(g.s)) + (g.e ? ' ' + g.e : '') : '')));
+      info.appendChild(el('span', '', qtyText(s.milli) + ' × ' + money(s.price) + ' = ' + money(L.lineSum(s.price, s.milli)) +
+        (g ? ' · qoldiq: ' + qtyText(L.milli(g.s)) : '')));
     }
     if (scroll) {
       var r = c.querySelector('.row.sel');

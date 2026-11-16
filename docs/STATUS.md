@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 14) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 15) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -50,6 +50,7 @@ Belgilar:
 | pc 14: pastdagi tugmalar ikonkali; yashirilganlari o'rniga qolganlari kengayib joyni to'liq egallaydi (6 ustunli to'r, oxirgi qator ham to'ladi; 4 tadan kam bo'lsa 2 ustun) | VERIFIED (brauzer) |
 | pc 14: "Savdolar" — kun bo'yicha (oldingi/keyingi kun) kassa savdolari va 1C'dagi boshqa ПродажаРозница hujjatlari; istalganining chekini qayta chiqarish | VERIFIED (test + brauzer) / 1C so'rovi IMPLEMENTED-UNVERIFIED |
 | pc 14: savatda tovar nomi pastga tushib (kesilib) qolmasligi — qator balandligi bir xil | VERIFIED (brauzer) |
+| pc 15: savatda miqdor birliksiz va nuqta bilan: donali "1", "2"; kiloli "0.122" (chekda 1C kabi qoladi) | VERIFIED (brauzer) |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 
