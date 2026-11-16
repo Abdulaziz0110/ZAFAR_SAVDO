@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 10) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 11) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -36,6 +36,9 @@ Belgilar:
 | Kompyuter dasturini qayta yoqmasdan yangilash (ilova tugmasi + kassa sozlamasi; kassa sahifasi o'zi yangilanadi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
 | 1C_oyna_tekshiruv.bat — V83.Application sinovi (app_test.txt) | IMPLEMENTED-UNVERIFIED |
 | pc 10: osilib qolgan ko'rinmas 1C (COM-server, -Embedding) jarayonlarini topib yopish va qayta urinish; kassirning 1C oynasiga tegilmaydi | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| pc 11: 1C KO'PRIGI — COM'da ПродажаРозница yaratilmasa (Ошибка инициализации модуля) kassa sotuvlari 1C'ni ODDIY usulda ochib (`1cv8.exe ENTERPRISE /Execute kassa_bridge.epf /C kassa_jobs`) yoziladi: .epf fayli dasturning o'zida yasaladi (1C konteyner formati, xUnitFor1C namunasi bilan tuzilishi bir xil), modul 1C sensor oynasining РасчетНажатие/ВозвратНажатие kodi (МахсулотКолдигиниАниклаш, ПоучитьДолг, ОхиргиУртачаНархиниАниклаш_Махсулот, Константы.Склад1) | VERIFIED (konteyner/topshiriq/natija testlari) / 1C'da IMPLEMENTED-UNVERIFIED |
+| pc 11: navbatdagi hamma sotuv bitta 1C ochilishida; kassir kutmaydi (chek darhol, 1C'ga fonda); 1C rad etsa — "xato" (admin ko'radi, qoldiq qaytadi); 1C yozayotganda o'chsa (.wip bor, .res yo'q) — qayta yozilmaydi (ikki marta yozilmasin), admin 1C'da tekshiradi; kompyuter o'chib yonsa qolgan natijalar olinadi | VERIFIED (test) |
+| pc 11: tashqi ishlov ogohlantirishi (8.3.9+ "Предупреждение безопасности") conf.cfg'da o'chiriladi (DisableUnsafeActionProtection); maslahatda 1cv8.exe ning HAQIQIY yo'li (Program Files (x86)); 1C_oyna_tekshiruv.bat endi ko'prikni sinaydi (hech narsa yozmaydi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 

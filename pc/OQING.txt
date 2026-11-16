@@ -122,3 +122,15 @@ Yangi (pc 8) - ISHONCHLILIK, SOZLAMALAR, QAYTA YOQMASDAN YANGILASH:
  - Kompyuterni qayta yoqish shart emas: Admin ilovasi > Kompyuter (1C) > "Kompyuter dasturini hozir yangilash"
    yoki kassa Sozlamalari. Dastur yangilanib o'zini qayta ishga tushiradi, kassa sahifasi o'zi yangilanadi.
  - 1C oynasi sinovi: 1C_oyna_tekshiruv.bat - natijasini rasmga olib dasturchiga yuboring (app_test.txt).
+
+
+Yangi (pc 11) - KASSA SOTUVI 1C'GA "KO'PRIK" ORQALI:
+ - Bu bazada ПродажаРозница yashirin (COM) ulanishda yaratilmaydi, ko'rinmas 1C esa darhol yopiladi. Endi dastur
+   1C'ni ODDIY usulda ochadi (siz ochgandek, ekranda kichraytirilgan holda) va kassa_bridge.epf ni beradi -
+   u sotuvlarni 1C sensor oynasining o'z kodi bilan yozadi va 1C'ni yopadi. Navbatdagi hamma sotuv bitta
+   ochilishda yoziladi. Kassir kutmaydi: chek darhol, 1C'ga fonda (10-60 soniya).
+ - 1C hujjatni yozayotganda kompyuter o'chib qolsa - u sotuv qayta yozilmaydi (ikki marta bo'lmasin), navbatda
+   "xato" bo'lib turadi: 1C'da tekshirib, kerak bo'lsa navbatdan "Qayta" yoki "O'chirish".
+ - 1C tashqi ishlov ochilganda "Предупреждение безопасности" so'ramasligi uchun conf.cfg ga
+   DisableUnsafeActionProtection yoziladi (dastur administrator huquqida ishlasa o'zi qiladi).
+ - Sinov: 1C_oyna_tekshiruv.bat (hech narsa yozmaydi) - oxirida "HAMMASI ISHLAYDI" chiqishi kerak.

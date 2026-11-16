@@ -302,6 +302,78 @@ class ServiceTest(unittest.TestCase):
         self.svc.tick()
         self.assertEqual(self.svc.app.quits, 1)          # ishlatilmasa 1C oynasi yopiladi
 
+    def test_bridge_when_module_fails_over_com(self):
+        """COM'da ПродажаРозница yaratilmaydi -> 1C ko'prigi: sotuvlar to'planib bitta 1C ochilishida yoziladi."""
+        com_c = self.c
+
+        class OneC(kassa.KassaOneC):
+            def write_sale(s, c, *a):
+                raise Exception("Ошибка инициализации модуля: Документ.ПродажаРозница.МодульОбъекта")
+
+        class FakeBridge:
+            def __init__(s):
+                s.runs = []
+                s.answer = {}
+                s.left = ({}, set())
+                s.fail = None
+
+            def leftovers(s):
+                return s.left
+
+            def forget(s, rid):
+                s.left[0].pop(rid, None)
+                s.left[1].discard(rid)
+
+            def run(s, jobs):
+                if s.fail:
+                    raise RuntimeError(s.fail)
+                s.runs.append(jobs)
+                return {j["id"]: s.answer.get(j["id"], ("OK", "B%d" % len(s.runs), "15.11.2026 09:31")) for j in jobs}
+
+        br = FakeBridge()
+        self.svc.onec = OneC("Do'kon", now=lambda: dt.datetime(2026, 11, 15, 9, 30))
+        self.svc.make_bridge = lambda: br
+        tok = self.login()
+        res = self.svc.sale(sale_body(token=tok, id="br000001"))
+        self.assertEqual((res["no"], res["date"]), ("B1", "15.11.2026 09:31"))
+        self.assertTrue(self.svc.bridge_mode)
+        job = br.runs[0][0]
+        self.assertEqual((job["kind"], job["ptype"], job["doc"], job["emp"], str(job["total"]), str(job["cash"])),
+                         ("sale", "Цена1", "Продажа", "7", "9000.00", "9000.00"))
+        self.assertEqual((job["lines"][0]["code"], str(job["lines"][0]["sum"])), ("15", "9000.00"))
+        self.assertEqual(com_c.written, [])
+        # keyingi sotuvlar: kassir kutmaydi (navbatda), fonda yoziladi
+        r2 = self.svc.sale(sale_body(token=tok, id="br000002", lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000"))
+        self.assertTrue(r2["queued"])
+        self.svc.call(lambda: None)                     # fon ishi tugashini kutish
+        self.assertEqual(self.svc.done.get("br000002")["no"], "B2")
+        # 1C rad etsa — admin ko'radi, qoldiq qaytadi; o'chib qolsa (noma'lum) — qayta yozilmaydi, qoldiq qaytmaydi
+        br.answer = {"br000003": ("ERR", "Товар етмаяпти"), "br000004": ("UNKNOWN", "1C to'xtadi")}
+        before = [g for g in self.svc.snap["g"] if g["c"] == "15"][0]["s"]
+        for rid in ("br000003", "br000004"):
+            self.svc.sale(sale_body(token=tok, id=rid, lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000"))
+        self.svc.call(lambda: None)
+        q = {x["id"]: x for x in self.svc.queue_list()}
+        self.assertEqual((q["br000003"]["state"], q["br000004"]["state"]), ("error", "error"))
+        self.assertIn("rad etdi", q["br000003"]["err"])
+        self.assertEqual([g for g in self.svc.snap["g"] if g["c"] == "15"][0]["s"], before - 2)
+        n = len(br.runs)
+        self.svc.tick()
+        self.assertEqual(len(br.runs), n)               # xatolilar o'zi qayta yozilmaydi
+        # 1C ochilmasa — navbatda qoladi, keyin yoziladi
+        br.fail = "1C ochilmadi"
+        self.svc.sale(sale_body(token=tok, id="br000005", lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000"))
+        self.svc.call(lambda: None)
+        self.assertEqual(self.svc.ping()["err"], "1C ochilmadi")
+        self.assertEqual([x["state"] for x in self.svc.queue_list() if x["id"] == "br000005"], ["wait"])
+        br.fail = None
+        # dastur o'chib-yonganda qolgan natija (.res) — 1C qayta ochilmasdan olinadi
+        br.left = ({"br000005": ("OK", "B9", "15.11.2026 10:00")}, set())
+        self.svc.retry_at = 0
+        self.svc.call(lambda: self.svc._drain())
+        self.assertEqual(self.svc.done.get("br000005")["no"], "B9")
+        self.assertEqual(len(br.runs), n)
+
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]
         self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")

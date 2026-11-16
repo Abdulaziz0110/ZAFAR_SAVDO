@@ -811,8 +811,16 @@ class OneC:
 
 
 
-APP_HINT = ("Kompyuterda administrator sifatida bir marta bajaring: "
-            "\"C:\\Program Files\\1cv8\\<versiya>\\bin\\1cv8.exe\" /regserver (yoki 1C_COM_tuzatish.bat)")
+def app_hint():
+    """Kompyuterdagi HAQIQIY 1cv8.exe yo'li bilan maslahat (Program Files yoki Program Files (x86))."""
+    exe = ""
+    try:
+        import onec_bridge
+        exe = onec_bridge.find_exe()
+    except Exception:  # noqa: BLE001
+        exe = ""
+    return "Kompyuterda administrator sifatida bir marta bajaring: \"%s\" /regserver (yoki 1C_COM_tuzatish.bat)" % (
+        exe or "<1C papkasi>\\bin\\1cv8.exe")
 _REGISTERED = []
 
 
@@ -999,7 +1007,7 @@ class OneCApp(OneC):
                     killed = True
                     if kill_stale_automation():
                         continue
-                raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: %s. %s" % ("; ".join(errs), APP_HINT))
+                raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: %s. %s" % ("; ".join(errs), app_hint()))
         if ok is False:
             raise SystemExit("1C ga ulanib bo'lmadi (foydalanuvchi yoki parol)")
         try:
@@ -1855,8 +1863,8 @@ def fix_startup(startup_dir=None, py_w=None, script=None, workdir=None):
 
 
 def app_test(cfg, out_path=None):
-    """v5.4: kassa sotuvi 1C'ga faqat 1C oynasi orqali yoziladi. Shu sinov qayerda to'xtashini ko'rsatadi
-    (natija oynada va app_test.txt faylida - rasmga olib dasturchiga yuboring)."""
+    """v5.4 (pc 11): kassa sotuvi 1C'ga "ko'prik" orqali yoziladi (1C oddiy ochiladi + kassa_bridge.epf).
+    Shu sinov qayerda to'xtashini ko'rsatadi (oynada va app_test.txt faylida - rasmga olib dasturchiga yuboring)."""
     out_path = out_path or os.path.join(HERE, "app_test.txt")
     lines = []
 
@@ -1873,37 +1881,34 @@ def app_test(cfg, out_path=None):
         admin = bool(ctypes.windll.shell32.IsUserAnAdmin())
     except Exception:  # noqa: BLE001
         admin = None
-    say("1C oynasi sinovi  %s  (Python %s, %d-bit, administrator: %s)" % (
+    say("1C kassa ko'prigi sinovi  %s  (Python %s, %d-bit, administrator: %s)" % (
         dt.datetime.now().strftime("%d.%m.%Y %H:%M"), sys.version.split()[0], 64 if sys.maxsize > 2 ** 32 else 32, admin))
     for prog, kind in (("V83.COMConnector", "InprocServer32"), ("V83.Application", "LocalServer32")):
         try:
             say("   %s: %s" % (prog, _clsid_server(prog, kind)))
         except OSError as e:
             say("   %s: ro'yxatda yo'q (%s)" % (prog, e))
-    procs = stale_automation_procs()
-    say("   Osilib qolgan ko'rinmas 1C: %s" % (", ".join("PID %d" % p for p, _ in procs) or "yo'q"))
-    say("1) 1C oynasi ochilmoqda (10-40 soniya)...")
-    app = OneCApp(cfg)
+    import onec_bridge
+    exe = onec_bridge.find_exe()
+    say("1) 1C dasturi: %s" % (exe or "TOPILMADI"))
+    if not exe:
+        return False
+    changed, errs = onec_bridge.allow_external(exe)
+    say("2) Tashqi ishlov ogohlantirishi (conf.cfg): %s" % (
+        "o'chirildi" if changed else ("XATO: " + "; ".join(errs)) if errs else "allaqachon o'chiq"))
+    say("3) 1C oddiy usulda ochilmoqda (kassa ko'prigi bilan, 10-60 soniya)... Kompyuter ekranida 1C oynasi "
+        "ochilib yopiladi. Agar 1C biror savol so'rasa — rasmga oling.")
+    br = onec_bridge.Bridge(cfg.conn_string(), HERE, exe, jobs_dir="kassa_jobs_test")   # kassa navbatiga tegmaydi
     t0 = time.time()
     try:
-        app.connect()
-    except SystemExit as e:
+        res = br.run([onec_bridge.probe_job("probe_%d" % int(t0))], timeout=240)
+    except (RuntimeError, OSError) as e:
         say("   XATO (%.0f s): %s" % (time.time() - t0, e))
-        for line in crash_info():
-            say("   " + line)
         return False
-    say("   OK - 1C ochildi")
-    ok = True
-    try:
-        say("2) ПродажаРозница hujjati (yozmasdan) yaratilmoqda...")
-        d = app.c.Документы.ПродажаРозница.СоздатьДокумент()
-        say("   OK - hujjat moduli ishlaydi (%s)" % type(d).__name__)
-    except Exception as e:  # noqa: BLE001
-        ok = False
-        say("   XATO: %s" % str(e)[:400])
-    finally:
-        app.quit()
-        say("3) 1C yopildi. Natija: %s" % ("HAMMASI ISHLAYDI" if ok else "XATO BOR"))
+    r = list(res.values())[0] if res else ("ERR", "javob yo'q")
+    ok = r[0] == "OK" and r[1] == "PROBE"
+    say("   %s (%.0f s): %s" % ("OK" if ok else "XATO", time.time() - t0, " | ".join(r[1:]) if not ok else r[2]))
+    say("4) Natija: %s" % ("HAMMASI ISHLAYDI - kassa sotuvlari 1C'ga yoziladi" if ok else "XATO BOR"))
     return ok
 
 

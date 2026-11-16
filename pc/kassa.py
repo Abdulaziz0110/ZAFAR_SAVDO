@@ -600,13 +600,23 @@ class Retry(kc.KassaError):
     """1C'ga ulanib bo'lmadi / band — sotuv navbatda qoladi va keyin o'zi yoziladi."""
 
 
+class UseBridge(Exception):
+    """COM ulanishida baza moduli ishlamaydi — sotuvlar 1C ko'prigi (oddiy 1C + kassa_bridge.epf) orqali yoziladi."""
+
+
+BRIDGE_REJECT = r"(?i)етмаяпти|не удалось провести|недостаточно|topilmadi|не найден"
+BRIDGE_TRANSIENT = r"(?i)блокиров|lock|занят|монопольн"
+
+
 class KassaService:
     def __init__(self, conf, here, open_com, open_app=None, use_app=lambda: False, onec=None, clock=time.time,
-                 version="", wake=None):
+                 version="", wake=None, bridge=None):
         """
         open_com() -> COM ulanish obyekti ([.c] va [.close()]); open_app() -> 1C oynasi (yozishda kerak bo'lsa).
         use_app() — sozlamada "oyna orqali" majburiymi ([onec] mode = app). Aks holda avval COM, baza moduli COM'da
         ishlamasa — 1C oynasi orqali (kassa ishlatilayotgan paytda oyna yopilmaydi).
+        bridge() -> onec_bridge.Bridge: berilgan bo'lsa, COM'da ishlamaydigan yozuv 1C oynasi o'rniga "ko'prik"
+        orqali (1C oddiy ochiladi, sotuvlar to'plab bitta ochilishda yoziladi; kassir kutmaydi).
 
         Ishonchlilik: har sotuv AVVAL diskdagi navbatga yoziladi (kassa_queue.json, fsync), keyin 1C'ga. 1C ishlamasa
         yoki band bo'lsa — kassir kutmaydi, sotuv navbatda qoladi va 1C tiklanganda o'zi yoziladi (bir marta).
@@ -617,6 +627,9 @@ class KassaService:
         self.open_com = open_com
         self.open_app = open_app
         self.use_app = use_app
+        self.make_bridge = bridge
+        self.bridge = None
+        self.bridge_mode = False
         self.onec = onec or KassaOneC(conf.title)
         self.clock = clock
         self.version = version
@@ -781,6 +794,10 @@ class KassaService:
             self._apply_stock(sale, res["_debt_delta"])
         elif item.get("state") == "error":
             raise kc.KassaError(item.get("err") or "Navbatdagi sotuv xatoli")
+        if self.bridge_mode:
+            # 1C har safar ochilib yopiladi (10-30 s) — kassir kutmaydi, chek darhol; yozuv fonda
+            self.jobs.put((self._drain_quiet, {}, threading.Event()))
+            return self._queued(sale["id"], "1C'ga fonda yoziladi")
         try:
             return self.call(lambda: self._drain(sale["id"]), timeout=SALE_WAIT)
         except Retry as e:
@@ -832,12 +849,20 @@ class KassaService:
             "_debt_delta": debt_delta,
         }
 
+    def _drain_quiet(self):
+        try:
+            self._drain()
+        except kc.KassaError as e:
+            log.info("kassa: navbat: %s", e)
+
     def _drain(self, target=None):
         """Navbatni tartib bilan 1C'ga yozadi (faqat 1C oqimida). [target] yozilsa — natijasi, aks holda Retry."""
         now = self.clock()
         if self.retry_at and now < self.retry_at and target is not None:
             raise Retry(self.last_error or "1C hozircha ishlamayapti")
         while True:
+            if self.bridge_mode:
+                return self._drain_bridge(target)
             with self.qlock:
                 item = next((p for p in self.pending if p.get("state") != "error"), None)
             if item is None:
@@ -845,6 +870,8 @@ class KassaService:
             self.busy = True
             try:
                 res = self._write_item(item)
+            except UseBridge:
+                continue
             except Retry as e:
                 self.retry_at = self.clock() + RETRY_SEC
                 self.last_error = str(e)[:300]
@@ -879,11 +906,7 @@ class KassaService:
             raise Retry("navbatda")
         return None
 
-    def _write_item(self, item):
-        sale = sale_from_json(item["sale"])
-        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"],
-                        bool(sale["client"]), sale["kind"])
-        number, when = self._write_doc(sale, pay, item.get("emp", ""))
+    def _done(self, item, number, when):
         res = dict(item["res"])
         res.pop("_debt_delta", None)
         res.update(no=number, date=when, ok=True)
@@ -894,6 +917,111 @@ class KassaService:
                 self.pending.remove(item)
             self._save_queue()
         return res
+
+    def _job(self, item):
+        sale = sale_from_json(item["sale"])
+        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"],
+                        bool(sale["client"]), sale["kind"])
+        return {"id": item["id"], "kind": sale["kind"], "ptype": sale["ptype"], "emp": item.get("emp", ""),
+                "client": sale["client"], "total": pay["total"], "discount": pay["discount"], "cash": pay["cash"],
+                "card": pay["card"], "click": pay["click"], "doc": pay["doc"], "note": sale["note"],
+                "lines": [{"code": l["code"], "qty": l["qty"], "price": l["price"],
+                           "sum": kc.line_sum(l["price"], l["qty"])} for l in sale["lines"]]}
+
+    def _bridge_fail(self, item, msg, target):
+        """1C hujjatni yozmadi: yangi sotuv — kassirga xato; fondagisi — "xato" (admin ko'radi)."""
+        with self.qlock:
+            if item["id"] == target:
+                self.pending.remove(item)
+            else:
+                item.update(state="error", err=msg[:300], tries=item.get("tries", 0) + 1)
+            self._save_queue()
+        if item["id"] == target:
+            self._apply_stock(sale_from_json(item["sale"]), -item["res"]["_debt_delta"], undo=True)
+
+    def _drain_bridge(self, target=None):
+        """Navbatdagi hamma sotuv bitta 1C ochilishida yoziladi (onec_bridge)."""
+        if self.bridge is None:
+            self.bridge = self.make_bridge()
+        br = self.bridge
+        # oldingi ishga tushirishdan (kompyuter o'chib qolgan bo'lsa) qolgan natijalar — avval ular
+        res, wip = br.leftovers()
+        with self.qlock:
+            items = [p for p in self.pending if p.get("state") != "error"]
+        out = {}
+        todo = []
+        for it in items:
+            if it["id"] in res:
+                out[it["id"]] = res[it["id"]]
+                br.forget(it["id"])
+            elif it["id"] in wip:
+                out[it["id"]] = ("UNKNOWN", "1C hujjatni yozayotganda to'xtagan — 1C'da tekshiring (yozilgan bo'lishi mumkin)")
+                br.forget(it["id"])
+            else:
+                todo.append(it)
+        err = None
+        if todo:
+            self.busy = True
+            try:
+                out.update(br.run([self._job(it) for it in todo]))
+            except (RuntimeError, OSError) as e:
+                err = str(e)[:300]
+            finally:
+                self.busy = False
+        target_res = None
+        target_err = None
+        for it in items:
+            r = out.get(it["id"])
+            if r is None:
+                with self.qlock:
+                    it["tries"] = it.get("tries", 0) + 1
+                    it["err"] = (err or "1C'ga yetib bormadi")[:300]
+                continue
+            if r[0] == "OK":
+                done = self._done(it, r[1], r[2])
+                if it["id"] == target:
+                    target_res = done
+            elif r[0] == "ERR" and re.search(BRIDGE_TRANSIENT, r[1]) and not re.search(BRIDGE_REJECT, r[1]):
+                with self.qlock:
+                    it["tries"] = it.get("tries", 0) + 1
+                    it["err"] = r[1][:300]
+                err = err or r[1]
+            elif r[0] == "UNKNOWN":
+                # yozilgan bo'lishi mumkin — qayta yozilmaydi, qoldiq qaytarilmaydi; admin 1C'da tekshiradi
+                with self.qlock:
+                    it.update(state="error", err=r[1][:300], tries=it.get("tries", 0) + 1)
+            else:
+                msg = "1C rad etdi: %s" % r[1]
+                self._bridge_fail(it, msg, target)
+                if it["id"] == target:
+                    target_err = msg
+        with self.qlock:
+            self._save_queue()
+        if err:
+            self.retry_at = self.clock() + RETRY_SEC
+            self.last_error = err
+        else:
+            self.retry_at = 0.0
+            self.last_error = ""
+        if target is None:
+            return None
+        if target_res is not None:
+            return target_res
+        if target_err is None and target in out and out[target][0] == "UNKNOWN":
+            return self._queued(target, out[target][1])
+        if target_err is not None:
+            raise kc.KassaError(target_err)
+        prev = self.done.get(target)
+        if prev is not None:
+            return prev
+        raise Retry(err or "navbatda")
+
+    def _write_item(self, item):
+        sale = sale_from_json(item["sale"])
+        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"],
+                        bool(sale["client"]), sale["kind"])
+        number, when = self._write_doc(sale, pay, item.get("emp", ""))
+        return self._done(item, number, when)
 
     def queue_list(self):
         with self.qlock:
@@ -1064,6 +1192,9 @@ class KassaService:
 
     def _write_doc(self, sale, pay, emp_code):
         import onec_write
+        if self.make_bridge is not None and self.use_app():
+            self.bridge_mode = True
+            raise UseBridge()
         if self.open_app is not None and (self.app_mode or self.use_app()):
             return self._write_app(sale, pay, emp_code)
         try:
@@ -1071,6 +1202,10 @@ class KassaService:
         except kc.KassaError:
             raise
         except Exception as e:  # noqa: BLE001
+            if self.make_bridge is not None and onec_write.needs_app(str(e)):
+                log.warning("kassa: COM ulanishida 1C moduli ishlamadi (%s) — 1C ko'prigi orqali", str(e)[:300])
+                self.bridge_mode = True
+                raise UseBridge()
             if self.open_app is not None and onec_write.needs_app(str(e)):
                 log.warning("kassa: COM ulanishida 1C moduli ishlamadi (%s) — 1C oynasi orqali", str(e)[:300])
                 self.app_mode = True
@@ -1390,8 +1525,12 @@ def start(cfg, here, cloud=None, onec_cls=None, app_cls=None, wake=None):
         version = str(selfupdate.local_version(here))
     except Exception:  # noqa: BLE001
         version = ""
+    def bridge():
+        import onec_bridge
+        return onec_bridge.Bridge(cfg.conn_string(), here, onec_bridge.find_exe())
+
     svc = KassaService(conf, here, open_com, (lambda: app_cls(cfg)) if app_cls else None, use_app,
-                       version=version, wake=wake)
+                       version=version, wake=wake, bridge=bridge)
     try:
         httpd = ThreadingHTTPServer(("0.0.0.0", conf.port), make_handler(svc, os.path.join(here, STATIC_DIR)))
     except OSError as e:
