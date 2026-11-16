@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 7) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 8) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -29,6 +29,13 @@ Belgilar:
 | Admin paroli bilan kamaytirish/o'chirish (Константы.ИзмененияВСенсореСпаролем, Сотрудники.Админ) | VERIFIED (test) / 1C'da IMPLEMENTED-UNVERIFIED |
 | "Chiqish" — kiosk oynasini yopish (window.close); yopilmasa barmoq bilan yo'l ko'rsatiladi | IMPLEMENTED-UNVERIFIED (monoblokda sinalmagan) |
 | 1C oynasi (V83.Application) "Неизвестный интерфейс": 1cv8.exe /regserver avtomatik + 1C_COM_tuzatish.bat; xatoda COM va oyna sabablari birga ko'rsatiladi | IMPLEMENTED-UNVERIFIED (Windows'da sinalmagan) |
+| pc 8: sotuv avval diskdagi navbatga (fsync), keyin 1C; 1C ishlamasa navbatda qoladi va o'zi bir marta yoziladi; biznes xatosi (qoldiq) navbatga tushmaydi | VERIFIED (test_kassa: 1C ishlamay qolishi, qayta ishga tushish, takror so'rov) |
+| Savatlar kompyuterga sinxron (elektr o'chsa monoblokdan tiklanadi); kompyuter javob bermasa — monoblok navbati | VERIFIED (Playwright: yangi brauzer xotirasi bilan tiklandi) |
+| So'rovlarga vaqt chegarasi, "yozilmoqda" 100 s dan ortiq qolmaydi, global xato tiklash | VERIFIED (kod, Playwright) |
+| Kassa sozlamalari (admin): oynalar 1–4, chek/ovoz/qoldiq, tugmalarni yashirish, interfeys muharriri (o'lcham, rang, matn), navbat, kunlik hisobot | VERIFIED (Playwright, soxta 1C) |
+| Kompyuter dasturini qayta yoqmasdan yangilash (ilova tugmasi + kassa sozlamasi; kassa sahifasi o'zi yangilanadi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| 1C_oyna_tekshiruv.bat — V83.Application sinovi (app_test.txt) | IMPLEMENTED-UNVERIFIED |
+| Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 
 ## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova

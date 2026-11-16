@@ -305,32 +305,120 @@ class ServiceTest(unittest.TestCase):
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]
         self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")
+        self.assertTrue(self.svc.admin(tok, "1234")["grant"])
         for bad in ("5555", "9999", "0000", ""):
             with self.assertRaises(kc.KassaError):
                 self.svc.admin(tok, bad)
         with self.assertRaises(PermissionError):
             self.svc.admin("x", "1234")
 
-    def test_app_failure_reports_both_errors(self):
+    def test_1c_down_sale_is_queued_then_written(self):
+        """1C ishlamasa: kassir kutmaydi, sotuv navbatga (diskka), 1C tiklanganda o'zi bir marta yoziladi."""
         com_c = self.c
+        state = {"broken": True}
 
         class OneC(kassa.KassaOneC):
             def write_sale(s, c, *a):
-                raise Exception("Ошибка инициализации модуля: ОбщиеНазначения")
+                if state["broken"]:
+                    raise Exception("Ошибка инициализации модуля: Документ.ПродажаРозница.МодульОбъекта")
+                return kassa.KassaOneC.write_sale(s, c, *a)
 
         class App:
             def connect(s):
-                raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: Неизвестный интерфейс")
+                if state["broken"]:
+                    raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: Сбой при удаленном вызове процедуры")
+                s.c = com_c
+                return s
 
-        self.svc.onec = OneC("Do'kon")
+            def quit(s):
+                pass
+
+        self.svc.onec = OneC("Do'kon", now=lambda: dt.datetime(2026, 11, 15, 9, 30))
         self.svc.open_app = App
         tok = self.login()
-        with self.assertRaises(kc.KassaError) as e:
-            self.svc.sale(sale_body(token=tok, id="fail0001"))
-        self.assertIn("Неизвестный интерфейс", str(e.exception))
-        self.assertIn("COM: Ошибка инициализации модуля", str(e.exception))
-        self.assertFalse(self.svc.app_mode)
-        self.assertEqual(com_c.written, [])
+        res = self.svc.sale(sale_body(token=tok, id="down0001"))
+        self.assertTrue(res["ok"] and res["queued"])
+        self.assertIn("Сбой при удаленном вызове", res["why"])
+        self.assertIn("COM:", res["why"])
+        self.assertEqual(self.svc.ping()["q"], 1)
+        # qoldiq darhol kamaygan (ikkinchi kassir ortiqcha sota olmaydi)
+        self.assertEqual([g for g in self.svc.snap["g"] if g["c"] == "15"][0]["s"], 8.5)
+        # xuddi shu so'rov qayta kelsa — ikkinchi navbat yozuvi yo'q
+        self.assertTrue(self.svc.sale(sale_body(token=tok, id="down0001"))["queued"])
+        self.assertEqual(len(self.svc.pending), 1)
+        # 1C tiklandi -> fon aylanishida yoziladi
+        state["broken"] = False
+        self.svc.retry_at = 0
+        self.svc.call(lambda: self.svc._drain())
+        self.assertEqual(len(com_c.written), 1)
+        self.assertEqual(self.svc.ping()["q"], 0)
+        self.assertEqual(self.svc.done.get("down0001")["no"], "000123")
+        # endi shu so'rov — tayyor natija (ikkinchi hujjat yo'q)
+        self.assertEqual(self.svc.sale(sale_body(token=tok, id="down0001"))["no"], "000123")
+        self.assertEqual(len(com_c.written), 1)
+
+    def test_power_loss_restart_keeps_queue_and_login(self):
+        """Kompyuter dasturi qayta ishga tushdi (1C hali ishlamaydi): navbat, tovarlar va parollar diskdan."""
+        tok = self.login()
+
+        def boom():
+            raise SystemExit("1C yo'q")
+        self.svc.open_com = boom
+        self.svc._drop()
+        self.svc.retry_at = 0
+        res = self.svc.sale(sale_body(token=tok, id="pwr00001"))
+        self.assertTrue(res["queued"])
+        svc2 = kassa.KassaService(kassa.KassaConf(), self.dir, boom, clock=lambda: self.t[0])
+        threading.Thread(target=svc2.run, daemon=True).start()
+        self.assertEqual([p["id"] for p in svc2.pending], ["pwr00001"])
+        self.assertEqual(len(json.loads(svc2.data(0)[0])["g"]), 2)
+        self.assertEqual(svc2.login("1234")["name"], "Zafar")
+        self.assertNotIn("1234", open(os.path.join(self.dir, kassa.STAFF_FILE), encoding="utf-8").read())
+
+    def test_business_error_from_1c_not_queued(self):
+        class OneC(kassa.KassaOneC):
+            def write_sale(s, c, *a):
+                raise kc.KassaError("Qoldiq yetmaydi: Olma (bor: 1)")
+        self.svc.onec = OneC()
+        tok = self.login()
+        with self.assertRaises(kc.KassaError):
+            self.svc.sale(sale_body(token=tok, id="biz00001"))
+        self.assertEqual(self.svc.pending, [])
+        self.assertEqual([g for g in self.svc.snap["g"] if g["c"] == "15"][0]["s"], 10.0)   # qoldiq qaytdi
+
+    def test_queue_admin_ops_and_report(self):
+        tok = self.login()
+        self.svc.sale(sale_body(token=tok, id="rep00001"))
+        self.svc.sale(sale_body(token=tok, id="rep00002", kind="return", lines=[{"code": "16", "qty": 1, "price": 6350}], cash="6350"))
+        r = self.svc.report(day="15.11.2026")
+        self.assertEqual((r["n"], r["sale"], r["ret"], r["cash"]), (2, 9000.0, 6350.0, 2650.0))
+        self.assertEqual(r["by"]["Zafar"]["n"], 2)
+        grant = self.svc.admin(tok, "1234")["grant"]
+        self.svc.pending.append({"id": "x1", "sale": kassa.sale_to_json(kc.clean_sale(sale_body(id="x1xxxxxx"))),
+                                 "res": {"_debt_delta": 0.0, "date": "", "total": 1}, "state": "error", "err": "e"})
+        self.assertEqual(self.svc.queue_list()[0]["state"], "error")
+        self.svc.queue_op("delete", "x1")
+        self.assertEqual(self.svc.pending, [])
+        with self.assertRaises(kc.KassaError):
+            self.svc.granted(tok, "eski")
+        self.svc.granted(tok, grant)
+
+    def test_state_and_ui_saved_on_pc(self):
+        tok = self.login()
+        st = {"at": 5, "wins": [{"lines": [{"code": "15", "milli": 1000}]}]}
+        self.svc.put_state(tok, "1", st)
+        self.assertEqual(self.svc.get_state(tok, "1"), st)
+        self.assertEqual(self.svc.get_state(tok, "../../x"), {})
+        with self.assertRaises(kc.KassaError):
+            self.svc.put_state(tok, "1", {"x": "y" * (kassa.MAX_STATE + 1)})
+        grant = self.svc.admin(tok, "1234")["grant"]
+        self.svc.put_ui(tok, grant, {"wins": 4})
+        self.assertEqual(self.svc.get_ui(), {"wins": 4})
+        with self.assertRaises(kc.KassaError):
+            self.svc.put_ui(tok, "x", {})
+        kassir = self.svc.login("5555")["token"]
+        with self.assertRaises(kc.KassaError):
+            self.svc.admin(kassir, "5555")          # admin emas
 
     def test_idle_releases_1c(self):
         self.login()

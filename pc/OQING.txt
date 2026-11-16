@@ -106,3 +106,19 @@ Yangi (v5.4, pc 7) - KASSA EKRANI QAYTA (1C sensor oynasi asosida, klaviaturasiz
  - 1C'da "ИзмененияВСенсореСпаролем" yoqilgan bo'lsa: kamaytirish/o'chirish/tozalash admin paroli bilan.
  - 1C "Неизвестный интерфейс" xatosi (1C oynasi COM orqali ochilmasa): dastur 1cv8.exe /regserver ni o'zi
    bir marta bajaradi. Bo'lmasa: 1C_COM_tuzatish.bat - o'ng tugma - "Запуск от имени администратора".
+
+
+Yangi (pc 8) - ISHONCHLILIK, SOZLAMALAR, QAYTA YOQMASDAN YANGILASH:
+ - Har sotuv avval kompyuter diskidagi navbatga yoziladi (kassa_queue.json), keyin 1C'ga. 1C ishlamasa yoki band
+   bo'lsa - kassir kutmaydi: "Qabul qilindi - 1C'ga keyin yoziladi", 1C tiklanganda o'zi (bir marta) yoziladi.
+   Tepada sariq "1C'ga yozilmagan: N" belgisi turadi - bosib ko'rish mumkin (admin paroli bilan).
+ - Kompyuter javob bermasa - sotuv monoblokda saqlanadi va kompyuter tiklanganda o'zi yuboriladi.
+ - Savatlar har o'zgarishda kompyuterga ham saqlanadi (kassa_state_1.json): elektr o'chib monoblok o'chsa,
+   qayta kirilganda savatlar kompyuterdan tiklanadi.
+ - Tovarlar, narxlar va kassirlar (parollar shifrlangan) kompyuterda saqlanadi: 1C ishlamasa ham kassa ochiladi.
+ - Sozlamalar (admin paroli): oynalar soni 1-4, chek, ovoz, panelda qoldiq, tugmalarni yashirish, istalgan joyning
+   o'lchami / rangi / matn o'lchami (hamma oynaga birdek), 1C navbati, kunlik hisobot, dasturni hozir yangilash.
+ - Yangi tugmalar: Narx tekshirish (sotmasdan narx/qoldiq), Kunlik hisobot (bugungi savdo, naqd/plastik/click).
+ - Kompyuterni qayta yoqish shart emas: Admin ilovasi > Kompyuter (1C) > "Kompyuter dasturini hozir yangilash"
+   yoki kassa Sozlamalari. Dastur yangilanib o'zini qayta ishga tushiradi, kassa sahifasi o'zi yangilanadi.
+ - 1C oynasi sinovi: 1C_oyna_tekshiruv.bat - natijasini rasmga olib dasturchiga yuboring (app_test.txt).

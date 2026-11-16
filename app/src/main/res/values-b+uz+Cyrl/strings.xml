@@ -1787,6 +1787,9 @@
     <string name="pc_prog_none">Янгиланиш манзили йўқ (илова ГитҲубъда ШОП_КОДЕ билан йиғилмаган)</string>
     <string name="pc_prog_text">Компютер дастури (бир марта): шу файлни юклаб, ичидагиларни дастур папкасига кўчиринг ва ORNATISH.bat ни очинг.\n%1$s</string>
     <string name="pc_bridge_on">Телефонлар кўприги: компютерда ишлаяпти (VPN керак эмас)</string>
+    <string name="pc_update_now">Компютер дастурини ҳозир янгилаш</string>
+    <string name="pc_update_sent">Сўров юборилди: янги версия бўлса 1-2 дақиқада ўрнатилади (компютерни қайта ёқиш шарт эмас)</string>
+    <string name="pc_update_fail">Юбориб бўлмади — интернетни текширинг</string>
     <string name="kassa_title">Касса ойнаси (сенсор моноблок)</string>
     <string name="kassa_wait">Текширилмоқда…</string>
     <string name="kassa_url">Манзил: %1$s (компютер эълон қилган: %2$s)</string>

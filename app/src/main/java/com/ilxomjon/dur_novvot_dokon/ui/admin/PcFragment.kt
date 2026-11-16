@@ -63,6 +63,13 @@ class PcFragment : CodeFragment() {
         c.addView(Ui.section(ctx, getString(R.string.pc_prog)))
         tvBridge = Ui.text(ctx, "", top = 4).also { c.addView(it) }
         c.addView(Ui.hint(ctx, getString(R.string.pc_prog_hint)))
+        // v5.4: kompyuterni qayta yoqmasdan — dastur yangi versiyani hozir tekshiradi va o'zini qayta ishga tushiradi
+        c.addView(Ui.button(ctx, getString(R.string.pc_update_now), icon = R.drawable.ic_download) {
+            launchUi {
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { askPcUpdate() }
+                snack(getString(if (ok) R.string.pc_update_sent else R.string.pc_update_fail))
+            }
+        })
         c.addView(Ui.button(ctx, getString(R.string.pc_prog_link), outlined = true, icon = R.drawable.ic_share) {
             val base = com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL
             if (!base.startsWith("https://")) { snack(getString(R.string.pc_prog_none)); return@button }
@@ -104,6 +111,14 @@ class PcFragment : CodeFragment() {
             tvKassa.text = if (k == null) getString(R.string.kassa_none) else getString(R.string.kassa_url, k.first, formatDateTime(k.second))
         }
     }
+
+    /** Kompyuterga "hozir yangilan" so'rovi (p/{inbox}/ureq). @return yuborildimi. */
+    private fun askPcUpdate(): Boolean = runCatching {
+        val st = ServiceLocator.shareStore
+        if (!st.isCloudReady || st.inboxKey.isEmpty()) return false
+        uz.imsoft.shared.CloudDb(st.dbUrl, st.secret).put("p/${st.inboxKey}/ureq", uz.imsoft.shared.CloudDb.SERVER_TIME, timeoutMs = 30_000)
+        true
+    }.getOrDefault(false)
 
     /** Kompyuter dasturi ishga tushganda e'lon qilgan kassa manzili (p/{inbox}/kassa) yoki null. */
     private fun readKassa(): Pair<String, Long>? = runCatching {

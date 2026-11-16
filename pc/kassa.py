@@ -27,10 +27,12 @@ import json
 import logging
 import os
 import queue
+import re
 import secrets
 import socket
 import threading
 import time
+import urllib.parse
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -487,6 +489,8 @@ class DoneLog:
         try:
             with open(self.path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(o, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())       # elektr o'chsa ham yozilgan sotuv yo'qolmaydi
         except OSError as e:
             log.warning("kassa jurnali: %s", e)
         self.appended += 1
@@ -505,15 +509,108 @@ class DoneLog:
             pass
 
 
+# ---------------------------------------------------------------- fayllar (elektr o'chsa ham buzilmaydi)
+
+def save_json(path, obj):
+    """Atomar yozish: avval .tmp, diskka majburan (fsync), keyin almashtirish — yarim yozilgan fayl qolmaydi."""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def load_json(path, default):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def sale_to_json(sale):
+    """Tozalangan sotuv (Decimal'lar bilan) -> faylga yoziladigan ko'rinish."""
+    out = dict(sale)
+    out["lines"] = [dict(l, qty=str(l["qty"]), price=str(l["price"])) for l in sale["lines"]]
+    for k in ("discount", "cash", "card", "click"):
+        out[k] = str(sale[k])
+    out.pop("token", None)
+    return out
+
+
+def sale_from_json(o):
+    s = dict(o)
+    s["lines"] = [dict(l, qty=kc.qty(l["qty"]), price=kc.money(l["price"])) for l in o.get("lines", [])]
+    for k in ("discount", "cash", "card", "click"):
+        s[k] = kc.money(o.get(k))
+    s.setdefault("note", "")
+    s.setdefault("client", "")
+    return s
+
+
+def pw_hash(pw):
+    import hashlib
+    return hashlib.sha256(("imsoft-kassa:" + str(pw)).encode("utf-8")).hexdigest()
+
+
+def today_items(items, day):
+    """Kunlik hisobot: [day] = "dd.mm.YYYY"."""
+    out = {"n": 0, "sale": 0.0, "ret": 0.0, "cash": 0.0, "card": 0.0, "click": 0.0, "debt": 0.0, "disc": 0.0,
+           "debt_paid": 0.0, "by": {}}
+    for r in items:
+        if not str(r.get("date", "")).startswith(day):
+            continue
+        out["n"] += 1
+        sign = -1 if r.get("kind") == kc.KIND_RETURN else 1
+        if r.get("kind") == kc.KIND_RETURN:
+            out["ret"] += fnum(r.get("total"))
+        else:
+            out["sale"] += fnum(r.get("total"))
+            out["disc"] += fnum(r.get("discount"))
+        for k in ("cash", "card", "click"):
+            out[k] += sign * fnum(r.get(k))
+        d = fnum(r.get("debt"))
+        if r.get("kind") == kc.KIND_SALE and d > 0:
+            out["debt"] += d
+        elif r.get("kind") == kc.KIND_SALE and d < 0:
+            out["debt_paid"] += -d
+        who = r.get("cashier") or "-"
+        b = out["by"].setdefault(who, {"n": 0, "sum": 0.0})
+        b["n"] += 1
+        b["sum"] += sign * fnum(r.get("due") or r.get("total"))
+    for k in ("sale", "ret", "cash", "card", "click", "debt", "disc", "debt_paid"):
+        out[k] = round(out[k], 2)
+    return out
+
+
 # ---------------------------------------------------------------- xizmat (bitta 1C oqimi)
 
+QUEUE_FILE = "kassa_queue.json"
+SNAP_FILE = "kassa_snap.json.gz"
+STAFF_FILE = "kassa_staff.json"
+UI_FILE = "kassa_ui.json"
+SALE_WAIT = 45            # sotuv 1C'ga shuncha soniyada yozilmasa — navbatda qoladi, kassir kutmaydi
+RETRY_SEC = 60            # 1C ishlamasa navbatni qayta urinish oralig'i
+GRANT_SEC = 15 * 60       # admin ruxsati (sozlamalar) amal qilish vaqti
+MAX_STATE = 600_000
+
+
+class Retry(kc.KassaError):
+    """1C'ga ulanib bo'lmadi / band — sotuv navbatda qoladi va keyin o'zi yoziladi."""
+
+
 class KassaService:
-    def __init__(self, conf, here, open_com, open_app=None, use_app=lambda: False, onec=None, clock=time.time):
+    def __init__(self, conf, here, open_com, open_app=None, use_app=lambda: False, onec=None, clock=time.time,
+                 version="", wake=None):
         """
         open_com() -> COM ulanish obyekti ([.c] va [.close()]); open_app() -> 1C oynasi (yozishda kerak bo'lsa).
         use_app() — sozlamada "oyna orqali" majburiymi ([onec] mode = app). Aks holda avval COM, baza moduli COM'da
-        ishlamasa (yozuv boshlanmasdan chiqadigan xato) — shu kundan oyna orqali (kassachi kutib qolmasligi uchun
-        oyna kassa ishlatilayotgan paytda yopilmaydi).
+        ishlamasa — 1C oynasi orqali (kassa ishlatilayotgan paytda oyna yopilmaydi).
+
+        Ishonchlilik: har sotuv AVVAL diskdagi navbatga yoziladi (kassa_queue.json, fsync), keyin 1C'ga. 1C ishlamasa
+        yoki band bo'lsa — kassir kutmaydi, sotuv navbatda qoladi va 1C tiklanganda o'zi yoziladi (bir marta).
+        Monoblokdagi savatlar ham shu kompyuterga saqlanadi (elektr o'chsa monoblok o'chadi, kompyuter qoladi).
         """
         self.conf = conf
         self.here = here
@@ -522,14 +619,18 @@ class KassaService:
         self.use_app = use_app
         self.onec = onec or KassaOneC(conf.title)
         self.clock = clock
+        self.version = version
+        self.wake = wake
         self.jobs = queue.Queue()
         self.lock = threading.Lock()
+        self.qlock = threading.Lock()
         self.snap = None
         self.snap_json = b""
         self.snap_gz = b""
         self.ver = 0
-        self.staff = []
+        self.staff = load_json(os.path.join(here, STAFF_FILE), [])
         self.tokens = {}
+        self.grants = {}
         self.full_at = 0.0
         self.stock_at = 0.0
         self.seen_at = 0.0
@@ -538,6 +639,39 @@ class KassaService:
         self.done = DoneLog(os.path.join(here, DONE_FILE))
         self.last_error = ""
         self.app_mode = False
+        self.busy = False
+        self.retry_at = 0.0
+        self.update_asked = threading.Event()
+        self.pending = load_json(os.path.join(here, QUEUE_FILE), [])
+        if not isinstance(self.pending, list):
+            self.pending = []
+        self._load_snap()
+
+    # --- saqlangan ma'lumot (1C ishlamasa ham kassa ochiladi) ---
+    def _load_snap(self):
+        try:
+            with open(os.path.join(self.here, SNAP_FILE), "rb") as f:
+                gz = f.read()
+            snap = json.loads(gzip.decompress(gz).decode("utf-8"))
+        except (OSError, ValueError, EOFError):
+            return
+        if isinstance(snap, dict) and isinstance(snap.get("g"), list):
+            self.snap = snap
+            self.snap_gz = gz
+            self.snap_json = gzip.decompress(gz)
+            self.ver = int(snap.get("ver") or 0)
+
+    def _save_snap(self, gz):
+        try:
+            tmp = os.path.join(self.here, SNAP_FILE + ".tmp")
+            with open(tmp, "wb") as f:
+                f.write(gz)
+            os.replace(tmp, os.path.join(self.here, SNAP_FILE))
+        except OSError as e:
+            log.warning("kassa: ma'lumot nusxasi saqlanmadi: %s", e)
+
+    def _save_queue(self):
+        save_json(os.path.join(self.here, QUEUE_FILE), self.pending)
 
     # --- brauzer tomoni (HTTP oqimlari) ---
     def touch(self):
@@ -548,7 +682,7 @@ class KassaService:
         ev = threading.Event()
         self.jobs.put((fn, box, ev))
         if not ev.wait(timeout):
-            raise kc.KassaError("1C javob bermadi (band). Birozdan keyin qayta urinib ko'ring")
+            raise Retry("1C javob bermadi (band)")
         if "e" in box:
             raise box["e"]
         return box.get("r")
@@ -572,8 +706,9 @@ class KassaService:
             self.call(self._refresh_full)
         if not self.staff:
             raise kc.KassaError("1C'da hech bir xodimga parol qo'yilmagan (Сотрудники → Пароль)")
+        h = pw_hash(pw)
         for s in self.staff:
-            if s["pw"] == pw:
+            if s["h"] == h:
                 if s["fired"]:
                     raise kc.KassaError("Siz bo'shatilgansiz")
                 tok = secrets.token_urlsafe(24)
@@ -585,17 +720,32 @@ class KassaService:
         raise kc.KassaError("Bunday parolli xodim yo'q")
 
     def admin(self, token, pw):
-        """1C ИзмененияВСенсореСпаролем: kamaytirish/o'chirishga admin (Сотрудники.Админ) paroli."""
+        """1C ИзмененияВСенсореСпаролем / sozlamalar: admin (Сотрудники.Админ) paroli. Bazada admin belgilanmagan
+        bo'lsa — istalgan ishlayotgan xodim paroli. @return ruxsat kaliti (15 daqiqa)."""
         self.who(token)
         pw = str(pw or "").strip()
         if not pw:
             raise kc.KassaError("Parolni kiriting")
+        h = pw_hash(pw)
+        any_admin = any(s.get("admin") for s in self.staff)
         for s in self.staff:
-            if s["pw"] == pw and not s["fired"]:
-                if s.get("admin"):
-                    return {"ok": True, "name": s["name"]}
+            if s["h"] == h and not s["fired"]:
+                if s.get("admin") or not any_admin:
+                    g = secrets.token_urlsafe(16)
+                    now = self.clock()
+                    with self.lock:
+                        self.grants = {k: v for k, v in self.grants.items() if now - v < GRANT_SEC}
+                        self.grants[g] = now
+                    return {"ok": True, "name": s["name"], "grant": g}
                 raise kc.KassaError("Bu xodim admin emas")
         raise kc.KassaError("Parol noto'g'ri")
+
+    def granted(self, token, grant):
+        self.who(token)
+        with self.lock:
+            at = self.grants.get(grant or "")
+        if at is None or self.clock() - at >= GRANT_SEC:
+            raise kc.KassaError("Admin ruxsati tugadi — sozlamalarga qayta kiring")
 
     def who(self, token):
         with self.lock:
@@ -604,6 +754,14 @@ class KassaService:
             raise PermissionError("login")
         return v
 
+    def ping(self):
+        with self.qlock:
+            waiting = sum(1 for p in self.pending if p.get("state") != "error")
+            errors = sum(1 for p in self.pending if p.get("state") == "error")
+        return {"ok": True, "v": self.version, "q": waiting, "qe": errors, "err": self.last_error[:300],
+                "data": self.ver}
+
+    # --- sotuv: avval navbat (disk), keyin 1C ---
     def sale(self, body):
         self.touch()
         sale = kc.clean_sale(body)
@@ -611,13 +769,210 @@ class KassaService:
         prev = self.done.get(sale["id"])
         if prev is not None:
             return prev
-        res = self.call(lambda: self._write(sale, emp_code, emp_name))
+        with self.qlock:
+            item = next((p for p in self.pending if p["id"] == sale["id"]), None)
+        if item is None:
+            res = self._prepare(sale, emp_name)
+            item = {"id": sale["id"], "sale": sale_to_json(sale), "emp": emp_code, "res": res, "at": self.clock(),
+                    "tries": 0, "state": "wait", "err": ""}
+            with self.qlock:
+                self.pending.append(item)
+                self._save_queue()
+            self._apply_stock(sale, res["_debt_delta"])
+        elif item.get("state") == "error":
+            raise kc.KassaError(item.get("err") or "Navbatdagi sotuv xatoli")
+        try:
+            return self.call(lambda: self._drain(sale["id"]), timeout=SALE_WAIT)
+        except Retry as e:
+            log.info("kassa: sotuv navbatda qoldi (%s)", e)
+            return self._queued(sale["id"], str(e))
+
+    def _queued(self, rid, why):
+        with self.qlock:
+            item = next((p for p in self.pending if p["id"] == rid), None)
+        if item is None:
+            prev = self.done.get(rid)
+            if prev is not None:
+                return prev
+            raise kc.KassaError("Sotuv topilmadi")
+        r = dict(item["res"])
+        r.pop("_debt_delta", None)
+        r.update(ok=True, queued=True, no="navbatda", why=why[:200])
+        return r
+
+    def _prepare(self, sale, emp_name):
+        """1C'siz tekshiruv (narx, to'lov, qoldiq) — xato bo'lsa kassirga darhol aytiladi, navbatga tushmaydi."""
+        if self.snap is None:
+            raise Retry("Tovarlar ma'lumoti hali yuklanmagan")
+        goods = {g["c"]: g for g in self.snap["g"]}
+        changed = kc.check_prices(sale["lines"], goods, sale["ptype"], self.snap.get("rate", 0.0))
+        if changed:
+            raise kc.KassaError("Narx o'zgargan: %s. Kassa yangilandi — savatni qayta tekshiring" % ", ".join(changed)[:200])
+        for l in sale["lines"]:
+            l["name"] = goods[l["code"]]["n"]
+        if not self.snap.get("neg"):
+            # snapdagi qoldiq navbatdagi (hali yozilmagan) sotuvlarni allaqachon hisobga olgan
+            short = check_stock(sale["lines"], lambda code: goods[code]["s"], sale["kind"])
+            if short:
+                raise kc.KassaError(short)
+        total = kc.cart_total(sale["lines"])
+        pay = kc.settle(total, sale["discount"], sale["cash"], sale["card"], sale["click"], bool(sale["client"]), sale["kind"])
+        debt_delta = float(pay["debt"]) * (1 if sale["kind"] == kc.KIND_SALE else -1)
+        old = [x for x in self.snap.get("cl", []) if x[0] == sale["client"]] if sale["client"] else []
+        now = dt.datetime.fromtimestamp(self.clock())
+        return {
+            "id": sale["id"], "ok": True, "no": "", "date": now.strftime("%d.%m.%Y %H:%M"), "kind": sale["kind"],
+            "doc": pay["doc"], "cashier": emp_name, "total": kc.jnum(pay["total"]), "discount": kc.jnum(pay["discount"]),
+            "due": kc.jnum(pay["due"]), "cash": kc.jnum(pay["cash"]), "card": kc.jnum(pay["card"]),
+            "click": kc.jnum(pay["click"]), "change": kc.jnum(pay["change"]), "debt": kc.jnum(pay["debt"]),
+            "client": sale["client"], "cname": old[0][1] if old else "",
+            "cdebt": round(old[0][3] + debt_delta, 2) if old else 0,
+            "lines": [{"n": l["name"], "q": kc.jnum(l["qty"]), "p": kc.jnum(l["price"]),
+                       "s": kc.jnum(kc.line_sum(l["price"], l["qty"]))} for l in sale["lines"]],
+            "_debt_delta": debt_delta,
+        }
+
+    def _drain(self, target=None):
+        """Navbatni tartib bilan 1C'ga yozadi (faqat 1C oqimida). [target] yozilsa — natijasi, aks holda Retry."""
+        now = self.clock()
+        if self.retry_at and now < self.retry_at and target is not None:
+            raise Retry(self.last_error or "1C hozircha ishlamayapti")
+        while True:
+            with self.qlock:
+                item = next((p for p in self.pending if p.get("state") != "error"), None)
+            if item is None:
+                break
+            self.busy = True
+            try:
+                res = self._write_item(item)
+            except Retry as e:
+                self.retry_at = self.clock() + RETRY_SEC
+                self.last_error = str(e)[:300]
+                with self.qlock:
+                    item["tries"] = item.get("tries", 0) + 1
+                    item["err"] = str(e)[:300]
+                    self._save_queue()
+                raise
+            except kc.KassaError as e:
+                # 1C rad etdi (masalan qoldiq yetmaydi): yangi sotuv bo'lsa kassirga aytiladi va navbatdan olinadi,
+                # oldingi (fonda) sotuv bo'lsa — "xato" bo'lib qoladi, admin ko'rib chiqadi
+                with self.qlock:
+                    if item["id"] == target:
+                        self.pending.remove(item)
+                    else:
+                        item.update(state="error", err=str(e)[:300], tries=item.get("tries", 0) + 1)
+                    self._save_queue()
+                if item["id"] == target:
+                    self._apply_stock(sale_from_json(item["sale"]), -item["res"]["_debt_delta"], undo=True)
+                    raise
+                continue
+            finally:
+                self.busy = False
+            self.retry_at = 0.0
+            self.last_error = ""
+            if item["id"] == target:
+                return res
+        if target is not None:
+            prev = self.done.get(target)
+            if prev is not None:
+                return prev
+            raise Retry("navbatda")
+        return None
+
+    def _write_item(self, item):
+        sale = sale_from_json(item["sale"])
+        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"],
+                        bool(sale["client"]), sale["kind"])
+        number, when = self._write_doc(sale, pay, item.get("emp", ""))
+        res = dict(item["res"])
+        res.pop("_debt_delta", None)
+        res.update(no=number, date=when, ok=True)
+        res["ts"] = self.clock()
+        self.done.add(res)
+        with self.qlock:
+            if item in self.pending:
+                self.pending.remove(item)
+            self._save_queue()
         return res
+
+    def queue_list(self):
+        with self.qlock:
+            return [{"id": p["id"], "state": p.get("state", "wait"), "err": p.get("err", ""), "tries": p.get("tries", 0),
+                     "date": p["res"].get("date", ""), "total": p["res"].get("total", 0), "kind": p["res"].get("kind"),
+                     "cashier": p["res"].get("cashier", ""), "lines": len(p["res"].get("lines", []))} for p in self.pending]
+
+    def queue_op(self, op, rid):
+        with self.qlock:
+            item = next((p for p in self.pending if p["id"] == rid), None)
+            if item is None:
+                raise kc.KassaError("Navbatda bunday sotuv yo'q")
+            if op == "retry":
+                item.update(state="wait", err="")
+            elif op == "delete":
+                self.pending.remove(item)
+            else:
+                raise kc.KassaError("Amal noto'g'ri")
+            self._save_queue()
+        if op == "delete":
+            self._apply_stock(sale_from_json(item["sale"]), -item["res"]["_debt_delta"], undo=True)
+        self.retry_at = 0.0
+        return {"ok": True}
+
+    def report(self, day=None):
+        day = day or dt.datetime.fromtimestamp(self.clock()).strftime("%d.%m.%Y")
+        out = today_items(list(self.done.items.values()), day)
+        out["day"] = day
+        out.update(self.ping())
+        return out
+
+    # --- monoblok holati (savatlar) — elektr o'chsa ham shu yerda qoladi ---
+    def state_path(self, k):
+        k = "".join(ch for ch in str(k or "1") if ch.isalnum())[:16] or "1"
+        return os.path.join(self.here, "kassa_state_%s.json" % k)
+
+    def get_state(self, token, k):
+        self.who(token)
+        return load_json(self.state_path(k), {})
+
+    def put_state(self, token, k, state):
+        self.who(token)
+        raw = json.dumps(state, ensure_ascii=False)
+        if len(raw) > MAX_STATE or not isinstance(state, dict):
+            raise kc.KassaError("Holat juda katta")
+        save_json(self.state_path(k), state)
+        return {"ok": True}
+
+    # --- interfeys sozlamalari (hamma oyna va monobloklar uchun bitta) ---
+    def get_ui(self):
+        return load_json(os.path.join(self.here, UI_FILE), {})
+
+    def put_ui(self, token, grant, ui):
+        self.granted(token, grant)
+        if not isinstance(ui, dict) or len(json.dumps(ui)) > 200_000:
+            raise kc.KassaError("Sozlama noto'g'ri")
+        save_json(os.path.join(self.here, UI_FILE), ui)
+        return {"ok": True}
+
+    def ask_update(self, token, grant):
+        self.granted(token, grant)
+        self.update_asked.set()
+        if self.wake is not None:
+            self.wake()
+        return {"ok": True}
+
+    def wait_idle(self, sec):
+        """Dastur yangilanib qayta ishga tushishidan oldin: 1C'ga yozilayotgan sotuv tugasin."""
+        end = time.time() + sec
+        while self.busy and time.time() < end:
+            time.sleep(0.5)
 
     # --- 1C oqimi ---
     def _com(self):
         if self.com is None:
-            self.com = self.open_com()
+            try:
+                self.com = self.open_com()
+            except SystemExit as e:
+                raise Retry(str(e)[:250])
         return self.com.c
 
     def _drop(self):
@@ -629,21 +984,47 @@ class KassaService:
                     pass
         self.com = None
 
-    def _publish(self, snap):
+    def _publish(self, snap, save=False):
         snap = dict(snap)
         self.ver = int(self.clock() * 1000)
         snap["ver"] = self.ver
         raw = json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        gz = gzip.compress(raw, 6)
         with self.lock:
             self.snap = snap
             self.snap_json = raw
-            self.snap_gz = gzip.compress(raw, 6)
+            self.snap_gz = gz
+        if save:
+            self._save_snap(gz)
+
+    def _pending_delta(self):
+        """Navbatdagi (1C'ga hali yozilmagan) sotuvlar qoldiqqa ta'siri — 1C'dan yangilaganda ham hisobga olinadi."""
+        d = {}
+        with self.qlock:
+            items = list(self.pending)
+        for p in items:
+            sign = -1 if p["sale"].get("kind") == kc.KIND_SALE else 1
+            for l in p["sale"].get("lines", []):
+                d[l["code"]] = d.get(l["code"], 0.0) + sign * fnum(l["qty"])
+        return d
+
+    def _with_pending(self, goods):
+        d = self._pending_delta()
+        if not d:
+            return goods
+        return [dict(g, s=round(g["s"] + d[g["c"]], 3)) if g["c"] in d else g for g in goods]
 
     def _refresh_full(self):
         c = self._com()
         snap, staff = self.onec.snapshot(c)
-        self.staff = staff
-        self._publish(snap)
+        self.staff = [{"code": s["code"], "name": s["name"], "h": pw_hash(s["pw"]), "fired": s["fired"],
+                       "admin": s.get("admin", False)} for s in staff]
+        try:
+            save_json(os.path.join(self.here, STAFF_FILE), self.staff)
+        except OSError:
+            pass
+        snap["g"] = self._with_pending(snap["g"])
+        self._publish(snap, save=True)
         self.full_at = self.stock_at = self.clock()
         log.info("kassa: ma'lumot yangilandi (%d tovar, %d mijoz)", len(snap["g"]), len(snap["cl"]))
 
@@ -652,10 +1033,11 @@ class KassaService:
         k = self.onec.consts(c)
         st = {code_text(r.get("Код")): fnum(r.get("Кол")) for r in self.onec.stock(c, k["store_ref"])}
         snap = dict(self.snap or {})
+        d = self._pending_delta()
         changed = abs(fnum(snap.get("rate")) - k["rate"]) > 1e-9 or bool(snap.get("neg")) != k["neg"]
         goods = []
         for g in snap.get("g", []):
-            s = round(st.get(g["c"], 0.0), 3)
+            s = round(st.get(g["c"], 0.0) + d.get(g["c"], 0.0), 3)
             if s != g["s"]:
                 g = dict(g, s=s)
                 changed = True
@@ -665,10 +1047,12 @@ class KassaService:
             snap.update(g=goods, rate=k["rate"], neg=k["neg"])
             self._publish(snap)
 
-    def _apply_stock(self, sale, debt_delta):
-        """Yozilgandan keyin qoldiq va mijoz qarzi xotirada darhol o'zgaradi (keyingi yangilanishgacha kutilmaydi)."""
+    def _apply_stock(self, sale, debt_delta, undo=False):
+        """Sotuv qabul qilinishi bilan qoldiq va mijoz qarzi xotirada o'zgaradi (1C'ga yozilishini kutmaydi)."""
         snap = dict(self.snap or {})
         sign = -1 if sale["kind"] == kc.KIND_SALE else 1
+        if undo:
+            sign = -sign
         delta = {}
         for l in sale["lines"]:
             delta[l["code"]] = delta.get(l["code"], 0.0) + sign * float(l["qty"])
@@ -677,42 +1061,6 @@ class KassaService:
             snap["cl"] = [[x[0], x[1], x[2], round(x[3] + debt_delta, 2), x[4], x[5]] if x[0] == sale["client"] else x
                           for x in snap.get("cl", [])]
         self._publish(snap)
-
-    def _write(self, sale, emp_code, emp_name):
-        prev = self.done.get(sale["id"])
-        if prev is not None:
-            return prev
-        if self.snap is None:
-            self._refresh_full()
-        goods = {g["c"]: g for g in self.snap["g"]}
-        rate = self.snap.get("rate", 0.0)
-        changed = kc.check_prices(sale["lines"], goods, sale["ptype"], rate)
-        if changed:
-            self._refresh_full()
-            goods = {g["c"]: g for g in self.snap["g"]}
-            if kc.check_prices(sale["lines"], goods, sale["ptype"], self.snap.get("rate", 0.0)):
-                raise kc.KassaError("Narx o'zgargan: %s. Kassa yangilandi — savatni qayta tekshiring" % ", ".join(changed)[:200])
-        for l in sale["lines"]:
-            l["name"] = goods[l["code"]]["n"]
-        total = kc.cart_total(sale["lines"])
-        pay = kc.settle(total, sale["discount"], sale["cash"], sale["card"], sale["click"], bool(sale["client"]), sale["kind"])
-        number, when = self._write_doc(sale, pay, emp_code)
-        # qarz: sotuvda to'lanmagan qismi qo'shiladi (ortiqcha to'lov/qarz to'lovi — kamayadi), qaytarishda — kamayadi
-        debt_delta = float(pay["debt"]) * (1 if sale["kind"] == kc.KIND_SALE else -1)
-        old = [x for x in self.snap.get("cl", []) if x[0] == sale["client"]] if sale["client"] else []
-        res = {
-            "id": sale["id"], "ok": True, "no": number, "date": when, "kind": sale["kind"], "doc": pay["doc"],
-            "cashier": emp_name, "total": kc.jnum(pay["total"]), "discount": kc.jnum(pay["discount"]),
-            "due": kc.jnum(pay["due"]), "cash": kc.jnum(pay["cash"]), "card": kc.jnum(pay["card"]),
-            "click": kc.jnum(pay["click"]), "change": kc.jnum(pay["change"]), "debt": kc.jnum(pay["debt"]),
-            "client": sale["client"], "cname": old[0][1] if old else "",
-            "cdebt": round(old[0][3] + debt_delta, 2) if old else 0,
-            "lines": [{"n": l["name"], "q": kc.jnum(l["qty"]), "p": kc.jnum(l["price"]),
-                       "s": kc.jnum(kc.line_sum(l["price"], l["qty"]))} for l in sale["lines"]],
-        }
-        self.done.add(res)
-        self._apply_stock(sale, debt_delta)
-        return res
 
     def _write_doc(self, sale, pay, emp_code):
         import onec_write
@@ -728,11 +1076,12 @@ class KassaService:
                 self.app_mode = True
                 try:
                     return self._write_app(sale, pay, emp_code)
-                except (kc.KassaError, SystemExit) as e2:
+                except Retry as e2:
                     self.app_mode = False      # keyingi safar yana COM'dan boshlanadi (masalan tuzatilgan bo'lsa)
-                    raise kc.KassaError("%s | COM: %s" % (str(e2)[:220], str(e)[:120]))
+                    raise Retry("%s | COM: %s" % (str(e2)[:220], str(e)[:120]))
             log.warning("kassa: 1C yozuv xatosi: %s", str(e)[:300])
-            raise kc.KassaError("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
+            self._drop()
+            raise Retry("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
 
     def _write_app(self, sale, pay, emp_code):
         import onec_write
@@ -742,22 +1091,35 @@ class KassaService:
             self.app.connect()
         except SystemExit as e:
             log.warning("kassa: 1C oynasi ochilmadi: %s", e)
-            raise kc.KassaError(str(e)[:300])
+            raise Retry(str(e)[:300])
         try:
             return self.onec.write_sale(self.app.c, sale, pay, emp_code)
         except kc.KassaError:
             raise
         except Exception as e:  # noqa: BLE001
-            raise kc.KassaError("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
+            msg = onec_write.explain_1c_error(str(e))
+            # 1C o'zi rad etgan (masalan "... етмаяпти" - qoldiq yetmaydi) - qayta urinish foydasiz
+            if re.search(r"(?i)етмаяпти|не удалось провести|недостаточно", str(e)):
+                raise kc.KassaError("1C rad etdi: %s" % msg[:250])
+            try:
+                self.app.quit()
+            except Exception:  # noqa: BLE001
+                pass
+            raise Retry("1C: %s" % msg[:250])
 
     def tick(self):
-        """Navbat bo'sh paytda: brauzer ochiq bo'lsa — ma'lumotni yangilab turish."""
+        """Navbat bo'sh paytda: navbatdagi sotuvlarni yozish va (brauzer ochiq bo'lsa) ma'lumotni yangilab turish."""
         now = self.clock()
+        if self.pending and (not self.retry_at or now >= self.retry_at):
+            try:
+                self._drain()
+            except kc.KassaError:
+                pass
         if now - self.seen_at > ACTIVE_SEC:
             # hech kim ishlatmayapti — 1C ulanishlari yopiladi (litsenziya bo'shaydi)
             if self.com is not None:
                 self._drop()
-            if self.app is not None:
+            if self.app is not None and not self.pending:
                 try:
                     self.app.quit()
                 except Exception:  # noqa: BLE001
@@ -790,12 +1152,12 @@ class KassaService:
             except kc.KassaError as e:
                 box["e"] = e
             except SystemExit as e:
-                box["e"] = kc.KassaError(str(e)[:250])
+                box["e"] = Retry(str(e)[:250])
                 self._drop()
             except Exception as e:  # noqa: BLE001
                 log.exception("kassa: 1C xatosi")
                 self._drop()
-                box["e"] = kc.KassaError("1C: %s" % str(e)[:250])
+                box["e"] = Retry("1C: %s" % str(e)[:250])
             finally:
                 ev.set()
 
@@ -896,7 +1258,21 @@ def make_handler(service, static_dir):
                     return self._send(200, gz, gz=True)
                 return self._send(200, raw)
             if path == "/api/ping":
-                return self._json(200, {"ok": True, "err": service.last_error})
+                return self._json(200, service.ping())
+            if path in ("/api/state", "/api/report", "/api/queue", "/api/ui"):
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                tok = urllib.parse.unquote(params.get("t", ""))
+                try:
+                    if path == "/api/ui":
+                        return self._json(200, service.get_ui())
+                    service.who(tok)
+                    if path == "/api/state":
+                        return self._json(200, service.get_state(tok, params.get("k", "1")))
+                    if path == "/api/report":
+                        return self._json(200, service.report())
+                    return self._json(200, {"ok": True, "items": service.queue_list()})
+                except PermissionError:
+                    return self._json(401, {"ok": False, "e": "login"})
             if path == "/monoblok.bat":
                 host = (self.headers.get("Host") or "").strip()
                 try:
@@ -936,10 +1312,22 @@ def make_handler(service, static_dir):
                     service.who(body.get("token"))
                     service.call(service._refresh_full)
                     return self._json(200, {"ok": True})
+                if path == "/api/state":
+                    return self._json(200, service.put_state(body.get("token"), body.get("k"), body.get("state")))
+                if path == "/api/ui":
+                    return self._json(200, service.put_ui(body.get("token"), body.get("grant"), body.get("ui")))
+                if path == "/api/update":
+                    return self._json(200, service.ask_update(body.get("token"), body.get("grant")))
+                if path == "/api/queue":
+                    service.granted(body.get("token"), body.get("grant"))
+                    return self._json(200, service.queue_op(body.get("op"), body.get("id")))
             except PermissionError:
                 return self._json(401, {"ok": False, "e": "login"})
             except kc.KassaError as e:
-                return self._json(200, {"ok": False, "e": str(e)})
+                return self._json(200, {"ok": False, "e": str(e), "retry": isinstance(e, Retry)})
+            except Exception as e:  # noqa: BLE001 - kassa sahifasi hech qachon "qotib" qolmasin
+                log.exception("kassa http")
+                return self._json(200, {"ok": False, "e": "Kompyuterdagi xato: %s" % str(e)[:200], "retry": True})
             return self._send(404, b"not found", "text/plain")
 
     return H
@@ -982,7 +1370,7 @@ def ensure_firewall(port):
     return ok
 
 
-def start(cfg, here, cloud=None, onec_cls=None, app_cls=None):
+def start(cfg, here, cloud=None, onec_cls=None, app_cls=None, wake=None):
     """onec_export.py chaqiradi. @return xizmat yoki None (o'chiq / port band)."""
     conf = KassaConf.load(here)
     if not conf.enabled:
@@ -997,7 +1385,13 @@ def start(cfg, here, cloud=None, onec_cls=None, app_cls=None):
     def use_app():
         return str(getattr(cfg, "onec_mode", "auto") or "auto").lower() == "app"
 
-    svc = KassaService(conf, here, open_com, (lambda: app_cls(cfg)) if app_cls else None, use_app)
+    try:
+        import selfupdate
+        version = str(selfupdate.local_version(here))
+    except Exception:  # noqa: BLE001
+        version = ""
+    svc = KassaService(conf, here, open_com, (lambda: app_cls(cfg)) if app_cls else None, use_app,
+                       version=version, wake=wake)
     try:
         httpd = ThreadingHTTPServer(("0.0.0.0", conf.port), make_handler(svc, os.path.join(here, STATIC_DIR)))
     except OSError as e:

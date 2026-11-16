@@ -466,5 +466,29 @@ class AppRegisterTest(unittest.TestCase):
         self.assertTrue(o.needs_register(E("Класс не зарегистрирован")))
         self.assertFalse(o.needs_register(E("Ошибка инициализации модуля")))
 
+
+class UpdateAskTest(unittest.TestCase):
+    def test_update_asked_once(self):
+        import threading
+        o = load(tempfile.mkdtemp())
+
+        class C:
+            v = 0
+
+            def update_request(self):
+                return self.v
+
+        class K:
+            update_asked = threading.Event()
+        c = C()
+        self.assertFalse(o.update_asked(c))
+        c.v = 1700000000000
+        self.assertTrue(o.update_asked(c))
+        self.assertFalse(o.update_asked(c))          # bir so'rov — bir marta
+        k = K()
+        k.update_asked.set()
+        self.assertTrue(o.update_asked(c, k))         # kassa sozlamasidan
+        self.assertFalse(k.update_asked.is_set())
+
 if __name__ == "__main__":
     unittest.main()

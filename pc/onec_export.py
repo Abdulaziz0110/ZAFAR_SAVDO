@@ -245,6 +245,11 @@ class Cloud:
         v = self.call("GET", "p/%s/creq" % self.cfg.inbox, timeout=30)
         return v if isinstance(v, (int, float)) else 0
 
+    def update_request(self):
+        """v5.4: Admin "Kompyuter dasturini hozir yangilash" bosgan vaqt (ms) yoki 0."""
+        v = self.call("GET", "p/%s/ureq" % self.cfg.inbox, timeout=30)
+        return v if isinstance(v, (int, float)) else 0
+
     def data_request(self):
         """Admin "shu davrni yuboring" so'rovi: {k, f, t, at} yoki {}."""
         v = self.call("GET", "p/%s/dreq" % self.cfg.inbox, timeout=30)
@@ -1527,7 +1532,8 @@ def loop(cfg):
         fix_startup()
     except Exception as e:  # noqa: BLE001
         log.warning("avtozapusk faylini tuzatib bo'lmadi: %s", e)
-    waker = Waker(cfg, ["w/%s" % inbox, "p/%s/scale" % inbox, "p/%s/dreq" % inbox, "p/%s/creq" % inbox]).start()
+    waker = Waker(cfg, ["w/%s" % inbox, "p/%s/scale" % inbox, "p/%s/dreq" % inbox, "p/%s/creq" % inbox,
+                        "p/%s/ureq" % inbox]).start()
     # v5.3: telefonlar ko'prigi - alohida oqimda (1C band bo'lsa ham telefonlar kutib qolmaydi)
     if getattr(cfg, "relay_on", True):
         try:
@@ -1536,9 +1542,10 @@ def loop(cfg):
         except Exception as e:  # noqa: BLE001
             log.warning("telefonlar ko'prigi ishga tushmadi: %s", e)
     # v5.4: kassa (sensor) oynasi - do'kon tarmog'idagi monoblok brauzerda ochadi (o'z oqimi va 1C ulanishi bilan)
+    kassa_svc = None
     try:
         import kassa
-        kassa.start(cfg, HERE, cloud, OneC, OneCApp)
+        kassa_svc = kassa.start(cfg, HERE, cloud, OneC, OneCApp, wake=waker.event.set)
     except Exception as e:  # noqa: BLE001
         log.warning("kassa oynasi ishga tushmadi: %s", e)
 
@@ -1570,15 +1577,23 @@ def loop(cfg):
     last_final_day = ""
     last_upd = 0.0
     while True:
+        # v5.4: "hozir yangilash" - Admin ilovasidan yoki kassa sozlamasidan (kompyuterni qayta yoqish shart emas)
+        asked = update_asked(cloud, kassa_svc)
+        if asked:
+            last_upd = 0.0
         # v5.3: dastur o'zi yangilanadi (soatiga bir marta tekshiradi; yozish navbati bo'sh paytda)
         if time.time() - last_upd >= 3600:
             last_upd = time.time()
             try:
                 import selfupdate
                 if selfupdate.check(cloud, inbox, HERE):
-                    safe_status(cloud, "Kompyuter dasturi yangilandi", True)
+                    safe_status(cloud, "Kompyuter dasturi yangilandi — qayta ishga tushmoqda", True)
+                    if kassa_svc is not None:
+                        kassa_svc.wait_idle(90)     # kassa sotuvi yozilayotgan bo'lsa tugashini kutadi
                     writer.quit()
                     selfupdate.restart()
+                elif asked:
+                    safe_status(cloud, "Kompyuter dasturi eng yangi versiyada (%s)" % PC_VERSION, True)
             except Exception as e:  # noqa: BLE001
                 log.warning("yangilanishni tekshirib bo'lmadi: %s", e)
                 last_upd = time.time() - 3600 + 300    # internet yo'q edi - 5 daqiqadan keyin qayta (soat kutilmaydi)
@@ -1678,6 +1693,27 @@ def loop(cfg):
             log.info("so'rov keldi — darhol bajarilmoqda")
 
 
+def update_asked(cloud, kassa_svc=None):
+    """Yangilash so'ralganmi: bulutdagi p/{inbox}/ureq (Admin ilovasi) yoki kassa sozlamasi. Bir so'rov bir marta."""
+    asked = False
+    try:
+        req = cloud.update_request()
+    except Exception:  # noqa: BLE001
+        req = 0
+    if req:
+        st = load_state()
+        if req > st.get("__ureq__", 0):
+            st["__ureq__"] = req
+            save_state(st)
+            asked = True
+    if kassa_svc is not None and kassa_svc.update_asked.is_set():
+        kassa_svc.update_asked.clear()
+        asked = True
+    if asked:
+        log.info("yangilash so'raldi — hozir tekshiriladi")
+    return asked
+
+
 def codes_tick(cfg, cloud, onec, last_codes, now=None):
     """Tovar kodlari: vaqti kelgan bo'lsa yoki telefon so'ragan bo'lsa. @return bajarildimi."""
     now = now or time.time()
@@ -1756,6 +1792,49 @@ def fix_startup(startup_dir=None, py_w=None, script=None, workdir=None):
     return True
 
 
+def app_test(cfg, out_path=None):
+    """v5.4: kassa sotuvi 1C'ga faqat 1C oynasi orqali yoziladi. Shu sinov qayerda to'xtashini ko'rsatadi
+    (natija oynada va app_test.txt faylida - rasmga olib dasturchiga yuboring)."""
+    out_path = out_path or os.path.join(HERE, "app_test.txt")
+    lines = []
+
+    def say(msg):
+        lines.append(msg)
+        print(msg)
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+        except OSError:
+            pass
+    import ctypes
+    try:
+        admin = bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:  # noqa: BLE001
+        admin = None
+    say("1C oynasi sinovi  %s  (Python %s, %d-bit, administrator: %s)" % (
+        dt.datetime.now().strftime("%d.%m.%Y %H:%M"), sys.version.split()[0], 64 if sys.maxsize > 2 ** 32 else 32, admin))
+    say("1) 1C oynasi ochilmoqda (10-40 soniya)...")
+    app = OneCApp(cfg)
+    try:
+        app.connect()
+    except SystemExit as e:
+        say("   XATO: %s" % e)
+        return False
+    say("   OK - 1C ochildi")
+    ok = True
+    try:
+        say("2) ПродажаРозница hujjati (yozmasdan) yaratilmoqda...")
+        d = app.c.Документы.ПродажаРозница.СоздатьДокумент()
+        say("   OK - hujjat moduli ishlaydi (%s)" % type(d).__name__)
+    except Exception as e:  # noqa: BLE001
+        ok = False
+        say("   XATO: %s" % str(e)[:400])
+    finally:
+        app.quit()
+        say("3) 1C yopildi. Natija: %s" % ("HAMMASI ISHLAYDI" if ok else "XATO BOR"))
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser(description="1C → Excel → telefon (avtomatik)")
     ap.add_argument("--discover", action="store_true", help="1C tuzilishini discover.txt ga yozish")
@@ -1765,6 +1844,7 @@ def main():
     ap.add_argument("--codes", action="store_true", help="tovar kodlari (PLU, shtrix) ni hozir yuborish")
     ap.add_argument("--sample", action="store_true", help="PLU/shtrix/narx namunalari -> sample.txt (dasturchiga)")
     ap.add_argument("--days", type=int, help="necha kunlik (jadvaldagini almashtiradi)")
+    ap.add_argument("--app-test", action="store_true", help="1C oynasi (V83.Application) orqali ulanish sinovi")
     ap.add_argument("--config", default=CONFIG)
     ap.add_argument("-v", action="store_true")
     a = ap.parse_args()
@@ -1781,6 +1861,10 @@ def main():
         with open(path, "w", encoding="utf-8") as f:
             f.write(txt)
         print("Tayyor:", path, "— shu faylni dasturchiga yuboring (ichida parol yo'q).")
+        return
+    if a.app_test:
+        cfg.check_onec(need_report=False)
+        app_test(cfg)
         return
     if a.discover:
         cfg.check_onec(need_report=False)
