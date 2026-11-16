@@ -94,20 +94,30 @@ def read_text(path):
     return raw.decode("latin-1")
 
 
-def single_instance(name="onec_export"):
-    """Bir vaqtda faqat bitta nusxa ishlasin (avtozapusk + qo'lda ishga tushirilsa). @return qulf fayli yoki None."""
+def single_instance(name="onec_export", wait=45, sleep=time.sleep):
+    """Bir vaqtda faqat bitta nusxa ishlasin (avtozapusk + qo'lda ishga tushirilsa). @return qulf fayli yoki None.
+    pc 18: yangilanishdan keyin qayta ishga tushganda eski nusxa hali yopilmagan bo'lishi mumkin — [wait] soniya kutiladi
+    (aks holda yangi nusxa "boshqasi ishlayapti" deb chiqib ketar va dastur umuman ishlamay qolardi)."""
     path = os.path.join(tempfile.gettempdir(), "imsoft_%s.lock" % name)
-    try:
-        f = open(path, "a+")
-        if os.name == "nt":
-            import msvcrt
-            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return f
-    except OSError:
-        return None
+    end = time.time() + wait
+    while True:
+        f = None
+        try:
+            f = open(path, "a+")
+            if os.name == "nt":
+                import msvcrt
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return f
+        except OSError:
+            if f is not None:
+                f.close()
+            if time.time() >= end:
+                return None
+            sleep(1)
 
 
 def normalize_url(raw):

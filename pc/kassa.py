@@ -1856,7 +1856,7 @@ def ensure_firewall(port):
 
 
 def start(cfg, here, cloud=None, onec_cls=None, app_cls=None, wake=None):
-    """onec_export.py chaqiradi. @return xizmat yoki None (o'chiq / port band)."""
+    """onec_export.py chaqiradi. @return xizmat yoki None (o'chiq). Port band bo'lsa — bo'shaguncha fonda kutadi."""
     conf = KassaConf.load(here)
     if not conf.enabled:
         log.info("kassa oynasi o'chiq ([kassa] enabled = 0)")
@@ -1881,21 +1881,33 @@ def start(cfg, here, cloud=None, onec_cls=None, app_cls=None, wake=None):
 
     svc = KassaService(conf, here, open_com, (lambda: app_cls(cfg)) if app_cls else None, use_app,
                        version=version, wake=wake, bridge=bridge)
-    try:
-        httpd = ThreadingHTTPServer(("0.0.0.0", conf.port), make_handler(svc, os.path.join(here, STATIC_DIR)))
-    except OSError as e:
-        log.warning("kassa oynasi: %d-port band yoki ruxsat yo'q: %s", conf.port, e)
-        return None
-    httpd.daemon_threads = True
-    ensure_firewall(conf.port)
-    threading.Thread(target=svc.run, daemon=True, name="kassa-1c").start()
-    threading.Thread(target=httpd.serve_forever, daemon=True, name="kassa-http").start()
     url = "http://%s:%d" % (lan_ip(), conf.port)
-    log.info("kassa oynasi: %s", url)
-    if cloud is not None:
-        try:
-            cloud.call("PUT", "p/%s/kassa" % cloud.cfg.inbox, {"url": url, "at": {".sv": "timestamp"}}, timeout=30, print="silent")
-        except Exception as e:  # noqa: BLE001
-            log.warning("kassa manzilini bulutga yozib bo'lmadi: %s", e)
     svc.url = url
+    threading.Thread(target=svc.run, daemon=True, name="kassa-1c").start()
+
+    def serve():
+        # pc 18: dastur yangilanib qayta ishga tushganda eski nusxa portni hali bo'shatmagan bo'lishi mumkin —
+        # bir marta urinib to'xtamaymiz (aks holda monoblokda "ERR_CONNECTION_REFUSED"), port bo'shaguncha qayta urinamiz
+        delay, warned = 1.0, False
+        while True:
+            try:
+                httpd = ThreadingHTTPServer(("0.0.0.0", conf.port), make_handler(svc, os.path.join(here, STATIC_DIR)))
+                break
+            except OSError as e:
+                if not warned:
+                    log.warning("kassa oynasi: %d-port hozircha band (%s) — qayta urinilmoqda", conf.port, e)
+                    warned = True
+                time.sleep(delay)
+                delay = min(delay * 2, 15.0)
+        httpd.daemon_threads = True
+        ensure_firewall(conf.port)
+        log.info("kassa oynasi: %s", url)
+        if cloud is not None:
+            try:
+                cloud.call("PUT", "p/%s/kassa" % cloud.cfg.inbox, {"url": url, "at": {".sv": "timestamp"}}, timeout=30,
+                           print="silent")
+            except Exception as e:  # noqa: BLE001
+                log.warning("kassa manzilini bulutga yozib bo'lmadi: %s", e)
+        httpd.serve_forever()
+    threading.Thread(target=serve, daemon=True, name="kassa-http").start()
     return svc

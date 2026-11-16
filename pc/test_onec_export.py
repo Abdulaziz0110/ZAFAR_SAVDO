@@ -520,5 +520,24 @@ class AutostartTest(unittest.TestCase):
         self.assertEqual(a[a.index("/rl") + 1], "highest")
 
 
+class SingleInstanceTest(unittest.TestCase):
+    def test_waits_for_old_copy(self):
+        E = load(tempfile.mkdtemp())
+        name = "t%d" % int(time.time() * 1000)
+        a = E.single_instance(name, wait=0)
+        self.assertIsNotNone(a)
+        slept = []
+
+        def sleep(s):                       # eski nusxa 2 soniyadan keyin yopiladi
+            slept.append(s)
+            if len(slept) == 2:
+                a.close()
+        b = E.single_instance(name, wait=30, sleep=sleep)
+        self.assertIsNotNone(b)
+        self.assertEqual(len(slept), 2)
+        self.assertIsNone(E.single_instance(name, wait=0))
+        b.close()
+
+
 if __name__ == "__main__":
     unittest.main()
