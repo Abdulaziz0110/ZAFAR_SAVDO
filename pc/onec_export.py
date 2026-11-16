@@ -816,13 +816,68 @@ APP_HINT = ("Kompyuterda administrator sifatida bir marta bajaring: "
 _REGISTERED = []
 
 
+RPC_DEAD = (-2147023170, -2147023174, -2147417848, -2147023169)   # Сбой при удаленном вызове / RPC недоступен / ...
+
+
+def err_code(err):
+    try:
+        return err.args[0] if err.args and isinstance(err.args[0], int) else getattr(err, "hresult", None)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def parse_procs(csv_text):
+    """wmic ... /format:csv natijasi -> [(pid, buyruq qatori)] faqat 1cv8.exe uchun."""
+    out = []
+    for line in str(csv_text or "").splitlines():
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) < 3 or not parts[-1].isdigit():
+            continue
+        out.append((int(parts[-1]), ",".join(parts[1:-1])))
+    return out
+
+
+def is_automation(cmdline):
+    """Dastur COM orqali ochgan (ko'rinmas) 1C: buyruq qatorida -Embedding / /Automation bor. Kassir ochgani — yo'q."""
+    return bool(re.search(r"(?i)(^|\s)[-/](embedding|automation)\b", str(cmdline or "")))
+
+
+def stale_automation_procs():
+    """Ilgari ochilib, osilib qolgan ko'rinmas 1C (COM-server) jarayonlari: [(pid, buyruq)]."""
+    if os.name != "nt":
+        return []
+    import subprocess
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        r = subprocess.run(["wmic", "process", "where", "name='1cv8.exe'", "get", "CommandLine,ProcessId", "/format:csv"],
+                           capture_output=True, timeout=30, creationflags=flags)
+        text = r.stdout.decode("utf-16", "replace") if r.stdout[:2] in (b"\xff\xfe", b"\xfe\xff") else \
+            r.stdout.decode("cp866", "replace")
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [(pid, cmd) for pid, cmd in parse_procs(text) if is_automation(cmd)]
+
+
+def kill_stale_automation():
+    """Osilib qolgan ko'rinmas 1C'larni yopadi (kassirning 1C oynasiga tegmaydi). @return nechta yopildi."""
+    procs = stale_automation_procs()
+    if not procs:
+        return 0
+    import subprocess
+    for pid, cmd in procs:
+        log.info("osilib qolgan ko'rinmas 1C yopilmoqda: PID %d (%s)", pid, cmd[:120])
+        try:
+            subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, timeout=30,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError):
+            pass
+    time.sleep(2)
+    return len(procs)
+
+
 def needs_register(err):
     """V83.Application ro'yxatdan o'tmaganligi/buzilganligi xatosimi (RPC_S_UNKNOWN_IF, REGDB_E_CLASSNOTREG, ...)."""
-    code = None
-    try:
-        code = err.args[0] if err.args and isinstance(err.args[0], int) else getattr(err, "hresult", None)
-    except Exception:  # noqa: BLE001
-        code = None
+    code = err_code(err)
     if code in (-2147023179, -2147221164, -2147221005, -2147024894):
         return True
     return bool(re.search(r"(?i)неизвестный интерфейс|interface is unknown|не зарегистрирован|not registered|"
@@ -922,7 +977,8 @@ class OneCApp(OneC):
         pythoncom.CoInitialize()
         errs = []
         app = ok = None
-        for attempt in range(2):
+        killed = False
+        for attempt in range(3):
             try:
                 # sof "kech bog'lanish" (IDispatch) - makepy keshidagi eski tiplar xalaqit bermaydi
                 app = win32com.client.dynamic.Dispatch("V83.Application")
@@ -935,8 +991,14 @@ class OneCApp(OneC):
                 # v5.4: "Неизвестный интерфейс" / "класс не зарегистрирован" - 1cv8.exe COM-server sifatida
                 # ro'yxatdan o'tmagan yoki boshqa versiyaga bog'langan. Ishlayotgan COMConnector bilan bir xil
                 # versiyadagi 1cv8.exe /regserver qilinadi (dastur administrator huquqida) va bir marta qayta urinadi.
-                if attempt == 0 and needs_register(e) and register_app_server():
+                if attempt < 2 and needs_register(e) and register_app_server():
                     continue
+                # v5.4: oldingi urinishdan osilib qolgan ko'rinmas 1C (COM-server) yangisini "ushlab" oladi va
+                # darhol "Сбой при удаленном вызове процедуры" beradi - shularni yopib qayta urinamiz
+                if not killed and err_code(e) in RPC_DEAD:
+                    killed = True
+                    if kill_stale_automation():
+                        continue
                 raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: %s. %s" % ("; ".join(errs), APP_HINT))
         if ok is False:
             raise SystemExit("1C ga ulanib bo'lmadi (foydalanuvchi yoki parol)")
@@ -1818,6 +1880,8 @@ def app_test(cfg, out_path=None):
             say("   %s: %s" % (prog, _clsid_server(prog, kind)))
         except OSError as e:
             say("   %s: ro'yxatda yo'q (%s)" % (prog, e))
+    procs = stale_automation_procs()
+    say("   Osilib qolgan ko'rinmas 1C: %s" % (", ".join("PID %d" % p for p, _ in procs) or "yo'q"))
     say("1) 1C oynasi ochilmoqda (10-40 soniya)...")
     app = OneCApp(cfg)
     t0 = time.time()

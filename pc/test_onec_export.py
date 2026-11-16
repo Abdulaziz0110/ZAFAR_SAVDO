@@ -490,5 +490,25 @@ class UpdateAskTest(unittest.TestCase):
         self.assertTrue(o.update_asked(c, k))         # kassa sozlamasidan
         self.assertFalse(k.update_asked.is_set())
 
+
+class StaleAutomationTest(unittest.TestCase):
+    def test_parse_and_filter(self):
+        o = load(tempfile.mkdtemp())
+        csv = ("\r\nNode,CommandLine,ProcessId\r\n"
+               'PC,"C:\\Program Files (x86)\\1cv8\\8.3.10.2505\\bin\\1cv8.exe" -Embedding,4120\r\n'
+               'PC,"C:\\Program Files (x86)\\1cv8\\8.3.10.2505\\bin\\1cv8.exe" ENTERPRISE /F"D:\\Base, 1",5332\r\n'
+               "PC,,77\r\n")
+        procs = o.parse_procs(csv)
+        self.assertEqual([p for p, _ in procs], [4120, 5332, 77])
+        self.assertTrue(o.is_automation(procs[0][1]))
+        self.assertFalse(o.is_automation(procs[1][1]))       # kassirning 1C oynasi — tegilmaydi
+        self.assertTrue(o.is_automation("1cv8.exe /Automation"))
+        self.assertFalse(o.is_automation(""))
+        self.assertEqual(o.stale_automation_procs(), [])     # Windows emas
+
+        class E(Exception):
+            pass
+        self.assertIn(o.err_code(E(-2147023170, "Сбой при удаленном вызове процедуры.", None, None)), o.RPC_DEAD)
+
 if __name__ == "__main__":
     unittest.main()

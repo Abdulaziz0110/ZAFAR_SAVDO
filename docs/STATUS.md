@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 9) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 10) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -35,6 +35,7 @@ Belgilar:
 | Kassa sozlamalari (admin): oynalar 1–4, chek/ovoz/qoldiq, tugmalarni yashirish, interfeys muharriri (o'lcham, rang, matn), navbat, kunlik hisobot | VERIFIED (Playwright, soxta 1C) |
 | Kompyuter dasturini qayta yoqmasdan yangilash (ilova tugmasi + kassa sozlamasi; kassa sahifasi o'zi yangilanadi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
 | 1C_oyna_tekshiruv.bat — V83.Application sinovi (app_test.txt) | IMPLEMENTED-UNVERIFIED |
+| pc 10: osilib qolgan ko'rinmas 1C (COM-server, -Embedding) jarayonlarini topib yopish va qayta urinish; kassirning 1C oynasiga tegilmaydi | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 
