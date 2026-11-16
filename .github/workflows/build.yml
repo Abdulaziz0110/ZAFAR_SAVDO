@@ -267,6 +267,7 @@ jobs:
           python3 pc/test_kassa_core.py
           python3 pc/test_kassa.py
           python3 pc/test_onec_bridge.py
+          python3 pc/test_kassa_panel.py
           node pc/test_kassa_logic.js
           if python3 -c "import PIL" 2>/dev/null; then python3 pc/test_label_printer.py; else pip install -q pillow && python3 pc/test_label_printer.py; fi
 
