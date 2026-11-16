@@ -808,6 +808,14 @@ class KassaService:
         with self.lock:
             if ver and ver == self.ver:
                 return None
+        return self._packed()
+
+    def _packed(self):
+        """Ma'lumot JSON/gzip holida — faqat so'ralganda tayyorlanadi (sotuv paytida emas: kassir kutmasin)."""
+        with self.lock:
+            if self.snap_json is None and self.snap is not None:
+                raw = json.dumps(self.snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                self.snap_json, self.snap_gz = raw, gzip.compress(raw, 6)
             return self.snap_json, self.snap_gz
 
     def _token(self, s):
@@ -894,11 +902,15 @@ class KassaService:
     def sale(self, body):
         """pc 12: javobda v0/v1 — ma'lumot versiyasi sotuvdan oldin va keyin. Monoblok qoldiqni o'zida o'zgartiradi va
         butun tovarlar ro'yxatini qayta yuklamaydi (sekin monoblokda ham sotuvdan keyin kutish yo'q)."""
+        t0 = time.time()
         with self.lock:
             v0 = self.ver
         r = dict(self._sale(body))
         with self.lock:
             v1 = self.ver
+        ms = int((time.time() - t0) * 1000)
+        if ms > 400:
+            log.info("kassa: sotuv javobi sekin: %d ms", ms)
         r.update(v0=v0, v1=v1)
         return r
 
@@ -1326,14 +1338,11 @@ class KassaService:
         snap = dict(snap)
         self.ver = max(self.ver + 1, int(self.clock() * 1000))      # doim o'sadi (bir millisekundda ikki marta ham)
         snap["ver"] = self.ver
-        raw = json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        gz = gzip.compress(raw, 6)
         with self.lock:
             self.snap = snap
-            self.snap_json = raw
-            self.snap_gz = gz
+            self.snap_json = self.snap_gz = None
         if save:
-            self._save_snap(gz)
+            self._save_snap(self._packed()[1])
 
     def _pending_delta(self):
         """Navbatdagi (1C'ga hali yozilmagan) sotuvlar qoldiqqa ta'siri — 1C'dan yangilaganda ham hisobga olinadi."""

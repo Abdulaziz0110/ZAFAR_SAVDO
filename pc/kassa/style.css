@@ -352,3 +352,10 @@ body.editing [data-ui].ed-on { outline: 4px solid #3d5afe; }
 
 .sale-item small { display: block; }
 .info-body .sale-item small { color: var(--ink2); font-weight: 500; }
+
+/* pc 17: sotuv chizig'i 0 -> 100% */
+.prog-box { width: min(520px, 80vw); background: var(--panel, #fff); border-radius: 16px; padding: 22px 26px; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); }
+.prog-t { display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 14px; }
+.prog-t b { color: var(--acc); font-variant-numeric: tabular-nums; }
+.prog-line { height: 18px; border-radius: 9px; background: var(--acc-soft); overflow: hidden; }
+.prog-line i { display: block; height: 100%; width: 0; background: var(--acc); border-radius: 9px; transition: width .12s linear; }

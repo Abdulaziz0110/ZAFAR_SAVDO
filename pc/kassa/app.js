@@ -139,6 +139,29 @@
       o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.18);
     } catch (e) { /* ovoz yo'q */ }
   }
+  /** pc 17: sotuv yuborilayotganda 0 dan 100 gacha to'ladigan chiziq (tez javobda umuman ko'rinmaydi). */
+  var prog = { t0: 0, raf: 0, show: 0 };
+  function progress(on) {
+    var bar = $('progBar'), pct = $('progPct'), box = $('prog');
+    cancelAnimationFrame(prog.raf); clearTimeout(prog.show);
+    if (on) {
+      prog.t0 = Date.now();
+      bar.style.width = '0%'; pct.textContent = '0%';
+      busyAt = Date.now();
+      prog.show = setTimeout(function () { box.classList.remove('hidden'); }, 150);
+      var step = function () {
+        var p = Math.min(95, Math.round(95 * (1 - Math.exp(-(Date.now() - prog.t0) / 700))));
+        bar.style.width = p + '%'; pct.textContent = p + '%';
+        prog.raf = requestAnimationFrame(step);
+      };
+      prog.raf = requestAnimationFrame(step);
+      return;
+    }
+    busyAt = 0;
+    if (box.classList.contains('hidden')) return;
+    bar.style.width = '100%'; pct.textContent = '100%';
+    prog.show = setTimeout(function () { box.classList.add('hidden'); }, 180);
+  }
   var busyAt = 0;
   function busy(on, text) {
     $('busyText').textContent = text || "1C'ga yozilmoqda…";
@@ -880,9 +903,9 @@
     };
     var print = $('printChk').checked;
     body.print1c = !!(print && S.ui.chk1c);             // chekni 1C'ning o'zi chiqaradi (kompyuter printeri)
-    busy(true);
+    progress(true);
     api('POST', '/api/sale', body, 60000).then(function (j) {
-      busy(false);
+      progress(false);
       if (!j.ok) {
         $('payErr').textContent = j.e || 'Xato';
         beep();
@@ -891,7 +914,7 @@
       }
       done(j, print);
     }).catch(function (e) {
-      busy(false);
+      progress(false);
       if (e.message === 'login') return;
       // kompyuter javob bermadi: sotuv monoblok navbatiga (ikki marta yozilmaydi — raqami bir xil)
       var pay = payState();
@@ -1681,7 +1704,7 @@
       if (SC.pw) $('pw').value = stripTail($('pw').value, SC.pw);
       if (SC.ask) $('askPw').value = stripTail($('askPw').value, SC.ask);
       if (!hidden('login') || !S.data) { toast('Avval kassaga kiring', true); beep(); return; }
-      if (!hidden('busy')) { toast('Kuting — oldingi amal tugamoqda', true); beep(); return; }
+      if (!hidden('busy') || !hidden('prog')) { toast('Kuting — oldingi amal tugamoqda', true); beep(); return; }
       if (S.edit) { toast("Ko'rinish sozlanmoqda — avval «Saqlash» yoki «Bekor qilish»", true); beep(); return; }
       ['doneModal', 'infoModal', 'panelView', 'setView', 'sugView'].forEach(function (id) { $(id).classList.add('hidden'); });
       if (S.sug) S.sug = null;
