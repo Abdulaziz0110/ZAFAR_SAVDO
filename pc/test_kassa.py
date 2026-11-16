@@ -142,6 +142,14 @@ class FakeC:
                     {"Код": 1.0, "Имя": "Do'kon", "Пароль": "", "Уволен": False}]
         if "Константы КАК К" in text:
             return [{}]
+        if text == kassa.DAY_DOCS_Q:
+            when = dt.datetime(2026, 11, 15, 8, 5)
+            return [{"Номер": "000123", "Дата": when, "КК": 55.0, "КН": "Ali", "Сот": "Zafar", "Всего": 9000.0, "Ск": 0.0,
+                     "Нал": 9000.0, "Пер": 0.0, "Клик": 0.0, "Долг": 25000.0, "Вид": 0, "Савдо": 0},
+                    {"Номер": "000050", "Дата": when, "КК": 55.0, "КН": "Ali", "Сот": "Kassir", "Всего": 12000.0,
+                     "Ск": 1000.0, "Нал": 5000.0, "Пер": 2000.0, "Клик": 0.0, "Долг": 25000.0, "Вид": 0, "Савдо": 0}]
+        if text == kassa.DAY_LINES_Q:
+            return [{"Номер": "000050", "Имя": "Olma", "Кол": 2.0, "Цена": 6000.0, "Сум": 12000.0}]
         if text == kassa.SALES_STATS_Q:
             assert params["Н2"] - params["Н1"] == dt.timedelta(days=28)
             return [{"Код": 15.0, "Н": 12.0}, {"Код": 16.0, "Н": 3.0}]
@@ -418,6 +426,22 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(self.svc.snap["pnls"], "kassa")
         self.assertEqual(self.svc.panel_op(tok, grant, "reset")["src"], "1c")
         self.assertEqual(self.svc.snap["pnls"], "1c")
+
+    def test_sales_list_kassa_and_1c(self):
+        tok = self.login()
+        self.svc.sale(sale_body(token=tok))                                        # kassada: 1C raqami 000123
+        r = self.svc.sales(tok, "2026-11-15")
+        self.assertEqual(r["e1c"], "")
+        by = {x["no"]: x for x in r["items"]}
+        self.assertEqual(sorted(by), ["000050", "000123"])                          # 000123 ikki marta emas
+        self.assertEqual(by["000123"]["src"], "kassa")
+        old = by["000050"]                                                         # 1C'da qilingan savdo
+        self.assertEqual((old["src"], old["due"], old["debt"], old["cdebt"], old["cashier"]), ("1c", 11000.0, 4000.0, 29000.0, "Kassir"))
+        self.assertEqual(old["lines"], [{"n": "Olma", "q": 2.0, "p": 6000.0, "s": 12000.0}])
+        with self.assertRaises(PermissionError):
+            self.svc.sales("yo'q")
+        with self.assertRaises(kc.KassaError):
+            self.svc.sales(tok, "2026-13-45")
 
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]

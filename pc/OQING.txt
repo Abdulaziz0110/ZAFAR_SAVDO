@@ -154,3 +154,8 @@ Yangi (pc 13):
    yopilsa dastur o'zi qayta ochadi. Sotuv 1C'ga 1-2 soniyada yoziladi, kassir kutmaydi.
  - Sotuvdan keyin kassa qotmaydi (tovarlar ro'yxati qayta yuklanmaydi).
  - Chek 1C'dagi chek (Чек1) tartibida.
+
+
+Yangi (pc 14):
+ - Pastdagi tugmalar ikonkali. Sozlamalarda keraksizini yashirsangiz, qolganlari kattalashib joyni to'ldiradi.
+ - "Savdolar" tugmasi: kun bo'yicha hamma savdolar (kassa va 1C'dagi) - istalganining chekini qayta chiqarish.

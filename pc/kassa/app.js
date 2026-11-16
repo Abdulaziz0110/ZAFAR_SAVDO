@@ -34,9 +34,36 @@
     { id: 'check', b: 'Narx tekshirish', s: "sotmasdan ko'rish" },
     { id: 'debt', b: "Qarz to'lash", s: "mijoz to'lovi" },
     { id: 'last', b: 'Oxirgi chek', s: 'qayta chiqarish' },
+    { id: 'sales', b: 'Savdolar', s: 'istalgan chek' },
     { id: 'report', b: 'Kunlik hisobot', s: 'bugungi savdo' },
     { id: 'settings', b: 'Sozlamalar', s: 'admin paroli' }
   ];
+
+  // pc 13: tugmalar ikonkasi (24x24, chiziqli)
+  var ICON = {
+    panel: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/>',
+    price: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.6"/>',
+    code: '<path d="M4 5v14M7 5v14M11 5v14M14 5v14M18 5v14M20.5 5v14"/>',
+    qty: '<path d="M12 4v16M4 12h16"/><rect x="2.5" y="2.5" width="19" height="19" rx="3"/>',
+    disc: '<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+    ret: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
+    check: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    debt: '<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19M16 14.5h2.5"/><path d="M6 6V4.5h12V6"/>',
+    last: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+    sales: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+    report: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>'
+  };
+  function icon(id) {
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('class', 'ic');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = ICON[id] || '';
+    return svg;
+  }
 
   function emptyWin() { return { lines: [], mode: 'sale', dmode: 'sum', dval: 0, id: '' }; }
 
@@ -461,25 +488,49 @@
     $('tDueLabel').textContent = ret ? 'Qaytariladi' : "To'lanadi";
     renderFn();
   }
+  /** Tugmalar: ikonka + nom. Ko'rinadiganlari 6 ustunli to'rga joylanadi — yashirilganlari o'rniga qolganlari
+   *  kengayadi (oxirgi qator ham to'liq to'ladi), bo'sh joy qolmaydi. */
   function renderFn() {
     var box = $('fn');
     box.textContent = '';
     var ret = S.wins.length && W().mode === 'return';
-    FN.forEach(function (f) {
-      if (S.ui.hide.indexOf(f.id) >= 0 && f.id !== 'settings') return;
-      var b = el('button', (f.id === 'panel' ? 'fn-main ' : '') + (f.big ? 'fn-big' : ''));
-      b.setAttribute('data-fn', f.id);
-      b.setAttribute('data-ui', 'fn-' + f.id);
-      var sub = f.s;
-      if (f.id === 'ret' && ret) { b.classList.add('on'); sub = 'yoqilgan — bekor'; }
-      if (f.id === 'check' && S.check) { b.classList.add('on'); sub = 'skanerlang…'; }
-      if (f.id === 'disc' && S.wins.length && discount()) sub = 'bekor qilish';
-      if (f.id === 'settings' && S.ps) sub = 'yangi panel tavsiyasi';
-      var bt = el('b', '', f.b);
-      if (f.id === 'settings' && S.ps) bt.appendChild(el('i', 'badge-dot'));
-      b.appendChild(bt);
-      b.appendChild(el('small', '', sub));
-      box.appendChild(b);
+    var list = FN.filter(function (f) { return S.ui.hide.indexOf(f.id) < 0 || f.id === 'settings'; });
+    var per = list.length <= 4 ? 3 : 2;                     // bitta katak = 6 ning nechtasi
+    var items = list.map(function (f) {
+      var e = (S.ui.el || {})['fn-' + f.id] || {};
+      return { f: f, w: Math.min(6, (e.span || 1) * per) };
+    });
+    var rows = [], cur = [], used = 0;
+    items.forEach(function (it) {
+      if (used + it.w > 6 && cur.length) { rows.push(cur); cur = []; used = 0; }
+      cur.push(it); used += it.w;
+    });
+    if (cur.length) rows.push(cur);
+    rows.forEach(function (r) {
+      var left = 6 - r.reduce(function (a, it) { return a + it.w; }, 0);
+      for (var i = 0; left > 0; i = (i + 1) % r.length, left--) r[i].w++;
+    });
+    rows.forEach(function (r) {
+      r.forEach(function (it) {
+        var f = it.f;
+        var b = el('button', (f.id === 'panel' ? 'fn-main ' : '') + (f.big ? 'fn-big' : ''));
+        b.setAttribute('data-fn', f.id);
+        b.setAttribute('data-ui', 'fn-' + f.id);
+        b.style.gridColumn = 'span ' + it.w;
+        var sub = f.s;
+        if (f.id === 'ret' && ret) { b.classList.add('on'); sub = 'yoqilgan — bekor'; }
+        if (f.id === 'check' && S.check) { b.classList.add('on'); sub = 'skanerlang…'; }
+        if (f.id === 'disc' && S.wins.length && discount()) sub = 'bekor qilish';
+        if (f.id === 'settings' && S.ps) sub = 'yangi panel tavsiyasi';
+        b.appendChild(icon(f.id));
+        var tx = el('span', 'tx');
+        var bt = el('b', '', f.b);
+        if (f.id === 'settings' && S.ps) bt.appendChild(el('i', 'badge-dot'));
+        tx.appendChild(bt);
+        tx.appendChild(el('small', '', sub));
+        b.appendChild(tx);
+        box.appendChild(b);
+      });
     });
   }
   function renderWins() {
@@ -670,6 +721,42 @@
     rows.push({ a: 'Qoldiq', b: L.fmtQty(L.milli(g.s)) + (g.e ? ' ' + g.e : ''), cls: g.s > 0 ? '' : 'warn' });
     rows.push({ a: 'Kod', b: g.c });
     info(g.n, rows, [{ label: "Savatga qo'shish", cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); addGoods(g, 1000, false); } }]);
+  }
+  // ---------------- savdolar ro'yxati: istalgan chekni qayta chiqarish ----------------
+  function ymd(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+  function showSales(day) {
+    busy(true, "Savdolar olinmoqda…");
+    api('GET', '/api/sales?t=' + encodeURIComponent(S.token) + (day ? '&d=' + day : ''), undefined, 50000).then(function (j) {
+      busy(false);
+      if (!j.ok) throw new Error(j.e || 'Xato');
+      var d = new Date(j.day + 'T12:00:00');
+      var rows = [];
+      var nav = el('div', 'row-btns nav3');
+      [[-1, '◀ Oldingi'], [0, 'Bugun'], [1, 'Keyingi ▶']].forEach(function (x) {
+        var bt = el('button', 'big muted', x[1]);
+        bt.addEventListener('click', function () {
+          var n = x[0] === 0 ? new Date() : new Date(d.getTime() + x[0] * 86400000);
+          showSales(ymd(n));
+        });
+        nav.appendChild(bt);
+      });
+      rows.push({ node: nav });
+      if (j.e1c) rows.push({ a: "1C'dagi savdolar o'qilmadi", b: j.e1c.slice(0, 80), cls: 'warn' });
+      (j.items || []).forEach(function (r) {
+        var it = el('div', 'q-item sale-item');
+        var a = el('span', '', (r.date || '').slice(11) + ' · ' + (r.kind === 'return' ? 'Qaytarish' : r.doc === 'ОплатаДолга' ? "Qarz to'lovi" : 'Sotuv') +
+          ' № ' + r.no + ' · ' + money(L.cents(r.total)));
+        a.appendChild(el('small', '', (r.cname || 'Savdo') + ' · ' + (r.cashier || '') + ' · ' + (r.lines || []).length + ' ta tovar' +
+          (r.src === '1c' ? " · 1C'da qilingan" : '')));
+        it.appendChild(a);
+        var pr = el('button', 'big primary', 'Chek');
+        pr.addEventListener('click', function () { printReceipt(r); });
+        it.appendChild(pr);
+        rows.push({ node: it });
+      });
+      if (!(j.items || []).length) rows.push({ a: 'Savdo yo\'q', b: d.toLocaleDateString('ru-RU') });
+      info('Savdolar · ' + d.toLocaleDateString('ru-RU'), rows);
+    }).catch(function (e) { busy(false); if (e.message !== 'login') toast('Savdolar olinmadi: ' + e.message, true); });
   }
   function showReport() {
     busy(true, 'Hisobot tayyorlanmoqda…');
@@ -1314,6 +1401,7 @@
     },
     last: function () { if (S.last) printReceipt(S.last); else toast("Hali chek yo'q", true); },
     report: showReport,
+    sales: function () { showSales(''); },
     settings: openSettings
   };
 

@@ -235,6 +235,55 @@ SALES_STATS_Q = ("ВЫБРАТЬ Т.Товары.Код КАК Код, КОЛИ�
                  " СГРУППИРОВАТЬ ПО Т.Товары.Код")
 
 
+DAY_DOCS_Q = (
+    "ВЫБРАТЬ Д.Номер КАК Номер, Д.Дата КАК Дата, Д.Контрагент.Код КАК КК, Д.Контрагент.Наименование КАК КН, "
+    "Д.Сотрудник.Наименование КАК Сот, Д.ВсегоСум КАК Всего, Д.СкидкаСум КАК Ск, Д.Нал КАК Нал, Д.Пер КАК Пер, "
+    "Д.Клик КАК Клик, Д.ДтКтСум КАК Долг, "
+    "ВЫБОР КОГДА Д.ВидДокумента = ЗНАЧЕНИЕ(Перечисление.ВидДокумента.Возврать) ТОГДА 1 "
+    "КОГДА Д.ВидДокумента = ЗНАЧЕНИЕ(Перечисление.ВидДокумента.ОплатаДолга) ТОГДА 2 ИНАЧЕ 0 КОНЕЦ КАК Вид, "
+    "ВЫБОР КОГДА Д.Контрагент = ЗНАЧЕНИЕ(Справочник.Контрагенты.Савдо) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Савдо "
+    "ИЗ Документ.ПродажаРозница КАК Д ГДЕ Д.Проведен И Д.Дата МЕЖДУ &Н И &К УПОРЯДОЧИТЬ ПО Д.Дата УБЫВ")
+DAY_LINES_Q = (
+    "ВЫБРАТЬ Т.Ссылка.Номер КАК Номер, Т.Товары.Наименование КАК Имя, Т.Кол КАК Кол, Т.ЦенаСум КАК Цена, "
+    "Т.СуммаСум КАК Сум ИЗ Документ.ПродажаРозница.Таблица КАК Т "
+    "ГДЕ Т.Ссылка.Проведен И Т.Ссылка.Дата МЕЖДУ &Н И &К УПОРЯДОЧИТЬ ПО Т.Ссылка.Дата, Т.НомерСтроки")
+DAY_DOCS_F = ["Номер", "Дата", "КК", "КН", "Сот", "Всего", "Ск", "Нал", "Пер", "Клик", "Долг", "Вид", "Савдо"]
+
+
+def when_text(v):
+    try:
+        return "%02d.%02d.%04d %02d:%02d" % (v.day, v.month, v.year, v.hour, v.minute)
+    except AttributeError:
+        return text(v)[:16]
+
+
+def day_docs(heads, lines):
+    """1C ПродажаРозница (bir kun) -> chek yozuvlari (kassa javobi bilan bir xil ko'rinishda)."""
+    by_no = {}
+    for l in lines:
+        by_no.setdefault(text(l.get("Номер")), []).append(
+            {"n": text(l.get("Имя")), "q": fnum(l.get("Кол")), "p": fnum(l.get("Цена")), "s": fnum(l.get("Сум"))})
+    out = []
+    for h in heads:
+        no = text(h.get("Номер"))
+        kind = kc.KIND_RETURN if int(fnum(h.get("Вид"))) == 1 else kc.KIND_SALE
+        total, disc = fnum(h.get("Всего")), fnum(h.get("Ск"))
+        if kind == kc.KIND_RETURN:
+            disc = 0.0
+        cash, card, click = fnum(h.get("Нал")), fnum(h.get("Пер")), fnum(h.get("Клик"))
+        due = round(total - disc, 2)
+        debt = round(due - cash - card - click, 2)
+        client = "" if int(fnum(h.get("Савдо"))) else code_text(h.get("КК"))
+        before = fnum(h.get("Долг"))
+        after = round(before + (debt if kind == kc.KIND_SALE else -debt), 2)
+        out.append({"id": "1c:" + no, "src": "1c", "ok": True, "no": no, "date": when_text(h.get("Дата")), "kind": kind,
+                    "doc": "Возврать" if kind == kc.KIND_RETURN else ("ОплатаДолга" if int(fnum(h.get("Вид"))) == 2 else "Продажа"),
+                    "cashier": text(h.get("Сот")), "total": total, "discount": disc, "due": due, "cash": cash, "card": card,
+                    "click": click, "change": 0, "debt": debt, "client": client, "cname": text(h.get("КН")) if client else "",
+                    "cdebt": after if client else 0, "lines": by_no.get(no, [])})
+    return out
+
+
 def check_stock(lines, stock_of, kind):
     """Sotuvda tovar qoldig'i yetadimi (1C ПродажаРозница o'tkazishda ham tekshiradi). @return xato matni yoki ""."""
     if kind != kc.KIND_SALE:
@@ -372,6 +421,13 @@ class KassaOneC:
             except Exception as e:  # noqa: BLE001 - eski bazada "Возврать" qiymati boshqacha bo'lishi mumkin
                 log.warning("kassa: sotuv statistikasi: %s", str(e)[:200])
         return {code_text(r.get("Код")): int(fnum(r.get("Н"))) for r in rows or []}
+
+    def day_sales(self, c, day):
+        start = dt.datetime(day.year, day.month, day.day)
+        end = start + dt.timedelta(days=1) - dt.timedelta(seconds=1)
+        heads = self.query(c, DAY_DOCS_Q, DAY_DOCS_F, Н=start, К=end)
+        lines = self.query(c, DAY_LINES_Q, ["Номер", "Имя", "Кол", "Цена", "Сум"], Н=start, К=end) if heads else []
+        return day_docs(heads, lines)
 
     def snapshot(self, c):
         k = self.consts(c)
@@ -1112,6 +1168,34 @@ class KassaService:
         self.retry_at = 0.0
         return {"ok": True}
 
+    def sales(self, token, day=None, with_1c=True):
+        """pc 13: kun savdolari (kassa + 1C'dagi boshqa savdolar) — istalganining chekini qayta chiqarish uchun."""
+        self.who(token)
+        try:
+            d = dt.datetime.strptime(day, "%Y-%m-%d") if day else dt.datetime.fromtimestamp(self.clock())
+        except ValueError:
+            raise kc.KassaError("Sana noto'g'ri")
+        key = d.strftime("%d.%m.%Y")
+        items = [dict(r, src="kassa") for r in self.done.items.values() if str(r.get("date", "")).startswith(key)]
+        with self.qlock:
+            for p in self.pending:
+                if str(p["res"].get("date", "")).startswith(key):
+                    r = dict(p["res"])
+                    r.pop("_debt_delta", None)
+                    r.update(src="kassa", queued=True, no="navbatda" if p.get("state") != "error" else "xato")
+                    items.append(r)
+        err = ""
+        if with_1c:
+            try:
+                have = {text(r.get("no")) for r in items}
+                items += [r for r in self.call(lambda: self.onec.day_sales(self._com(), d), timeout=40)
+                          if r["no"] not in have]
+            except (kc.KassaError, Exception) as e:  # noqa: BLE001 - 1C'siz ham kassa savdolari ko'rinadi
+                err = str(e)[:200]
+        items.sort(key=lambda r: (r.get("date", "")[6:10], r.get("date", "")[3:5], r.get("date", "")[:2],
+                                  r.get("date", "")[11:]), reverse=True)
+        return {"ok": True, "day": d.strftime("%Y-%m-%d"), "items": items[:500], "e1c": err}
+
     def report(self, day=None):
         day = day or dt.datetime.fromtimestamp(self.clock()).strftime("%d.%m.%Y")
         out = today_items(list(self.done.items.values()), day)
@@ -1576,6 +1660,14 @@ def make_handler(service, static_dir):
                 return self._send(200, raw)
             if path == "/api/ping":
                 return self._json(200, service.ping())
+            if path == "/api/sales":
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                try:
+                    return self._json(200, service.sales(urllib.parse.unquote(params.get("t", "")), params.get("d") or None))
+                except PermissionError:
+                    return self._json(401, {"ok": False, "e": "login"})
+                except kc.KassaError as e:
+                    return self._json(200, {"ok": False, "e": str(e)})
             if path in ("/api/state", "/api/report", "/api/queue", "/api/ui"):
                 params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
                 tok = urllib.parse.unquote(params.get("t", ""))
