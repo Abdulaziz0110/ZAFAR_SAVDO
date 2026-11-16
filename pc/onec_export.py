@@ -811,6 +811,44 @@ class OneC:
 
 
 
+AUTOSTART_TASK = "IMSOFT server"
+
+
+def autostart_args(pyw, script):
+    """Windows'ga kirilishi bilan (kutmasdan) dastur administrator huquqida ishga tushadi."""
+    return ["schtasks", "/create", "/tn", AUTOSTART_TASK, "/tr", '"%s" "%s"' % (pyw, script), "/sc", "onlogon",
+            "/rl", "highest", "/f"]
+
+
+def pythonw_path(exe):
+    d, name = os.path.split(exe)
+    if name.lower() == "python.exe" and os.path.isfile(os.path.join(d, "pythonw.exe")):
+        return os.path.join(d, "pythonw.exe")
+    return exe
+
+
+def ensure_autostart():
+    """pc 12: kompyuter yonib Windows'ga kirilishi bilan dastur o'zi ishga tushadi (bir marta sozlanadi)."""
+    if os.name != "nt":
+        return False
+    import subprocess
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        import ctypes
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            return False
+        r = subprocess.run(["schtasks", "/query", "/tn", AUTOSTART_TASK], capture_output=True, timeout=30, creationflags=flags)
+        if r.returncode == 0:
+            return True
+        r = subprocess.run(autostart_args(pythonw_path(sys.executable), os.path.abspath(__file__)), capture_output=True,
+                           timeout=30, creationflags=flags)
+        log.info("avtozapusk (Windows'ga kirilganda): %s", "qo'yildi" if r.returncode == 0 else "XATO")
+        return r.returncode == 0
+    except (OSError, subprocess.SubprocessError, AttributeError) as e:
+        log.warning("avtozapusk: %s", e)
+        return False
+
+
 def app_hint():
     """Kompyuterdagi HAQIQIY 1cv8.exe yo'li bilan maslahat (Program Files yoki Program Files (x86))."""
     exe = ""
@@ -2004,6 +2042,7 @@ def main():
             log.info("Boshqa nusxa allaqachon ishlayapti — chiqildi")
             return
         log.info("Ishga tushdi (faqat tovar kodlari — [onec] report bo'sh)")
+        ensure_autostart()
         loop(cfg)
         return
     cfg.check_onec()
@@ -2037,6 +2076,7 @@ def main():
         log.info("Boshqa nusxa allaqachon ishlayapti — chiqildi")
         return
     log.info("Ishga tushdi")
+    ensure_autostart()
     loop(cfg)
 
 

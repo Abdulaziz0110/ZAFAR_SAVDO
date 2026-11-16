@@ -53,6 +53,35 @@ assert.deepStrictEqual(L.search(G, 'olma qiz', 'Цена1', 12000).map(g => g.c)
 assert.deepStrictEqual(L.search(G, "'fuji'", 'Цена1', 12000).map(g => g.c), ['7']);   // ‘ ’ ham ' deb qidiriladi
 assert.deepStrictEqual(L.search(G, 'banan', 'Цена1', 12000).map(g => g.c), []);
 
+// telefondagi qidiruv algoritmi: imlo xatolari, kirill/lotin, h/x q/k, klaviatura tartibi, raqamlar aniq
+const F = [
+  { c: '1', n: 'Pista Eron qovurilgan', u: 0, p: [1, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '2', n: 'Bodom Amerika', u: 0, p: [2, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '3', n: 'B Mayiz 134', u: 0, p: [3, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '4', n: 'Mayiz 120', u: 0, p: [4, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '5', n: "Xurmo O'g'il", u: 0, p: [5, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '6', n: 'Кешью жареный', u: 0, p: [6, 0, 0, 0], v: [0, 0, 0, 0] },
+  { c: '7', n: 'Pista', u: 0, p: [7, 0, 0, 0], v: [0, 0, 0, 0], f: 40 }
+];
+const S = (q) => L.search(F, q, 'Цена1', 0).map(g => g.c);
+assert.deepStrictEqual(S('pistta').slice(0, 2).sort(), ['1', '7']);          // ortiqcha harf
+assert.deepStrictEqual(S('psita').slice(0, 2).sort(), ['1', '7']);           // harflar almashgan
+assert.strictEqual(S('pista')[0], '7');                                        // aniq + ko'p sotiladi
+assert.strictEqual(S('badom')[0], '2');                                        // unli xato
+assert.strictEqual(S('писта')[0], '7');                                        // kirillda yozilsa
+assert.strictEqual(S('keshyu')[0], '6');                                       // nomi kirillda, qidiruv lotinda
+assert.deepStrictEqual(S('ьфнша').sort(), ['3', '4']);                       // klaviatura tartibi adashgan
+assert.strictEqual(S('ogil')[0], '5');                                         // tutuq belgisisiz
+assert.strictEqual(S('hurmo')[0], '5');                                        // h ~ x
+assert.deepStrictEqual(S('mayiz 134'), ['3']);                                 // 134 hech qachon 120 emas
+assert.strictEqual(S('eron pista')[0], '1');                                   // so'zlar istalgan tartibda
+assert.deepStrictEqual(S('qqqqzzz'), []);
+const CL = [['10', 'Alisher aka', '+998 90 123 45 67', 0, 0, 0], ['11', 'Олим Тошкент', '', 0, 0, 0]];
+assert.deepStrictEqual(L.searchClients(CL, 'alishir').map(c => c[0]), ['10']);
+assert.deepStrictEqual(L.searchClients(CL, 'olim').map(c => c[0]), ['11']);
+assert.deepStrictEqual(L.searchClients(CL, '4567').map(c => c[0]), ['10']);
+assert.strictEqual(L.osa('ab', 'ba', 2), 1);
+
 // ko'rinish va yuborish matnlari
 assert.strictEqual(L.fmtMoney(123456700), '1 234 567');
 assert.strictEqual(L.fmtMoney(12345), '123,45');

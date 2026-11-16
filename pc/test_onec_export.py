@@ -510,5 +510,15 @@ class StaleAutomationTest(unittest.TestCase):
             pass
         self.assertIn(o.err_code(E(-2147023170, "Сбой при удаленном вызове процедуры.", None, None)), o.RPC_DEAD)
 
+class AutostartTest(unittest.TestCase):
+    def test_args(self):
+        E = load(tempfile.mkdtemp())
+        a = E.autostart_args(r"C:\Py\pythonw.exe", r"D:\imsoft\onec_export.py")
+        self.assertEqual(a[:4], ["schtasks", "/create", "/tn", "IMSOFT server"])
+        self.assertIn('"C:\\Py\\pythonw.exe" "D:\\imsoft\\onec_export.py"', a)
+        self.assertEqual(a[a.index("/sc") + 1], "onlogon")
+        self.assertEqual(a[a.index("/rl") + 1], "highest")
+
+
 if __name__ == "__main__":
     unittest.main()

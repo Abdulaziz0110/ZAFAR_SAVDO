@@ -24,6 +24,15 @@ ID=1
 
 
 class T(unittest.TestCase):
+    def test_autologon_cmds(self):
+        cmds = O.autologon_cmds("Kassa", "p@ss 1", "DOKON-PC")
+        flat = [" ".join(c) for c in cmds]
+        self.assertIn("AutoAdminLogon /t REG_SZ /d 1 /f", flat[0])
+        self.assertEqual(cmds[2][-3:], ["/d", "p@ss 1", "/f"])          # parol bitta argument (bo'shliq bilan ham)
+        self.assertTrue(any("DevicePasswordLessBuildVersion" in x and "REG_DWORD /d 0" in x for x in flat))
+        self.assertTrue(all(c[0] == "reg" for c in cmds))
+        self.assertIn("DefaultPassword", " ".join(O.autologon_off_cmds()[1]))
+
     def test_ibases(self):
         b = O.parse_ibases(IBASES)
         self.assertEqual(b, [("Dokon baza", 'File="D:\\1C\\Dokon";'), ("Server baza", 'Srvr="srv1";Ref="trade";')])

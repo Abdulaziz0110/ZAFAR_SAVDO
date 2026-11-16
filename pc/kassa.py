@@ -37,6 +37,7 @@ from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import kassa_core as kc
+import kassa_panel as kp
 
 log = logging.getLogger("kassa")
 
@@ -227,6 +228,13 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
     }
 
 
+SALES_STATS_NORET = " И Т.Ссылка.ВидДокумента <> ЗНАЧЕНИЕ(Перечисление.ВидДокумента.Возврать)"
+SALES_STATS_Q = ("ВЫБРАТЬ Т.Товары.Код КАК Код, КОЛИЧЕСТВО(РАЗЛИЧНЫЕ Т.Ссылка) КАК Н "
+                 "ИЗ Документ.ПродажаРозница.Таблица КАК Т "
+                 "ГДЕ Т.Ссылка.Проведен И Т.Ссылка.Дата МЕЖДУ &Н1 И &Н2" + SALES_STATS_NORET +
+                 " СГРУППИРОВАТЬ ПО Т.Товары.Код")
+
+
 def check_stock(lines, stock_of, kind):
     """Sotuvda tovar qoldig'i yetadimi (1C ПродажаРозница o'tkazishda ham tekshiradi). @return xato matni yoki ""."""
     if kind != kc.KIND_SALE:
@@ -343,6 +351,19 @@ class KassaOneC:
             def query(_self, q_text, fields, **params):
                 return self.query(c, q_text, fields, **params)
         return onec_data.panel(_Q())
+
+    def sales_stats(self, c, days=kp.DAYS):
+        """{tovar kodi: oxirgi [days] kundagi sotuv hujjatlari soni} (qaytarishsiz)."""
+        end = self.now()
+        start = end - dt.timedelta(days=days)
+        rows = None
+        for q in (SALES_STATS_Q, SALES_STATS_Q.replace(SALES_STATS_NORET, "")):
+            try:
+                rows = self.query(c, q, ["Код", "Н"], Н1=start, Н2=end)
+                break
+            except Exception as e:  # noqa: BLE001 - eski bazada "Возврать" qiymati boshqacha bo'lishi mumkin
+                log.warning("kassa: sotuv statistikasi: %s", str(e)[:200])
+        return {code_text(r.get("Код")): int(fnum(r.get("Н"))) for r in rows or []}
 
     def snapshot(self, c):
         k = self.consts(c)
@@ -590,6 +611,10 @@ QUEUE_FILE = "kassa_queue.json"
 SNAP_FILE = "kassa_snap.json.gz"
 STAFF_FILE = "kassa_staff.json"
 UI_FILE = "kassa_ui.json"
+PANEL_FILE = "kassa_panel.json"            # admin tasdiqlagan panel (bo'lmasa — 1C'dagi panel)
+SUGGEST_FILE = "kassa_panel_suggest.json"  # haftalik tavsiya
+STATS_SEC = 3600                           # sotuv statistikasi soatda bir o'qiladi
+SUGGEST_SEC = 7 * 24 * 3600                # tavsiya haftada bir
 SALE_WAIT = 45            # sotuv 1C'ga shuncha soniyada yozilmasa — navbatda qoladi, kassir kutmaydi
 RETRY_SEC = 60            # 1C ishlamasa navbatni qayta urinish oralig'i
 GRANT_SEC = 15 * 60       # admin ruxsati (sozlamalar) amal qilish vaqti
@@ -655,6 +680,12 @@ class KassaService:
         self.busy = False
         self.retry_at = 0.0
         self.update_asked = threading.Event()
+        self.stats = load_json(os.path.join(here, "kassa_stats.json"), {})
+        if not isinstance(self.stats, dict):
+            self.stats = {}
+        self.stats_at = None
+        self.suggest_try_at = -STATS_SEC
+        self.pnl1c = []
         self.pending = load_json(os.path.join(here, QUEUE_FILE), [])
         if not isinstance(self.pending, list):
             self.pending = []
@@ -772,7 +803,7 @@ class KassaService:
             waiting = sum(1 for p in self.pending if p.get("state") != "error")
             errors = sum(1 for p in self.pending if p.get("state") == "error")
         return {"ok": True, "v": self.version, "q": waiting, "qe": errors, "err": self.last_error[:300],
-                "data": self.ver}
+                "data": self.ver, "ps": 1 if self._suggest_new() else 0}
 
     # --- sotuv: avval navbat (disk), keyin 1C ---
     def sale(self, body):
@@ -1152,9 +1183,96 @@ class KassaService:
         except OSError:
             pass
         snap["g"] = self._with_pending(snap["g"])
+        if self.stats_at is None or self.clock() - self.stats_at >= STATS_SEC:
+            self.stats_at = self.clock()
+            try:
+                stats = self.onec.sales_stats(c)
+                if stats:
+                    self.stats = stats
+                    save_json(os.path.join(self.here, "kassa_stats.json"), stats)
+            except Exception as e:  # noqa: BLE001 - statistikasiz ham kassa ishlaydi
+                log.warning("kassa: statistika: %s", str(e)[:200])
+        self.pnl1c = snap.get("pnl") or []
+        self._decorate(snap)
         self._publish(snap, save=True)
         self.full_at = self.stock_at = self.clock()
         log.info("kassa: ma'lumot yangilandi (%d tovar, %d mijoz)", len(snap["g"]), len(snap["cl"]))
+
+    def _decorate(self, snap):
+        """Mashhurlik (qidiruvda yuqorida) va tasdiqlangan panel."""
+        st = self.stats
+        snap["g"] = [dict(g, f=st[g["c"]]) if st.get(g["c"]) else g for g in snap.get("g", [])]
+        own = load_json(os.path.join(self.here, PANEL_FILE), {})
+        if isinstance(own, dict) and isinstance(own.get("pnl"), list) and own["pnl"]:
+            snap["pnl"] = own["pnl"]
+            snap["pnls"] = "kassa"
+        else:
+            snap["pnls"] = "1c"
+        return snap
+
+    # --- panel tavsiyasi ---
+    def _suggest_new(self):
+        sug = load_json(os.path.join(self.here, SUGGEST_FILE), {})
+        if not isinstance(sug, dict) or not sug.get("pnl") or sug.get("seen"):
+            return False
+        own = load_json(os.path.join(self.here, PANEL_FILE), {})
+        return not (isinstance(own, dict) and own.get("at", 0) >= sug.get("at", 0))
+
+    def _make_suggest(self):
+        if self.snap is None:
+            raise Retry("Tovarlar ma'lumoti hali yuklanmagan")
+        if not self.stats:
+            self.stats_at = self.clock()
+            self.stats = self.onec.sales_stats(self._com())
+            save_json(os.path.join(self.here, "kassa_stats.json"), self.stats)
+        if not self.stats:
+            raise kc.KassaError("Oxirgi %d kunda sotuv topilmadi — tavsiya qilib bo'lmaydi" % kp.DAYS)
+        res = kp.suggest(self.snap.get("g", []), self.stats, self.snap.get("b", {}))
+        res.update(at=self.clock(), days=kp.DAYS, seen=False)
+        save_json(os.path.join(self.here, SUGGEST_FILE), res)
+        log.info("kassa: panel tavsiyasi tayyor (%s)", ", ".join("%s %d" % (m["t"], m["n"]) for m in res["sec"]))
+        return res
+
+    def panel_op(self, token, grant, op):
+        self.granted(token, grant)
+        sug_path = os.path.join(self.here, SUGGEST_FILE)
+        own_path = os.path.join(self.here, PANEL_FILE)
+        if op == "make":
+            self.call(self._make_suggest)
+        elif op == "approve":
+            sug = load_json(sug_path, {})
+            if not isinstance(sug, dict) or not sug.get("pnl"):
+                raise kc.KassaError("Tavsiya yo'q")
+            save_json(own_path, {"pnl": sug["pnl"], "at": self.clock(), "sec": sug.get("sec", [])})
+            sug["seen"] = True
+            save_json(sug_path, sug)
+            self._repanel()
+        elif op == "reset":
+            try:
+                os.remove(own_path)
+            except FileNotFoundError:
+                pass
+            self._repanel()
+        elif op == "dismiss":
+            sug = load_json(sug_path, {})
+            if isinstance(sug, dict) and sug:
+                sug["seen"] = True
+                save_json(sug_path, sug)
+        elif op != "get":
+            raise kc.KassaError("Amal noto'g'ri")
+        sug = load_json(sug_path, {})
+        own = load_json(own_path, {})
+        return {"ok": True, "sug": sug if isinstance(sug, dict) and sug.get("pnl") else None,
+                "src": "kassa" if isinstance(own, dict) and own.get("pnl") else "1c",
+                "own_sec": own.get("sec", []) if isinstance(own, dict) else []}
+
+    def _repanel(self):
+        snap = dict(self.snap or {})
+        if not snap:
+            return
+        snap["pnl"] = self.pnl1c or snap.get("pnl", [])
+        self._decorate(snap)
+        self._publish(snap, save=True)
 
     def _refresh_stock(self):
         c = self._com()
@@ -1264,6 +1382,14 @@ class KassaService:
             self._refresh_full()
         elif now - self.stock_at >= STOCK_SEC:
             self._refresh_stock()
+        sug = load_json(os.path.join(self.here, SUGGEST_FILE), {})
+        due = not isinstance(sug, dict) or not sug.get("pnl") or now - sug.get("at", 0) >= SUGGEST_SEC
+        if self.stats and self.snap is not None and due and now - self.suggest_try_at >= STATS_SEC:
+            self.suggest_try_at = now
+            try:
+                self._make_suggest()
+            except kc.KassaError as e:
+                log.info("kassa: panel tavsiyasi: %s", e)
 
     def run(self):
         try:
@@ -1320,7 +1446,17 @@ def monoblok_bat(url):
         "if not defined B if exist \"%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe\" set \"B=%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe\"",
         "if not defined B goto nobrowser",
         "set \"S=%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\IMSOFT_kassa.bat\"",
-        "> \"%S%\" echo @start \"\" \"%B%\" --kiosk --kiosk-printing --edge-kiosk-type=fullscreen --no-first-run "
+        # pc 12: monoblok kompyuterdan oldin yonsa — kassa sahifasi kompyuter javob berguncha kutadi (15 daqiqagacha),
+        # aks holda brauzer "sayt ochilmadi" bo'lib qolardi
+        "> \"%S%\" echo @echo off",
+        ">> \"%S%\" echo set n=0",
+        ">> \"%S%\" echo :w",
+        ">> \"%S%\" echo if not exist \"%%SystemRoot%%\\System32\\curl.exe\" goto go",
+        ">> \"%S%\" echo curl -s -o nul -m 3 \"%URL%api/ping\" ^&^& goto go",
+        ">> \"%S%\" echo set /a n+=1",
+        ">> \"%S%\" echo if %%n%% LSS 300 (timeout /t 3 /nobreak ^>nul ^& goto w)",
+        ">> \"%S%\" echo :go",
+        ">> \"%S%\" echo start \"\" \"%B%\" --kiosk --kiosk-printing --edge-kiosk-type=fullscreen --no-first-run "
         "--user-data-dir=\"%LocalAppData%\\IMSOFT_kassa\" %URL%",
         "start \"\" \"%B%\" --kiosk --kiosk-printing --edge-kiosk-type=fullscreen --no-first-run "
         "--user-data-dir=\"%LocalAppData%\\IMSOFT_kassa\" %URL%",
@@ -1451,6 +1587,8 @@ def make_handler(service, static_dir):
                     return self._json(200, service.put_state(body.get("token"), body.get("k"), body.get("state")))
                 if path == "/api/ui":
                     return self._json(200, service.put_ui(body.get("token"), body.get("grant"), body.get("ui")))
+                if path == "/api/panel":
+                    return self._json(200, service.panel_op(body.get("token"), body.get("grant"), body.get("op")))
                 if path == "/api/update":
                     return self._json(200, service.ask_update(body.get("token"), body.get("grant")))
                 if path == "/api/queue":

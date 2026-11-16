@@ -142,6 +142,9 @@ class FakeC:
                     {"Код": 1.0, "Имя": "Do'kon", "Пароль": "", "Уволен": False}]
         if "Константы КАК К" in text:
             return [{}]
+        if text == kassa.SALES_STATS_Q:
+            assert params["Н2"] - params["Н1"] == dt.timedelta(days=28)
+            return [{"Код": 15.0, "Н": 12.0}, {"Код": 16.0, "Н": 3.0}]
         raise AssertionError("kutilmagan so'rov: " + text[:80])
 
 
@@ -373,6 +376,28 @@ class ServiceTest(unittest.TestCase):
         self.svc.call(lambda: self.svc._drain())
         self.assertEqual(self.svc.done.get("br000005")["no"], "B9")
         self.assertEqual(len(br.runs), n)
+
+    def test_panel_suggestion_approve_and_reset(self):
+        tok = self.login()
+        self.svc.data(0)
+        self.assertEqual({g["c"]: g.get("f") for g in self.svc.snap["g"]}, {"15": 12, "16": 3})     # mashhurlik qidiruv uchun
+        self.assertEqual(self.svc.snap["pnls"], "1c")
+        grant = self.svc.admin(tok, "1234")["grant"]
+        self.svc.tick()                                                          # haftalik tavsiya o'zi
+        self.assertEqual(self.svc.ping()["ps"], 1)
+        r = self.svc.panel_op(tok, grant, "get")
+        self.assertEqual(r["sug"]["pnl"][0], ["15", "Olma"])                     # tarozi (kg) birinchi sahifada
+        self.assertEqual(r["sug"]["pnl"][42], ["16", "Nok"])                     # shtrix kodli — keyingi sahifada
+        self.assertEqual([m["t"] for m in r["sug"]["sec"]], ["TAROZI (KG)", "SHTRIX KODLI"])
+        with self.assertRaises(kc.KassaError):
+            self.svc.panel_op(tok, "", "approve")                                # admin ruxsatisiz emas
+        self.svc.panel_op(tok, grant, "approve")
+        self.assertEqual((self.svc.snap["pnls"], self.svc.snap["pnl"][42]), ("kassa", ["16", "Nok"]))
+        self.assertEqual(self.svc.ping()["ps"], 0)
+        self.svc.call(self.svc._refresh_full)                                    # 1C'dan yangilansa ham saqlanadi
+        self.assertEqual(self.svc.snap["pnls"], "kassa")
+        self.assertEqual(self.svc.panel_op(tok, grant, "reset")["src"], "1c")
+        self.assertEqual(self.svc.snap["pnls"], "1c")
 
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]

@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 11) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 12) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -39,6 +39,11 @@ Belgilar:
 | pc 11: 1C KO'PRIGI — COM'da ПродажаРозница yaratilmasa (Ошибка инициализации модуля) kassa sotuvlari 1C'ni ODDIY usulda ochib (`1cv8.exe ENTERPRISE /Execute kassa_bridge.epf /C kassa_jobs`) yoziladi: .epf fayli dasturning o'zida yasaladi (1C konteyner formati, xUnitFor1C namunasi bilan tuzilishi bir xil), modul 1C sensor oynasining РасчетНажатие/ВозвратНажатие kodi (МахсулотКолдигиниАниклаш, ПоучитьДолг, ОхиргиУртачаНархиниАниклаш_Махсулот, Константы.Склад1) | VERIFIED (konteyner/topshiriq/natija testlari) / 1C'da IMPLEMENTED-UNVERIFIED |
 | pc 11: navbatdagi hamma sotuv bitta 1C ochilishida; kassir kutmaydi (chek darhol, 1C'ga fonda); 1C rad etsa — "xato" (admin ko'radi, qoldiq qaytadi); 1C yozayotganda o'chsa (.wip bor, .res yo'q) — qayta yozilmaydi (ikki marta yozilmasin), admin 1C'da tekshiradi; kompyuter o'chib yonsa qolgan natijalar olinadi | VERIFIED (test) |
 | pc 11: tashqi ishlov ogohlantirishi (8.3.9+ "Предупреждение безопасности") conf.cfg'da o'chiriladi (DisableUnsafeActionProtection); maslahatda 1cv8.exe ning HAQIQIY yo'li (Program Files (x86)); 1C_oyna_tekshiruv.bat endi ko'prikni sinaydi (hech narsa yozmaydi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| pc 12: kassa qidiruvi telefondagi algoritm bilan bir xil (shared/Search.kt -> logic.js): imlo xatolari (1-2 harf, harflar almashuvi), lotin/kirill, tutuq belgisisiz, h~x q~k, klaviatura tartibi adashsa, so'zlar istalgan tartibda, raqamlar aniq; ko'p sotiladigan yuqorida; mijoz qidiruvi ham shunday | VERIFIED (node testlar + brauzer sinovi) |
+| pc 12: panel tavsiyasi — oxirgi 28 kun ПродажаРозница bo'yicha: tarozi (kg) tovarlari oilalar bilan (pistalar, bodomlar, keshu... ketma-ket, nomi bo'yicha), keyin shtrix kodlilar, keyin boshqalar; har hafta o'zi, admin ko'rib tasdiqlaydi (yoki 1C'dagi panelga qaytadi); panel KATTA harfda | VERIFIED (test + brauzer) / 1C so'rovi IMPLEMENTED-UNVERIFIED |
+| pc 12: narx turi xaridorga bilinmaydi — yuqoridagi tugma yo'q, raqam maydoni burchagida kichik raqam; 1 soniya bosib turilsa "Rejim 1-4"; narx tekshirishda faqat joriy narx (sozlamada ochiq ko'rsatish mumkin) | VERIFIED (brauzer sinovi) |
+| pc 12: skaner HAMMA holatda: panel, qidiruv, to'lov, chek, ma'lumot, sozlama oynasi ochiq bo'lsa ham yopilib tovar savatga tushadi; tez kiritilgan belgilar qidiruv/parol maydonidan olib tashlanadi; qo'lda sekin yozish skaner hisoblanmaydi | VERIFIED (brauzer sinovi) |
+| pc 12: avtomatik ishga tushish — dastur Windows'ga kirilishi bilan administrator huquqida (vazifa "IMSOFT server"); AVTO_KIRISH.bat — Windows parol so'ramasdan kiradi, kompyuter uxlamaydi; monoblok kassa sahifasi kompyuter javob berguncha kutadi; 1C kerak bo'lganda o'zi ochiladi (ko'prik) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 

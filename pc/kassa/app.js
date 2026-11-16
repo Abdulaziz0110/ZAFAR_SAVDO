@@ -21,7 +21,8 @@
     try { window.localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* xotira yo'q */ }
   }
 
-  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: 'Xaridingiz uchun rahmat!', hide: [], el: {} };
+  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: 'Xaridingiz uchun rahmat!', hide: [], el: {},
+    ptypeShow: false };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
     { id: 'search', b: 'Qidiruv', s: "nomi bo'yicha", big: true },
@@ -135,6 +136,19 @@
   }
   function ptypeLabel(p) { return 'Narx ' + (L.PRICE_TYPES.indexOf(p) + 1); }
   function hidden(id) { return $(id).classList.contains('hidden'); }
+  function choosePtype() {
+    var shown = S.ui.ptypeShow;
+    ask({
+      title: shown ? 'Narx turi' : 'Rejim',
+      choices: L.PRICE_TYPES.map(function (p) {
+        return { label: shown ? ptypeLabel(p) : String(L.PRICE_TYPES.indexOf(p) + 1), on: p === S.ptype, pick: function () {
+          S.ptype = p; save('k_ptype', p);
+          repriceAll(true);
+          renderAll();
+        } };
+      })
+    });
+  }
 
   // ---------------- savatlarni saqlash (monoblok + kompyuter) ----------------
   var syncTimer = 0;
@@ -311,6 +325,7 @@
       if (S.pcVer && j.v && j.v !== S.pcVer && idle()) { window.location.reload(); return; }
       S.pcVer = j.v || S.pcVer;
       S.pcQ = j.q || 0; S.pcQe = j.qe || 0;
+      if (!!j.ps !== !!S.ps) { S.ps = !!j.ps; renderFn(); }
       renderQueue();
     }).catch(function () { renderDot(true); });
   }
@@ -433,6 +448,9 @@
   // ---------------- chizish ----------------
   function renderAll() {
     $('ptypeName').textContent = ptypeLabel(S.ptype);
+    // xaridorga bilinmasin: yuqoridagi tugma faqat sozlamada yoqilsa; aks holda raqam maydoni burchagida kichik raqam
+    $('ptypeBtn').classList.toggle('hidden', !S.ui.ptypeShow);
+    $('ptypeTag').textContent = S.ui.ptypeShow ? '' : String(L.PRICE_TYPES.indexOf(S.ptype) + 1);
     renderMode(); renderWins(); renderCart(); renderDisplay(); renderDot(); renderFn(); renderQueue();
   }
   function renderMode() {
@@ -456,7 +474,10 @@
       if (f.id === 'ret' && ret) { b.classList.add('on'); sub = 'yoqilgan — bekor'; }
       if (f.id === 'check' && S.check) { b.classList.add('on'); sub = 'skanerlang…'; }
       if (f.id === 'disc' && S.wins.length && discount()) sub = 'bekor qilish';
-      b.appendChild(el('b', '', f.b));
+      if (f.id === 'settings' && S.ps) sub = 'yangi panel tavsiyasi';
+      var bt = el('b', '', f.b);
+      if (f.id === 'settings' && S.ps) bt.appendChild(el('i', 'badge-dot'));
+      b.appendChild(bt);
       b.appendChild(el('small', '', sub));
       box.appendChild(b);
     });
@@ -594,18 +615,13 @@
     box.textContent = '';
     if (!S.data || k.kind === 'text') return;
     if (k.kind === 'client') {
-      var q = k.text.toLowerCase().trim();
-      var digits = q.replace(/[^0-9]/g, '');
+      var q = k.text.trim();
+      var list = q ? L.searchClients(S.data.cl, q, 60) : S.data.cl.filter(function (c) { return c[3] > 0; }).slice(0, 60);
       var n = 0;
-      for (var i = 0; i < S.data.cl.length && n < 60; i++) {
-        var c = S.data.cl[i];
-        if (q) {
-          var okName = c[1].toLowerCase().indexOf(q) >= 0;
-          var okTel = digits.length >= 3 && String(c[2]).replace(/[^0-9]/g, '').indexOf(digits) >= 0;
-          if (!okName && !okTel) continue;
-        } else if (!(c[3] > 0)) continue;
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
         var b = el('button', 'cl');
-        b.setAttribute('data-ci', i);
+        b.setAttribute('data-ci', S.data.cl.indexOf(c));
         b.appendChild(el('b', '', c[1]));
         b.appendChild(el('small', '', c[2] || ''));
         if (c[3]) b.appendChild(el('small', c[3] > 0 ? 'debt' : '', 'qarz: ' + money(L.cents(c[3]))));
@@ -648,9 +664,9 @@
     $('infoModal').classList.remove('hidden');
   }
   function showGoods(g) {
-    var rows = L.PRICE_TYPES.map(function (p) {
+    var rows = S.ui.ptypeShow ? L.PRICE_TYPES.map(function (p) {
       return { a: ptypeLabel(p) + (p === S.ptype ? ' (hozirgi)' : ''), b: money(L.priceOf(g, p, S.data.rate)), cls: p === S.ptype ? 'big' : '' };
-    });
+    }) : [{ a: 'Narx', b: money(L.priceOf(g, S.ptype, S.data.rate)), cls: 'big' }];
     rows.push({ a: 'Qoldiq', b: L.fmtQty(L.milli(g.s)) + (g.e ? ' ' + g.e : ''), cls: g.s > 0 ? '' : 'warn' });
     rows.push({ a: 'Kod', b: g.c });
     info(g.n, rows, [{ label: "Savatga qo'shish", cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); addGoods(g, 1000, false); } }]);
@@ -908,7 +924,8 @@
       btn(seg, String(n), u.wins === n ? 'on' : '', function () { u.wins = n; saveUi(u, renderSettings); });
     });
     var c2 = card('Chek va ovoz');
-    [['autoprint', "To'lovdan keyin chek chiqarish"], ['sound', 'Xatoda ovozli signal'], ['stock', "Panel tugmalarida qoldiqni ko'rsatish"]]
+    [['autoprint', "To'lovdan keyin chek chiqarish"], ['sound', 'Xatoda ovozli signal'], ['stock', "Panel tugmalarida qoldiqni ko'rsatish"],
+      ['ptypeShow', "Narx turini yuqorida ochiq ko'rsatish (o'chiq bo'lsa: raqam maydonini 1 soniya bosib turing)"]]
       .forEach(function (x) {
         var b = el('button', 'tg' + (u[x[0]] ? ' on' : ''));
         b.appendChild(el('span', '', x[1])); b.appendChild(el('i', '', u[x[0]] ? 'HA' : "YO'Q"));
@@ -918,6 +935,15 @@
     btn(c2, 'Chek pastidagi matn: ' + (u.footer || '—'), 'tg', function () {
       openKb('text', 'Chek pastidagi matn', function (t) { u.footer = t.slice(0, 60); saveUi(u, renderSettings); });
       S.kb.text = u.footer || ''; renderKb();
+    });
+    var cp = card('Panel', (S.data && S.data.pnls === 'kassa' ? 'Hozir: tasdiqlangan tavsiya.' : "Hozir: 1C'dagi panel.") +
+      " Har hafta eng ko'p sotilgan tovarlardan tavsiya tayyorlanadi: tarozi tovarlari (pistalar, bodomlar, keshu… ketma-ket), " +
+      'keyin shtrix kodlilar, keyin boshqalar. Siz tasdiqlaysiz.');
+    btn(cp, "Tavsiyani ko'rish" + (S.ps ? ' (yangi)' : ''), 'big primary', function () { openSuggest(false); });
+    btn(cp, 'Yangidan hisoblash', 'big muted', function () { openSuggest(true); });
+    if (S.data && S.data.pnls === 'kassa') btn(cp, "1C'dagi panelga qaytish", 'big muted', function () {
+      ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
+        onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
     var c3 = card("Tugmalar", "Keraksizini yashiring (Sozlamalar tugmasi doim turadi)");
     FN.forEach(function (f) {
@@ -958,6 +984,54 @@
     btn(c6, 'Sahifani qayta yuklash', 'big muted', function () { window.location.reload(); });
     btn(c6, 'Kassani yopish', 'big danger', closeKassa);
   }
+  // ---------------- panel tavsiyasi ----------------
+  function panelApi(op) {
+    return api('POST', '/api/panel', { token: S.token, grant: S.grant, op: op }, 120000).then(function (j) {
+      if (!j.ok) throw new Error(j.e || 'Xato');
+      return j;
+    });
+  }
+  function openSuggest(make) {
+    busy(true, make ? "Oxirgi 4 hafta sotuvi tahlil qilinmoqda…" : 'Tavsiya ochilmoqda…');
+    panelApi(make ? 'make' : 'get').then(function (j) {
+      busy(false);
+      if (!j.sug) {
+        ask({ title: 'Panel tavsiyasi', text: "Hali tavsiya yo'q. Hozir hisoblansinmi?", yes: 'Hisoblash',
+          onYes: function () { openSuggest(true); return Promise.resolve(); } });
+        return;
+      }
+      S.sug = j.sug; S.sugPage = 0;
+      $('sugView').classList.remove('hidden');
+      renderSuggest();
+    }).catch(function (e) { busy(false); if (e.message !== 'login') toast(e.message, true); });
+  }
+  function renderSuggest() {
+    var sug = S.sug;
+    var t = $('sugTabs');
+    t.textContent = '';
+    for (var i = 0; i < 8; i++) {
+      var used = sug.pnl.slice(i * 42, i * 42 + 42).some(function (x) { return x[0]; });
+      var b = el('button', (i === S.sugPage ? 'on' : '') + (used ? ' has' : ''), String(i + 1));
+      b.setAttribute('data-page', i);
+      t.appendChild(b);
+    }
+    var d = new Date((sug.at || 0) * 1000);
+    var here = (sug.sec || []).filter(function (m) { return m.n && m.from < S.sugPage * 42 + 42 && m.to > S.sugPage * 42; })
+      .map(function (m) { return m.t; });
+    $('sugInfo').textContent = (S.sugPage + 1) + '-sahifa: ' + (here.join(', ') || "bo'sh") + ' · oxirgi ' + (sug.days || 28) +
+      ' kun sotuvi (' + d.toLocaleDateString('ru-RU') + ') · ' + (sug.sec || []).map(function (m) { return m.t + ' ' + m.n; }).join(', ');
+    var grid = $('sugGrid');
+    grid.textContent = '';
+    for (var k = S.sugPage * 42; k < S.sugPage * 42 + 42; k++) {
+      var slot = sug.pnl[k] || ['', ''];
+      var g = slot[0] && S.byCode ? S.byCode[slot[0]] : null;
+      if (g) grid.appendChild(tile(g));
+      else if (slot[0]) { var x = el('div', 'tile'); x.appendChild(el('span', 'tn', slot[1])); grid.appendChild(x); }
+      else grid.appendChild(el('div', 'tile empty'));
+    }
+  }
+  function closeSuggest() { $('sugView').classList.add('hidden'); S.sug = null; }
+
   function showQueue() {
     api('GET', '/api/queue?t=' + encodeURIComponent(S.token), undefined, 15000).then(function (j) {
       var rows = [];
@@ -1235,18 +1309,17 @@
       saveWins();
       renderAll();
     });
-    on('ptypeBtn', function () {
-      ask({
-        title: 'Narx turi',
-        choices: L.PRICE_TYPES.map(function (p) {
-          return { label: ptypeLabel(p), on: p === S.ptype, pick: function () {
-            S.ptype = p; save('k_ptype', p);
-            repriceAll(true);
-            renderAll();
-          } };
-        })
-      });
+    on('ptypeBtn', choosePtype);
+    // yashirin rejim: raqam maydonini 1 soniya bosib turish — faqat xodimlar biladi
+    var lpTimer = 0;
+    var disp = $('display');
+    function lpStop() { clearTimeout(lpTimer); lpTimer = 0; }
+    disp.addEventListener('pointerdown', function () {
+      lpStop();
+      lpTimer = setTimeout(function () { lpTimer = 0; if (!S.edit) choosePtype(); }, 900);
     });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { disp.addEventListener(ev, lpStop); });
+    disp.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     on('queueBadge', function () { adminPw("1C navbatini ko'rish", showQueue); });
     on('lockBtn', function () { lock(''); });
     on('exitBtn', function () {
@@ -1391,19 +1464,74 @@
 
     on('infoClose', function () { $('infoModal').classList.add('hidden'); });
     on('setClose', function () { $('setView').classList.add('hidden'); });
+    on('sugBack', closeSuggest);
+    $('sugTabs').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-page]') : null;
+      if (!b || !S.sug) return;
+      S.sugPage = parseInt(b.getAttribute('data-page'), 10);
+      renderSuggest();
+    });
+    on('sugApprove', function () {
+      ask({ title: 'Panelni almashtirish', text: "Kassada shu panel ishlatiladi (1C'dagi panelga keyin qaytish mumkin).", yes: 'Tasdiqlash',
+        onYes: function () {
+          return panelApi('approve').then(function () {
+            closeSuggest(); S.ps = false; renderFn();
+            return refreshData();
+          }).then(function () { if (!hidden('setView')) renderSettings(); toast('Panel yangilandi'); });
+        } });
+    });
+    on('sugMake', function () { closeSuggest(); openSuggest(true); });
+    on('sugDismiss', function () {
+      panelApi('dismiss').then(function () { closeSuggest(); S.ps = false; renderFn(); if (!hidden('setView')) renderSettings(); })
+        .catch(function (e) { if (e.message !== 'login') toast(e.message, true); });
+    });
     on('donePrint', function () { if (S.last) printReceipt(S.last); });
     on('doneNew', function () { $('doneModal').classList.add('hidden'); });
 
-    // skaner (klaviatura sifatida): raqamlar maydonga, Enter — kiritish
+    // skaner (klaviatura sifatida). pc 12: QAYSI oyna ochiq bo'lmasin, skaner o'qigan tovar savatga tushadi —
+    // panel/qidiruv/chek/ma'lumot oynasi o'zi yopiladi. Skaner belgilarni juda tez (<50 ms) yuboradi va Enter bilan
+    // tugatadi — shu bilan qo'lda yozishdan ajratiladi.
+    var SC = { buf: '', t0: 0, last: 0, kb: 0, disp: 0, pw: 0, ask: 0 };
+    function scanReset() { SC.buf = ''; SC.kb = SC.disp = SC.pw = SC.ask = 0; }
+    function stripTail(text, n) { return n > 0 ? String(text).slice(0, Math.max(0, String(text).length - n)) : text; }
+    function globalScan(code) {
+      // tez kiritilgan belgilar qayerga tushgan bo'lsa — olib tashlanadi
+      if (SC.kb && S.kb) { S.kb.text = stripTail(S.kb.text, SC.kb); }
+      if (SC.disp) S.disp = stripTail(S.disp, SC.disp);
+      if (SC.pw) $('pw').value = stripTail($('pw').value, SC.pw);
+      if (SC.ask) $('askPw').value = stripTail($('askPw').value, SC.ask);
+      if (!hidden('login') || !S.data) { toast('Avval kassaga kiring', true); beep(); return; }
+      if (!hidden('busy')) { toast('Kuting — oldingi amal tugamoqda', true); beep(); return; }
+      if (S.edit) { toast("Ko'rinish sozlanmoqda — avval «Saqlash» yoki «Bekor qilish»", true); beep(); return; }
+      ['doneModal', 'infoModal', 'panelView', 'setView', 'sugView'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if (S.sug) S.sug = null;
+      if (S.kb) closeKb();
+      if (!hidden('askModal')) closeAsk();
+      if (!hidden('payModal')) closePay();
+      S.disp = '';
+      enterCode(code);
+    }
     document.addEventListener('keydown', function (e) {
+      var now = Date.now();
+      if (e.key && e.key.length === 1) {
+        if (now - SC.last > 80) { scanReset(); SC.t0 = now; }
+        SC.buf += e.key; SC.last = now;
+      } else if (e.key === 'Enter') {
+        var n = SC.buf.length;
+        var fast = n >= 4 && now - SC.last < 120 && (now - SC.t0) <= n * 50 + 80;
+        var code = SC.buf;
+        if (fast) { e.preventDefault(); e.stopPropagation(); globalScan(code); scanReset(); return; }
+        scanReset();
+      } else if (e.key !== 'Shift') scanReset();
+
       if (!hidden('login')) {
         if (e.key === 'Enter') doLogin();
-        else if (/^[0-9]$/.test(e.key)) $('pw').value = ($('pw').value + e.key).slice(0, 20);
+        else if (/^[0-9]$/.test(e.key)) { $('pw').value = ($('pw').value + e.key).slice(0, 20); SC.pw++; }
         else if (e.key === 'Backspace') $('pw').value = $('pw').value.slice(0, -1);
         return;
       }
       if (S.kb) {
-        if (e.key.length === 1) S.kb.text = (S.kb.text + e.key.toLowerCase()).slice(0, 60);
+        if (e.key.length === 1) { S.kb.text = (S.kb.text + e.key.toLowerCase()).slice(0, 60); SC.kb++; }
         else if (e.key === 'Backspace') S.kb.text = S.kb.text.slice(0, -1);
         else return;
         $('kbText').textContent = S.kb.text;
@@ -1411,14 +1539,15 @@
         e.preventDefault();
         return;
       }
-      if (!hidden('payModal') || !hidden('askModal') || !hidden('setView') || S.edit) return;
+      if (!hidden('askModal')) { if (e.key.length === 1 && document.activeElement === $('askPw')) SC.ask++; return; }
+      if (!hidden('payModal') || !hidden('setView') || !hidden('sugView') || S.edit) return;
       if (!hidden('doneModal')) $('doneModal').classList.add('hidden');
       if (!hidden('infoModal')) $('infoModal').classList.add('hidden');
       if (!hidden('panelView')) $('panelView').classList.add('hidden');
       if (e.key === 'Enter') { e.preventDefault(); enterCode(S.disp); return; }
       if (e.key === 'Backspace') { S.disp = S.disp.slice(0, -1); renderDisplay(); return; }
-      if (e.key.length === 1 && /[0-9A-Za-z.\-]/.test(e.key)) { S.disp = (S.disp + e.key).slice(0, 40); renderDisplay(); e.preventDefault(); }
-    });
+      if (e.key.length === 1 && /[0-9A-Za-z.\-]/.test(e.key)) { S.disp = (S.disp + e.key).slice(0, 40); SC.disp++; renderDisplay(); e.preventDefault(); }
+    }, true);
   }
 
   // ---------------- o'zini tiklash ----------------

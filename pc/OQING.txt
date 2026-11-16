@@ -134,3 +134,16 @@ Yangi (pc 11) - KASSA SOTUVI 1C'GA "KO'PRIK" ORQALI:
  - 1C tashqi ishlov ochilganda "Предупреждение безопасности" so'ramasligi uchun conf.cfg ga
    DisableUnsafeActionProtection yoziladi (dastur administrator huquqida ishlasa o'zi qiladi).
  - Sinov: 1C_oyna_tekshiruv.bat (hech narsa yozmaydi) - oxirida "HAMMASI ISHLAYDI" chiqishi kerak.
+
+
+Yangi (pc 12) - KASSA:
+ - Qidiruv telefondagidek: xato yozilsa ham topadi (pistta, badom, kirill/lotin, o'g'il = ogil).
+ - Panel: Sozlamalar > Panel > "Tavsiyani ko'rish". Har hafta eng ko'p sotilganlardan tavsiya: tarozi tovarlari
+   (pistalar, bodomlar, keshu... ketma-ket), keyin shtrix kodlilar, keyin boshqalar. "Tasdiqlash" - kassada shu panel.
+   1C'dagi panelga qaytish ham bor. Panelda yozuvlar KATTA harfda.
+ - Narx turi xaridorga ko'rinmaydi: raqam maydonining chap pastki burchagidagi kichik raqam (1-4).
+   O'zgartirish: raqam maydonini 1 soniya bosib turing. (Sozlamada ochiq ko'rsatish mumkin.)
+ - Skaner har doim ishlaydi: panel, qidiruv, to'lov oynasi ochiq bo'lsa ham - oyna yopiladi, tovar savatga tushadi.
+ - Avtomatik ishga tushish: AVTO_KIRISH.bat ni bir marta oching (Windows parolini so'raydi) - kompyuter yonganda
+   Windows o'zi kiradi, dastur, kassa va 1C ko'prigi o'zi ishlaydi, kompyuter uxlamaydi.
+   Elektr qaytganda kompyuter o'zi yonishi: BIOS > "Restore on AC power loss" = "Power On".

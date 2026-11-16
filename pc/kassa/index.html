@@ -75,6 +75,7 @@
     <!-- O'NG: kiritish va tugmalar -->
     <div class="right" data-ui="right">
       <div class="display" id="display" data-ui="display">
+        <span class="d-tag" id="ptypeTag" aria-hidden="true"></span>
         <span class="d-mult" id="dMult"></span>
         <span class="d-val" id="dVal"></span>
         <span class="d-hint" id="dHint">Raqam yozing yoki skanerlang</span>
@@ -97,7 +98,7 @@
     <div class="tabs" id="tabs" data-ui="tabs"></div>
     <button id="panelBack" class="big primary back">← Savdo oynasiga qaytish</button>
   </div>
-  <div class="grid" id="grid"></div>
+  <div class="grid panel-grid" id="grid"></div>
 </div>
 
 <!-- QIDIRUV (ekran klaviaturasi bilan) -->
@@ -199,6 +200,21 @@
     <button id="setClose" class="big primary back">← Savdo oynasiga qaytish</button>
   </div>
   <div class="set-body" id="setBody"></div>
+</div>
+
+<!-- PANEL TAVSIYASI (admin tasdiqlaydi) -->
+<div class="overlay hidden" id="sugView" role="dialog" aria-modal="true" aria-label="Panel tavsiyasi">
+  <div class="ov-head">
+    <div class="tabs" id="sugTabs"></div>
+    <div class="sug-info" id="sugInfo"></div>
+    <button id="sugBack" class="big primary back">← Qaytish</button>
+  </div>
+  <div class="sug-bar" id="sugBar">
+    <button id="sugApprove" class="big primary">Tasdiqlash — kassada shu panel</button>
+    <button id="sugMake" class="big muted">Yangidan hisoblash</button>
+    <button id="sugDismiss" class="big muted">Kerak emas</button>
+  </div>
+  <div class="grid panel-grid" id="sugGrid"></div>
 </div>
 
 <!-- MA'LUMOT (narx tekshirish, hisobot, navbat) -->

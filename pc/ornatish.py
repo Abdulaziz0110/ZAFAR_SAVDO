@@ -500,7 +500,78 @@ def step_autostart():
     ok("onec_export.py hozir fonda ishga tushirildi")
 
 
+# ------------------------------------------------------------------ pc 12: kompyuter yonganda HAMMASI o'zi
+
+WINLOGON = r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+PASSWORDLESS = r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device"
+
+
+def autologon_cmds(user, password, domain):
+    """Windows avtomatik kirish (parol so'ramasdan) uchun reg.exe buyruqlari."""
+    def put(key, name, value, kind="REG_SZ"):
+        return ["reg", "add", key, "/v", name, "/t", kind, "/d", value, "/f"]
+    return [put(WINLOGON, "AutoAdminLogon", "1"), put(WINLOGON, "DefaultUserName", user),
+            put(WINLOGON, "DefaultPassword", password), put(WINLOGON, "DefaultDomainName", domain),
+            ["reg", "delete", WINLOGON, "/v", "AutoLogonCount", "/f"],
+            # Windows 10/11: "faqat Windows Hello bilan kirish" yoqilgan bo'lsa avtomatik kirish ishlamaydi
+            put(PASSWORDLESS, "DevicePasswordLessBuildVersion", "0", "REG_DWORD")]
+
+
+def autologon_off_cmds():
+    return [["reg", "add", WINLOGON, "/v", "AutoAdminLogon", "/t", "REG_SZ", "/d", "0", "/f"],
+            ["reg", "delete", WINLOGON, "/v", "DefaultPassword", "/f"]]
+
+
+POWER_CMDS = [["powercfg", "/change", "standby-timeout-ac", "0"], ["powercfg", "/change", "hibernate-timeout-ac", "0"],
+              ["powercfg", "/hibernate", "off"]]
+
+
+def step_autologon():
+    """AVTO_KIRISH.bat: kompyuter yonganda Windows parol so'ramasdan kiradi -> dastur, kassa va 1C ko'prigi o'zi
+    ishga tushadi; kompyuter uxlamaydi."""
+    print()
+    line("#")
+    print("  Kompyuter yonganda Windows'ga AVTOMATIK kirish (kassa va 1C o'zi ishlashi uchun)")
+    line("#")
+    if os.name != "nt":
+        print("Bu faqat Windows uchun.")
+        return 1
+    if not is_admin():
+        warn("administrator emas - AVTO_KIRISH.bat orqali oching")
+        return 1
+    user = os.environ.get("USERNAME", "")
+    domain = os.environ.get("USERDOMAIN", "") or os.environ.get("COMPUTERNAME", "")
+    print("  Foydalanuvchi: %s   (kompyuter: %s)" % (user, domain))
+    pw = getpass.getpass("  Shu foydalanuvchining Windows paroli (paroli yo'q bo'lsa - Enter): ")
+    pw2 = getpass.getpass("  Parolni qayta yozing: ")
+    if pw != pw2:
+        warn("parollar bir xil emas - qaytadan oching")
+        return 1
+    if pw == "-":
+        for cmd in autologon_off_cmds():
+            run(cmd)
+        ok("avtomatik kirish O'CHIRILDI (saqlangan parol o'chirildi)")
+        return 0
+    bad = 0
+    for cmd in autologon_cmds(user, pw, domain):
+        c, o = run(cmd)
+        if c != 0 and "delete" not in cmd:
+            bad += 1
+            warn("%s: %s" % (cmd[3] if len(cmd) > 3 else cmd, o[:200]))
+    ok("avtomatik kirish yoqildi" if not bad else "avtomatik kirish: %d ta xato" % bad)
+    for cmd in POWER_CMDS:
+        run(cmd)
+    ok("kompyuter uxlab qolmaydi (uyqu va gibernatsiya o'chirildi)")
+    print()
+    print("  Endi kompyuter yonganda: Windows o'zi kiradi -> IMSOFT dasturi -> kassa sahifasi va 1C ko'prigi.")
+    print("  Elektr o'chib qaytganda kompyuter o'zi yonishi uchun: BIOS'da \"Restore on AC power loss\" = \"Power On\".")
+    print("  O'chirish: AVTO_KIRISH.bat ni oching va parol o'rniga  -  (minus) yozing.")
+    return 0 if not bad else 1
+
+
 def main():
+    if "--autologon" in sys.argv:
+        return step_autologon()
     print()
     line("#")
     print("  IMSOFT — kompyuterni sozlash. Savollarga javob bering (Enter — qavs ichidagi javob).")
