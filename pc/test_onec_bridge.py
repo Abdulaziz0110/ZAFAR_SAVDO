@@ -44,6 +44,8 @@ class EpfTest(unittest.TestCase):
 
     def test_bsl_matches_1c_sensor_window(self):
         t = ob.bsl_text()
+        self.assertNotRegex(t, r"Новый [^;\n(]+\([^)]*\)\.")      # 8.3.10: "Новый X(...).Metod()" kompilyatsiya xatosi
+        self.assertIn('Выполнить("ПечатьНажатие_1(Сс, 1)")', t)      # bazaning o'z cheki (yo'q bo'lsa ham modul buzilmaydi)
         for must in ("МахсулотКолдигиниАниклаш(ТекущаяДата(), Склад, Тов)", "ПоучитьДолг(ТекущаяДата(), Кл,",
                      "ОхиргиУртачаНархиниАниклаш_Махсулот(Тов, КлНарх, ТекущаяДата())", "Константы.Склад1.Получить()",
                      "Док.Записать(РежимЗаписиДокумента.Проведение)", '".wip"', '".res"', "Стр.Блок     = Стр.Кол / Стр.Шт"):
@@ -63,7 +65,11 @@ class JobTest(unittest.TestCase):
                                             "sum": Decimal("9000.00")}]}
         lines = ob.job_text(j).split("\r\n")
         self.assertEqual(lines[0].split("\t"), ["H", "s1", "sale", "Цена1", "7", "", "9000", "0", "10000", "0", "0.5",
-                                                "Продажа", "a b c"])
+                                                "Продажа", "a b c", "0"])
+        j["print"] = True
+        self.assertEqual(ob.job_text(j).split("\r\n")[0].split("\t")[13], "1")         # chekni 1C chiqaradi
+        pj = ob.job_text(ob.print_job("p1", "000123", "15.11.2026 09:30")).split("\r\n")[0].split("\t")
+        self.assertEqual((pj[2], pj[3], pj[12]), ("print", "15.11.2026", "000123"))
         self.assertEqual(lines[1], "L\t15\t1.5\t6000\t9000")
         self.assertEqual(ob.num(Decimal("-0.00")), "0")
 

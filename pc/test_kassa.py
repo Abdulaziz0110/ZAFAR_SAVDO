@@ -347,6 +347,10 @@ class ServiceTest(unittest.TestCase):
                 if s.fail:
                     raise RuntimeError(s.fail)
 
+            def print_errors(s):
+                e, s.perr = getattr(s, "perr", []), []
+                return e
+
             def run(s, jobs, timeout=30):
                 if s.fail:
                     raise RuntimeError(s.fail)
@@ -404,6 +408,22 @@ class ServiceTest(unittest.TestCase):
         r = self.svc.sale(sale_body(token=tok, id="br000006", lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000"))
         self.assertTrue(r["queued"])
         self.assertGreater(r["v1"], r["v0"])                                     # monoblok qoldiqni o'zida o'zgartiradi
+        # chekni 1C'ning o'zi chiqaradi: sotuvda belgi, qayta chiqarish — 1C raqami bo'yicha
+        self.svc.call(lambda: None)
+        self.svc.sale(sale_body(token=tok, id="br000007", lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000",
+                                print1c=True))
+        self.svc.call(lambda: None)
+        jobs = [j for run in br.runs for j in run]
+        self.assertTrue([j for j in jobs if j["id"] == "br000007"][0]["print"])
+        self.assertFalse([j for j in jobs if j["id"] == "br000006"][0]["print"])
+        self.assertEqual(self.svc.print_1c(tok, rid="br000005"), {"ok": True})
+        pj = br.runs[-1][0]
+        self.assertEqual((pj["kind"], pj["note"], pj["ptype"]), ("print", "B9", "15.11.2026"))
+        br.perr = ["Принтер не найден"]
+        self.svc.print_1c(tok, no="000050", date="15.11.2026 08:05")
+        self.assertIn("Принтер не найден", self.svc.ping()["pe"])
+        with self.assertRaises(kc.KassaError):
+            self.svc.print_1c(tok, no="", date="")
 
     def test_panel_suggestion_approve_and_reset(self):
         tok = self.login()
@@ -442,6 +462,19 @@ class ServiceTest(unittest.TestCase):
             self.svc.sales("yo'q")
         with self.assertRaises(kc.KassaError):
             self.svc.sales(tok, "2026-13-45")
+
+    def test_auto_login(self):
+        with self.assertRaises(kc.KassaError):
+            self.svc.auto_login()                                                  # yoqilmagan
+        tok = self.login()
+        grant = self.svc.admin(tok, "1234")["grant"]
+        self.svc.put_ui(tok, grant, {"auto": "7"})
+        r = self.svc.auto_login()
+        self.assertEqual((r["name"], r["code"]), ("Zafar", "7"))
+        self.assertEqual(self.svc.who(r["token"])[1], "Zafar")
+        self.svc.put_ui(tok, grant, {"auto": "8"})                                 # bo'shatilgan
+        with self.assertRaises(kc.KassaError):
+            self.svc.auto_login()
 
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]

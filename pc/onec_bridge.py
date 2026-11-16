@@ -27,11 +27,13 @@ log = logging.getLogger("bridge")
 
 EPF_NAME = "kassa_bridge.epf"
 JOBS_DIR = "kassa_jobs"
-BRIDGE_VERSION = "2"
+BRIDGE_VERSION = "3"
 
 # --------------------------------------------------------------------------- 1C kodi (tashqi ishlov moduli)
 
 BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job -> ПродажаРозница (1C sensor oynasi bilan bir xil), natija *.res
+Перем ПечатьСсылка, ПечатьВозврат;
+
 Функция Ч(Знач С)
 	С = СокрЛП(С);
 	Если С = "" Тогда
@@ -52,9 +54,13 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		Р = Неопределено;
 	КонецПопытки;
 	Если Р = Неопределено Или Р.Пустая() Тогда
-		Р = Менеджер.НайтиПоКоду(Код);
+		Попытка
+			Р = Менеджер.НайтиПоКоду(Код);
+		Исключение
+			Р = Неопределено;
+		КонецПопытки;
 	КонецЕсли;
-	Если Р.Пустая() Тогда
+	Если Р = Неопределено Или Р.Пустая() Тогда
 		Возврат Неопределено;
 	КонецЕсли;
 	Возврат Р;
@@ -74,6 +80,17 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		ВызватьИсключение "Topshiriq fayli noto'g'ri";
 	КонецЕсли;
 	Вид    = Ш[2];
+	Если Вид = "print" Тогда
+		// chekni qayta chiqarish: 1C'ning o'z chek bosmasi (ПечатьНажатие_1 / ПечатьНажатиеВоз_1)
+		Д = Ш[3];
+		Найден = Документы.ПродажаРозница.НайтиПоНомеру(Ш[12], Дата(Прав(Д, 4) + Сред(Д, 4, 2) + Лев(Д, 2)));
+		Если Найден.Пустая() Тогда
+			ВызватьИсключение "1C'da hujjat topilmadi: " + Ш[12];
+		КонецЕсли;
+		ПечатьСсылка  = Найден;
+		ПечатьВозврат = (Найден.ВидДокумента = Перечисления.ВидДокумента.Возврать);
+		Возврат "PRINT" + Символы.Таб + СокрЛП(Найден.Номер);
+	КонецЕсли;
 	Склад  = Константы.Склад1.Получить();
 	Док = Документы.ПродажаРозница.СоздатьДокумент();
 	Если Вид = "probe" Тогда
@@ -152,11 +169,16 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		Стр.СуммаСум = Ч(С[4]);
 	КонецЦикла;
 	Док.Записать(РежимЗаписиДокумента.Проведение);
+	Если Ш.Количество() > 13 И Ш[13] = "1" Тогда
+		ПечатьСсылка  = Док.Ссылка;
+		ПечатьВозврат = (Вид = "return");
+	КонецЕсли;
 	Возврат СокрЛП(Док.Номер) + Символы.Таб + Формат(Док.Дата, "ДФ='dd.MM.yyyy HH:mm'");
 КонецФункции
 
 Функция ФайлЕсть(Путь)
-	Возврат Новый Файл(Путь).Существует();
+	Ф = Новый Файл(Путь);
+	Возврат Ф.Существует();
 КонецФункции
 
 Процедура ИшлаТопшириклар(Папка)
@@ -172,6 +194,7 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 			Продолжить;
 		КонецЕсли;
 		ЗаписатьТекст(Асос + ".wip", "1");
+		ПечатьСсылка = Неопределено;
 		Попытка
 			Ответ = "OK" + Символы.Таб + Провести(Ф.ПолноеИмя);
 		Исключение
@@ -180,6 +203,20 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		ЗаписатьТекст(Асос + ".res", Ответ);
 		УдалитьФайлы(Ф.ПолноеИмя);
 		УдалитьФайлы(Асос + ".wip");
+		Если ПечатьСсылка <> Неопределено Тогда
+			// chek — 1C sensor oynasidagi bilan AYNAN bir xil (bazaning o'z bosma protsedurasi, chek printeriga)
+			Попытка
+				Сс = ПечатьСсылка;
+				Если ПечатьВозврат Тогда
+					Выполнить("ПечатьНажатиеВоз_1(Сс, 1)");
+				Иначе
+					Выполнить("ПечатьНажатие_1(Сс, 1)");
+				КонецЕсли;
+			Исключение
+				ЗаписатьТекст(Асос + ".perr", ОписаниеОшибки());
+			КонецПопытки;
+			ПечатьСсылка = Неопределено;
+		КонецЕсли;
 	КонецЦикла;
 КонецПроцедуры
 
@@ -363,11 +400,17 @@ def probe_job(rid="probe"):
             "cash": 0, "card": 0, "click": 0, "doc": "Продажа", "note": "", "lines": []}
 
 
+def print_job(rid, no, date):
+    """Chekni 1C'ning o'zi qayta chiqaradi: [no] — 1C hujjat raqami, [date] — "dd.mm.yyyy"."""
+    return {"id": rid, "kind": "print", "ptype": clean(date)[:10], "emp": "", "client": "", "total": 0, "discount": 0,
+            "cash": 0, "card": 0, "click": 0, "doc": "", "note": clean(no), "lines": [], "print": False}
+
+
 def job_text(job):
     """job: dict(id, kind, ptype, emp, client, total, discount, cash, card, click, doc, note, lines=[code, qty, price, sum])."""
     h = ["H", job["id"], job["kind"], job["ptype"], clean(job.get("emp")), clean(job.get("client")),
          num(job["total"]), num(job["discount"]), num(job["cash"]), num(job["card"]), num(job["click"]),
-         job["doc"], clean(job.get("note"))[:300]]
+         job["doc"], clean(job.get("note"))[:300], "1" if job.get("print") else "0"]
     out = ["\t".join(h)]
     for l in job["lines"]:
         out.append("\t".join(["L", clean(l["code"]), num(l["qty"]), num(l["price"]), num(l["sum"])]))
@@ -499,7 +542,7 @@ class Bridge:
     sotuv 1-2 soniyada yoziladi. Dastur (Python) ishlab turgani "py.alive" belgisi bilan bildiriladi — dastur
     to'xtasa 5 daqiqadan keyin 1C o'zi yopiladi; dastur qayta ishga tushsa ochiq 1C'dan foydalanadi."""
 
-    ALIVE_SEC = 20         # 1C belgisi (1c.alive) shundan eski bo'lsa — 1C ishlamayapti
+    ALIVE_SEC = 60         # 1C belgisi (1c.alive) shundan eski bo'lsa — 1C ishlamayapti (chek bosilayotganda ham)
     WIP_STUCK = 90         # .wip shundan eski va .res yo'q — 1C yozish paytida o'chgan (natija noma'lum)
     START_SEC = 180        # 1C ochilishini kutish
 
@@ -646,6 +689,22 @@ class Bridge:
                 if age is not None and age > self.WIP_STUCK:
                     wip.add(base)
         return res, wip
+
+    def print_errors(self):
+        """1C chekni chiqara olmagan bo'lsa (*.perr): xabarlar, fayllar o'chiriladi."""
+        out = []
+        try:
+            names = [n for n in os.listdir(self.jobs) if n.endswith(".perr")]
+        except OSError:
+            return out
+        for n in names:
+            try:
+                with open(self._p(n), "r", encoding="utf-8-sig") as f:
+                    out.append(re.sub(r"\s+", " ", f.read()).strip()[:300])
+                os.remove(self._p(n))
+            except OSError:
+                continue
+        return out
 
     def forget(self, rid):
         for ext in (".job", ".res", ".wip"):

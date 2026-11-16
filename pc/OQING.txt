@@ -159,3 +159,9 @@ Yangi (pc 13):
 Yangi (pc 14):
  - Pastdagi tugmalar ikonkali. Sozlamalarda keraksizini yashirsangiz, qolganlari kattalashib joyni to'ldiradi.
  - "Savdolar" tugmasi: kun bo'yicha hamma savdolar (kassa va 1C'dagi) - istalganining chekini qayta chiqarish.
+
+
+Yangi (pc 16):
+ - Chekni 1C'ning o'zi chiqaradi (1C sensor oynasidagi chek, kompyuterdagi chek printeriga).
+ - To'lovdan keyin oyna darhol bo'shaydi (dialog yo'q). Tozalash/sotuvdan keyin narx turi 1 ga qaytadi.
+ - Sozlamalar: "Kirishda parol so'ralmasin", "Blok tugmasini yashirish".

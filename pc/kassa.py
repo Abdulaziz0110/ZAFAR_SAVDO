@@ -723,6 +723,7 @@ class KassaService:
         mode = load_json(os.path.join(here, MODE_FILE), {})
         self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
         self.warm_at = 0.0
+        self.print_err = ""
         self.onec = onec or KassaOneC(conf.title)
         self.clock = clock
         self.version = version
@@ -809,6 +810,27 @@ class KassaService:
                 return None
             return self.snap_json, self.snap_gz
 
+    def _token(self, s):
+        tok = secrets.token_urlsafe(24)
+        now = self.clock()
+        with self.lock:
+            self.tokens = {t: v for t, v in self.tokens.items() if now - v[2] < TOKEN_TTL}
+            self.tokens[tok] = (s["code"], s["name"], now)
+        return {"ok": True, "token": tok, "name": s["name"], "code": s["code"]}
+
+    def auto_login(self):
+        """pc 15: sozlamada "parol so'ralmasin" yoqilgan bo'lsa — tanlangan kassir nomidan darhol kiriladi."""
+        self.touch()
+        code = str(self.get_ui().get("auto") or "")
+        if not code:
+            raise kc.KassaError("Parolsiz kirish yoqilmagan")
+        if not self.staff:
+            self.call(self._refresh_full)
+        for s in self.staff:
+            if s["code"] == code and not s["fired"]:
+                return self._token(s)
+        raise kc.KassaError("Parolsiz kirish uchun tanlangan xodim topilmadi")
+
     def login(self, pw):
         self.touch()
         pw = str(pw or "").strip()
@@ -823,12 +845,7 @@ class KassaService:
             if s["h"] == h:
                 if s["fired"]:
                     raise kc.KassaError("Siz bo'shatilgansiz")
-                tok = secrets.token_urlsafe(24)
-                now = self.clock()
-                with self.lock:
-                    self.tokens = {t: v for t, v in self.tokens.items() if now - v[2] < TOKEN_TTL}
-                    self.tokens[tok] = (s["code"], s["name"], now)
-                return {"ok": True, "token": tok, "name": s["name"]}
+                return self._token(s)
         raise kc.KassaError("Bunday parolli xodim yo'q")
 
     def admin(self, token, pw):
@@ -871,7 +888,7 @@ class KassaService:
             waiting = sum(1 for p in self.pending if p.get("state") != "error")
             errors = sum(1 for p in self.pending if p.get("state") == "error")
         return {"ok": True, "v": self.version, "q": waiting, "qe": errors, "err": self.last_error[:300],
-                "data": self.ver, "ps": 1 if self._suggest_new() else 0}
+                "data": self.ver, "ps": 1 if self._suggest_new() else 0, "pe": self.print_err}
 
     # --- sotuv: avval navbat (disk), keyin 1C ---
     def sale(self, body):
@@ -897,7 +914,7 @@ class KassaService:
         if item is None:
             res = self._prepare(sale, emp_name)
             item = {"id": sale["id"], "sale": sale_to_json(sale), "emp": emp_code, "res": res, "at": self.clock(),
-                    "tries": 0, "state": "wait", "err": ""}
+                    "tries": 0, "state": "wait", "err": "", "print": bool(isinstance(body, dict) and body.get("print1c"))}
             with self.qlock:
                 self.pending.append(item)
                 self._save_queue()
@@ -1036,7 +1053,8 @@ class KassaService:
                 "client": sale["client"], "total": pay["total"], "discount": pay["discount"], "cash": pay["cash"],
                 "card": pay["card"], "click": pay["click"], "doc": pay["doc"], "note": sale["note"],
                 "lines": [{"code": l["code"], "qty": l["qty"], "price": l["price"],
-                           "sum": kc.line_sum(l["price"], l["qty"])} for l in sale["lines"]]}
+                           "sum": kc.line_sum(l["price"], l["qty"])} for l in sale["lines"]],
+                "print": bool(item.get("print"))}
 
     def _bridge_fail(self, item, msg, target):
         """1C hujjatni yozmadi: yangi sotuv — kassirga xato; fondagisi — "xato" (admin ko'radi)."""
@@ -1053,6 +1071,15 @@ class KassaService:
         if self.bridge is None:
             self.bridge = self.make_bridge()
         return self.bridge
+
+    def _print_errs(self, br):
+        try:
+            errs = br.print_errors()
+        except (AttributeError, OSError):
+            errs = []
+        if errs:
+            self.print_err = "%s %s" % (time.strftime("%H:%M"), errs[-1])
+            log.warning("kassa: 1C chekni chiqarmadi: %s", errs[-1])
 
     def _set_bridge_mode(self):
         if not self.bridge_mode:
@@ -1085,6 +1112,7 @@ class KassaService:
             self.busy = True
             try:
                 out.update(br.run([self._job(it) for it in todo], timeout=BRIDGE_WAIT if target else 20))
+                self._print_errs(br)
             except (RuntimeError, OSError) as e:
                 err = str(e)[:300]
             finally:
@@ -1195,6 +1223,38 @@ class KassaService:
         items.sort(key=lambda r: (r.get("date", "")[6:10], r.get("date", "")[3:5], r.get("date", "")[:2],
                                   r.get("date", "")[11:]), reverse=True)
         return {"ok": True, "day": d.strftime("%Y-%m-%d"), "items": items[:500], "e1c": err}
+
+    def print_1c(self, token, rid="", no="", date=""):
+        """pc 15: chekni 1C'ning O'ZI chiqaradi (bazadagi ПечатьНажатие_1 — kompyuterdagi chek printeriga)."""
+        self.who(token)
+        if rid:
+            r = self.done.get(rid)
+            if r is None:
+                with self.qlock:
+                    pend = any(p["id"] == rid for p in self.pending)
+                raise kc.KassaError("Sotuv hali 1C'ga yozilmagan — bir oz kuting" if pend else "Sotuv topilmadi")
+            no, date = r.get("no", ""), r.get("date", "")
+        no, date = str(no or "").strip(), str(date or "").strip()[:10]
+        if not no or not re.match(r"^\d\d\.\d\d\.\d{4}$", date):
+            raise kc.KassaError("Chek uchun hujjat raqami yo'q")
+        if self.make_bridge is None:
+            raise kc.KassaError("1C ko'prigi sozlanmagan")
+        import onec_bridge
+        job = onec_bridge.print_job("pr" + secrets.token_hex(6), no, date)
+
+        def go():
+            out = self._br().run([job], timeout=15)
+            self._print_errs(self._br())
+            r = out.get(job["id"])
+            if r is None:
+                return {"ok": True, "wait": True}
+            if r[0] != "OK":
+                raise kc.KassaError("1C: %s" % r[1][:200])
+            return {"ok": True}
+        try:
+            return self.call(go, timeout=40)
+        except (RuntimeError, OSError) as e:
+            raise kc.KassaError(str(e)[:200])
 
     def report(self, day=None):
         day = day or dt.datetime.fromtimestamp(self.clock()).strftime("%d.%m.%Y")
@@ -1712,7 +1772,12 @@ def make_handler(service, static_dir):
             body = self._body()
             try:
                 if path == "/api/login":
+                    if body.get("auto"):
+                        return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/print":
+                    return self._json(200, service.print_1c(body.get("token"), body.get("id") or "", body.get("no") or "",
+                                                            body.get("date") or ""))
                 if path == "/api/sale":
                     return self._json(200, service.sale(body))
                 if path == "/api/admin":
