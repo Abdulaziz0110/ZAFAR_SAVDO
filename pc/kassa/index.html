@@ -37,6 +37,7 @@
     <button id="editCancel" class="big muted">Bekor qilish</button>
     <button id="editSave" class="big primary">Saqlash</button>
   </div>
+  <div class="upd-bar hidden" id="updBar" role="status"></div>
   <header class="top" data-ui="top">
     <div class="who">
       <div class="store" id="storeName">Kassa</div>
@@ -53,8 +54,9 @@
     <!-- CHAP: savat -->
     <div class="left" data-ui="cart">
       <div class="mode-bar hidden" id="modeBar">QAYTARISH — mijoz qaytargan tovar</div>
-      <div class="thead" data-ui="thead"><span>№</span><span>Mahsulot</span><span>Soni</span><span>Narxi</span><span>Summa</span></div>
+      <div class="thead" data-ui="thead"><span>№</span><span>Mahsulot</span><span id="thStock" class="hidden">Qoldiq</span><span>Soni</span><span>Narxi</span><span>Summa</span></div>
       <div class="cart" id="cart" role="list"></div>
+      <button class="change-big hidden" id="changeBig" aria-live="polite"></button>
       <div class="cart-empty" id="cartEmpty">Savat bo'sh — skanerlang, kodni yozing yoki «Panel»dan tanlang</div>
       <div class="sel-info" id="selInfo" data-ui="selinfo"></div>
       <div class="row-tools" data-ui="tools">
@@ -129,6 +131,7 @@
           <button class="field" data-f="card"><span>Plastik</span><b id="fCard">0</b></button>
           <button class="field" data-f="click"><span>Click</span><b id="fClick">0</b></button>
         </div>
+        <div class="notes" id="notes" aria-label="Xaridor bergan pul"></div>
         <div class="quick">
           <button data-all="cash">Hammasi naqd</button>
           <button data-all="card">Hammasi plastik</button>

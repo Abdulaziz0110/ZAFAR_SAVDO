@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 18) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 19) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -56,6 +56,9 @@ Belgilar:
 | pc 16: to'lovdan keyin dialog yo'q — darhol bo'sh oyna (qaytim qisqa xabarda); Tozalash va sotuvdan keyin narx turi 1 ga qaytadi; "Blok" tugmasini yashirish; "Kirishda parol so'ralmasin" (tanlangan kassir nomidan avtomatik kirish) | VERIFIED (test + brauzer) |
 | pc 17: sotuv javobi tezroq — tovarlar ma'lumoti (JSON/gzip) sotuv paytida emas, faqat so'ralganda tayyorlanadi; sekin javob jurnalga yoziladi; kutish paytida 0→100% to'ladigan chiziq (tez javobda ko'rinmaydi) | VERIFIED (test + brauzer) |
 | pc 18: yangilanishdan keyin dastur ishlamay qolishi tuzatildi — yangi nusxa eski nusxa yopilishini 45 s kutadi (avval darhol "boshqasi ishlayapti" deb chiqib ketardi); kassa porti band bo'lsa bo'shaguncha qayta urinadi (avval bir marta urinib to'xtardi -> ERR_CONNECTION_REFUSED) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| pc 19: ixcham joylashuv — ro'yxatga 12-14 tovar sig'adi (tugmalar o'lchami o'zgarmagan); oq/qora fon (Sozlamalar); pastdagi tugmalar ikonka + yirik nom; katta oyna tugmalari | VERIFIED (brauzer) |
+| pc 19: qoldiq hech qayerda ko'rinmaydi, sozlamada yoqilsa ro'yxatda "Qoldiq" ustuni; qidiruvda oxirgi 12 ta tanlangan tovar; to'lovda banknot tugmalari (50/100/200 ming); sotuvdan keyin QAYTIM (yoki qarz) savat ustida katta yozuvda 6 s; qo'shilgan qator yonib turadi; "tik" ovozi (xato — past ovoz) | VERIFIED (brauzer) |
+| pc 19: sariq "1C'ga yozilmagan" faqat sotuv 1 daqiqadan ko'p kutsa; xatolar — Sozlamalar tugmasida qizil nuqta; telefondan yangilanganda kassada "Dastur yangilanmoqda" yozuvi, keyin o'zi qayta ochiladi; Sozlamalarda versiya | VERIFIED (test + brauzer) |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 

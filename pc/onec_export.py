@@ -821,6 +821,7 @@ class OneC:
 
 
 
+UPDATE_SEC = 3600           # yangilanish soatda bir marta (tezroq kerak bo'lsa — telefondan "hozir yangilash")
 AUTOSTART_TASK = "IMSOFT server"
 
 
@@ -1700,13 +1701,14 @@ def loop(cfg):
         if asked:
             last_upd = 0.0
         # v5.3: dastur o'zi yangilanadi (soatiga bir marta tekshiradi; yozish navbati bo'sh paytda)
-        if time.time() - last_upd >= 3600:
+        if time.time() - last_upd >= UPDATE_SEC:
             last_upd = time.time()
             try:
                 import selfupdate
                 if selfupdate.check(cloud, inbox, HERE):
                     safe_status(cloud, "Kompyuter dasturi yangilandi — qayta ishga tushmoqda", True)
                     if kassa_svc is not None:
+                        kassa_svc.updating = "Dastur yangilanmoqda — 1 daqiqa kuting, kassa o'zi qayta ochiladi"
                         kassa_svc.wait_idle(90)     # kassa sotuvi yozilayotgan bo'lsa tugashini kutadi
                     writer.quit()
                     selfupdate.restart()
@@ -1714,7 +1716,7 @@ def loop(cfg):
                     safe_status(cloud, "Kompyuter dasturi eng yangi versiyada (%s)" % PC_VERSION, True)
             except Exception as e:  # noqa: BLE001
                 log.warning("yangilanishni tekshirib bo'lmadi: %s", e)
-                last_upd = time.time() - 3600 + 300    # internet yo'q edi - 5 daqiqadan keyin qayta (soat kutilmaydi)
+                last_upd = time.time() - UPDATE_SEC + 300    # internet yo'q edi - 5 daqiqadan keyin qayta
         # v3.12: avval yozish navbati — Admin kutib qolmasin
         do_writes()
         try:

@@ -22,7 +22,7 @@
   }
 
   var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {},
-    ptypeShow: false, chk1c: true, hideLock: false, auto: '' };
+    ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'light', notes: [50000, 100000, 200000] };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
     { id: 'search', b: 'Qidiruv', s: "nomi bo'yicha", big: true },
@@ -88,6 +88,8 @@
     pay: null,
     last: load('k_last', null),
     code: load('k_code', ''),
+    recent: load('k_recent', []),
+    flash: -1,
     outbox: load('k_outbox', []),
     stateAt: load('k_state_at', 0),
     kb: null,
@@ -130,15 +132,17 @@
     if (err) beep();
   }
   var audio = null;
-  function beep() {
+  function tone(freq, sec, vol) {
     if (!S.ui.sound) return;
     try {
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
       var o = audio.createOscillator(); var g = audio.createGain();
-      o.frequency.value = 880; g.gain.value = 0.15;
-      o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.18);
+      o.frequency.value = freq; g.gain.value = vol;
+      o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + sec);
     } catch (e) { /* ovoz yo'q */ }
   }
+  function beep() { tone(330, 0.3, 0.2); }          // xato — past, uzunroq
+  function tick() { tone(1500, 0.05, 0.08); }       // tovar qo'shildi — qisqa "tik"
   /** pc 17: sotuv yuborilayotganda 0 dan 100 gacha to'ladigan chiziq (tez javobda umuman ko'rinmaydi). */
   var prog = { t0: 0, raf: 0, show: 0 };
   function progress(on) {
@@ -398,7 +402,10 @@
     return api('GET', '/api/ping', undefined, 10000).then(function (j) {
       if (S.pcVer && j.v && j.v !== S.pcVer && idle()) { window.location.reload(); return; }
       S.pcVer = j.v || S.pcVer;
-      S.pcQ = j.q || 0; S.pcQe = j.qe || 0;
+      S.pcQ = j.q || 0; S.pcQa = j.qa || 0;
+      if ((j.qe || 0) !== (S.pcQe || 0)) { S.pcQe = j.qe || 0; renderFn(); }
+      S.pcv = j.v || '';
+      showUpdating(j.up || '');
       if (!!j.ps !== !!S.ps) { S.ps = !!j.ps; renderFn(); }
       if (j.pe && j.pe !== S.pe) { if (S.pe !== undefined) toast("1C chekni chiqarmadi: " + j.pe, true, 8000); S.pe = j.pe; }
       else if (S.pe === undefined) S.pe = j.pe || '';
@@ -408,10 +415,12 @@
   function idle() {
     return hidden('payModal') && hidden('askModal') && hidden('busy') && hidden('setView') && !S.edit;
   }
+  /** pc 19: sariq belgi kassirni chalg'itmasin — faqat sotuv 1 daqiqadan ko'p kutib qolsa; xatolar Sozlamalarda. */
   function renderQueue() {
-    var n = S.pcQ + S.pcQe + S.outbox.length;
+    var late = (S.pcQa || 0) >= 60 ? S.pcQ : 0;
+    var n = late + S.outbox.length;
     $('queueBadge').classList.toggle('hidden', n === 0);
-    $('queueN').textContent = String(n) + (S.pcQe ? ' (' + S.pcQe + ' xato)' : '');
+    $('queueN').textContent = String(n);
   }
 
   // ---------------- monoblok navbati (kompyuter javob bermasa) ----------------
@@ -475,7 +484,10 @@
       S.sel = w.lines.length - 1;
     }
     touchWin();
+    hideChange();
+    S.flash = S.sel;
     renderCart(true); renderDisplay(); renderWins();
+    tick();
   }
   function setQty(i, milli) {
     var l = W().lines[i];
@@ -576,10 +588,10 @@
         b.appendChild(icon(f.id));
         var tx = el('span', 'tx');
         var bt = el('b', '', f.b);
-        if (f.id === 'settings' && S.ps) bt.appendChild(el('i', 'badge-dot'));
+        if (f.id === 'settings' && (S.ps || S.pcQe)) bt.appendChild(el('i', 'badge-dot'));
         tx.appendChild(bt);
-        tx.appendChild(el('small', '', sub));
         b.appendChild(tx);
+        b.title = sub;
         box.appendChild(b);
       });
     });
@@ -611,11 +623,19 @@
       var nm = el('span', 'nm', l.name);
       if (!S.byCode[l.code] && S.data) nm.appendChild(el('i', '', "1C'da yo'q"));
       row.appendChild(nm);
+      if (S.ui.stock) {
+        var sg = S.byCode[l.code];
+        row.appendChild(el('span', 'st' + (sg && sg.s <= 0 ? ' none' : ''), sg ? qtyText(L.milli(sg.s)) : ''));
+      }
       row.appendChild(el('span', '', qtyText(l.milli)));
       row.appendChild(el('span', '', money(l.price)));
       row.appendChild(el('span', 'sm', money(L.lineSum(l.price, l.milli))));
+      if (i === S.flash) row.classList.add('flash');
       c.appendChild(row);
     });
+    S.flash = -1;
+    document.body.classList.toggle('stockcol', !!S.ui.stock);
+    $('thStock').classList.toggle('hidden', !S.ui.stock);
     var t = total(w), d = discount(w);
     $('tTotal').textContent = money(t);
     $('tDisc').textContent = money(d) + (w.dmode === 'pct' && w.dval ? ' (' + (w.dval / 100) + '%)' : '');
@@ -628,7 +648,7 @@
       var g = S.byCode[s.code];
       info.appendChild(el('b', '', s.name));
       info.appendChild(el('span', '', qtyText(s.milli) + ' × ' + money(s.price) + ' = ' + money(L.lineSum(s.price, s.milli)) +
-        (g ? ' · qoldiq: ' + qtyText(L.milli(g.s)) : '')));
+        (g && S.ui.stock ? ' · qoldiq: ' + qtyText(L.milli(g.s)) : '')));
     }
     if (scroll) {
       var r = c.querySelector('.row.sel');
@@ -650,7 +670,6 @@
     b.appendChild(el('span', 'tn', g.n));
     var p = el('span', 'tp');
     p.appendChild(el('span', '', money(L.priceOf(g, S.ptype, S.data.rate))));
-    if (S.ui.stock) p.appendChild(el('i', g.s > 0 ? '' : 'none', L.fmtQty(L.milli(g.s)) + (g.e ? ' ' + g.e : '')));
     b.appendChild(p);
     return b;
   }
@@ -733,7 +752,10 @@
       if (!n) box.appendChild(el('div', 'grid-msg', q ? 'Mijoz topilmadi' : "Ismi yoki telefonini yozing (qarzdorlar ko'rsatilgan)"));
       return;
     }
-    var res = k.text.trim() ? L.search(S.data.g, k.text, S.ptype, S.data.rate, 60) : [];
+    var recent = !k.text.trim() && k.kind === 'goods';
+    var res = k.text.trim() ? L.search(S.data.g, k.text, S.ptype, S.data.rate, 60) :
+      recent ? S.recent.map(function (c) { return S.byCode[c]; }).filter(Boolean) : [];
+    if (recent && res.length) box.appendChild(el('div', 'kb-sub', 'Oxirgi qidirilganlar'));
     if (k.kind === 'price') {
       var pc = L.cents(k.text);
       res = S.data.g.filter(function (g) { return L.priceOf(g, S.ptype, S.data.rate) === pc; }).slice(0, 60);
@@ -769,7 +791,7 @@
     var rows = S.ui.ptypeShow ? L.PRICE_TYPES.map(function (p) {
       return { a: ptypeLabel(p) + (p === S.ptype ? ' (hozirgi)' : ''), b: money(L.priceOf(g, p, S.data.rate)), cls: p === S.ptype ? 'big' : '' };
     }) : [{ a: 'Narx', b: money(L.priceOf(g, S.ptype, S.data.rate)), cls: 'big' }];
-    rows.push({ a: 'Qoldiq', b: L.fmtQty(L.milli(g.s)) + (g.e ? ' ' + g.e : ''), cls: g.s > 0 ? '' : 'warn' });
+    if (S.ui.stock) rows.push({ a: 'Qoldiq', b: qtyText(L.milli(g.s)), cls: g.s > 0 ? '' : 'warn' });
     rows.push({ a: 'Kod', b: g.c });
     info(g.n, rows, [{ label: "Savatga qo'shish", cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); addGoods(g, 1000, false); } }]);
   }
@@ -849,6 +871,7 @@
     if (!w.id) { w.id = L.newId(); saveWins(); }
     var t = total(w), d = discount(w);
     S.pay = { total: t, discount: d, cash: t - d, card: 0, click: 0, field: 'cash', buf: '', client: null };
+    renderNotes();
     $('payTitle').textContent = w.mode === 'return' ? 'Qaytarish' : (t === 0 ? "Qarz to'lovi" : "To'lov");
     $('pDueLabel').textContent = w.mode === 'return' ? 'Qaytariladi' : "To'lanadi";
     $('printChk').checked = !!S.ui.autoprint;
@@ -858,6 +881,15 @@
     if (debtOnly) openKb('client', "Qarz to'laydigan mijoz");
   }
   function closePay() { $('payModal').classList.add('hidden'); S.pay = null; }
+  function renderNotes() {
+    var box = $('notes');
+    box.textContent = '';
+    (S.ui.notes || []).forEach(function (n) {
+      var b = el('button', 'note', money(L.cents(n)));
+      b.setAttribute('data-note', String(n));
+      box.appendChild(b);
+    });
+  }
   function payState() {
     var p = S.pay;
     return L.settle(p.total, p.discount, p.cash, p.card, p.click, !!p.client, W().mode === 'return');
@@ -942,13 +974,30 @@
       (res.debt > 0 && res.kind === 'sale' ? 'Qarzga: ' + money(L.cents(res.debt)) : '');
     // dialog yo'q: darhol bo'sh savdo oynasi; qaytim/qarz qisqa xabarda
     var msg = $('doneChange').textContent;
-    toast((res.kind === 'return' ? 'Qaytarish' : 'Sotuv') + ' qabul qilindi' + (msg ? ' · ' + msg : ''), false, msg ? 6000 : 2500);
+    if (msg) showChange(msg, res.change ? '' : 'debt');
+    else toast((res.kind === 'return' ? 'Qaytarish' : 'Sotuv') + ' qabul qilindi');
     var lines = W().lines.slice();
     clearWin();
     renderQueue();
     applyLocal(res, lines);
     if (print && !S.ui.chk1c) setTimeout(function () { printReceipt(res); }, 30);
   }
+  /** Dastur yangilanayotgani (kompyuter o'zi topdi va o'rnatyapti) — kassa ustida yozuv; tugagach sahifa o'zi yangilanadi. */
+  function showUpdating(text) {
+    var b = $('updBar');
+    if (text) { b.textContent = text; b.classList.remove('hidden'); S.updAt = Date.now(); }
+    else if (S.updAt && Date.now() - S.updAt > 3000) { b.classList.add('hidden'); S.updAt = 0; }
+  }
+  /** Sotuvdan keyin qaytim (yoki qarz) savat ustida katta yozuvda 6 soniya; bosilsa yoki yangi tovar qo'shilsa yo'qoladi. */
+  var changeTimer = 0;
+  function showChange(text, cls) {
+    var b = $('changeBig');
+    b.textContent = text.toUpperCase();
+    b.className = 'change-big' + (cls ? ' ' + cls : '');
+    clearTimeout(changeTimer);
+    changeTimer = setTimeout(hideChange, 6000);
+  }
+  function hideChange() { clearTimeout(changeTimer); $('changeBig').className = 'change-big hidden'; }
   /** Chek: sozlamaga ko'ra 1C'ning o'zi (kompyuter printeriga, bazadagi chek) yoki shu oyna. */
   function reprint(r) {
     if (!r) { toast("Hali chek yo'q", true); return; }
@@ -1056,6 +1105,7 @@
   function applyUi(u) {
     S.ui = u;
     save('k_ui', u);
+    document.body.classList.toggle('dark', u.theme === 'dark');
     S.wins = fixWins(S.wins);
     if (S.w >= S.wins.length) S.w = 0;
     var css = [];
@@ -1115,7 +1165,7 @@
       btn(seg, String(n), u.wins === n ? 'on' : '', function () { u.wins = n; saveUi(u, renderSettings); });
     });
     var c2 = card('Chek va ovoz');
-    [['autoprint', "To'lovdan keyin chek chiqarish"], ['sound', 'Xatoda ovozli signal'], ['stock', "Panel tugmalarida qoldiqni ko'rsatish"],
+    [['autoprint', "To'lovdan keyin chek chiqarish"], ['sound', 'Xatoda ovozli signal'], ['stock', "Ro'yxatda har tovarning qoldig'ini ko'rsatish"],
       ['ptypeShow', "Narx turini yuqorida ochiq ko'rsatish (o'chiq bo'lsa: raqam maydonini 1 soniya bosib turing)"],
       ['chk1c', "Chekni 1C'ning o'zi chiqaradi (kompyuterdagi chek printeri, bazadagi chek)"],
       ['hideLock', "«Blok» tugmasini yashirish"]]
@@ -1137,6 +1187,17 @@
     btn(c2, 'Chek pastidagi matn: ' + (u.footer || '—'), 'tg', function () {
       openKb('text', 'Chek pastidagi matn', function (t) { u.footer = t.slice(0, 60); saveUi(u, renderSettings); });
       S.kb.text = u.footer || ''; renderKb();
+    });
+    var cv = card("Ko'rinish va dastur", 'Kompyuter dasturi: versiya ' + (S.pcv || '?') +
+      ". Telefondan «hozir yangilash» bosilganda kassada «Dastur yangilanmoqda» yozuvi chiqadi va kassa o'zi qayta ochiladi.");
+    btn(cv, u.theme === 'dark' ? 'Fon: QORA (oqqa o\'tkazish)' : "Fon: OQ (qoraga o'tkazish)", 'big muted', function () {
+      u.theme = u.theme === 'dark' ? 'light' : 'dark';
+      saveUi(u, renderSettings);
+    });
+    btn(cv, 'Yangilanishni hozir tekshirish', 'big muted', function () {
+      api('POST', '/api/update', { token: S.token, grant: S.grant }, 20000).then(function (j) {
+        toast(j.ok ? "Tekshirilmoqda — yangisi bo'lsa kassa o'zi yangilanadi" : (j.e || 'Xato'), !j.ok);
+      }).catch(function (e) { toast(e.message, true); });
     });
     var cp = card('Panel', (S.data && S.data.pnls === 'kassa' ? 'Hozir: tasdiqlangan tavsiya.' : "Hozir: 1C'dagi panel.") +
       " Har hafta eng ko'p sotilgan tovarlardan tavsiya tayyorlanadi: tarozi tovarlari (pistalar, bodomlar, keshu… ketma-ket), " +
@@ -1615,16 +1676,29 @@
       }
       var t = e.target.closest ? e.target.closest('.tile[data-code]') : null;
       if (!t) return;
+      var code = t.getAttribute('data-code');
+      if (S.kb.kind === 'goods') {
+        S.recent = [code].concat(S.recent.filter(function (x) { return x !== code; })).slice(0, 12);
+        save('k_recent', S.recent);
+      }
       closeKb();
-      addGoods(S.byCode[t.getAttribute('data-code')], 1000, false);
+      addGoods(S.byCode[code], 1000, false);
     });
     on('kbClose', closeKb);
 
+    on('changeBig', hideChange);
     on('payClose', closePay);
     document.querySelector('.fields').addEventListener('click', function (e) {
       var f = e.target.closest ? e.target.closest('.field') : null;
       if (!f || !S.pay) return;
       S.pay.field = f.getAttribute('data-f'); S.pay.buf = '';
+      renderPay();
+    });
+    $('notes').addEventListener('click', function (e) {
+      var v = e.target.closest ? e.target.closest('button[data-note]') : null;
+      if (!v || !S.pay) return;
+      S.pay.buf = ''; S.pay.field = 'cash';
+      S.pay.cash = L.cents(v.getAttribute('data-note'));
       renderPay();
     });
     document.querySelector('.quick').addEventListener('click', function (e) {

@@ -359,3 +359,54 @@ body.editing [data-ui].ed-on { outline: 4px solid #3d5afe; }
 .prog-t b { color: var(--acc); font-variant-numeric: tabular-nums; }
 .prog-line { height: 18px; border-radius: 9px; background: var(--acc-soft); overflow: hidden; }
 .prog-line i { display: block; height: 100%; width: 0; background: var(--acc); border-radius: 9px; transition: width .12s linear; }
+
+/* ================= pc 19: ixcham (ekonom) joylashuv — ro'yxatga 13-14 ta tovar sig'adi ================= */
+.top { height: 58px; }
+.wins button { min-width: 132px; min-height: 48px; font-size: 21px; font-weight: 800; }
+.wins button small { font-size: 13px; font-weight: 600; }
+.thead { padding: 6px 12px; font-size: 14px; }
+.thead, .row { grid-template-columns: 34px 1fr 90px 104px 124px; }
+body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 80px 100px 116px; }
+.row { padding: 5px 6px; font-size: 18px; border-radius: 6px; }
+.row .nm { -webkit-line-clamp: 1; }
+.row .st { color: var(--ink2); }
+.row .st.none { color: var(--warn); }
+.row.flash { animation: rowflash .9s ease-out; }
+@keyframes rowflash { 0% { background: #ffe58a; } 100% { background: var(--acc-soft); } }
+.sel-info { display: none; }
+.row-tools { padding: 6px 8px; border-top: 1px solid var(--line); }
+.totals { display: flex; align-items: center; gap: 22px; padding: 6px 14px; }
+.t-line { gap: 8px; }
+.t-line.due { margin-left: auto; }
+.t-line.due b { font-size: 36px; }
+.left { position: relative; }
+.change-big { position: absolute; left: 12px; right: 12px; top: 40%; min-height: 96px; border-radius: 18px; background: var(--acc); color: #fff;
+  font-size: 44px; font-weight: 900; letter-spacing: 1px; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); z-index: 3; }
+.change-big.debt { background: var(--warn); }
+/* pastdagi tugmalar: ikonka va yirik nom (kichik yozuvlarsiz) */
+.fn button { flex-direction: column; justify-content: center; gap: 2px; padding: 0 4px; }
+.fn button .tx { align-items: center; text-align: center; }
+.fn button .tx b, .fn button.fn-big .tx b { font-size: 18px; overflow-wrap: normal; white-space: nowrap; }
+.fn button .ic, .fn button.fn-big .ic { width: 27px; height: 27px; }
+.fn button[data-fn="settings"] { flex-direction: row; gap: 10px; }
+/* to'lov: xaridor bergan pul */
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.notes:empty { display: none; }
+.notes .note { min-height: 52px; font-size: 20px; font-weight: 800; background: var(--tile); border: 2px solid var(--line); }
+/* qidiruv: oxirgi qidirilganlar */
+.kb-sub { grid-column: 1 / -1; color: var(--ink2); font-weight: 700; padding: 2px 4px; }
+/* yangilanish yozuvi */
+.upd-bar { background: #ffcc4d; color: #3a2a00; font-weight: 800; font-size: 18px; text-align: center; padding: 6px; flex: none; }
+
+/* ================= qora fon ================= */
+body.dark {
+  --bg: #0f1412; --panel: #1a211e; --ink: #e8efe9; --ink2: #9fb0a7; --line: #2c3631; --acc: #2fb57a; --acc-ink: #06140d;
+  --acc-soft: #173a2a; --warn: #ff8a80; --warn-soft: #3a1d1b; --ret: #e08a3c; --ret-soft: #3b2614; --tile: #141a17; --muted: #27302c;
+}
+body.dark .top { background: #13281e; color: #e8efe9; }
+body.dark.ret .top { background: #4a2a10; }
+body.dark .wins button.on { background: var(--acc); color: #06140d; }
+body.dark .fn button.fn-main, body.dark .pay-btn, body.dark .primary, body.dark .change-big { color: #06140d; }
+body.dark .row.flash { animation-name: rowflashd; }
+@keyframes rowflashd { 0% { background: #6b5a12; } 100% { background: var(--acc-soft); } }
+@media print { body.dark { background: #fff; } }

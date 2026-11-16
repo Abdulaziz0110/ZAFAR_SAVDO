@@ -724,6 +724,7 @@ class KassaService:
         self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
         self.warm_at = 0.0
         self.print_err = ""
+        self.updating = ""          # "Dastur yangilanmoqda…" — monoblokda yozuv chiqadi
         self.onec = onec or KassaOneC(conf.title)
         self.clock = clock
         self.version = version
@@ -892,11 +893,14 @@ class KassaService:
         return v
 
     def ping(self):
+        now = self.clock()
         with self.qlock:
-            waiting = sum(1 for p in self.pending if p.get("state") != "error")
+            wait = [p for p in self.pending if p.get("state") != "error"]
             errors = sum(1 for p in self.pending if p.get("state") == "error")
-        return {"ok": True, "v": self.version, "q": waiting, "qe": errors, "err": self.last_error[:300],
-                "data": self.ver, "ps": 1 if self._suggest_new() else 0, "pe": self.print_err}
+            oldest = max([now - p.get("at", now) for p in wait] or [0])
+        return {"ok": True, "v": self.version, "q": len(wait), "qa": int(oldest), "qe": errors,
+                "err": self.last_error[:300], "data": self.ver, "ps": 1 if self._suggest_new() else 0, "pe": self.print_err,
+                "up": self.updating}
 
     # --- sotuv: avval navbat (disk), keyin 1C ---
     def sale(self, body):
