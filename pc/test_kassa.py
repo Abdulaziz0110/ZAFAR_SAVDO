@@ -419,6 +419,13 @@ class ConfTest(unittest.TestCase):
                 f.write("[kassa]\nenabled = 0\nport = 9000\ntitle = Zafar\nrefresh = 999\n")
             k = kassa.KassaConf.load(d)
             self.assertEqual((k.enabled, k.port, k.title, k.refresh_min), (False, 9000, "Zafar", 120))
+            # Bloknot ANSI (1251) da saqlagan ini — kassa baribir ishga tushadi (5.4 dagi xato)
+            with open(os.path.join(d, "onec.ini"), "wb") as f:
+                f.write("[onec]\nbase = D:\\1C — Do'kon\n[kassa]\ntitle = Дукон\n".encode("cp1251"))
+            with open(os.path.join(d, "forwarder.ini"), "wb") as f:
+                f.write(b"\xef\xbb\xbf[x]\na = 1\n")
+            k = kassa.KassaConf.load(d)
+            self.assertEqual((k.enabled, k.title), (True, "Дукон"))
         finally:
             shutil.rmtree(d, ignore_errors=True)
 

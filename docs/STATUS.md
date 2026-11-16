@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 5) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 6) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -24,6 +24,7 @@ Belgilar:
 | Monoblok o'rnatish fayli (Chrome/Edge kiosk, avtozapusk) | IMPLEMENTED-UNVERIFIED (Windows'da sinalmagan) |
 | Brandmauer 8077-port (dastur o'zi; bo'lmasa allow_firewall.bat) | IMPLEMENTED-UNVERIFIED |
 | Admin ilovasi: Kompyuter ekranida kassa manzili va monoblok ko'rsatmasi | VERIFIED (kompilyatsiya) |
+| pc 6: onec.ini Bloknotda ANSI (1251) saqlangan bo'lsa kassa ishga tushmasdi — tuzatildi; internet yo'q bo'lsa yangilanish 5 daqiqada qayta tekshiriladi | VERIFIED (test) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish | NOT-IMPLEMENTED |
 
 ## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova

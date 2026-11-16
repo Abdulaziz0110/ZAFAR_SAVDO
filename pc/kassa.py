@@ -49,6 +49,21 @@ CALL_TIMEOUT = 120
 
 # ---------------------------------------------------------------- sozlama
 
+def read_text(path):
+    """Bloknot UTF-8 (BOM bilan/siz) yoki ANSI (1251) da saqlagan bo'lsa ham o'qiladi. Fayl yo'q — None."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return None
+    for enc in ("utf-8-sig", "cp1251"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1")
+
+
 class KassaConf:
     def __init__(self, enabled=True, port=PORT, title="", refresh_min=5):
         self.enabled = enabled
@@ -61,11 +76,13 @@ class KassaConf:
         cp = configparser.ConfigParser(interpolation=None)
         for name in ("forwarder.ini", "onec.ini"):
             p = os.path.join(here, name)
-            try:
-                with open(p, "r", encoding="utf-8-sig") as f:
-                    cp.read_string(f.read(), source=p)
-            except (OSError, configparser.Error):
+            text = read_text(p)
+            if text is None:
                 continue
+            try:
+                cp.read_string(text, source=p)
+            except configparser.Error as e:
+                log.warning("kassa: %s o'qilmadi: %s", name, e)
         s = cp["kassa"] if cp.has_section("kassa") else {}
         g = lambda k, d="": (s.get(k, d) or d).strip()  # noqa: E731
 

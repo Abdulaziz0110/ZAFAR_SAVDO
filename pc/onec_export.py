@@ -1487,6 +1487,7 @@ def loop(cfg):
                     selfupdate.restart()
             except Exception as e:  # noqa: BLE001
                 log.warning("yangilanishni tekshirib bo'lmadi: %s", e)
+                last_upd = time.time() - 3600 + 300    # internet yo'q edi - 5 daqiqadan keyin qayta (soat kutilmaydi)
         # v3.12: avval yozish navbati — Admin kutib qolmasin
         do_writes()
         try:
