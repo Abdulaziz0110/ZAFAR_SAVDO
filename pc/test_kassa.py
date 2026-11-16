@@ -233,6 +233,8 @@ class ServiceTest(unittest.TestCase):
         tok = self.login()
         a = self.svc.sale(sale_body(token=tok))
         b = self.svc.sale(sale_body(token=tok))
+        for x in (a, b):
+            x.pop("v0"), x.pop("v1")
         self.assertEqual(a, b)
         self.assertEqual(len(self.c.written), 1)
         # dastur qayta ishga tushsa ham (jurnal faylda)
@@ -327,7 +329,17 @@ class ServiceTest(unittest.TestCase):
                 s.left[0].pop(rid, None)
                 s.left[1].discard(rid)
 
-            def run(s, jobs):
+            def heartbeat(s):
+                s.beats = getattr(s, "beats", 0) + 1
+
+            def alive(s):
+                return not s.fail
+
+            def ensure_running(s):
+                if s.fail:
+                    raise RuntimeError(s.fail)
+
+            def run(s, jobs, timeout=30):
                 if s.fail:
                     raise RuntimeError(s.fail)
                 s.runs.append(jobs)
@@ -376,6 +388,14 @@ class ServiceTest(unittest.TestCase):
         self.svc.call(lambda: self.svc._drain())
         self.assertEqual(self.svc.done.get("br000005")["no"], "B9")
         self.assertEqual(len(br.runs), n)
+        # dastur qayta ishga tushsa ham ko'prik rejimi esda (COM'ga qayta urinmaydi), 1C oldindan ochib qo'yiladi
+        svc2 = kassa.KassaService(kassa.KassaConf(), self.dir, lambda: self.conn, bridge=lambda: br, clock=lambda: self.t[0])
+        self.assertTrue(svc2.bridge_mode)
+        svc2.tick()
+        self.assertGreater(br.beats, 0)
+        r = self.svc.sale(sale_body(token=tok, id="br000006", lines=[{"code": "15", "qty": 1, "price": 6000}], cash="6000"))
+        self.assertTrue(r["queued"])
+        self.assertGreater(r["v1"], r["v0"])                                     # monoblok qoldiqni o'zida o'zgartiradi
 
     def test_panel_suggestion_approve_and_reset(self):
         tok = self.login()

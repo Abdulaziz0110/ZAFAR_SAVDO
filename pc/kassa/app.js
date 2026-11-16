@@ -21,7 +21,7 @@
     try { window.localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* xotira yo'q */ }
   }
 
-  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: 'Xaridingiz uchun rahmat!', hide: [], el: {},
+  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {},
     ptypeShow: false };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
@@ -802,49 +802,88 @@
     $('doneChange').textContent = res.change ? 'Qaytim: ' + money(L.cents(res.change)) :
       (res.debt > 0 && res.kind === 'sale' ? 'Qarzga: ' + money(L.cents(res.debt)) : '');
     $('doneModal').classList.remove('hidden');
+    var lines = W().lines.slice();
     clearWin();
     renderQueue();
-    refreshData();
-    if (print) printReceipt(res);
+    applyLocal(res, lines);
+    if (print) setTimeout(function () { printReceipt(res); }, 30);
   }
+  /** Sotuvdan keyin qoldiq va mijoz qarzi shu yerning o'zida o'zgaradi — butun ro'yxat qayta yuklanmaydi (tez). */
+  function applyLocal(res, lines) {
+    if (!S.data || res.v0 == null || res.v0 !== S.ver) { refreshData(); return; }
+    var sign = res.kind === 'return' ? 1 : -1;
+    lines.forEach(function (l) {
+      var g = S.byCode[l.code];
+      if (g) g.s = Math.round((g.s + sign * l.milli / 1000) * 1000) / 1000;
+    });
+    if (res.client && res.debt) {
+      var dd = (res.kind === 'return' ? -1 : 1) * res.debt;
+      S.data.cl.forEach(function (c) { if (c[0] === res.client) c[3] = Math.round((c[3] + dd) * 100) / 100; });
+    }
+    S.ver = res.v1;
+  }
+  /** Chek — 1C'dagi "Чек1" maketi bilan bir xil tartib (sarlavha, vaqt/sana, mijoz, agent, qarz, tovarlar, summa,
+   *  chegirma, to'lov, qarz qoldig'i, telefon). Qiymatlar 1C kabi: so'm — "1 446 750", dollar — "0,00". */
   function printReceipt(r) {
     var R = $('receipt');
     R.textContent = '';
-    function line(a, b, cls) {
-      var d = el('div', 'ln' + (cls ? ' ' + cls : ''));
-      d.appendChild(el('span', '', a));
-      d.appendChild(el('b', '', b));
+    var k = (S.data && S.data.chk) || {};
+    function row(cls, a, b) {
+      var d = el('div', cls);
+      d.appendChild(el('span', 'k', a));
+      d.appendChild(el('span', 'v', b));
       R.appendChild(d);
     }
-    R.appendChild(el('div', 'c h', (S.data && (S.data.title || S.data.store)) || 'Kassa'));
-    R.appendChild(el('div', 'c', (r.kind === 'return' ? 'QAYTARISH' : r.doc === 'ОплатаДолга' ? "QARZ TO'LOVI" : 'SOTUV') +
-      (r.queued ? '' : ' № ' + r.no)));
-    R.appendChild(el('div', 'c', r.date + ' · ' + r.cashier));
-    R.appendChild(el('hr'));
-    r.lines.forEach(function (l) {
-      var it = el('div', 'item');
-      it.appendChild(el('div', '', l.n));
-      var ln = el('div', 'ln');
-      ln.appendChild(el('span', '', L.fmtQty(L.milli(l.q)) + ' × ' + money(L.cents(l.p))));
-      ln.appendChild(el('b', '', money(L.cents(l.s))));
-      it.appendChild(ln);
-      R.appendChild(it);
-    });
-    R.appendChild(el('hr'));
-    line('Jami', money(L.cents(r.total)), 'big');
-    if (r.discount) { line('Chegirma', money(L.cents(r.discount))); line("To'lanadi", money(L.cents(r.due)), 'big'); }
-    if (r.cash) line('Naqd', money(L.cents(r.cash)));
-    if (r.card) line('Plastik', money(L.cents(r.card)));
-    if (r.click) line('Click', money(L.cents(r.click)));
-    if (r.change) line('Qaytim', money(L.cents(r.change)));
-    if (r.client) {
-      R.appendChild(el('hr'));
-      line('Mijoz', r.cname || r.client);
-      if (r.debt) line(r.debt > 0 ? (r.kind === 'return' ? 'Qarzdan ayrildi' : 'Qarzga yozildi') : "Qarz to'landi", money(L.cents(Math.abs(r.debt))));
-      if (!r.local) line('Jami qarz', money(L.cents(r.cdebt)));
+    function row3(c0, a, b) {
+      var d = el('div', 't');
+      d.appendChild(el('span', 'c0', c0)); d.appendChild(el('span', '', a)); d.appendChild(el('span', '', b));
+      R.appendChild(d);
     }
+    var som = function (v) { return money(L.cents(v || 0)); };
+    var val0 = '0,00';
+    var title = k.t || (S.data && (S.data.title || S.data.store)) || '';
+    if (title) R.appendChild(el('div', 'ttl', title));
+    if (k.t1 || k.t2) row('a', k.t1 || '', k.t2 || '');
+    var now = new Date();
+    var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    var m = /^(\d\d)\.(\d\d)\.\d\d(\d\d) (\d\d):(\d\d)/.exec(r.date || '');
+    var tm = m ? m[4] + ':' + m[5] + ':' + p2(now.getSeconds()) : p2(now.getHours()) + ':' + p2(now.getMinutes()) + ':' + p2(now.getSeconds());
+    var dt = m ? m[1] + '.' + m[2] + '.' + m[3] : p2(now.getDate()) + '.' + p2(now.getMonth() + 1) + '.' + String(now.getFullYear()).slice(2);
+    row('a', 'Vaqt: ' + tm, 'Sana: ' + dt);
+    if (r.kind === 'return') R.appendChild(el('div', 'ret', 'QAYTARISH'));
+    if (r.client) {
+      row('p', 'Mijoz:', r.client);
+      row('p', 'Mijoz:', r.cname || '');
+    }
+    row('s ag', 'Agent:', r.cashier || '');
+    var dd = (r.kind === 'return' ? -1 : 1) * (r.debt || 0);
+    var after = r.client ? (r.cdebt || 0) : 0;
+    var before = r.client ? after - dd : 0;
+    row('s', "Qarz qoldig'i  (So'm):", som(before));
+    row('s', "Qarz qoldig'i (Val):", val0);
+    var tb = el('table');
+    (r.lines || []).forEach(function (l, i) {
+      var tr = el('tr'), td = el('td');
+      td.appendChild(el('span', 'n', (i + 1) + ' || ' + l.n));
+      td.appendChild(el('span', 'f', L.fmtQty(L.milli(l.q)) + ' х ' + som(l.p) + ' = ' + som(l.s)));
+      tr.appendChild(td); tb.appendChild(tr);
+    });
+    R.appendChild(tb);
     R.appendChild(el('hr'));
-    R.appendChild(el('div', 'c', S.ui.footer || ''));
+    row3('Summa', 'Sum:', som(r.total));
+    row3('', 'Val:', val0);
+    R.appendChild(el('hr'));
+    row3('Chegirma', 'Sum:', som(r.discount));
+    row3('', 'Val:', val0);
+    row3("To'lov", 'Naqd:', som(r.cash));
+    row3('', 'Plastik:', som(r.card));
+    if (r.click) row3('', 'Click:', som(r.click));
+    row3('', 'Val ( $ ):', val0);
+    row('s e', "Qarz qoldig'i (So'm)", som(after));
+    row('s e', "Qarz qoldig'i (Val):", val0);
+    var tel = [k.tel, k.tel1, k.tel2].filter(function (x) { return x; }).join(', ');
+    if (tel) R.appendChild(el('div', 'tel', 'Tel : ' + tel));
+    if (S.ui.footer) R.appendChild(el('div', 'foot', S.ui.footer));
     setTimeout(function () { window.print(); }, 50);
   }
 

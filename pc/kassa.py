@@ -222,7 +222,7 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
     g_out.sort(key=lambda x: x["n"].lower())
     return {
         "rate": consts.get("rate", 0.0), "neg": bool(consts.get("neg")), "rongta": bool(consts.get("rongta")),
-        "lock": bool(consts.get("lock")),
+        "lock": bool(consts.get("lock")), "chk": consts.get("chk") or {},
         "store": consts.get("store", ""), "title": title,
         "g": g_out, "b": b_out, "pnl": panel or [], "cl": c_out,
     }
@@ -287,6 +287,14 @@ class KassaOneC:
             out["lock"] = bool(c.Константы.ИзмененияВСенсореСпаролем.Получить())
         except Exception:  # noqa: BLE001
             out["lock"] = False
+        # pc 12: chek (1C "Чек1" maketi): sarlavha va telefonlar 1C konstantalaridan
+        chk = {}
+        for key, name in (("t", "Текст"), ("t1", "Текст1"), ("t2", "Текст2"), ("tel", "Тел"), ("tel1", "Тел1"), ("tel2", "Тел2")):
+            try:
+                chk[key] = text(getattr(c.Константы, name).Получить())
+            except Exception:  # noqa: BLE001 - bu bazada konstanta yo'q bo'lsa — bo'sh
+                chk[key] = ""
+        out["chk"] = chk
         try:
             out["rongta"] = text(c.String(c.Константы.ТипВесы.Получить())) == text(c.String(c.Перечисления.СписокВесов.RONGTA))
         except Exception:  # noqa: BLE001
@@ -611,6 +619,8 @@ QUEUE_FILE = "kassa_queue.json"
 SNAP_FILE = "kassa_snap.json.gz"
 STAFF_FILE = "kassa_staff.json"
 UI_FILE = "kassa_ui.json"
+MODE_FILE = "kassa_mode.json"              # {"bridge": true} — 1C ko'prigi ishlatiladi (dastur qayta yonganda ham)
+BRIDGE_WAIT = 8                            # birinchi sotuvda ko'prik natijasini kutish
 PANEL_FILE = "kassa_panel.json"            # admin tasdiqlagan panel (bo'lmasa — 1C'dagi panel)
 SUGGEST_FILE = "kassa_panel_suggest.json"  # haftalik tavsiya
 STATS_SEC = 3600                           # sotuv statistikasi soatda bir o'qiladi
@@ -654,7 +664,9 @@ class KassaService:
         self.use_app = use_app
         self.make_bridge = bridge
         self.bridge = None
-        self.bridge_mode = False
+        mode = load_json(os.path.join(here, MODE_FILE), {})
+        self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
+        self.warm_at = 0.0
         self.onec = onec or KassaOneC(conf.title)
         self.clock = clock
         self.version = version
@@ -807,6 +819,17 @@ class KassaService:
 
     # --- sotuv: avval navbat (disk), keyin 1C ---
     def sale(self, body):
+        """pc 12: javobda v0/v1 — ma'lumot versiyasi sotuvdan oldin va keyin. Monoblok qoldiqni o'zida o'zgartiradi va
+        butun tovarlar ro'yxatini qayta yuklamaydi (sekin monoblokda ham sotuvdan keyin kutish yo'q)."""
+        with self.lock:
+            v0 = self.ver
+        r = dict(self._sale(body))
+        with self.lock:
+            v1 = self.ver
+        r.update(v0=v0, v1=v1)
+        return r
+
+    def _sale(self, body):
         self.touch()
         sale = kc.clean_sale(body)
         emp_code, emp_name, _ = self.who(sale["token"])
@@ -826,7 +849,7 @@ class KassaService:
         elif item.get("state") == "error":
             raise kc.KassaError(item.get("err") or "Navbatdagi sotuv xatoli")
         if self.bridge_mode:
-            # 1C har safar ochilib yopiladi (10-30 s) — kassir kutmaydi, chek darhol; yozuv fonda
+            # kassir kutmaydi: chek darhol, 1C (ochiq turgan) 1-2 soniyada fonda yozadi
             self.jobs.put((self._drain_quiet, {}, threading.Event()))
             return self._queued(sale["id"], "1C'ga fonda yoziladi")
         try:
@@ -970,11 +993,22 @@ class KassaService:
         if item["id"] == target:
             self._apply_stock(sale_from_json(item["sale"]), -item["res"]["_debt_delta"], undo=True)
 
-    def _drain_bridge(self, target=None):
-        """Navbatdagi hamma sotuv bitta 1C ochilishida yoziladi (onec_bridge)."""
+    def _br(self):
         if self.bridge is None:
             self.bridge = self.make_bridge()
-        br = self.bridge
+        return self.bridge
+
+    def _set_bridge_mode(self):
+        if not self.bridge_mode:
+            self.bridge_mode = True
+            try:
+                save_json(os.path.join(self.here, MODE_FILE), {"bridge": True})
+            except OSError:
+                pass
+
+    def _drain_bridge(self, target=None):
+        """Navbatdagi sotuvlar ochiq turgan 1C orqali yoziladi (onec_bridge, 1-2 soniya)."""
+        br = self._br()
         # oldingi ishga tushirishdan (kompyuter o'chib qolgan bo'lsa) qolgan natijalar — avval ular
         res, wip = br.leftovers()
         with self.qlock:
@@ -994,7 +1028,7 @@ class KassaService:
         if todo:
             self.busy = True
             try:
-                out.update(br.run([self._job(it) for it in todo]))
+                out.update(br.run([self._job(it) for it in todo], timeout=BRIDGE_WAIT if target else 20))
             except (RuntimeError, OSError) as e:
                 err = str(e)[:300]
             finally:
@@ -1004,9 +1038,10 @@ class KassaService:
         for it in items:
             r = out.get(it["id"])
             if r is None:
-                with self.qlock:
-                    it["tries"] = it.get("tries", 0) + 1
-                    it["err"] = (err or "1C'ga yetib bormadi")[:300]
+                if err:                       # 1C ochilmadi; aks holda — 1C hali yozmoqda, keyingi aylanishda olinadi
+                    with self.qlock:
+                        it["tries"] = it.get("tries", 0) + 1
+                        it["err"] = err[:300]
                 continue
             if r[0] == "OK":
                 done = self._done(it, r[1], r[2])
@@ -1145,7 +1180,7 @@ class KassaService:
 
     def _publish(self, snap, save=False):
         snap = dict(snap)
-        self.ver = int(self.clock() * 1000)
+        self.ver = max(self.ver + 1, int(self.clock() * 1000))      # doim o'sadi (bir millisekundda ikki marta ham)
         snap["ver"] = self.ver
         raw = json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         gz = gzip.compress(raw, 6)
@@ -1311,7 +1346,7 @@ class KassaService:
     def _write_doc(self, sale, pay, emp_code):
         import onec_write
         if self.make_bridge is not None and self.use_app():
-            self.bridge_mode = True
+            self._set_bridge_mode()
             raise UseBridge()
         if self.open_app is not None and (self.app_mode or self.use_app()):
             return self._write_app(sale, pay, emp_code)
@@ -1322,7 +1357,7 @@ class KassaService:
         except Exception as e:  # noqa: BLE001
             if self.make_bridge is not None and onec_write.needs_app(str(e)):
                 log.warning("kassa: COM ulanishida 1C moduli ishlamadi (%s) — 1C ko'prigi orqali", str(e)[:300])
-                self.bridge_mode = True
+                self._set_bridge_mode()
                 raise UseBridge()
             if self.open_app is not None and onec_write.needs_app(str(e)):
                 log.warning("kassa: COM ulanishida 1C moduli ishlamadi (%s) — 1C oynasi orqali", str(e)[:300])
@@ -1363,6 +1398,17 @@ class KassaService:
     def tick(self):
         """Navbat bo'sh paytda: navbatdagi sotuvlarni yozish va (brauzer ochiq bo'lsa) ma'lumotni yangilab turish."""
         now = self.clock()
+        if self.bridge_mode:
+            # 1C ko'prigi doim ochiq: dastur ishlayotganini bildiradi, 1C yopilgan bo'lsa — oldindan ochib qo'yadi
+            br = self._br()
+            br.heartbeat()
+            if not br.alive() and now >= self.warm_at:
+                self.warm_at = now + RETRY_SEC
+                try:
+                    br.ensure_running()
+                except (RuntimeError, OSError) as e:
+                    self.last_error = str(e)[:300]
+                    log.warning("kassa: 1C ko'prigi: %s", self.last_error)
         if self.pending and (not self.retry_at or now >= self.retry_at):
             try:
                 self._drain()

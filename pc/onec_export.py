@@ -1934,15 +1934,17 @@ def app_test(cfg, out_path=None):
     changed, errs = onec_bridge.allow_external(exe)
     say("2) Tashqi ishlov ogohlantirishi (conf.cfg): %s" % (
         "o'chirildi" if changed else ("XATO: " + "; ".join(errs)) if errs else "allaqachon o'chiq"))
-    say("3) 1C oddiy usulda ochilmoqda (kassa ko'prigi bilan, 10-60 soniya)... Kompyuter ekranida 1C oynasi "
-        "ochilib yopiladi. Agar 1C biror savol so'rasa — rasmga oling.")
+    say("3) 1C oddiy usulda ochilmoqda (kassa ko'prigi bilan, 10-60 soniya)... Sinovdan keyin bu 1C o'zi yopiladi. "
+        "Agar 1C biror savol so'rasa — rasmga oling.")
     br = onec_bridge.Bridge(cfg.conn_string(), HERE, exe, jobs_dir="kassa_jobs_test")   # kassa navbatiga tegmaydi
     t0 = time.time()
     try:
-        res = br.run([onec_bridge.probe_job("probe_%d" % int(t0))], timeout=240)
+        res = br.run([onec_bridge.probe_job("probe_%d" % int(t0))], timeout=120)
     except (RuntimeError, OSError) as e:
         say("   XATO (%.0f s): %s" % (time.time() - t0, e))
         return False
+    finally:
+        br.stop()             # sinov 1C'i yopiladi (kassaning o'z 1C'i alohida, ochiq turadi)
     r = list(res.values())[0] if res else ("ERR", "javob yo'q")
     ok = r[0] == "OK" and r[1] == "PROBE"
     say("   %s (%.0f s): %s" % ("OK" if ok else "XATO", time.time() - t0, " | ".join(r[1:]) if not ok else r[2]))

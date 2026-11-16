@@ -305,14 +305,25 @@ body.editing [data-ui].ed-on { outline: 4px solid #3d5afe; }
   @page { margin: 0; size: 80mm auto; }
   body { background: #fff; overflow: visible; }
   body > *:not(#receipt) { display: none !important; }
-  #receipt { display: block; width: 72mm; margin: 0 auto; padding: 2mm 0 6mm; font: 12px/1.35 "Arial Narrow", Arial, sans-serif; color: #000; }
-  #receipt .c { text-align: center; }
-  #receipt .h { font-size: 16px; font-weight: 700; }
-  #receipt hr { border: 0; border-top: 1px dashed #000; margin: 4px 0; }
-  #receipt .ln { display: flex; justify-content: space-between; gap: 6px; }
-  #receipt .ln b { white-space: nowrap; }
-  #receipt .item { margin: 2px 0; }
-  #receipt .big { font-size: 16px; font-weight: 700; min-height: 0; }
+  /* pc 12: 1C "Чек1" maketi — Arial qalin, 72 mm */
+  #receipt { display: block; width: 72mm; margin: 0 auto; padding: 1mm 0 6mm; font: bold 9pt/1.25 Arial, sans-serif; color: #000; }
+  #receipt .ttl { font: bold 20pt/1.1 "Bookman Old Style", "Bookman", Georgia, serif; text-align: center; margin: 0 0 4px; }
+  #receipt .a { display: flex; justify-content: space-between; font-size: 9pt; }
+  #receipt .p { display: flex; justify-content: space-between; align-items: baseline; margin: 1px 0; }
+  #receipt .p .k { font-size: 11pt; } #receipt .p .v { font-size: 14pt; text-align: right; }
+  #receipt .s { display: flex; justify-content: space-between; font-size: 9pt; margin: 1px 0; }
+  #receipt .s.ag, #receipt .s.e { font-size: 11pt; }
+  #receipt .ret { text-align: center; font-size: 13pt; margin: 2px 0; }
+  #receipt .t { display: flex; justify-content: flex-end; gap: 10px; font-size: 11pt; margin: 1px 0; }
+  #receipt .t .c0 { margin-right: auto; font-size: 10pt; }
+  #receipt table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+  #receipt td { border: 1px solid #000; padding: 2px 4px; font-size: 9pt; }
+  #receipt .n { display: block; } #receipt .f { display: block; text-align: right; }
+  #receipt hr { border: 0; border-top: 1px solid #000; margin: 5px 0; }
+  #receipt .tel { text-align: center; font-size: 12pt; margin-top: 6px; }
+  #receipt .foot { text-align: center; font-size: 10pt; margin-top: 4px; }
+  #receipt .c { text-align: center; } #receipt .h { font-size: 13pt; margin-bottom: 4px; }
+  #receipt .ln { display: flex; justify-content: space-between; gap: 6px; font-size: 10pt; }
 }
 
 #kbView { z-index: 12; }

@@ -91,18 +91,57 @@ class JobTest(unittest.TestCase):
         self.assertIsNone(ob.conf_with_unsafe("a=1\r\nDisableUnsafeActionProtection=.*Baza.*\r\n"))
 
 
-class Proc:
-    def __init__(self, on_start):
+class Fake1C:
+    """1C o'rnida: ochilgach 1c.alive yozadi va har "soniyada" papkadagi *.job larni .res qiladi (BSL bilan bir xil)."""
+
+    def __init__(self, jobs, answers=None, start_after=2, die_after=None, never=False):
+        self.jobs = jobs
+        self.answers = answers or {}
+        self.wait = start_after
+        self.die_after = die_after
+        self.never = never
         self.code = None
-        self.killed = False
-        on_start(self)
+        self.n = 0
+        self.done = 0
 
     def poll(self):
         return self.code
 
     def kill(self):
-        self.killed = True
         self.code = -9
+
+    def cycle(self):
+        if self.code is not None or self.never:
+            return
+        if self.wait > 0:
+            self.wait -= 1
+            return
+        if os.path.exists(os.path.join(self.jobs, "stop.flag")):
+            self.code = 0
+            return
+        with open(os.path.join(self.jobs, "1c.alive"), "w", encoding="utf-8-sig") as f:
+            f.write(ob.BRIDGE_VERSION)
+        for name in sorted(os.listdir(self.jobs)):
+            if not name.endswith(".job"):
+                continue
+            rid = name[:-4]
+            base = os.path.join(self.jobs, rid)
+            if os.path.exists(base + ".res"):
+                os.remove(base + ".job")
+                continue
+            if os.path.exists(base + ".wip"):
+                continue
+            open(base + ".wip", "w").close()
+            if self.die_after is not None and self.done >= self.die_after:
+                self.code = 1                      # 1C yozish paytida o'chdi
+                os.remove(os.path.join(self.jobs, "1c.alive"))
+                return
+            with open(base + ".res", "w", encoding="utf-8-sig") as f:
+                self.n += 1
+                f.write(self.answers.get(rid, "OK\t%05d\t15.11.2026 09:30" % self.n))
+            os.remove(base + ".job")
+            os.remove(base + ".wip")
+            self.done += 1
 
 
 class BridgeTest(unittest.TestCase):
@@ -112,87 +151,107 @@ class BridgeTest(unittest.TestCase):
         open(self.exe, "w").close()
         self.t = [0.0]
         self.cmds = []
+        self.procs = []
 
     def tearDown(self):
         shutil.rmtree(self.dir, ignore_errors=True)
 
-    def bridge(self, behave):
-        def popen(cmd, **kw):
+    def bridge(self, **kw):
+        def popen(cmd, **_):
             self.cmds.append(cmd)
-            jobs = cmd[cmd.index("/C") + 1]
-            return Proc(lambda p: behave(p, jobs))
+            p = Fake1C(cmd[cmd.index("/C") + 1], **kw)
+            self.procs.append(p)
+            return p
 
         def sleep(s):
             self.t[0] += s
+            for p in self.procs:
+                p.cycle()
         return ob.Bridge('File="D:\\Baza";', self.dir, self.exe, popen=popen, clock=lambda: self.t[0], sleep=sleep)
-
-    @staticmethod
-    def fake_1c(answers, stop_after=None):
-        """1C o'rnida: har *.job -> .wip, keyin .res (javob answers[id]), oxirida finish.flag."""
-        def behave(proc, jobs):
-            n = 0
-            for name in sorted(os.listdir(jobs)):
-                if not name.endswith(".job"):
-                    continue
-                rid = name[:-4]
-                with open(os.path.join(jobs, name), encoding="utf-8") as f:
-                    head = f.readline().split("\t")
-                assert head[0] == "H" and head[1] == rid
-                open(os.path.join(jobs, rid + ".wip"), "w").close()
-                if stop_after is not None and n >= stop_after:
-                    proc.code = 1            # 1C o'chib qoldi
-                    return
-                with open(os.path.join(jobs, rid + ".res"), "w", encoding="utf-8-sig") as f:
-                    f.write(answers.get(rid, "OK\t%05d\t15.11.2026 09:30" % (n + 1)))
-                os.remove(os.path.join(jobs, name))
-                os.remove(os.path.join(jobs, rid + ".wip"))
-                n += 1
-            open(os.path.join(jobs, "finish.flag"), "w").close()
-            proc.code = 0
-        return behave
 
     def job(self, rid):
         return {"id": rid, "kind": "sale", "ptype": "Цена1", "emp": "", "client": "", "total": 1, "discount": 0,
                 "cash": 1, "card": 0, "click": 0, "doc": "Продажа", "note": "", "lines": []}
 
-    def test_batch_in_one_start(self):
-        br = self.bridge(self.fake_1c({"b": "ERR\tТовар етмаяпти"}))
-        res = br.run([self.job("a"), self.job("b"), self.job("c")])
-        self.assertEqual(len(self.cmds), 1)                                    # bitta 1C ochilishi
-        self.assertEqual(res["a"], ("OK", "00001", "15.11.2026 09:30"))
+    def test_opened_once_and_stays(self):
+        br = self.bridge(answers={"b": "ERR\tТовар етмаяпти"})
+        res = br.run([self.job("a"), self.job("b")])
+        self.assertEqual(res["a"][0], "OK")
         self.assertEqual(res["b"], ("ERR", "Товар етмаяпти"))
+        self.assertTrue(br.alive())
+        res = br.run([self.job("c")])                                          # 1C qayta ochilmaydi
         self.assertEqual(res["c"][0], "OK")
-        self.assertTrue(os.path.isfile(os.path.join(self.dir, ob.EPF_NAME)))
-        self.assertEqual(br.leftovers(), ({}, set()))                         # hammasi tozalandi
+        self.assertEqual(len(self.cmds), 1)
+        self.assertIn("/Execute", self.cmds[0])
+        self.assertEqual(br.leftovers(), ({}, set()))
+        br.stop()
+        self.procs[0].cycle()
+        self.assertEqual(self.procs[0].poll(), 0)                              # stop.flag — 1C o'zi yopiladi
+
+    def test_slow_result_stays_in_folder(self):
+        br = self.bridge()
+        br.ensure_running()
+        self.procs[0].never = True                                             # 1C band (hali yozmadi)
+        os.utime(os.path.join(br.jobs, "1c.alive"), None)
+        res = br.run([self.job("a")], timeout=2)
+        self.assertEqual(res, {})
+        self.assertTrue(os.path.exists(os.path.join(br.jobs, "a.job")))        # topshiriq joyida
+        self.assertFalse(br.submit(self.job("a")))                             # ikkinchi marta yozilmaydi
+        self.procs[0].never = False
+        res = br.run([self.job("a")])
+        self.assertEqual(res["a"][0], "OK")
 
     def test_crash_mid_write_is_unknown_not_retried(self):
-        br = self.bridge(self.fake_1c({}, stop_after=1))
-        res = br.run([self.job("a"), self.job("b"), self.job("c")])
+        br = self.bridge(die_after=1)
+        res = br.run([self.job("a"), self.job("b")], timeout=5)
         self.assertEqual(res["a"][0], "OK")
-        self.assertEqual(res["b"][0], "UNKNOWN")                               # yozildimi — noma'lum
-        self.assertNotIn("c", res)                                             # boshlanmagan — keyin qayta
+        self.assertNotIn("b", res)
+        wip = os.path.join(br.jobs, "b.wip")
+        self.assertTrue(os.path.exists(wip))
+        self.assertEqual(br.leftovers(), ({}, set()))                         # hali yangi — kutiladi
+        old = os.path.getmtime(wip) - 200
+        os.utime(wip, (old, old))
+        self.assertEqual(br.leftovers(), ({}, {"b"}))                          # eski .wip — noma'lum
+        # yangi 1C ochilsa ham .wip li topshiriqqa tegmaydi (ikki marta yozilmasin)
+        p = Fake1C(br.jobs)
+        p.wait = 0
+        p.cycle()
+        self.assertTrue(os.path.exists(os.path.join(br.jobs, "b.job")))
 
     def test_1c_never_starts(self):
-        def behave(proc, jobs):
-            pass                                                               # osilib qoldi (masalan savol oynasi)
-        br = self.bridge(behave)
+        br = self.bridge(never=True)
         with self.assertRaises(RuntimeError):
-            br.run([self.job("a")], timeout=30)
-        self.assertGreaterEqual(self.t[0], 30)
-        self.assertEqual(os.listdir(br.jobs), [])                              # topshiriq olib tashlandi
+            br.run([self.job("a")])
+        self.assertTrue(self.procs[0].poll() is not None)                      # osilgan 1C yopildi
 
     def test_no_exe(self):
         br = ob.Bridge("File=x;", self.dir, "")
         with self.assertRaises(RuntimeError):
             br.run([self.job("a")])
 
+    def test_old_version_restarted(self):
+        br = self.bridge()
+        os.makedirs(br.jobs)
+        with open(os.path.join(br.jobs, "1c.alive"), "w") as f:
+            f.write("1")
+        old = Fake1C(br.jobs)
+
+        def stop_old(_):
+            if os.path.exists(os.path.join(br.jobs, "stop.flag")):
+                os.remove(os.path.join(br.jobs, "1c.alive"))
+        orig = br.sleep
+        br.sleep = lambda s: (stop_old(s), orig(s))
+        self.assertTrue(br.ensure_running())
+        self.assertEqual(len(self.cmds), 1)
+        self.assertTrue(br.alive())
+        del old
+
     def test_leftovers_after_pc_restart(self):
-        br = self.bridge(None)
+        br = self.bridge()
         os.makedirs(br.jobs)
         with open(os.path.join(br.jobs, "x.res"), "w", encoding="utf-8") as f:
             f.write("OK\t7\t01.01.2026 10:00")
-        open(os.path.join(br.jobs, "y.wip"), "w").close()
-        self.assertEqual(br.leftovers(), ({"x": ("OK", "7", "01.01.2026 10:00")}, {"y"}))
+        self.assertEqual(br.leftovers(), ({"x": ("OK", "7", "01.01.2026 10:00")}, set()))
 
 
 if __name__ == "__main__":

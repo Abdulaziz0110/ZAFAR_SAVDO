@@ -147,3 +147,10 @@ Yangi (pc 12) - KASSA:
  - Avtomatik ishga tushish: AVTO_KIRISH.bat ni bir marta oching (Windows parolini so'raydi) - kompyuter yonganda
    Windows o'zi kiradi, dastur, kassa va 1C ko'prigi o'zi ishlaydi, kompyuter uxlamaydi.
    Elektr qaytganda kompyuter o'zi yonishi: BIOS > "Restore on AC power loss" = "Power On".
+
+
+Yangi (pc 13):
+ - Kassa uchun 1C bir marta ochiladi va OCHIQ turadi (kompyuterda kichraytirilgan 1C oynasi). Uni yopmang -
+   yopilsa dastur o'zi qayta ochadi. Sotuv 1C'ga 1-2 soniyada yoziladi, kassir kutmaydi.
+ - Sotuvdan keyin kassa qotmaydi (tovarlar ro'yxati qayta yuklanmaydi).
+ - Chek 1C'dagi chek (Чек1) tartibida.

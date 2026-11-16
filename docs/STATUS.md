@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 12) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 13) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -44,6 +44,9 @@ Belgilar:
 | pc 12: narx turi xaridorga bilinmaydi — yuqoridagi tugma yo'q, raqam maydoni burchagida kichik raqam; 1 soniya bosib turilsa "Rejim 1-4"; narx tekshirishda faqat joriy narx (sozlamada ochiq ko'rsatish mumkin) | VERIFIED (brauzer sinovi) |
 | pc 12: skaner HAMMA holatda: panel, qidiruv, to'lov, chek, ma'lumot, sozlama oynasi ochiq bo'lsa ham yopilib tovar savatga tushadi; tez kiritilgan belgilar qidiruv/parol maydonidan olib tashlanadi; qo'lda sekin yozish skaner hisoblanmaydi | VERIFIED (brauzer sinovi) |
 | pc 12: avtomatik ishga tushish — dastur Windows'ga kirilishi bilan administrator huquqida (vazifa "IMSOFT server"); AVTO_KIRISH.bat — Windows parol so'ramasdan kiradi, kompyuter uxlamaydi; monoblok kassa sahifasi kompyuter javob berguncha kutadi; 1C kerak bo'lganda o'zi ochiladi (ko'prik) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| pc 13: 1C ko'prigi OCHIQ turadi — bir marta ochiladi (kichraytirilgan), har ~1 soniyada papkani tekshiradi, sotuv 1-2 soniyada yoziladi; dastur qayta yonsa ochiq 1C'dan foydalanadi, dastur to'xtasa 5 daqiqada 1C o'zi yopiladi; ko'prik rejimi esda qoladi (COM'ga qayta urinmaydi), 1C oldindan ochib qo'yiladi; .wip li topshiriq qayta yozilmaydi | VERIFIED (test) / 1C'da IMPLEMENTED-UNVERIFIED |
+| pc 13: sotuvdan keyin monoblok butun tovar ro'yxatini qayta yuklamaydi — qoldiq va qarz o'zida o'zgaradi (javobda v0/v1); chek chop etish ekranni ushlab turmaydi | VERIFIED (test + brauzer: sotuv 75 ms, qayta yuklash 0) |
+| pc 13: chek 1C "Чек1" maketi tartibida: sarlavha (Константы.Текст), Vaqt/Sana, Mijoz (kod, nomi), Agent, oldingi qarz, "N || tovar" va "miqdor х narx = summa" jadvali, Summa/Chegirma Sum-Val, To'lov Naqd/Plastik/Val, keyingi qarz, Tel (Тел, Тел1, Тел2) | VERIFIED (brauzer) / logotip NOT-IMPLEMENTED |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 

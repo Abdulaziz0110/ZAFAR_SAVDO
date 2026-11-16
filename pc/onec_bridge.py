@@ -27,11 +27,11 @@ log = logging.getLogger("bridge")
 
 EPF_NAME = "kassa_bridge.epf"
 JOBS_DIR = "kassa_jobs"
-BRIDGE_VERSION = "1"
+BRIDGE_VERSION = "2"
 
 # --------------------------------------------------------------------------- 1C kodi (tashqi ishlov moduli)
 
-BSL = r"""// IMSOFT kassa ko'prigi v__VER__: papkadagi *.job -> ПродажаРозница (1C sensor oynasi bilan bir xil), natija *.res
+BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job -> ПродажаРозница (1C sensor oynasi bilan bir xil), natija *.res
 Функция Ч(Знач С)
 	С = СокрЛП(С);
 	Если С = "" Тогда
@@ -155,14 +155,22 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: papkadagi *.job -> ПродажаР
 	Возврат СокрЛП(Док.Номер) + Символы.Таб + Формат(Док.Дата, "ДФ='dd.MM.yyyy HH:mm'");
 КонецФункции
 
-Процедура ИшлаТопшириклар()
-	Папка = СокрЛП(ПараметрЗапуска);
-	Если Папка = "" Тогда
-		Возврат;
-	КонецЕсли;
+Функция ФайлЕсть(Путь)
+	Возврат Новый Файл(Путь).Существует();
+КонецФункции
+
+Процедура ИшлаТопшириклар(Папка)
 	Файлы = НайтиФайлы(Папка, "*.job");
 	Для Каждого Ф Из Файлы Цикл
 		Асос = Папка + "\" + Ф.ИмяБезРасширения;
+		// ikki marta yozilmasin: natijasi bor yoki oldin yozish boshlangan (1C o'chib qolgan) bo'lsa — tegilmaydi
+		Если ФайлЕсть(Асос + ".res") Тогда
+			УдалитьФайлы(Ф.ПолноеИмя);
+			Продолжить;
+		КонецЕсли;
+		Если ФайлЕсть(Асос + ".wip") Тогда
+			Продолжить;
+		КонецЕсли;
 		ЗаписатьТекст(Асос + ".wip", "1");
 		Попытка
 			Ответ = "OK" + Символы.Таб + Провести(Ф.ПолноеИмя);
@@ -170,16 +178,67 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: papkadagi *.job -> ПродажаР
 			Ответ = "ERR" + Символы.Таб + СтрЗаменить(СтрЗаменить(ОписаниеОшибки(), Символы.ПС, " "), Символы.ВК, " ");
 		КонецПопытки;
 		ЗаписатьТекст(Асос + ".res", Ответ);
-		Попытка
-			УдалитьФайлы(Ф.ПолноеИмя);
-			УдалитьФайлы(Асос + ".wip");
-		Исключение
-		КонецПопытки;
+		УдалитьФайлы(Ф.ПолноеИмя);
+		УдалитьФайлы(Асос + ".wip");
 	КонецЦикла;
-	ЗаписатьТекст(Папка + "\finish.flag", "1");
 КонецПроцедуры
 
-ИшлаТопшириклар();
+Процедура Пауза(Оболочка)
+	// ~1 soniya kutish (1C 8.3.10 da "uxlash" yo'q): yashirin ping
+	Если Оболочка <> Неопределено Тогда
+		Попытка
+			Оболочка.Run("cmd /c ping -n 2 127.0.0.1 >nul", 0, Истина);
+			Возврат;
+		Исключение
+		КонецПопытки;
+	КонецЕсли;
+	ЗапуститьПриложение("ping -n 2 127.0.0.1", , Истина);
+КонецПроцедуры
+
+Функция ДастурЖив(Папка)
+	// kompyuter dasturi (Python) 5 daqiqa belgi bermasa — 1C o'zi yopiladi
+	Ф = Новый Файл(Папка + "\py.alive");
+	Если Не Ф.Существует() Тогда
+		Возврат Ложь;
+	КонецЕсли;
+	Возврат ТекущаяДата() - Ф.ПолучитьВремяИзменения() < 300;
+КонецФункции
+
+Процедура Ишла()
+	Папка = СокрЛП(ПараметрЗапуска);
+	Если Папка = "" Тогда
+		Возврат;
+	КонецЕсли;
+	Оболочка = Неопределено;
+	Попытка
+		Оболочка = Новый COMОбъект("WScript.Shell");
+	Исключение
+		Оболочка = Неопределено;
+	КонецПопытки;
+	Пульс = Дата(1, 1, 1);
+	Пока Истина Цикл
+		Если ФайлЕсть(Папка + "\stop.flag") Или Не ДастурЖив(Папка) Тогда
+			Прервать;
+		КонецЕсли;
+		Если ТекущаяДата() - Пульс >= 5 Тогда
+			ЗаписатьТекст(Папка + "\1c.alive", "__VER__");
+			Пульс = ТекущаяДата();
+		КонецЕсли;
+		Попытка
+			ИшлаТопшириклар(Папка);
+		Исключение
+			ЗаписатьТекст(Папка + "\1c.error", ОписаниеОшибки());
+		КонецПопытки;
+		Пауза(Оболочка);
+	КонецЦикла;
+	Попытка
+		УдалитьФайлы(Папка + "\1c.alive");
+	Исключение
+	КонецПопытки;
+КонецПроцедуры
+
+// 1C bitta marta ochiladi va OCHIQ turadi: har ~1 soniyada papkani tekshiradi
+Ишла();
 ЗавершитьРаботуСистемы(Ложь);
 """
 
@@ -436,7 +495,13 @@ def allow_external(exe):
 
 
 class Bridge:
-    """1C'ni oddiy rejimda ochib, topshiriqlarni bitta ishga tushirishda o'tkazadi."""
+    """1C'ni oddiy rejimda BIR MARTA ochadi va ochiq qoldiradi (pc 12): 1C har ~1 soniyada papkani tekshiradi,
+    sotuv 1-2 soniyada yoziladi. Dastur (Python) ishlab turgani "py.alive" belgisi bilan bildiriladi — dastur
+    to'xtasa 5 daqiqadan keyin 1C o'zi yopiladi; dastur qayta ishga tushsa ochiq 1C'dan foydalanadi."""
+
+    ALIVE_SEC = 20         # 1C belgisi (1c.alive) shundan eski bo'lsa — 1C ishlamayapti
+    WIP_STUCK = 90         # .wip shundan eski va .res yo'q — 1C yozish paytida o'chgan (natija noma'lum)
+    START_SEC = 180        # 1C ochilishini kutish
 
     def __init__(self, conn, here, exe, popen=subprocess.Popen, clock=time.time, sleep=time.sleep, jobs_dir=JOBS_DIR):
         self.conn = conn
@@ -448,6 +513,10 @@ class Bridge:
         self.jobs = os.path.join(here, jobs_dir)
         self.epf = os.path.join(here, EPF_NAME)
         self.conf_done = False
+        self.proc = None
+
+    def _p(self, name):
+        return os.path.join(self.jobs, name)
 
     def ensure_epf(self):
         raw = build_epf(bsl_text())
@@ -463,50 +532,57 @@ class Bridge:
         os.replace(tmp, self.epf)
         return self.epf
 
-    def leftovers(self):
-        """Oldingi ishga tushirishdan qolgan: {id: natija} (.res) va {id} (.wip — yozildimi noma'lum)."""
-        res, wip = {}, set()
-        try:
-            names = os.listdir(self.jobs)
-        except OSError:
-            return res, wip
-        for n in names:
-            base, ext = os.path.splitext(n)
-            p = os.path.join(self.jobs, n)
-            if ext == ".res":
-                try:
-                    with open(p, "r", encoding="utf-8-sig") as f:
-                        res[base] = parse_result(f.read())
-                except OSError:
-                    continue
-            elif ext == ".wip":
-                wip.add(base)
-        return res, wip
-
-    def forget(self, rid):
-        for ext in (".job", ".res", ".wip"):
-            try:
-                os.remove(os.path.join(self.jobs, rid + ext))
-            except OSError:
-                pass
-
-    def run(self, jobs, timeout=180):
-        """jobs: [dict] -> {id: ("OK", raqam, sana) | ("ERR", xabar) | ("UNKNOWN", xabar)}. 1C ochilmasa — RuntimeError."""
-        if not self.exe or not os.path.isfile(self.exe):
-            raise RuntimeError("1cv8.exe topilmadi: %s" % (self.exe or "-"))
+    def heartbeat(self):
+        """Dastur ishlayapti — 1C ochiq turaversin."""
         os.makedirs(self.jobs, exist_ok=True)
+        p = self._p("py.alive")
         try:
-            os.remove(os.path.join(self.jobs, "finish.flag"))
+            with open(p, "a"):
+                pass
+            os.utime(p, None)
         except OSError:
             pass
-        ids = []
-        for j in jobs:
-            self.forget(j["id"])
-            tmp = os.path.join(self.jobs, j["id"] + ".tmp")
-            with open(tmp, "w", encoding="utf-8", newline="") as f:
-                f.write(job_text(j))
-            os.replace(tmp, os.path.join(self.jobs, j["id"] + ".job"))
-            ids.append(j["id"])
+
+    def _age(self, name):
+        try:
+            return time.time() - os.path.getmtime(self._p(name))
+        except OSError:
+            return None
+
+    def alive_version(self):
+        """Ochiq 1C ko'prigining versiyasi yoki None (ochiq emas)."""
+        age = self._age("1c.alive")
+        if age is None or age > self.ALIVE_SEC:
+            return None
+        try:
+            with open(self._p("1c.alive"), "r", encoding="utf-8-sig") as f:
+                return f.read().strip() or "?"
+        except OSError:
+            return None
+
+    def alive(self):
+        return self.alive_version() == BRIDGE_VERSION
+
+    def ensure_running(self, timeout=None):
+        """1C ochiq bo'lmasa — ochadi va tayyor bo'lishini kutadi. Eski versiyadagisi yopiladi."""
+        if not self.exe or not os.path.isfile(self.exe):
+            raise RuntimeError("1cv8.exe topilmadi: %s" % (self.exe or "-"))
+        self.heartbeat()
+        ver = self.alive_version()
+        if ver == BRIDGE_VERSION:
+            return False
+        if ver is not None:
+            log.info("1C ko'prigi eski versiyada (%s) — yopilmoqda", ver)
+            with open(self._p("stop.flag"), "w") as f:
+                f.write("1")
+            end = self.clock() + 30
+            while self.clock() < end and self.alive_version() is not None:
+                self.sleep(1)
+        for n in ("stop.flag", "1c.alive"):
+            try:
+                os.remove(self._p(n))
+            except OSError:
+                pass
         epf = self.ensure_epf()
         if not self.conf_done:
             self.conf_done = True
@@ -515,44 +591,101 @@ class Bridge:
                 log.info("1C: tashqi ishlov ogohlantirishi o'chirildi (conf.cfg)")
             for e in errs:
                 log.warning("1C conf.cfg yozilmadi (administrator huquqi kerak): %s", e)
-        log.info("1C ko'prigi: %d ta hujjat uchun 1C ochilmoqda", len(ids))
         kw = {}
         if os.name == "nt":
             si = subprocess.STARTUPINFO()
             si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            si.wShowWindow = 7          # SW_SHOWMINNOACTIVE — kassirning ishiga xalaqit bermaydi
+            si.wShowWindow = 7          # SW_SHOWMINNOACTIVE — kichraytirilgan, kassirga xalaqit bermaydi
             kw["startupinfo"] = si
-        proc = self.popen(command(self.exe, self.conn, epf, self.jobs), **kw)
+        log.info("1C ko'prigi ochilmoqda (bir marta, keyin ochiq turadi)")
+        self.proc = self.popen(command(self.exe, self.conn, epf, self.jobs), **kw)
         start = self.clock()
-        finished = False
-        while self.clock() - start < timeout:
-            if os.path.exists(os.path.join(self.jobs, "finish.flag")):
-                finished = True
-                break
-            if proc.poll() is not None:
-                self.sleep(1)
-                break
+        while self.clock() - start < (timeout or self.START_SEC):
+            self.heartbeat()
+            if self.alive():
+                log.info("1C ko'prigi tayyor (%d s)", int(self.clock() - start))
+                return True
+            if self.proc.poll() is not None:
+                raise RuntimeError("1C ochildi, lekin darhol yopildi (kod %s). 1C_oyna_tekshiruv.bat ni oching" %
+                                   self.proc.poll())
             self.sleep(1)
-        if proc.poll() is None:
-            # 1C o'zi yopilmasa — ishimiz tugagan (yoki vaqt tugagan): jarayon yopiladi
-            self.sleep(3 if finished else 0)
+        try:
+            self.proc.kill()
+        except OSError:
+            pass
+        raise RuntimeError("1C ochildi, lekin ko'prik ishga tushmadi (%d s) — kompyuterdagi 1C oynasida savol "
+                           "chiqqan bo'lishi mumkin" % int(self.clock() - start))
+
+    def stop(self):
+        try:
+            os.makedirs(self.jobs, exist_ok=True)
+            with open(self._p("stop.flag"), "w") as f:
+                f.write("1")
+        except OSError:
+            pass
+
+    def leftovers(self):
+        """{id: natija} (.res bor) va {id} (.wip eski, .res yo'q — 1C yozayotganda o'chgan, natija noma'lum)."""
+        res, wip = {}, set()
+        try:
+            names = os.listdir(self.jobs)
+        except OSError:
+            return res, wip
+        for n in names:
+            base, ext = os.path.splitext(n)
+            if ext == ".res":
+                try:
+                    with open(self._p(n), "r", encoding="utf-8-sig") as f:
+                        res[base] = parse_result(f.read())
+                except OSError:
+                    continue
+        for n in names:
+            base, ext = os.path.splitext(n)
+            if ext == ".wip" and base not in res:
+                age = self._age(n)
+                if age is not None and age > self.WIP_STUCK:
+                    wip.add(base)
+        return res, wip
+
+    def forget(self, rid):
+        for ext in (".job", ".res", ".wip"):
             try:
-                proc.kill()
+                os.remove(self._p(rid + ext))
             except OSError:
                 pass
-        res, wip = self.leftovers()
+
+    def submit(self, job):
+        """Topshiriq fayli (allaqachon bor/boshlangan/natijali bo'lsa — qayta yozilmaydi)."""
+        rid = job["id"]
+        if any(os.path.exists(self._p(rid + e)) for e in (".job", ".wip", ".res")):
+            return False
+        tmp = self._p(rid + ".tmp")
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.write(job_text(job))
+        os.replace(tmp, self._p(rid + ".job"))
+        return True
+
+    def run(self, jobs, timeout=30):
+        """jobs: [dict] -> {id: ("OK", raqam, sana) | ("ERR", xabar)} — [timeout] ichida natijasi kelganlar.
+        Kelmaganlari papkada qoladi (1C keyin yozadi). 1C ochilmasa — RuntimeError."""
+        os.makedirs(self.jobs, exist_ok=True)
+        self.ensure_running()
+        ids = [j["id"] for j in jobs]
+        for j in jobs:
+            self.submit(j)
+        start = self.clock()
         out = {}
-        for rid in ids:
-            if rid in res:
-                out[rid] = res[rid]
-                self.forget(rid)
-            elif rid in wip:
-                out[rid] = ("UNKNOWN", "1C hujjatni yozayotganda to'xtadi — 1C'da tekshiring (yozilgan bo'lishi mumkin)")
-            elif os.path.exists(os.path.join(self.jobs, rid + ".job")):
-                pass        # 1C umuman boshlamadi — keyinroq qayta urinish
-        if not out and ids:
+        while True:
+            res, _ = self.leftovers()
             for rid in ids:
-                self.forget(rid)
-            raise RuntimeError("1C ochildi, lekin ko'prik ishlamadi (%s s). 1C oynasida xabar chiqqan bo'lishi mumkin" %
-                               int(self.clock() - start))
+                if rid in res and rid not in out:
+                    out[rid] = res[rid]
+                    self.forget(rid)
+            if len(out) == len(ids) or self.clock() - start >= timeout:
+                break
+            if not self.alive():
+                self.heartbeat()
+                if self.alive_version() is None:
+                    break                 # 1C yopildi — keyingi safar qayta ochiladi
+            self.sleep(0.3)
         return out
