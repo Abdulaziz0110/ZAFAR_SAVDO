@@ -96,3 +96,13 @@ Yangi (v5.4) - KASSA (SENSOR) OYNASI MONOBLOKDA, RDP'SIZ:
         refresh = 5        ; tovar/narx/mijozlar necha daqiqada yangilanadi (qoldiq - har daqiqada)
         enabled = 0        ; o'chirish
     Bir xil sotuv ikki marta yozilmaydi (internet uzilib qayta bosilsa ham) - kassa_done.jsonl.
+
+
+Yangi (v5.4, pc 7) - KASSA EKRANI QAYTA (1C sensor oynasi asosida, klaviaturasiz monoblok uchun):
+ - O'ngda: raqam maydoni + raqam paneli, "x" (miqdorga ko'paytirish), Kiritish (shtrix/kod), Panel (alohida
+   sahifa, tanlansa savdoga qaytadi), Qidiruv (ekran klaviaturasi: lotin/kirill), Narx (narxi bo'yicha), Kod,
+   Miqdor, Chegirma (summa / %), Qaytarish, Qarz to'lash, Oxirgi chek, Yangilash.
+ - Tepada: 1-, 2-, 3-oyna (bir vaqtda 3 ta xaridor), Narx turi, Blok (qulflash), Chiqish (oynani yopadi).
+ - 1C'da "ИзмененияВСенсореСпаролем" yoqilgan bo'lsa: kamaytirish/o'chirish/tozalash admin paroli bilan.
+ - 1C "Неизвестный интерфейс" xatosi (1C oynasi COM orqali ochilmasa): dastur 1cv8.exe /regserver ni o'zi
+   bir marta bajaradi. Bo'lmasa: 1C_COM_tuzatish.bat - o'ng tugma - "Запуск от имени администратора".

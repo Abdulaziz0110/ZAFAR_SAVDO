@@ -136,7 +136,8 @@ class FakeC:
         if text == kassa.DEBTS_Q:
             return [{"Код": 55.0, "С": 25000.0, "В": 0.0}]
         if text == kassa.STAFF_Q:
-            return [{"Код": 7.0, "Имя": "Zafar", "Пароль": "1234", "Уволен": False},
+            return [{"Код": 7.0, "Имя": "Zafar", "Пароль": "1234", "Уволен": False, "Админ": True},
+                    {"Код": 9.0, "Имя": "Kassir", "Пароль": "5555", "Уволен": False, "Админ": False},
                     {"Код": 8.0, "Имя": "Eski", "Пароль": "9999", "Уволен": True},
                     {"Код": 1.0, "Имя": "Do'kon", "Пароль": "", "Уволен": False}]
         if "Константы КАК К" in text:
@@ -166,7 +167,10 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual(snap["cl"], [["55", "Ali", "+998901112233", 25000.0, 0.0, 0]])
         self.assertTrue(snap["rongta"])
         self.assertEqual(snap["title"], "Zafar savdo")
-        self.assertEqual([s["code"] for s in staff], ["7", "8"])     # parolsiz xodim kirolmaydi
+        self.assertEqual([s["code"] for s in staff], ["7", "9", "8"])     # parolsiz xodim kirolmaydi
+        self.assertFalse(snap["lock"])
+        c.Константы.ИзмененияВСенсореСпаролем = Obj(Получить=lambda: True)
+        self.assertTrue(kassa.KassaOneC().snapshot(c)[0]["lock"])
 
     def test_check_stock(self):
         lines = [{"code": "15", "qty": kc.qty(4), "name": "Olma"}, {"code": "15", "qty": kc.qty(7), "name": "Olma"}]
@@ -297,6 +301,36 @@ class ServiceTest(unittest.TestCase):
         self.t[0] += kassa.ACTIVE_SEC + 1
         self.svc.tick()
         self.assertEqual(self.svc.app.quits, 1)          # ishlatilmasa 1C oynasi yopiladi
+
+    def test_admin_password(self):
+        tok = self.svc.login("5555")["token"]
+        self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")
+        for bad in ("5555", "9999", "0000", ""):
+            with self.assertRaises(kc.KassaError):
+                self.svc.admin(tok, bad)
+        with self.assertRaises(PermissionError):
+            self.svc.admin("x", "1234")
+
+    def test_app_failure_reports_both_errors(self):
+        com_c = self.c
+
+        class OneC(kassa.KassaOneC):
+            def write_sale(s, c, *a):
+                raise Exception("Ошибка инициализации модуля: ОбщиеНазначения")
+
+        class App:
+            def connect(s):
+                raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: Неизвестный интерфейс")
+
+        self.svc.onec = OneC("Do'kon")
+        self.svc.open_app = App
+        tok = self.login()
+        with self.assertRaises(kc.KassaError) as e:
+            self.svc.sale(sale_body(token=tok, id="fail0001"))
+        self.assertIn("Неизвестный интерфейс", str(e.exception))
+        self.assertIn("COM: Ошибка инициализации модуля", str(e.exception))
+        self.assertFalse(self.svc.app_mode)
+        self.assertEqual(com_c.written, [])
 
     def test_idle_releases_1c(self):
         self.login()

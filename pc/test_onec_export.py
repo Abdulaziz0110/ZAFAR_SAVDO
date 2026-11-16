@@ -448,5 +448,23 @@ class Codes(unittest.TestCase):
         self.assertIn("Shtrix kod manbasi: РегистрСведений.Штрихкоды", t)
 
 
+
+class AppRegisterTest(unittest.TestCase):
+    def test_paths_and_errors(self):
+        o = load(tempfile.mkdtemp())
+        self.assertEqual(o.exe_from_command('"C:\\Program Files (x86)\\1cv8\\8.3.22\\bin\\1cv8.exe" /automation'),
+                         "C:\\Program Files (x86)\\1cv8\\8.3.22\\bin\\1cv8.exe")
+        self.assertEqual(o.exe_from_command("C:\\1cv8\\bin\\comcntr.dll"), "C:\\1cv8\\bin\\comcntr.dll")
+        # ishlayotgan COMConnector yonidagi 1cv8.exe birinchi
+        self.assertEqual(o.app_server_candidates("C:\\P\\8.3.22\\bin\\comcntr.dll", '"C:\\P\\8.3.18\\bin\\1cv8.exe" /automation'),
+                         ["C:\\P\\8.3.22\\bin\\1cv8.exe", "C:\\P\\8.3.18\\bin\\1cv8.exe"])
+        self.assertEqual(o.app_server_candidates("", ""), [])
+
+        class E(Exception):
+            pass
+        self.assertTrue(o.needs_register(E(-2147023179, "Неизвестный интерфейс.", None, None)))
+        self.assertTrue(o.needs_register(E("Класс не зарегистрирован")))
+        self.assertFalse(o.needs_register(E("Ошибка инициализации модуля")))
+
 if __name__ == "__main__":
     unittest.main()

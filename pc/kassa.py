@@ -144,9 +144,10 @@ DEBT_ONE_Q = (
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(, Контрагент = &К И Сотрудник = &С) КАК О"
 )
 STAFF_Q = (
-    "ВЫБРАТЬ С.Код КАК Код, С.Наименование КАК Имя, С.Пароль КАК Пароль, С.Уволен КАК Уволен "
+    "ВЫБРАТЬ С.Код КАК Код, С.Наименование КАК Имя, С.Пароль КАК Пароль, С.Уволен КАК Уволен, С.Админ КАК Админ "
     "ИЗ Справочник.Сотрудники КАК С ГДЕ НЕ С.ЭтоГруппа И НЕ С.ПометкаУдаления"
 )
+STAFF_Q_MIN = STAFF_Q.replace(", С.Админ КАК Админ", "")
 STOCK_ONE_Q = (
     "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.КоличествоОстаток), 0) КАК Кол, ЕСТЬNULL(СУММА(О.СуммаСумОстаток), 0) КАК Сум, "
     "ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК Вал ИЗ РегистрНакопления.Товар.Остатки(, Товар = &Т И Склад = &С) КАК О"
@@ -218,6 +219,7 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
     g_out.sort(key=lambda x: x["n"].lower())
     return {
         "rate": consts.get("rate", 0.0), "neg": bool(consts.get("neg")), "rongta": bool(consts.get("rongta")),
+        "lock": bool(consts.get("lock")),
         "store": consts.get("store", ""), "title": title,
         "g": g_out, "b": b_out, "pnl": panel or [], "cl": c_out,
     }
@@ -271,6 +273,11 @@ class KassaOneC:
         except Exception:  # noqa: BLE001
             out["neg"] = False
         try:
+            # 1C: o'zgartirish (kamaytirish/o'chirish) admin paroli bilan
+            out["lock"] = bool(c.Константы.ИзмененияВСенсореСпаролем.Получить())
+        except Exception:  # noqa: BLE001
+            out["lock"] = False
+        try:
             out["rongta"] = text(c.String(c.Константы.ТипВесы.Получить())) == text(c.String(c.Перечисления.СписокВесов.RONGTA))
         except Exception:  # noqa: BLE001
             out["rongta"] = False
@@ -312,14 +319,19 @@ class KassaOneC:
             return []
 
     def staff(self, c):
-        rows = self.query(c, STAFF_Q, ["Код", "Имя", "Пароль", "Уволен"])
+        try:
+            rows = self.query(c, STAFF_Q, ["Код", "Имя", "Пароль", "Уволен", "Админ"])
+        except Exception as e:  # noqa: BLE001
+            log.warning("kassa: Сотрудники.Админ o'qilmadi (%s)", str(e)[:120])
+            rows = self.query(c, STAFF_Q_MIN, ["Код", "Имя", "Пароль", "Уволен"])
         out = []
         for r in rows:
             pw = text(r.get("Пароль"))
             if isinstance(r.get("Пароль"), float):
                 pw = code_text(r.get("Пароль"))
             if pw:
-                out.append({"code": code_text(r.get("Код")), "name": text(r.get("Имя")), "pw": pw, "fired": bool(r.get("Уволен"))})
+                out.append({"code": code_text(r.get("Код")), "name": text(r.get("Имя")), "pw": pw,
+                            "fired": bool(r.get("Уволен")), "admin": bool(r.get("Админ"))})
         return out
 
     def panel(self, c):
@@ -572,6 +584,19 @@ class KassaService:
                 return {"ok": True, "token": tok, "name": s["name"]}
         raise kc.KassaError("Bunday parolli xodim yo'q")
 
+    def admin(self, token, pw):
+        """1C ИзмененияВСенсореСпаролем: kamaytirish/o'chirishga admin (Сотрудники.Админ) paroli."""
+        self.who(token)
+        pw = str(pw or "").strip()
+        if not pw:
+            raise kc.KassaError("Parolni kiriting")
+        for s in self.staff:
+            if s["pw"] == pw and not s["fired"]:
+                if s.get("admin"):
+                    return {"ok": True, "name": s["name"]}
+                raise kc.KassaError("Bu xodim admin emas")
+        raise kc.KassaError("Parol noto'g'ri")
+
     def who(self, token):
         with self.lock:
             v = self.tokens.get(token or "")
@@ -699,16 +724,25 @@ class KassaService:
             raise
         except Exception as e:  # noqa: BLE001
             if self.open_app is not None and onec_write.needs_app(str(e)):
-                log.info("kassa: COM'da modul ishlamadi — 1C oynasi orqali")
+                log.warning("kassa: COM ulanishida 1C moduli ishlamadi (%s) — 1C oynasi orqali", str(e)[:300])
                 self.app_mode = True
-                return self._write_app(sale, pay, emp_code)
+                try:
+                    return self._write_app(sale, pay, emp_code)
+                except (kc.KassaError, SystemExit) as e2:
+                    self.app_mode = False      # keyingi safar yana COM'dan boshlanadi (masalan tuzatilgan bo'lsa)
+                    raise kc.KassaError("%s | COM: %s" % (str(e2)[:220], str(e)[:120]))
+            log.warning("kassa: 1C yozuv xatosi: %s", str(e)[:300])
             raise kc.KassaError("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
 
     def _write_app(self, sale, pay, emp_code):
         import onec_write
         if self.app is None:
             self.app = self.open_app()
-        self.app.connect()
+        try:
+            self.app.connect()
+        except SystemExit as e:
+            log.warning("kassa: 1C oynasi ochilmadi: %s", e)
+            raise kc.KassaError(str(e)[:300])
         try:
             return self.onec.write_sale(self.app.c, sale, pay, emp_code)
         except kc.KassaError:
@@ -896,6 +930,8 @@ def make_handler(service, static_dir):
                     return self._json(200, service.login(body.get("pw")))
                 if path == "/api/sale":
                     return self._json(200, service.sale(body))
+                if path == "/api/admin":
+                    return self._json(200, service.admin(body.get("token"), body.get("pw")))
                 if path == "/api/refresh":
                     service.who(body.get("token"))
                     service.call(service._refresh_full)

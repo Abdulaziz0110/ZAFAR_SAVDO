@@ -9,12 +9,12 @@
 </head>
 <body>
 
-<!-- KIRISH -->
+<!-- KIRISH / QULF -->
 <section id="login" class="screen">
   <div class="login-card">
     <div class="brand" id="loginTitle">Kassa</div>
-    <div class="login-hint">Parolingizni kiriting</div>
-    <input id="pw" type="password" inputmode="none" autocomplete="off" aria-label="Parol">
+    <div class="login-hint" id="loginHint">Parolingizni kiriting</div>
+    <input id="pw" type="password" inputmode="none" autocomplete="off" aria-label="Parol" readonly>
     <div class="pad login-pad" id="loginPad">
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
       <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
@@ -23,7 +23,10 @@
     </div>
     <button id="loginBtn" class="big primary">Kirish</button>
     <div class="login-err" id="loginErr" role="alert"></div>
-    <a class="setup" href="/monoblok.bat">Monoblokka o'rnatish (to'liq ekran, avtozapusk)</a>
+    <div class="login-foot">
+      <button id="loginExit" class="ghost">Kassani yopish</button>
+      <a class="setup" href="/monoblok.bat">Monoblokka o'rnatish</a>
+    </div>
   </div>
 </section>
 
@@ -32,80 +35,104 @@
   <header class="top">
     <div class="who">
       <div class="store" id="storeName">Kassa</div>
-      <div class="cashier"><span id="cashierName"></span> · <span id="clock"></span></div>
+      <div class="cashier"><span id="cashierName"></span> · <span id="clock"></span> <span class="dot" id="dataDot"></span></div>
     </div>
-    <div class="seg" id="ptypes" role="group" aria-label="Narx turi">
-      <button data-p="Цена1">Narx 1</button><button data-p="Цена2">Narx 2</button>
-      <button data-p="Цена3">Narx 3</button><button data-p="Цена4">Narx 4</button>
-    </div>
-    <div class="seg mode" role="group" aria-label="Amal">
-      <button id="modeSale" class="on">Sotuv</button><button id="modeRet">Qaytarish</button>
-    </div>
-    <div class="top-actions">
-      <span class="dot" id="dataDot" title="Ma'lumot holati"></span>
-      <button id="refreshBtn" class="icon" title="1C'dan yangilash" aria-label="Yangilash"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></button>
-      <button id="logoutBtn" class="icon" title="Chiqish" aria-label="Chiqish"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M13 3h-2v10h2V3zm4.83 2.17-1.42 1.42A6.92 6.92 0 0 1 19 12a7 7 0 1 1-11.42-5.42L6.17 5.17A8.93 8.93 0 0 0 3 12a9 9 0 0 0 18 0c0-2.74-1.23-5.18-3.17-6.83z"/></svg></button>
-    </div>
+    <div class="wins" id="wins" role="tablist" aria-label="Savdo oynalari"></div>
+    <button id="ptypeBtn" class="hbtn"><small>Narx turi</small><b id="ptypeName">Narx 1</b></button>
+    <button id="lockBtn" class="hbtn"><small>Qulflash</small><b>Blok</b></button>
+    <button id="exitBtn" class="hbtn exit"><small>Kassadan</small><b>Chiqish</b></button>
   </header>
 
   <div class="body">
+    <!-- CHAP: savat -->
     <div class="left">
-      <div class="scanbar">
-        <input id="q" type="text" inputmode="none" autocomplete="off" placeholder="Shtrix kod, kod, nom yoki narx…" aria-label="Qidiruv">
-        <button id="kbBtn" class="icon" title="Klaviatura" aria-label="Klaviatura">⌨</button>
-        <button id="qClear" class="icon" aria-label="Tozalash">✕</button>
-      </div>
+      <div class="mode-bar hidden" id="modeBar">QAYTARISH — mijoz qaytargan tovar</div>
+      <div class="thead"><span>№</span><span>Mahsulot</span><span>Soni</span><span>Narxi</span><span>Summa</span></div>
       <div class="cart" id="cart" role="list"></div>
-      <div class="cart-empty" id="cartEmpty">Savat bo'sh — tovarni skanerlang yoki paneldan tanlang</div>
-      <div class="sel-bar hidden" id="selBar">
-        <button id="selMinus" class="sq">−</button>
-        <div class="sel-qty" id="selQty"></div>
-        <button id="selPlus" class="sq">+</button>
-        <button id="selDel" class="sq danger" aria-label="O'chirish"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+      <div class="cart-empty" id="cartEmpty">Savat bo'sh — skanerlang, kodni yozing yoki «Panel»dan tanlang</div>
+      <div class="sel-info" id="selInfo"></div>
+      <div class="row-tools">
+        <button id="upBtn" class="sq" aria-label="Yuqoriga">▲</button>
+        <button id="downBtn" class="sq" aria-label="Pastga">▼</button>
+        <button id="minusBtn" class="sq">−</button>
+        <button id="plusBtn" class="sq">+</button>
+        <button id="delBtn" class="sq danger">O'chirish</button>
+        <button id="clearBtn" class="sq muted">Tozalash</button>
       </div>
       <div class="totals">
-        <div class="tot-row"><span id="cartCount">0 ta</span><span class="tot" id="cartTotal">0</span></div>
-        <div class="tot-btns">
-          <button id="clearBtn" class="big muted">Tozalash</button>
-          <button id="payBtn" class="big primary">To'lov</button>
-        </div>
+        <div class="t-line"><span>Jami</span><b id="tTotal">0</b></div>
+        <div class="t-line disc" id="tDiscLine"><span>Chegirma</span><b id="tDisc">0</b></div>
+        <div class="t-line due"><span id="tDueLabel">To'lanadi</span><b id="tDue">0</b></div>
       </div>
     </div>
 
+    <!-- O'NG: kiritish va tugmalar -->
     <div class="right">
-      <div class="tabs" id="tabs"></div>
-      <div class="grid" id="grid"></div>
-      <div class="padrow">
-        <div class="mult" id="multBox"><span class="mult-l">Miqdor</span><span id="mult">—</span></div>
-        <div class="pad main-pad" id="mainPad">
-          <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="B" class="muted">⌫</button>
-          <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="muted">C</button>
-          <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="." class="muted">,</button>
-          <button data-k="0">0</button><button data-k="00">00</button><button id="setQtyBtn" class="act">× Miqdor</button><button id="codeBtn" class="act">Kod</button>
-        </div>
+      <div class="display" id="display">
+        <span class="d-mult" id="dMult"></span>
+        <span class="d-val" id="dVal"></span>
+        <span class="d-hint" id="dHint">Raqam yozing yoki skanerlang</span>
       </div>
+      <div class="pad main-pad" id="mainPad">
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="B" class="muted">⌫</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="muted">C</button>
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="X" class="act">×</button>
+        <button data-k="0">0</button><button data-k="00">00</button><button data-k="." class="muted">,</button><button data-k="OK" class="act">Kiritish</button>
+      </div>
+      <div class="fn" id="fn">
+        <button id="panelBtn" class="fn-main"><b>Panel</b><small>tez tovarlar</small></button>
+        <button id="searchBtn"><b>Qidiruv</b><small>nomi bo'yicha</small></button>
+        <button id="priceBtn"><b>Narx</b><small>narxi bo'yicha</small></button>
+        <button id="codeBtn"><b>Kod</b><small>tovar kodi</small></button>
+        <button id="qtyBtn"><b>Miqdor</b><small>tanlangan qator</small></button>
+        <button id="discBtn"><b>Chegirma</b><small id="discSub">summa</small></button>
+        <button id="discPBtn"><b>Chegirma %</b><small>foiz</small></button>
+        <button id="retBtn"><b>Qaytarish</b><small id="retSub">tovar qaytdi</small></button>
+        <button id="debtBtn"><b>Qarz to'lash</b><small>mijoz to'lovi</small></button>
+        <button id="lastBtn"><b>Oxirgi chek</b><small>qayta chiqarish</small></button>
+        <button id="refreshBtn"><b>Yangilash</b><small>1C'dan</small></button>
+      </div>
+      <button id="payBtn" class="pay-btn">TO'LOV</button>
     </div>
   </div>
 </section>
+
+<!-- PANEL (1C'dagi "Paneli" sahifasi) -->
+<div class="overlay hidden" id="panelView" role="dialog" aria-modal="true" aria-label="Panel">
+  <div class="ov-head">
+    <div class="tabs" id="tabs"></div>
+    <button id="panelBack" class="big primary back">← Savdo oynasiga qaytish</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- QIDIRUV (ekran klaviaturasi bilan) -->
+<div class="overlay hidden" id="kbView" role="dialog" aria-modal="true" aria-labelledby="kbTitle">
+  <div class="ov-head">
+    <div class="kb-title" id="kbTitle">Qidiruv</div>
+    <div class="kb-field"><span id="kbText"></span><i class="caret"></i></div>
+    <button id="kbClose" class="big primary back">← Qaytish</button>
+  </div>
+  <div class="kb-results" id="kbResults"></div>
+  <div class="kb" id="kb"></div>
+</div>
 
 <!-- TO'LOV -->
 <div class="modal hidden" id="payModal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
   <div class="sheet pay">
     <div class="sheet-head">
       <div class="sheet-title" id="payTitle">To'lov</div>
-      <button class="icon" id="payClose" aria-label="Yopish">✕</button>
+      <button class="big muted" id="payClose">Bekor qilish</button>
     </div>
     <div class="pay-body">
       <div class="pay-left">
         <div class="pay-sum"><span>Jami</span><b id="pTotal">0</b></div>
         <div class="pay-sum disc"><span>Chegirma</span><b id="pDiscount">0</b></div>
         <div class="pay-sum due"><span id="pDueLabel">To'lanadi</span><b id="pDue">0</b></div>
-
         <div class="fields">
           <button class="field" data-f="cash"><span>Naqd</span><b id="fCash">0</b></button>
           <button class="field" data-f="card"><span>Plastik</span><b id="fCard">0</b></button>
           <button class="field" data-f="click"><span>Click</span><b id="fClick">0</b></button>
-          <button class="field" data-f="discount"><span>Chegirma</span><b id="fDiscount">0</b></button>
         </div>
         <div class="quick">
           <button data-all="cash">Hammasi naqd</button>
@@ -113,13 +140,11 @@
           <button data-all="click">Hammasi Click</button>
         </div>
         <div class="pay-result" id="pResult"></div>
-
         <div class="client-box">
-          <div class="client-sel" id="clientSel">Mijoz: <b id="clientName">tanlanmagan</b> <span id="clientDebt"></span></div>
-          <button id="clientClear" class="link hidden">olib tashlash</button>
+          <div class="client-sel">Mijoz: <b id="clientName">tanlanmagan</b> <span id="clientDebt"></span></div>
+          <button id="clientPick" class="big muted">Mijozni tanlash</button>
+          <button id="clientClear" class="ghost hidden">Olib tashlash</button>
         </div>
-        <input id="clientQ" type="text" inputmode="text" autocomplete="off" placeholder="Mijoz: ism yoki telefon…" aria-label="Mijoz qidirish">
-        <div class="client-list" id="clientList"></div>
       </div>
       <div class="pay-right">
         <div class="pay-display"><span id="padTarget">Naqd</span><b id="padVal">0</b></div>
@@ -133,6 +158,27 @@
         <div class="pay-err" id="payErr" role="alert"></div>
         <button id="payOk" class="big primary">Tasdiqlash</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- SO'ROV (parol, narx turi, tasdiq) -->
+<div class="modal hidden" id="askModal" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+  <div class="sheet ask">
+    <div class="sheet-title" id="askTitle"></div>
+    <div class="ask-text" id="askText"></div>
+    <input id="askPw" type="password" inputmode="none" readonly class="hidden" aria-label="Parol">
+    <div class="pad ask-pad hidden" id="askPad">
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="C" class="muted">C</button><button data-k="0">0</button><button data-k="B" class="muted">⌫</button>
+    </div>
+    <div class="ask-choices" id="askChoices"></div>
+    <div class="ask-err" id="askErr" role="alert"></div>
+    <div class="ask-btns" id="askBtns">
+      <button id="askNo" class="big muted">Bekor qilish</button>
+      <button id="askYes" class="big primary">Tasdiqlash</button>
     </div>
   </div>
 </div>
@@ -151,11 +197,8 @@
   </div>
 </div>
 
-<!-- XABAR -->
 <div class="toast hidden" id="toast" role="status"></div>
 <div class="busy hidden" id="busy"><div class="spin"></div><div id="busyText">1C'ga yozilmoqda…</div></div>
-
-<!-- CHEK (faqat chop etishda) -->
 <div id="receipt" aria-hidden="true"></div>
 
 <script src="logic.js"></script>

@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 6) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 49) + kompyuter dasturi 5.4 (pc 7) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-15
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -25,7 +25,11 @@ Belgilar:
 | Brandmauer 8077-port (dastur o'zi; bo'lmasa allow_firewall.bat) | IMPLEMENTED-UNVERIFIED |
 | Admin ilovasi: Kompyuter ekranida kassa manzili va monoblok ko'rsatmasi | VERIFIED (kompilyatsiya) |
 | pc 6: onec.ini Bloknotda ANSI (1251) saqlangan bo'lsa kassa ishga tushmasdi — tuzatildi; internet yo'q bo'lsa yangilanish 5 daqiqada qayta tekshiriladi | VERIFIED (test) |
-| Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish | NOT-IMPLEMENTED |
+| pc 7: kassa ekrani 1C sensor oynasi asosida qayta: raqam maydoni + panel, ×, Kod, Narx bo'yicha, Miqdor, Chegirma summa/%, 3 ta parallel oyna, Panel alohida sahifa, ekran klaviaturasi (lotin/kirill), Blok, Chiqish | VERIFIED (Playwright, soxta 1C) |
+| Admin paroli bilan kamaytirish/o'chirish (Константы.ИзмененияВСенсореСпаролем, Сотрудники.Админ) | VERIFIED (test) / 1C'da IMPLEMENTED-UNVERIFIED |
+| "Chiqish" — kiosk oynasini yopish (window.close); yopilmasa barmoq bilan yo'l ko'rsatiladi | IMPLEMENTED-UNVERIFIED (monoblokda sinalmagan) |
+| 1C oynasi (V83.Application) "Неизвестный интерфейс": 1cv8.exe /regserver avtomatik + 1C_COM_tuzatish.bat; xatoda COM va oyna sabablari birga ko'rsatiladi | IMPLEMENTED-UNVERIFIED (Windows'da sinalmagan) |
+| Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 
 ## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova
 | Narsa | Holat |

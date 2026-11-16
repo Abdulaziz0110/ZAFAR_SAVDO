@@ -806,6 +806,90 @@ class OneC:
 
 
 
+APP_HINT = ("Kompyuterda administrator sifatida bir marta bajaring: "
+            "\"C:\\Program Files\\1cv8\\<versiya>\\bin\\1cv8.exe\" /regserver (yoki 1C_COM_tuzatish.bat)")
+_REGISTERED = []
+
+
+def needs_register(err):
+    """V83.Application ro'yxatdan o'tmaganligi/buzilganligi xatosimi (RPC_S_UNKNOWN_IF, REGDB_E_CLASSNOTREG, ...)."""
+    code = None
+    try:
+        code = err.args[0] if err.args and isinstance(err.args[0], int) else getattr(err, "hresult", None)
+    except Exception:  # noqa: BLE001
+        code = None
+    if code in (-2147023179, -2147221164, -2147221005, -2147024894):
+        return True
+    return bool(re.search(r"(?i)неизвестный интерфейс|interface is unknown|не зарегистрирован|not registered|"
+                          r"недопустимая строка с указанием класса|invalid class string", str(err)))
+
+
+def exe_from_command(cmd):
+    """Reestrdagi LocalServer32 / InprocServer32 qiymatidan fayl yo'li: '"C:\\a b\\1cv8.exe" /automation' -> 'C:\\a b\\1cv8.exe'."""
+    cmd = str(cmd or "").strip()
+    if cmd.startswith('"'):
+        end = cmd.find('"', 1)
+        return cmd[1:end] if end > 0 else cmd.strip('"')
+    m = re.match(r"(?i)^(.+?\.(exe|dll))(\s|$)", cmd)
+    return m.group(1) if m else cmd
+
+
+def app_server_candidates(comcntr_path, current_server):
+    """Qaysi 1cv8.exe ni ro'yxatdan o'tkazish: avval ishlayotgan COMConnector (comcntr.dll) yonidagisi, keyin hozirgisi."""
+    out = []
+    if comcntr_path:
+        import ntpath   # reestrdagi yo'llar doim Windows ko'rinishida
+        out.append(ntpath.join(ntpath.dirname(exe_from_command(comcntr_path)), "1cv8.exe"))
+    if current_server:
+        out.append(exe_from_command(current_server))
+    seen = []
+    for p in out:
+        if p and p.lower().endswith("1cv8.exe") and p not in seen:
+            seen.append(p)
+    return seen
+
+
+def _clsid_server(progid, kind):
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, progid + "\\CLSID") as k:
+        clsid = winreg.QueryValue(k, None)
+    for view in (0, getattr(winreg, "KEY_WOW64_32KEY", 0), getattr(winreg, "KEY_WOW64_64KEY", 0)):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "CLSID\\%s\\%s" % (clsid, kind), 0, winreg.KEY_READ | view) as k:
+                return winreg.QueryValue(k, None)
+        except OSError:
+            continue
+    return ""
+
+
+def register_app_server():
+    """1cv8.exe /regserver (bir marta). @return urinildimi."""
+    if _REGISTERED or os.name != "nt":
+        return False
+    _REGISTERED.append(1)
+    comcntr = current = ""
+    try:
+        comcntr = _clsid_server("V83.COMConnector", "InprocServer32")
+    except OSError:
+        pass
+    try:
+        current = _clsid_server("V83.Application", "LocalServer32")
+    except OSError:
+        pass
+    import subprocess
+    for exe in app_server_candidates(comcntr, current):
+        if not os.path.isfile(exe):
+            continue
+        log.info("1C oynasi COM-server sifatida ro'yxatdan o'tkazilmoqda: %s /regserver", exe)
+        try:
+            subprocess.run([exe, "/regserver"], timeout=180, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            return True
+        except (OSError, subprocess.SubprocessError) as e:
+            log.warning("1cv8.exe /regserver: %s", e)
+    log.warning("1cv8.exe topilmadi (COMConnector: %s, V83.Application: %s)", comcntr or "-", current or "-")
+    return False
+
+
 class OneCApp(OneC):
     """v5.3: 1C'ga "oyna orqali" ulanish (V83.Application) - Konfiguratorda hech narsa o'zgartirmasdan.
 
@@ -829,16 +913,26 @@ class OneCApp(OneC):
             import win32com.client
         except ImportError:
             raise SystemExit("pywin32 o'rnatilmagan: pip install pywin32")
+        import win32com.client.dynamic
         pythoncom.CoInitialize()
-        try:
-            app = win32com.client.Dispatch("V83.Application")
-        except Exception as e:
-            raise SystemExit("1C oynasini ochib bo'lmadi (V83.Application): %s" % str(e)[:200])
-        log.info("1C ga oyna orqali ulanilmoqda…")
-        try:
-            ok = app.Connect(self.cfg.conn_string())
-        except Exception as e:
-            raise SystemExit("1C ga ulanib bo'lmadi: %s" % str(e)[:200])
+        errs = []
+        app = ok = None
+        for attempt in range(2):
+            try:
+                # sof "kech bog'lanish" (IDispatch) - makepy keshidagi eski tiplar xalaqit bermaydi
+                app = win32com.client.dynamic.Dispatch("V83.Application")
+                log.info("1C ga oyna orqali ulanilmoqda…")
+                ok = app.Connect(self.cfg.conn_string())
+                break
+            except Exception as e:  # noqa: BLE001
+                errs.append(str(e)[:200])
+                app = None
+                # v5.4: "Неизвестный интерфейс" / "класс не зарегистрирован" - 1cv8.exe COM-server sifatida
+                # ro'yxatdan o'tmagan yoki boshqa versiyaga bog'langan. Ishlayotgan COMConnector bilan bir xil
+                # versiyadagi 1cv8.exe /regserver qilinadi (dastur administrator huquqida) va bir marta qayta urinadi.
+                if attempt == 0 and needs_register(e) and register_app_server():
+                    continue
+                raise SystemExit("1C ga oyna orqali ulanib bo'lmadi: %s. %s" % ("; ".join(errs), APP_HINT))
         if ok is False:
             raise SystemExit("1C ga ulanib bo'lmadi (foydalanuvchi yoki parol)")
         try:
