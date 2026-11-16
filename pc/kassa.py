@@ -1238,7 +1238,8 @@ class KassaService:
                 err = str(e)[:200]
         items.sort(key=lambda r: (r.get("date", "")[6:10], r.get("date", "")[3:5], r.get("date", "")[:2],
                                   r.get("date", "")[11:]), reverse=True)
-        return {"ok": True, "day": d.strftime("%Y-%m-%d"), "items": items[:500], "e1c": err}
+        return {"ok": True, "day": d.strftime("%Y-%m-%d"), "items": items[:500] if with_1c else items, "e1c": err,
+                "all": items}
 
     def print_1c(self, token, rid="", no="", date=""):
         """pc 15: chekni 1C'ning O'ZI chiqaradi (bazadagi ПечатьНажатие_1 — kompyuterdagi chek printeriga)."""
@@ -1272,12 +1273,40 @@ class KassaService:
         except (RuntimeError, OSError) as e:
             raise kc.KassaError(str(e)[:200])
 
-    def report(self, day=None):
-        day = day or dt.datetime.fromtimestamp(self.clock()).strftime("%d.%m.%Y")
-        out = today_items(list(self.done.items.values()), day)
-        out["day"] = day
+    def report(self, token=None, day=None):
+        """pc 20: KASSA YOPISH (kun hisoboti) — 1C'dagi HAMMA savdolar (kassa + 1C sensor oynasi) bo'yicha; 1C o'qilmasa —
+        kassaning o'z yozuvlari. day: "YYYY-MM-DD" (bo'sh — bugun)."""
+        if token is None:                                   # faqat kassa yozuvlari (day: "dd.mm.YYYY")
+            key = day or dt.datetime.fromtimestamp(self.clock()).strftime("%d.%m.%Y")
+            out = today_items(list(self.done.items.values()), key)
+            out["day"] = key
+            out.update(self.ping())
+            return out
+        r = self.sales(token, day)
+        d = dt.datetime.strptime(r["day"], "%Y-%m-%d")
+        key = d.strftime("%d.%m.%Y")
+        out = today_items(r["all"], key)
         out.update(self.ping())
+        out.update(day=key, iso=r["day"], e1c=r["e1c"], src="1c" if not r["e1c"] else "kassa")
         return out
+
+    def print_text(self, token, title, rows):
+        """Hisobotni kompyuterdagi chek printeriga (1C orqali) chiqarish."""
+        self.who(token)
+        if self.make_bridge is None:
+            raise kc.KassaError("1C ko'prigi sozlanmagan")
+        import onec_bridge
+        lines = [str(title or "")[:60]] + ["%s|%s" % (str(a)[:40], str(b)[:30]) for a, b in (rows or [])[:80]]
+        job = onec_bridge.text_job("tx" + secrets.token_hex(6), lines)
+
+        def go():
+            out = self._br().run([job], timeout=15)
+            self._print_errs(self._br())
+            r = out.get(job["id"])
+            if r is not None and r[0] != "OK":
+                raise kc.KassaError("1C: %s" % r[1][:200])
+            return {"ok": True, "wait": r is None}
+        return self.call(go, timeout=40)
 
     # --- monoblok holati (savatlar) — elektr o'chsa ham shu yerda qoladi ---
     def state_path(self, k):
@@ -1751,7 +1780,10 @@ def make_handler(service, static_dir):
                     if path == "/api/state":
                         return self._json(200, service.get_state(tok, params.get("k", "1")))
                     if path == "/api/report":
-                        return self._json(200, service.report())
+                        try:
+                            return self._json(200, service.report(tok, params.get("d") or None))
+                        except kc.KassaError as e:
+                            return self._json(200, {"ok": False, "e": str(e)})
                     return self._json(200, {"ok": True, "items": service.queue_list()})
                 except PermissionError:
                     return self._json(401, {"ok": False, "e": "login"})
@@ -1788,6 +1820,10 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/print_text":
+                    rows = body.get("rows") if isinstance(body.get("rows"), list) else []
+                    return self._json(200, service.print_text(body.get("token"), body.get("title"),
+                                                              [r for r in rows if isinstance(r, list) and len(r) == 2]))
                 if path == "/api/print":
                     return self._json(200, service.print_1c(body.get("token"), body.get("id") or "", body.get("no") or "",
                                                             body.get("date") or ""))

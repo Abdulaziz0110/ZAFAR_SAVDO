@@ -35,7 +35,7 @@
     { id: 'debt', b: "Qarz to'lash", s: "mijoz to'lovi" },
     { id: 'last', b: 'Oxirgi chek', s: 'qayta chiqarish' },
     { id: 'sales', b: 'Savdolar', s: 'istalgan chek' },
-    { id: 'report', b: 'Kunlik hisobot', s: 'bugungi savdo' },
+    { id: 'report', b: 'Kassa yopish', s: 'kun hisoboti' },
     { id: 'settings', b: 'Sozlamalar', s: 'admin paroli' }
   ];
 
@@ -141,8 +141,7 @@
       o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + sec);
     } catch (e) { /* ovoz yo'q */ }
   }
-  function beep() { tone(330, 0.3, 0.2); }          // xato — past, uzunroq
-  function tick() { tone(1500, 0.05, 0.08); }       // tovar qo'shildi — qisqa "tik"
+  function beep() { tone(330, 0.3, 0.2); }          // xato — past, uzunroq (muvaffaqiyatda ovoz yo'q: skanerning o'zi chiqaradi)
   /** pc 17: sotuv yuborilayotganda 0 dan 100 gacha to'ladigan chiziq (tez javobda umuman ko'rinmaydi). */
   var prog = { t0: 0, raf: 0, show: 0 };
   function progress(on) {
@@ -487,7 +486,6 @@
     hideChange();
     S.flash = S.sel;
     renderCart(true); renderDisplay(); renderWins();
-    tick();
   }
   function setQty(i, milli) {
     var l = W().lines[i];
@@ -831,23 +829,41 @@
       info('Savdolar · ' + d.toLocaleDateString('ru-RU'), rows);
     }).catch(function (e) { busy(false); if (e.message !== 'login') toast('Savdolar olinmadi: ' + e.message, true); });
   }
-  function showReport() {
+  /** KASSA YOPISH: kun hisoboti (1C'dagi hamma savdolar), kun bo'yicha; chop etish — kompyuterdagi chek printeriga. */
+  function showReport(day) {
     busy(true, 'Hisobot tayyorlanmoqda…');
-    api('GET', '/api/report?t=' + encodeURIComponent(S.token), undefined, 20000).then(function (r) {
+    api('GET', '/api/report?t=' + encodeURIComponent(S.token) + (day ? '&d=' + day : ''), undefined, 50000).then(function (r) {
       busy(false);
+      if (r.ok === false) throw new Error(r.e || 'Xato');
       var c = function (v) { return money(L.cents(v)); };
+      var d = new Date((r.iso || ymd(new Date())) + 'T12:00:00');
+      var nav = el('div', 'row-btns nav3');
+      [[-1, '◀ Oldingi'], [0, 'Bugun'], [1, 'Keyingi ▶']].forEach(function (x) {
+        var bt = el('button', 'big muted', x[1]);
+        bt.addEventListener('click', function () { showReport(ymd(x[0] === 0 ? new Date() : new Date(d.getTime() + x[0] * 86400000))); });
+        nav.appendChild(bt);
+      });
       var rows = [
         { a: 'Sana', b: r.day },
         { a: 'Hujjatlar soni', b: String(r.n) },
         { a: 'Savdo (jami)', b: c(r.sale), cls: 'big' },
         { a: 'Chegirma', b: c(r.disc) },
         { a: 'Qaytarish', b: c(r.ret), cls: r.ret ? 'warn' : '' },
-        { a: 'Naqd', b: c(r.cash) }, { a: 'Plastik', b: c(r.card) }, { a: 'Click', b: c(r.click) },
+        { a: 'Naqd', b: c(r.cash), cls: 'big' }, { a: 'Plastik', b: c(r.card) }, { a: 'Click', b: c(r.click) },
         { a: 'Qarzga berildi', b: c(r.debt), cls: r.debt ? 'warn' : '' }, { a: "Qarz to'landi", b: c(r.debt_paid) }
       ];
       Object.keys(r.by || {}).forEach(function (k) { rows.push({ a: 'Kassir: ' + k, b: r.by[k].n + ' ta · ' + c(r.by[k].sum) }); });
-      if (r.q || r.qe) rows.push({ a: "1C'ga hali yozilmagan", b: (r.q + r.qe) + ' ta', cls: 'warn' });
-      info('Kunlik hisobot', rows, [{ label: 'Chop etish', fn: function () { printRows('Kunlik hisobot', rows); } }]);
+      var view = [{ node: nav }].concat(rows);
+      if (r.e1c) view.push({ a: "1C o'qilmadi — faqat kassa savdolari", b: r.e1c.slice(0, 60), cls: 'warn' });
+      if (r.q || r.qe) view.push({ a: "1C'ga hali yozilmagan", b: (r.q + r.qe) + ' ta', cls: 'warn' });
+      info('Kassa yopish · ' + r.day, view, [{ label: 'Chop etish', cls: 'primary', fn: function () {
+        if (!S.ui.chk1c) { printRows('Kassa yopish', rows); return; }
+        api('POST', '/api/print_text', { token: S.token, title: 'KASSA YOPISH ' + r.day,
+          rows: rows.map(function (x) { return [x.a, x.b]; }) }, 45000).then(function (j) {
+          if (j.ok === false) throw new Error(j.e || 'Xato');
+          toast(j.wait ? "Hisobot 1C'ga yuborildi" : 'Hisobot chiqarildi');
+        }).catch(function (e) { if (e.message !== 'login') toast('Chop etilmadi: ' + e.message, true); });
+      } }]);
     }).catch(function (e) { busy(false); if (e.message !== 'login') toast('Hisobot olinmadi: ' + e.message, true); });
   }
   function printRows(title, rows) {
@@ -1461,6 +1477,26 @@
     if (nb.indexOf('.') >= 0 && nb.split('.')[1].length > 3) return buf;
     return nb.replace(/^0+(?=\d)/, '');
   }
+  /** Miqdor: raqam yozilgan bo'lsa — shu; bo'lmasa tez tanlash tugmalari (tarozi tovari — kg, donali — dona). */
+  function chooseQty() {
+    if (S.sel < 0) { toast('Avval savatdan qatorni tanlang', true); return; }
+    var i = S.sel, l = W().lines[i];
+    function apply(m) {
+      if (m < W().lines[i].milli) needAdmin('Miqdorni kamaytirish', function () { setQty(i, m); });
+      else setQty(i, m);
+    }
+    if (S.disp) { var v = S.disp; S.disp = ''; renderDisplay(); apply(L.milli(v)); return; }
+    var g = S.byCode[l.code];
+    var kg = l.w || /^(kg|кг)$/i.test(String((g && g.e) || l.unit || '').trim());
+    var opts = kg ? [100, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500, 3000] : [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24].map(function (n) { return n * 1000; });
+    ask({
+      title: l.name + (kg ? ' — necha kg?' : ' — nechta?'),
+      text: "Yoki bekor qilib, raqam panelida yozing va «Miqdor»ni bosing",
+      choices: opts.map(function (m) {
+        return { label: kg ? qtyText(m) + ' kg' : qtyText(m), on: m === l.milli, pick: function () { apply(m); } };
+      })
+    });
+  }
   function takeDisp(what) {
     var v = S.disp;
     if (!v) { toast(what + ' — avval raqam paneli bilan yozing', true); return null; }
@@ -1494,14 +1530,7 @@
       if (!g) { toast('Kod topilmadi: ' + code, true); return; }
       addGoods(g, 1000, false);
     },
-    qty: function () {
-      if (S.sel < 0) { toast('Avval savatdan qatorni tanlang', true); return; }
-      var v = takeDisp('Miqdor');
-      if (v == null) return;
-      var m = L.milli(v), i = S.sel;
-      if (m < W().lines[i].milli) needAdmin('Miqdorni kamaytirish', function () { setQty(i, m); });
-      else setQty(i, m);
-    },
+    qty: chooseQty,
     disc: function () {
       var w = W();
       if (!S.disp && discount(w)) { w.dmode = 'sum'; w.dval = 0; touchWin(); renderCart(); renderFn(); return; }
@@ -1537,7 +1566,7 @@
       openPay(true);
     },
     last: function () { reprint(S.last); },
-    report: showReport,
+    report: function () { showReport(''); },
     sales: function () { showSales(''); },
     settings: openSettings
   };
@@ -1600,6 +1629,7 @@
     on('upBtn', function () { if (S.sel > 0) { S.sel--; renderCart(true); } else if (W().lines.length) { S.sel = 0; renderCart(true); } });
     on('downBtn', function () { if (S.sel < W().lines.length - 1) { S.sel++; renderCart(true); } });
     on('plusBtn', function () { if (S.sel >= 0) setQty(S.sel, W().lines[S.sel].milli + 1000); });
+    on('qtyBtn', chooseQty);
     on('minusBtn', function () {
       if (S.sel < 0) return;
       var i = S.sel, m = W().lines[i].milli;

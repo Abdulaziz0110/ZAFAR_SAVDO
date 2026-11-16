@@ -27,7 +27,7 @@ log = logging.getLogger("bridge")
 
 EPF_NAME = "kassa_bridge.epf"
 JOBS_DIR = "kassa_jobs"
-BRIDGE_VERSION = "3"
+BRIDGE_VERSION = "4"
 
 # --------------------------------------------------------------------------- 1C kodi (tashqi ishlov moduli)
 
@@ -80,6 +80,44 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		ВызватьИсключение "Topshiriq fayli noto'g'ri";
 	КонецЕсли;
 	Вид    = Ш[2];
+	Если Вид = "text" Тогда
+		// hisobot: chap|o'ng ustunli qatorlar -> kompyuterdagi chek printeri (Константы.ЧекПритер1)
+		ТД = Новый ТабличныйДокумент;
+		Шр = Новый Шрифт("Arial", 9, Истина);
+		Н = 0;
+		Для Сч = 2 По Т.КоличествоСтрок() Цикл
+			С = СтрРазделить(Т.ПолучитьСтроку(Сч), Символы.Таб, Истина);
+			Если С.Количество() < 2 Или С[0] <> "L" Тогда
+				Продолжить;
+			КонецЕсли;
+			Н = Н + 1;
+			Ч1 = СтрРазделить(С[1], "|", Истина);
+			О1 = ТД.Область(Н, 1);
+			О1.Текст = Ч1[0];
+			О1.Шрифт = Шр;
+			Если Ч1.Количество() > 1 Тогда
+				О2 = ТД.Область(Н, 2);
+				О2.Текст = Ч1[1];
+				О2.Шрифт = Шр;
+				О2.ГоризонтальноеПоложение = ГоризонтальноеПоложение.Право;
+			Иначе
+				О1.Шрифт = Новый Шрифт("Arial", 12, Истина);
+			КонецЕсли;
+		КонецЦикла;
+		ТД.Область(, 1, , 1).ШиринаКолонки = 24;
+		ТД.Область(, 2, , 2).ШиринаКолонки = 16;
+		ТД.ПолеСлева = 0;
+		ТД.ПолеСправа = 0;
+		Попытка
+			Принтер = СокрЛП(Константы.ЧекПритер1.Получить());
+			Если Принтер <> "" Тогда
+				ТД.ИмяПринтера = Принтер;
+			КонецЕсли;
+		Исключение
+		КонецПопытки;
+		Выполнить("ТД.Напечатать(Истина)");
+		Возврат "TEXT" + Символы.Таб + Строка(Н);
+	КонецЕсли;
 	Если Вид = "print" Тогда
 		// chekni qayta chiqarish: 1C'ning o'z chek bosmasi (ПечатьНажатие_1 / ПечатьНажатиеВоз_1)
 		Д = Ш[3];
@@ -404,6 +442,13 @@ def print_job(rid, no, date):
     """Chekni 1C'ning o'zi qayta chiqaradi: [no] — 1C hujjat raqami, [date] — "dd.mm.yyyy"."""
     return {"id": rid, "kind": "print", "ptype": clean(date)[:10], "emp": "", "client": "", "total": 0, "discount": 0,
             "cash": 0, "card": 0, "click": 0, "doc": "", "note": clean(no), "lines": [], "print": False}
+
+
+def text_job(rid, lines):
+    """Hisobotni 1C chek printeriga: lines[0] — sarlavha, keyingilari "chap|o'ng"."""
+    return {"id": rid, "kind": "text", "ptype": "", "emp": "", "client": "", "total": 0, "discount": 0, "cash": 0,
+            "card": 0, "click": 0, "doc": "", "note": "", "print": False,
+            "lines": [{"code": clean(x)[:80], "qty": 0, "price": 0, "sum": 0} for x in lines]}
 
 
 def job_text(job):

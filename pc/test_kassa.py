@@ -424,6 +424,9 @@ class ServiceTest(unittest.TestCase):
         self.assertIn("Принтер не найден", self.svc.ping()["pe"])
         with self.assertRaises(kc.KassaError):
             self.svc.print_1c(tok, no="", date="")
+        self.assertEqual(self.svc.print_text(tok, "Kassa yopish", [["Naqd", "9 000"]])["ok"], True)
+        tj = br.runs[-1][0]
+        self.assertEqual((tj["kind"], [l["code"] for l in tj["lines"]]), ("text", ["Kassa yopish", "Naqd|9 000"]))
 
     def test_panel_suggestion_approve_and_reset(self):
         tok = self.login()
@@ -567,6 +570,9 @@ class ServiceTest(unittest.TestCase):
         r = self.svc.report(day="15.11.2026")
         self.assertEqual((r["n"], r["sale"], r["ret"], r["cash"]), (2, 9000.0, 6350.0, 2650.0))
         self.assertEqual(r["by"]["Zafar"]["n"], 2)
+        # kassa yopish: 1C'dagi hamma savdolar (kassaniki ikki marta sanalmaydi) + 1C'da qilingan 000050
+        full = self.svc.report(tok, "2026-11-15")
+        self.assertEqual((full["src"], full["n"], full["sale"]), ("1c", 3, 9000.0 + 12000.0 + 9000.0 * 0))
         grant = self.svc.admin(tok, "1234")["grant"]
         self.svc.pending.append({"id": "x1", "sale": kassa.sale_to_json(kc.clean_sale(sale_body(id="x1xxxxxx"))),
                                  "res": {"_debt_delta": 0.0, "date": "", "total": 1}, "state": "error", "err": "e"})

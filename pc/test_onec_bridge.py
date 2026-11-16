@@ -45,7 +45,8 @@ class EpfTest(unittest.TestCase):
     def test_bsl_matches_1c_sensor_window(self):
         t = ob.bsl_text()
         self.assertNotRegex(t, r"Новый [^;\n(]+\([^)]*\)\.")      # 8.3.10: "Новый X(...).Metod()" kompilyatsiya xatosi
-        self.assertIn('Выполнить("ПечатьНажатие_1(Сс, 1)")', t)      # bazaning o'z cheki (yo'q bo'lsa ham modul buzilmaydi)
+        self.assertIn('Выполнить("ПечатьНажатие_1(Сс, 1)")', t)
+        self.assertIn('Выполнить("ТД.Напечатать(Истина)")', t)                 # hisobot — chek printeriga      # bazaning o'z cheki (yo'q bo'lsa ham modul buzilmaydi)
         for must in ("МахсулотКолдигиниАниклаш(ТекущаяДата(), Склад, Тов)", "ПоучитьДолг(ТекущаяДата(), Кл,",
                      "ОхиргиУртачаНархиниАниклаш_Махсулот(Тов, КлНарх, ТекущаяДата())", "Константы.Склад1.Получить()",
                      "Док.Записать(РежимЗаписиДокумента.Проведение)", '".wip"', '".res"', "Стр.Блок     = Стр.Кол / Стр.Шт"):

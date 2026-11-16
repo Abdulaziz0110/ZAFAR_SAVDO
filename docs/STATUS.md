@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 19) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 20) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -59,6 +59,8 @@ Belgilar:
 | pc 19: ixcham joylashuv — ro'yxatga 12-14 tovar sig'adi (tugmalar o'lchami o'zgarmagan); oq/qora fon (Sozlamalar); pastdagi tugmalar ikonka + yirik nom; katta oyna tugmalari | VERIFIED (brauzer) |
 | pc 19: qoldiq hech qayerda ko'rinmaydi, sozlamada yoqilsa ro'yxatda "Qoldiq" ustuni; qidiruvda oxirgi 12 ta tanlangan tovar; to'lovda banknot tugmalari (50/100/200 ming); sotuvdan keyin QAYTIM (yoki qarz) savat ustida katta yozuvda 6 s; qo'shilgan qator yonib turadi; "tik" ovozi (xato — past ovoz) | VERIFIED (brauzer) |
 | pc 19: sariq "1C'ga yozilmagan" faqat sotuv 1 daqiqadan ko'p kutsa; xatolar — Sozlamalar tugmasida qizil nuqta; telefondan yangilanganda kassada "Dastur yangilanmoqda" yozuvi, keyin o'zi qayta ochiladi; Sozlamalarda versiya | VERIFIED (test + brauzer) |
+| pc 20: "Kassa yopish" — kun hisoboti 1C'dagi HAMMA savdolar bo'yicha (kassa + 1C sensor oynasi, takrorlanmasdan): savdo, chegirma, qaytarish, naqd/plastik/Click, qarzga, qarz to'lovi, kassirlar; kunlar bo'yicha; kompyuterdagi chek printeriga 1C orqali chop etish | VERIFIED (test + brauzer) / 1C chop etish IMPLEMENTED-UNVERIFIED |
+| pc 20: "Miqdor" — tez tanlash: tarozi tovari 0.1…3 kg, donali 1…24; savat ostida 7 ta ixcham tugma (▲ ▼ − + Miqdor O'chirish Tozalash); muvaffaqiyatli skanerda ovoz yo'q (skanerning o'zi chiqaradi) | VERIFIED (brauzer) |
 | Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
 | Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
 
