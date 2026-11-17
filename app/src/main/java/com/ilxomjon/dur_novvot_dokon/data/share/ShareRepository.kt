@@ -667,7 +667,7 @@ class ShareRepository(
 
     private fun productIndex(): Map<String, Product> {
         val map = HashMap<String, Product>()
-        for (p in catalog.state.value.products) map.putIfAbsent(LedgerMerge.nameKey(p.name), p)
+        for (p in catalog.state.value.products) map.getOrPut(LedgerMerge.nameKey(p.name)) { p }
         return map
     }
 

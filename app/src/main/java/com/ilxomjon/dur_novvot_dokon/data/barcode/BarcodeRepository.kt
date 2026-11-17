@@ -122,7 +122,7 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
             imported = HashMap(p.linked.map)
             codes = HashMap(p.linked.codes)
             importedRaw = HashMap()
-            for (r in p.parsed.rows) { val k = Ean.canonical(r.barcode); if (imported.containsKey(k)) importedRaw.putIfAbsent(k, r.barcode.trim()) }
+            for (r in p.parsed.rows) { val k = Ean.canonical(r.barcode); if (imported.containsKey(k)) importedRaw.getOrPut(k) { r.barcode.trim() } }
             meta = BarcodeState(imported.size, System.currentTimeMillis(), p.fileName, p.linked.unmatched.size)
             // 1C'dagi vazn tovarlari prefiksi (masalan 28, 29) — tarozi yorlig'ini tanish uchun
             if (p.parsed.scalePrefixes.isNotEmpty()) scale = scale.copy(enabled = true, prefixes = p.parsed.scalePrefixes)
@@ -236,7 +236,7 @@ class BarcodeRepository(private val context: Context, private val catalog: Catal
         resolver?.let { return it }
         // Katalog id lari ham "kod" sifatida (tarozi yorlig'idagi kod 1C kodi bo'lsa — taklif qilinadi)
         val allCodes = HashMap<String, String>()
-        for (p in catalog.state.value.products) allCodes.putIfAbsent(BarcodeLink.codeKey(p.id), p.id)
+        for (p in catalog.state.value.products) allCodes.getOrPut(BarcodeLink.codeKey(p.id)) { p.id }
         allCodes.putAll(codes)
         val r = BarcodeResolver(imported + learned, scaleLearned, allCodes, scale)
         resolver = r

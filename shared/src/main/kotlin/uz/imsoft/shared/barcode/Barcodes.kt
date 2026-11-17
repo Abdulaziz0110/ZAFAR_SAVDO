@@ -197,7 +197,7 @@ object BarcodeLink {
 
     fun <T> link(rows: List<BarcodeImport.Row>, items: List<T>, id: (T) -> String, name: (T) -> String): Linked {
         val byId = HashMap<String, String>()
-        for (it in items) byId.putIfAbsent(codeKey(id(it)), id(it))
+        for (it in items) byId.getOrPut(codeKey(id(it))) { id(it) }
         val byNameMap = HashMap<String, String?>()
         for (it in items) {
             val k = LedgerMerge.nameKey(name(it))
@@ -216,7 +216,7 @@ object BarcodeLink {
             if (r.code.isNotEmpty()) codes[codeKey(r.code)] = pid
         }
         // Katalogdagi id lar ham 1C kodi bo'lishi mumkin (tarozi kodi uchun)
-        for ((k, v) in byId) codes.putIfAbsent(k, v)
+        for ((k, v) in byId) codes.getOrPut(k) { v }
         return Linked(map, codes, c1, c2, un)
     }
 }

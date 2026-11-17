@@ -125,7 +125,7 @@ object PluImport {
     /** Katalogga bog'lash: avval kod, keyin nom (bir xil nomli ikki tovar — bog'lanmaydi). @return tovar id -> PLU. */
     fun <T> link(rows: List<Row>, items: List<T>, id: (T) -> String, name: (T) -> String): Pair<Map<String, String>, List<Row>> {
         val byCode = HashMap<String, String>()
-        for (it in items) byCode.putIfAbsent(BarcodeLink.codeKey(id(it)), id(it))
+        for (it in items) byCode.getOrPut(BarcodeLink.codeKey(id(it))) { id(it) }
         val byName = HashMap<String, String?>()
         for (it in items) {
             val k = LedgerMerge.nameKey(name(it))
@@ -160,7 +160,7 @@ object CodesPayload {
     /** Kompyuterdan kelgan tovarni katalogdagisiga bog'lash: avval kod, keyin nom (ikki ma'noli nom bog'lanmaydi). */
     fun <T> linkIds(items: List<Item>, catalog: List<T>, id: (T) -> String, name: (T) -> String): Map<Item, String> {
         val byCode = HashMap<String, String>()
-        for (it in catalog) byCode.putIfAbsent(BarcodeLink.codeKey(id(it)), id(it))
+        for (it in catalog) byCode.getOrPut(BarcodeLink.codeKey(id(it))) { id(it) }
         val byName = HashMap<String, String?>()
         for (it in catalog) {
             val k = LedgerMerge.nameKey(name(it))

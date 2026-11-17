@@ -77,7 +77,7 @@ class AppUpdater(private val context: Context, private val baseUrl: String, priv
         c.readTimeout = 30_000
         try {
             check(c.responseCode == 200) { "HTTP ${c.responseCode}" }
-            val total = c.contentLengthLong.takeIf { it > 0 } ?: info.size
+            val total = c.contentLength.toLong().takeIf { it > 0 } ?: info.size     // contentLengthLong — API 24+, minSdk 23
             var got = 0L
             var last = -1
             c.inputStream.use { input ->

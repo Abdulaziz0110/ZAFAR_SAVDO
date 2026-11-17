@@ -19,8 +19,8 @@ class CatalogMatch<T>(items: List<T>, private val name: (T) -> String, private v
 
     init {
         for (it in items) {
-            exact.putIfAbsent(LedgerMerge.nameKey(name(it)), it)
-            byId.putIfAbsent(id(it), it)
+            exact.getOrPut(LedgerMerge.nameKey(name(it))) { it }
+            byId.getOrPut(id(it)) { it }
         }
     }
 
