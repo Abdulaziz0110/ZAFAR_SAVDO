@@ -27,7 +27,7 @@ log = logging.getLogger("bridge")
 
 EPF_NAME = "kassa_bridge.epf"
 JOBS_DIR = "kassa_jobs"
-BRIDGE_VERSION = "4"
+BRIDGE_VERSION = "5"
 
 # --------------------------------------------------------------------------- 1C kodi (tashqi ishlov moduli)
 
@@ -67,9 +67,26 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 КонецФункции
 
 Процедура ЗаписатьТекст(Путь, Текст)
-	Т = Новый ТекстовыйДокумент;
-	Т.УстановитьТекст(Текст);
-	Т.Записать(Путь, КодировкаТекста.UTF8);
+	// avval vaqtinchalik faylga, keyin nomini almashtirish: dastur yarim yozilgan faylni o'qimaydi,
+	// fayl band bo'lsa ham ("Ошибка совместного доступа") 3 marta urinadi
+	Врем = Путь + ".part";
+	Для Урин = 1 По 3 Цикл
+		Попытка
+			Т = Новый ТекстовыйДокумент;
+			Т.УстановитьТекст(Текст);
+			Т.Записать(Врем, КодировкаТекста.UTF8);
+			Ф = Новый Файл(Путь);
+			Если Ф.Существует() Тогда
+				УдалитьФайлы(Путь);
+			КонецЕсли;
+			ПереместитьФайл(Врем, Путь);
+			Возврат;
+		Исключение
+			Если Урин = 3 Тогда
+				ВызватьИсключение;
+			КонецЕсли;
+		КонецПопытки;
+	КонецЦикла;
 КонецПроцедуры
 
 Функция Провести(Путь)
@@ -296,24 +313,35 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 			Прервать;
 		КонецЕсли;
 		Если ТекущаяДата() - Пульс >= 5 Тогда
-			ЗаписатьТекст(Папка + "\1c.alive", "__VER__");
+			// "tirikman" belgisi: versiya fayl NOMIDA (dastur faylni ochmaydi — faqat vaqtiga qaraydi)
+			Попытка
+				ЗаписатьТекст(Папка + "\1c___VER__.alive", "1");
+			Исключение
+			КонецПопытки;
 			Пульс = ТекущаяДата();
 		КонецЕсли;
 		Попытка
 			ИшлаТопшириклар(Папка);
 		Исключение
-			ЗаписатьТекст(Папка + "\1c.error", ОписаниеОшибки());
+			Попытка
+				ЗаписатьТекст(Папка + "\1c.error", ОписаниеОшибки());
+			Исключение
+			КонецПопытки;
 		КонецПопытки;
 		Пауза(Оболочка);
 	КонецЦикла;
 	Попытка
-		УдалитьФайлы(Папка + "\1c.alive");
+		УдалитьФайлы(Папка + "\1c___VER__.alive");
 	Исключение
 	КонецПопытки;
 КонецПроцедуры
 
-// 1C bitta marta ochiladi va OCHIQ turadi: har ~1 soniyada papkani tekshiradi
-Ишла();
+// 1C bitta marta ochiladi va OCHIQ turadi: har ~1 soniyada papkani tekshiradi.
+// Hech qanday xato oynasi chiqmasin (oyna chiqsa 1C to'xtab qoladi) — xato bo'lsa 1C yopiladi, dastur qayta ochadi.
+Попытка
+	Ишла();
+Исключение
+КонецПопытки;
 ЗавершитьРаботуСистемы(Ложь);
 """
 
@@ -582,6 +610,49 @@ def allow_external(exe):
     return changed, errs
 
 
+def parse_bridge_procs(out, jobs):
+    """wmic/powershell chiqishi ("uzel,buyruq qatori,PID") -> shu papkali ko'prik 1C PID'lari."""
+    pids = []
+    key = os.path.normcase(jobs).lower()
+    for line in (out or "").splitlines():
+        line = line.strip()
+        if not line or line.lower().startswith("node,"):
+            continue
+        head, _, pid = line.rpartition(",")
+        if not pid.strip().isdigit():
+            continue
+        cmd = os.path.normcase(head.partition(",")[2]).lower()
+        if EPF_NAME.lower() in cmd and re.search(re.escape(key) + r'(?:["\s]|$)', cmd):
+            pids.append(int(pid))
+    return pids
+
+
+def hide_windows(pids):
+    """Berilgan jarayonlarning ko'rinib turgan oynalarini yashirish (ShowWindowAsync — 1C band bo'lsa ham osilmaydi)."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+    except (ImportError, AttributeError, OSError):
+        return 0
+    hidden = []
+    proto = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    def cb(hwnd, _):
+        if user32.IsWindowVisible(hwnd):
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value in pids:
+                user32.ShowWindowAsync(hwnd, 0)          # SW_HIDE
+                hidden.append(hwnd)
+        return True
+    try:
+        user32.EnumWindows(proto(cb), 0)
+    except OSError:
+        return 0
+    return len(hidden)
+
+
 class Bridge:
     """1C'ni oddiy rejimda BIR MARTA ochadi va ochiq qoldiradi (pc 12): 1C har ~1 soniyada papkani tekshiradi,
     sotuv 1-2 soniyada yoziladi. Dastur (Python) ishlab turgani "py.alive" belgisi bilan bildiriladi — dastur
@@ -591,7 +662,8 @@ class Bridge:
     WIP_STUCK = 90         # .wip shundan eski va .res yo'q — 1C yozish paytida o'chgan (natija noma'lum)
     START_SEC = 180        # 1C ochilishini kutish
 
-    def __init__(self, conn, here, exe, popen=subprocess.Popen, clock=time.time, sleep=time.sleep, jobs_dir=JOBS_DIR):
+    def __init__(self, conn, here, exe, popen=subprocess.Popen, clock=time.time, sleep=time.sleep, jobs_dir=JOBS_DIR,
+                 procs=None):
         self.conn = conn
         self.here = here
         self.exe = exe
@@ -602,6 +674,8 @@ class Bridge:
         self.epf = os.path.join(here, EPF_NAME)
         self.conf_done = False
         self.proc = None
+        self.procs = procs
+        self.pids = set()
 
     def _p(self, name):
         return os.path.join(self.jobs, name)
@@ -638,15 +712,21 @@ class Bridge:
             return None
 
     def alive_version(self):
-        """Ochiq 1C ko'prigining versiyasi yoki None (ochiq emas)."""
-        age = self._age("1c.alive")
-        if age is None or age > self.ALIVE_SEC:
-            return None
+        """Ochiq 1C ko'prigining versiyasi yoki None (ochiq emas). Fayl OCHILMAYDI (1C yozayotgan bo'lsa ham
+        "Ошибка совместного доступа" bo'lmasin) — versiya fayl nomida: 1c_<versiya>.alive."""
         try:
-            with open(self._p("1c.alive"), "r", encoding="utf-8-sig") as f:
-                return f.read().strip() or "?"
+            names = os.listdir(self.jobs)
         except OSError:
             return None
+        best = None
+        for n in names:
+            m = re.match(r"^1c_(\w+)\.alive$", n)
+            if not m:
+                continue
+            age = self._age(n)
+            if age is not None and age <= self.ALIVE_SEC and (best is None or age < best[0]):
+                best = (age, m.group(1))
+        return best[1] if best else None
 
     def alive(self):
         return self.alive_version() == BRIDGE_VERSION
@@ -666,11 +746,16 @@ class Bridge:
             end = self.clock() + 30
             while self.clock() < end and self.alive_version() is not None:
                 self.sleep(1)
-        for n in ("stop.flag", "1c.alive"):
+        try:
+            names = os.listdir(self.jobs)
+        except OSError:
+            names = []
+        for n in ["stop.flag"] + [x for x in names if x.endswith(".alive") and x != "py.alive"]:
             try:
                 os.remove(self._p(n))
             except OSError:
                 pass
+        self.kill_stale()          # osilib qolgan (xato oynasi chiqqan) ko'prik 1C'lari — bittadan ortiq ochilmasin
         epf = self.ensure_epf()
         if not self.conf_done:
             self.conf_done = True
@@ -690,8 +775,10 @@ class Bridge:
         start = self.clock()
         while self.clock() - start < (timeout or self.START_SEC):
             self.heartbeat()
+            self.hide()
             if self.alive():
                 log.info("1C ko'prigi tayyor (%d s)", int(self.clock() - start))
+                self.hide()
                 return True
             if self.proc.poll() is not None:
                 raise RuntimeError("1C ochildi, lekin darhol yopildi (kod %s). 1C_oyna_tekshiruv.bat ni oching" %
@@ -703,6 +790,47 @@ class Bridge:
             pass
         raise RuntimeError("1C ochildi, lekin ko'prik ishga tushmadi (%d s) — kompyuterdagi 1C oynasida savol "
                            "chiqqan bo'lishi mumkin" % int(self.clock() - start))
+
+    def bridge_pids(self):
+        """Shu papka bilan ishlayotgan ko'prik 1C jarayonlari (Windows)."""
+        if self.procs is not None:
+            return self.procs()
+        if os.name != "nt":
+            return []
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        out = ""
+        for cmd in (["wmic", "process", "where", "name='1cv8.exe'", "get", "ProcessId,CommandLine", "/format:csv"],
+                    ["powershell", "-NoProfile", "-Command",
+                     "Get-CimInstance Win32_Process -Filter \"Name='1cv8.exe'\" | ForEach-Object { 'x,' + $_.CommandLine + ',' + $_.ProcessId }"]):
+            try:
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=30, creationflags=flags)
+                out = r.stdout or ""
+                if r.returncode == 0 and out.strip():
+                    break
+            except (OSError, subprocess.SubprocessError):
+                continue
+        return parse_bridge_procs(out, self.jobs)
+
+    def kill_stale(self):
+        for pid in self.bridge_pids():
+            log.warning("1C ko'prigi osilib qolgan (jarayon %s) — yopilmoqda", pid)
+            try:
+                subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, timeout=20,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            except (OSError, subprocess.SubprocessError):
+                pass
+
+    def hide(self):
+        """Ko'prik 1C oynalari yashiriladi — kompyuterda ishlaganda oldinga chiqib xalaqit bermasin."""
+        if os.name != "nt":
+            return 0
+        pids = set(self.pids)
+        if self.proc is not None:
+            pids.add(self.proc.pid)
+        elif not pids and self.alive():
+            # dastur qayta ishga tushgan, 1C esa oldindan ochiq — uning jarayonini topib olamiz (bir marta)
+            self.pids = pids = set(self.bridge_pids())
+        return hide_windows(pids) if pids else 0
 
     def stop(self):
         try:

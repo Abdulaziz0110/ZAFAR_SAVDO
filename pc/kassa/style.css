@@ -416,3 +416,7 @@ body.dark .row.flash { animation-name: rowflashd; }
 .row-tools .sq { min-height: 50px; }
 .row-tools .danger, .row-tools .muted { font-size: 17px; font-weight: 700; }
 .ask-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+/* pc 21: savat ostida 8 ta tugma (Narx qo'shildi); qo'lda yozilgan narx belgilanadi */
+.row-tools { grid-template-columns: 52px 52px 52px 52px 1fr 1fr 1fr 1fr; }
+.row .manual { color: var(--ret); text-decoration: underline dotted; }

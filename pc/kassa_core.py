@@ -207,7 +207,10 @@ def clean_sale(body):
             raise KassaError("Tovar kodi yo'q")
         if q <= ZERO:
             continue
-        lines.append({"code": code, "qty": q, "price": money(l.get("price")), "name": str(l.get("name") or "")[:150]})
+        line = {"code": code, "qty": q, "price": money(l.get("price")), "name": str(l.get("name") or "")[:150]}
+        if l.get("m"):
+            line["m"] = True            # kassir narxni qo'lda yozgan — hozirgi narx bilan solishtirilmaydi
+        lines.append(line)
     if len(lines) > 500:
         raise KassaError("Qatorlar juda ko'p")
     return {
@@ -227,7 +230,7 @@ def check_prices(lines, goods_by_code, ptype, rate):
         g = goods_by_code.get(l["code"])
         if g is None:
             raise KassaError("Tovar topilmadi: %s" % (l.get("name") or l["code"]))
-        if price_of(g, ptype, rate) != l["price"]:
+        if not l.get("m") and price_of(g, ptype, rate) != l["price"]:
             changed.append(g.get("n") or l["code"])
     return changed
 

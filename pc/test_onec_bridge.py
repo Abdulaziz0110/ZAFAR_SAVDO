@@ -98,6 +98,24 @@ class JobTest(unittest.TestCase):
         self.assertIsNone(ob.conf_with_unsafe("a=1\r\nDisableUnsafeActionProtection=.*Baza.*\r\n"))
 
 
+class ProcTest(unittest.TestCase):
+    def test_parse_bridge_procs(self):
+        jobs = r"D:\imsoft\kassa_jobs"
+        out = ("Node,CommandLine,ProcessId\r\n"
+               "PC,\"C:\\1cv8.exe\" ENTERPRISE /F \"D:\\Baza\" /Execute D:\\imsoft\\kassa_bridge.epf /C D:\\imsoft\\kassa_jobs,4120\r\n"
+               "PC,\"C:\\1cv8.exe\" ENTERPRISE /F \"D:\\Baza\",777\r\n"                  # kassirning o'z 1C'i — tegilmaydi
+               "PC,\"C:\\1cv8.exe\" /Execute D:\\imsoft\\kassa_bridge.epf /C D:\\imsoft\\kassa_jobs_test,999\r\n")
+        self.assertEqual(ob.parse_bridge_procs(out, jobs), [4120])                     # sinov 1C'i ham tegilmaydi
+        self.assertEqual(ob.parse_bridge_procs(out, r"D:\imsoft\kassa_jobs_test"), [999])
+
+    def test_bsl_never_shows_dialog(self):
+        t = ob.bsl_text()
+        tail = t[t.rindex("КонецПроцедуры"):]
+        self.assertIn("Попытка\n\tИшла();\nИсключение\nКонецПопытки;", tail)          # modul xatosi oyna chiqarmaydi
+        self.assertIn("ПереместитьФайл(Врем, Путь)", t)                                 # natija fayli butun holda paydo bo'ladi
+        self.assertIn('"\\1c_%s.alive"' % ob.BRIDGE_VERSION, t)
+
+
 class Fake1C:
     """1C o'rnida: ochilgach 1c.alive yozadi va har "soniyada" papkadagi *.job larni .res qiladi (BSL bilan bir xil)."""
 
@@ -126,8 +144,8 @@ class Fake1C:
         if os.path.exists(os.path.join(self.jobs, "stop.flag")):
             self.code = 0
             return
-        with open(os.path.join(self.jobs, "1c.alive"), "w", encoding="utf-8-sig") as f:
-            f.write(ob.BRIDGE_VERSION)
+        with open(os.path.join(self.jobs, "1c_%s.alive" % ob.BRIDGE_VERSION), "w") as f:
+            f.write("1")
         for name in sorted(os.listdir(self.jobs)):
             if not name.endswith(".job"):
                 continue
@@ -141,7 +159,7 @@ class Fake1C:
             open(base + ".wip", "w").close()
             if self.die_after is not None and self.done >= self.die_after:
                 self.code = 1                      # 1C yozish paytida o'chdi
-                os.remove(os.path.join(self.jobs, "1c.alive"))
+                os.remove(os.path.join(self.jobs, "1c_%s.alive" % ob.BRIDGE_VERSION))
                 return
             with open(base + ".res", "w", encoding="utf-8-sig") as f:
                 self.n += 1
@@ -199,7 +217,7 @@ class BridgeTest(unittest.TestCase):
         br = self.bridge()
         br.ensure_running()
         self.procs[0].never = True                                             # 1C band (hali yozmadi)
-        os.utime(os.path.join(br.jobs, "1c.alive"), None)
+        os.utime(os.path.join(br.jobs, "1c_%s.alive" % ob.BRIDGE_VERSION), None)
         res = br.run([self.job("a")], timeout=2)
         self.assertEqual(res, {})
         self.assertTrue(os.path.exists(os.path.join(br.jobs, "a.job")))        # topshiriq joyida
@@ -239,13 +257,13 @@ class BridgeTest(unittest.TestCase):
     def test_old_version_restarted(self):
         br = self.bridge()
         os.makedirs(br.jobs)
-        with open(os.path.join(br.jobs, "1c.alive"), "w") as f:
+        with open(os.path.join(br.jobs, "1c_1.alive"), "w") as f:
             f.write("1")
         old = Fake1C(br.jobs)
 
         def stop_old(_):
             if os.path.exists(os.path.join(br.jobs, "stop.flag")):
-                os.remove(os.path.join(br.jobs, "1c.alive"))
+                os.remove(os.path.join(br.jobs, "1c_1.alive"))
         orig = br.sleep
         br.sleep = lambda s: (stop_old(s), orig(s))
         self.assertTrue(br.ensure_running())

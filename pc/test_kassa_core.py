@@ -126,6 +126,14 @@ class RequestTest(unittest.TestCase):
         self.assertEqual(k.check_prices(r["lines"], goods, "Цена1", 0), ["Olma"])
         with self.assertRaises(k.KassaError):
             k.check_prices(r["lines"], {}, "Цена1", 0)
+        # kassir narxni qo'lda o'zgartirgan (parolsiz) — solishtirilmaydi
+        body = self.body()
+        body["lines"][0]["m"] = 1
+        body["lines"][0]["price"] = "1234"
+        m = k.clean_sale(body)
+        self.assertTrue(m["lines"][0]["m"])
+        self.assertEqual(k.check_prices(m["lines"], goods, "Цена1", 0), [])
+        self.assertNotIn("m", r["lines"][0])
 
 
 if __name__ == "__main__":

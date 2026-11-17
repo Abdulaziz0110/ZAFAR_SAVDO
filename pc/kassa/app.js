@@ -385,6 +385,7 @@
       w.lines.forEach(function (l) {
         var g = S.byCode[l.code];
         if (!g) return;
+        if (l.m) return;                                   // qo'lda yozilgan narx o'zgarmaydi
         var p = L.priceOf(g, S.ptype, S.data.rate);
         if (p !== l.price) { l.price = p; n++; w.id = ''; }
       });
@@ -627,6 +628,7 @@
       }
       row.appendChild(el('span', '', qtyText(l.milli)));
       row.appendChild(el('span', '', money(l.price)));
+      if (l.m) row.children[row.children.length - 1].classList.add('manual');
       row.appendChild(el('span', 'sm', money(L.lineSum(l.price, l.milli))));
       if (i === S.flash) row.classList.add('flash');
       c.appendChild(row);
@@ -947,7 +949,7 @@
       id: w.id, token: S.token, kind: w.mode, ptype: S.ptype,
       client: p.client ? p.client[0] : '',
       discount: L.centsText(st.discount), cash: L.centsText(p.cash), card: L.centsText(p.card), click: L.centsText(p.click),
-      lines: w.lines.map(function (l) { return { code: l.code, name: l.name, qty: L.milliText(l.milli), price: L.centsText(l.price) }; })
+      lines: w.lines.map(function (l) { return { code: l.code, name: l.name, qty: L.milliText(l.milli), price: L.centsText(l.price), m: l.m ? 1 : 0 }; })
     };
     var print = $('printChk').checked;
     body.print1c = !!(print && S.ui.chk1c);             // chekni 1C'ning o'zi chiqaradi (kompyuter printeri)
@@ -1477,6 +1479,26 @@
     if (nb.indexOf('.') >= 0 && nb.split('.')[1].length > 3) return buf;
     return nb.replace(/^0+(?=\d)/, '');
   }
+  /** pc 21: narxni o'zgartirish — raqam panelida yangi narxni yozib «Narx» bosiladi (parolsiz). Bo'sh bosilsa — asl narxga. */
+  function setPriceSel() {
+    if (S.sel < 0) { toast('Avval ro\'yxatdan tovarni tanlang', true); return; }
+    var l = W().lines[S.sel];
+    if (!S.disp) {
+      if (!l.m) { toast("Yangi narxni raqam panelida yozing, keyin «Narx»ni bosing", true); return; }
+      var g = S.byCode[l.code];
+      l.m = false;
+      if (g) l.price = L.priceOf(g, S.ptype, S.data.rate);
+      touchWin(); renderCart(); renderWins();
+      toast('Asl narx qaytarildi');
+      return;
+    }
+    var v = L.cents(S.disp);
+    S.disp = ''; renderDisplay();
+    if (!(v > 0)) { toast("Narx 0 bo'lishi mumkin emas", true); beep(); return; }
+    l.price = v; l.m = true;
+    touchWin(); renderCart(); renderWins();
+    toast(l.name + ': narx ' + money(v));
+  }
   /** Miqdor: raqam yozilgan bo'lsa — shu; bo'lmasa tez tanlash tugmalari (tarozi tovari — kg, donali — dona). */
   function chooseQty() {
     if (S.sel < 0) { toast('Avval savatdan qatorni tanlang', true); return; }
@@ -1630,6 +1652,7 @@
     on('downBtn', function () { if (S.sel < W().lines.length - 1) { S.sel++; renderCart(true); } });
     on('plusBtn', function () { if (S.sel >= 0) setQty(S.sel, W().lines[S.sel].milli + 1000); });
     on('qtyBtn', chooseQty);
+    on('priceBtn', setPriceSel);
     on('minusBtn', function () {
       if (S.sel < 0) return;
       var i = S.sel, m = W().lines[i].milli;

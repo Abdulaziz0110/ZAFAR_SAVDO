@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 20) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 21) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -61,8 +61,10 @@ Belgilar:
 | pc 19: sariq "1C'ga yozilmagan" faqat sotuv 1 daqiqadan ko'p kutsa; xatolar — Sozlamalar tugmasida qizil nuqta; telefondan yangilanganda kassada "Dastur yangilanmoqda" yozuvi, keyin o'zi qayta ochiladi; Sozlamalarda versiya | VERIFIED (test + brauzer) |
 | pc 20: "Kassa yopish" — kun hisoboti 1C'dagi HAMMA savdolar bo'yicha (kassa + 1C sensor oynasi, takrorlanmasdan): savdo, chegirma, qaytarish, naqd/plastik/Click, qarzga, qarz to'lovi, kassirlar; kunlar bo'yicha; kompyuterdagi chek printeriga 1C orqali chop etish | VERIFIED (test + brauzer) / 1C chop etish IMPLEMENTED-UNVERIFIED |
 | pc 20: "Miqdor" — tez tanlash: tarozi tovari 0.1…3 kg, donali 1…24; savat ostida 7 ta ixcham tugma (▲ ▼ − + Miqdor O'chirish Tozalash); muvaffaqiyatli skanerda ovoz yo'q (skanerning o'zi chiqaradi) | VERIFIED (brauzer) |
-| Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | NOT-IMPLEMENTED (sabab aniqlanmoqda) |
-| Kassada yangi mijoz qo'shish, kunni yopish (ЗакрытяСмены), narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari | NOT-IMPLEMENTED |
+| pc 21: 1C ko'prigi "Ошибка совместного доступа к файлу 1c.alive" tuzatildi — dastur belgi faylini ochmaydi (versiya fayl nomida), 1C fayllarni vaqtinchalik nom bilan yozib almashtiradi (3 marta urinadi), modul xatosi hech qachon oyna chiqarmaydi (1C yopiladi, dastur qayta ochadi); yangi 1C ochishdan oldin osilib qolgan ko'prik 1C'lari yopiladi (bittadan ortiq ochilmaydi); ko'prik 1C oynasi yashiriladi (oldinga chiqmaydi) | VERIFIED (test) / Windows'da IMPLEMENTED-UNVERIFIED |
+| pc 21: narxni o'zgartirish — raqam panelida yangi narx + "Narx" tugmasi (parolsiz); qo'lda yozilgan narx belgilanadi, narx turi almashganda o'zgarmaydi, kompyuter uni rad etmaydi; bo'sh bosilsa asl narxga qaytadi | VERIFIED (test + brauzer) |
+| Haqiqiy 1C'ga yozish: COM'da ПродажаРозница moduli ishlamaydi (8.3.10), V83.Application "Сбой при удаленном вызове" | Hal qilindi (pc 11-16: 1C ko'prigi — oddiy 1C ochiq turadi, kassa_bridge.epf) — foydalanuvchi sotuvlar va chek ishlayotganini tasdiqladi |
+| Kassada yangi mijoz qo'shish, narxni qo'lda o'zgartirish, tovar rasmi, tannarx/foyda ustunlari, chekda logotip | NOT-IMPLEMENTED (kunni yopish — pc 20 "Kassa yopish") |
 
 ## 5.3 — 1-qism: ishlamayotganlar, VPNsiz almashuv, bitta ilova
 | Narsa | Holat |
@@ -104,7 +106,7 @@ Belgilar:
 | **Kassa paneli telefondan** (1C: Константы.тов1…тов336, 8 sahifa x 42): tugmaga tovar qo'yish/bo'shatish, "ko'p sotilganlar bilan to'ldirish", bitta so'rov bilan saqlash, bekor qilsa eski holat qaytadi | VERIFIED (6 Kotlin + 5 Python test) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | 1C baza kodi (BaseOld.zip) o'qildi: savdo oynasi (РеализацияСенсор1) ПродажаРозница hujjatini qanday to'ldirishi, Товары rekvizitlari, dastur moduli (мМобилАпп) tasdiqlandi | VERIFIED (manba o'qildi) |
 | Xodim (agent) ko'rinishini alohida soddalashtirish, statistika, Mijoz ilovasi dizayni, veb-agentni ilova bilan bir xil qilish | NOT-IMPLEMENTED (keyingi qism) |
-| Sensor savdo oynasi (monoblok) | NOT-IMPLEMENTED (oxirgi bosqich) |
+| Sensor savdo oynasi (monoblok) | IMPLEMENTED — kompyuter dasturi pc 8-20 (pastdagi "Kompyuter 5.4 — kassa" bo'limi) |
 
 ## 5.2 — 3-qism: tekshiruvda topilgan kamchiliklar yopildi
 | Narsa | Holat |

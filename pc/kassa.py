@@ -1588,6 +1588,10 @@ class KassaService:
             # 1C ko'prigi doim ochiq: dastur ishlayotganini bildiradi, 1C yopilgan bo'lsa — oldindan ochib qo'yadi
             br = self._br()
             br.heartbeat()
+            try:
+                br.hide()                     # 1C oynasi kompyuterda oldinga chiqib xalaqit bermasin
+            except (AttributeError, OSError):
+                pass
             if not br.alive() and now >= self.warm_at:
                 self.warm_at = now + RETRY_SEC
                 try:
