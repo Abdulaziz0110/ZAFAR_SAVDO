@@ -217,27 +217,28 @@ jobs:
           print(out)
           PY
 
-      - name: Upload self-update files
+      # self-update and web files go to the web job through the Actions cache (not artifacts):
+      # the artifact storage quota can be full, the update must still be published
+      - name: Save self-update files (cache)
         if: steps.sign.outputs.tag == 'OWN-KEY' && steps.shop.outputs.dir != ''
-        uses: actions/upload-artifact@v6
+        uses: actions/cache/save@v4
         with:
-          name: update
           path: upd
-          retention-days: 7
+          key: upd-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Upload iPhone agent (web)
-        uses: actions/upload-artifact@v6
+      - name: Save iPhone agent (cache)
+        uses: actions/cache/save@v4
         with:
-          name: web-agent
           path: web/agent
-          retention-days: 7
+          key: web-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload APKs
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: apk-${{ steps.sign.outputs.tag }}
           path: out/*.apk
-          retention-days: 30
+          retention-days: 3
 
       - name: Unit tests
         id: tests
@@ -284,6 +285,7 @@ jobs:
 
       - name: Upload reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: reports
@@ -293,7 +295,7 @@ jobs:
             app/build/test-results/
             mijoz/build/test-results/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
 
       - name: Result
         if: always()
@@ -327,12 +329,18 @@ jobs:
             echo "::notice::iPhone agent not published: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets"
           fi
 
-      - name: Download iPhone agent (web)
+      - name: Restore iPhone agent (cache)
         if: steps.chk.outputs.ok == 'true'
-        uses: actions/download-artifact@v7
+        uses: actions/cache/restore@v4
         with:
-          name: web-agent
-          path: site
+          path: web/agent
+          key: web-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
+
+      - name: Site folder
+        if: steps.chk.outputs.ok == 'true'
+        shell: bash
+        run: mkdir -p site && cp -r web/agent/. site/
 
       - name: Self-update folder (v4.0)
         if: steps.chk.outputs.ok == 'true'
@@ -352,13 +360,19 @@ jobs:
           )
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Download self-update files
+      - name: Restore self-update files (cache)
         if: steps.chk.outputs.ok == 'true' && steps.upd.outputs.dir != ''
+        id: updcache
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/cache/restore@v4
         with:
-          name: update
-          path: site/u/${{ steps.upd.outputs.dir }}
+          path: upd
+          key: upd-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Self-update files into site
+        if: steps.chk.outputs.ok == 'true' && steps.upd.outputs.dir != '' && steps.updcache.outputs.cache-hit == 'true'
+        shell: bash
+        run: mkdir -p "site/u/${{ steps.upd.outputs.dir }}" && cp -r upd/. "site/u/${{ steps.upd.outputs.dir }}/"
 
       - name: Create Cloudflare Pages project (first run only)
         if: steps.chk.outputs.ok == 'true'
@@ -430,4 +444,4 @@ jobs:
           name: smoke-crash
           path: crash_*.txt
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 3
