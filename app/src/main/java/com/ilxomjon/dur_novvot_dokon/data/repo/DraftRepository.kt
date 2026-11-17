@@ -196,8 +196,8 @@ class DraftRepository(
     }
 
     /** Kutishdagi savatchani faol qiladi: do'kon, rejim, valyuta, narx turi va qatorlar birga. */
-    fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>) =
-        mutate({ DraftState(store = store, priceType = priceType, currency = currency, mode = mode, lines = lines) }) { s ->
+    fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>, priceLevel: Int = 0) =
+        mutate({ DraftState(store = store, priceType = priceType, currency = currency, mode = mode, lines = lines, priceLevel = priceLevel.coerceIn(0, 4)) }) { s ->
             prefs.edit().putString(K_STORE_ID, store?.id.orEmpty()).putString(K_REGION_ID, store?.regionId.orEmpty())
                 .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, priceType.code).putInt(K_PRICE_LEVEL, 0)
                 .putString(K_CURRENCY, currency.code).putString(K_MODE, mode.code).apply()
