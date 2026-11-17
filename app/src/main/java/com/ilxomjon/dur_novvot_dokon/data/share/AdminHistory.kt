@@ -69,7 +69,10 @@ class AdminHistory(
         }
         if (sales != null) {
             val byName = HashMap<String, String>()
-            for (s in catalog.state.value.stores) byName.putIfAbsent(LedgerMerge.nameKey(s.name), s.id)
+            for (s in catalog.state.value.stores) {
+                val key = LedgerMerge.nameKey(s.name)
+                if (!byName.containsKey(key)) byName[key] = s.id      // putIfAbsent — API 24+, minSdk 23
+            }
             val retail = context.getString(R.string.ah_retail)
             for (d in sales.docs) {
                 if (!OneCLedger.isClientDoc(d.kind)) continue

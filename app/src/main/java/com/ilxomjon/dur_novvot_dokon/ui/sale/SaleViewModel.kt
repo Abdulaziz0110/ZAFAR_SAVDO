@@ -183,7 +183,10 @@ class SaleViewModel(
                 // v5.0: tavsiya mijozning BUTUN tarixidan o'rganadi (1C hujjatlari ham), faqat shu telefondan emas
                 val all = withContext(Dispatchers.Default) {
                     val byName = HashMap<String, String>()
-                    for (p in catalog.state.value.products) byName.putIfAbsent(com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.key(p.name), p.id)
+                    for (p in catalog.state.value.products) {
+                        val key = com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.key(p.name)
+                        if (!byName.containsKey(key)) byName[key] = p.id   // putIfAbsent — API 24+, minSdk 23
+                    }
                     val led = com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.of(
                         com.ilxomjon.dur_novvot_dokon.ui.ledgerhost.DokonLedgerHost.dbData.value.entries, storeId,
                         { n -> byName[com.ilxomjon.dur_novvot_dokon.domain.LedgerOrders.key(n)] },
