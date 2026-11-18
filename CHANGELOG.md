@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 5.3.1 (versionCode 51) — 2026-11-17
+**Har bir savdo oynasining o'z narx turi bor.** Kutishdagi savdo o'z narx turini (1..4) eslab qoladi va qaytarilganda aynan shu
+narxda ochiladi; yangi savdo kutishga qo'yilgan savdoning narxini olmaydi (optomdan boshlanadi). Baza: draft_cart.price_level
+(eski bazalar ochilganda avtomatik yangilanadi).
+
 ## 5.1 (versionCode 35), Savdo Mijoz 5.1 (versionCode 23) — 2026-11-07
 **1C'ga yozish 1C kartochkasidagidek bo'ldi.**
 * **Yangi tovar**: kodni 1C o'zi beradi (shakl shuni yozib turadi); guruh, brend, o'lchov birligi va tarozi —
