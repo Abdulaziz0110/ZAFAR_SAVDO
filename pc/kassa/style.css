@@ -420,3 +420,42 @@ body.dark .row.flash { animation-name: rowflashd; }
 /* pc 21: savat ostida 8 ta tugma (Narx qo'shildi); qo'lda yozilgan narx belgilanadi */
 .row-tools { grid-template-columns: 52px 52px 52px 52px 1fr 1fr 1fr 1fr; }
 .row .manual { color: var(--ret); text-decoration: underline dotted; }
+
+/* pc 23: savat ostidagi tugmalar — tartib, o'lcham va yashirish sozlanadi (flex, sig'masa 2 qatorga o'tadi) */
+.row-tools { display: flex; flex-wrap: wrap; align-items: stretch; }
+.row-tools .sq { flex: 0 0 52px; min-width: 0; padding-left: 4px; padding-right: 4px; }
+.row-tools .sq.muted, .row-tools .sq.danger { flex: 1 1 100px; }
+
+/* pc 23: sozlamalar — kartalar ustunlarga siqiq joylanadi (oppoq bo'sh joy qolmaydi) */
+.set-body { display: block; overflow-y: auto; }
+.set-cols { column-count: 3; column-gap: 10px; padding-bottom: 16px; }
+.set-cols .set-card { break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid; margin: 0 0 10px; }
+.set-cols .set-card.set-span { column-span: all; }
+@media (max-width: 1100px) { .set-cols { column-count: 2; } }
+@media (max-width: 700px) { .set-cols { column-count: 1; } }
+
+/* pc 23: tugmalarni sozlash qatorlari (tartib, o'lcham, ko'rinish) */
+.ord-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 8px; }
+.ord-row { background: var(--tile); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.ord-row.off { opacity: .6; }
+.ord-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ord-top b { font-size: 18px; }
+.ord-top .tg { min-height: 40px; padding: 0 10px; flex: 0 0 auto; font-size: 15px; }
+.ord-bar { display: flex; gap: 6px; }
+.ord-bar button { flex: 1; min-height: 46px; font-size: 16px; font-weight: 700; background: var(--panel); border: 2px solid var(--line); }
+.ord-bar .ord-mv { flex: 0 0 54px; font-size: 20px; }
+.ord-bar button.on { border-color: var(--acc); background: var(--acc-soft); color: var(--acc); }
+
+/* pc 24: tugmalarni sudrab joylash va aniq kenglik */
+.ord-h { flex: 0 0 48px; min-height: 40px; display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1;
+  background: var(--panel); border: 2px solid var(--line); border-radius: 10px; cursor: grab; touch-action: none;
+  user-select: none; -webkit-user-select: none; }
+.ord-top b { flex: 1; min-width: 0; }
+.ord-row.drag { opacity: .45; }
+.ord-row.drop { outline: 3px solid var(--acc); outline-offset: -2px; }
+.ord-wid { display: flex; align-items: center; gap: 6px; }
+.ord-wid span { flex: 1; font-size: 15px; color: var(--ink2); }
+.ord-wid .v { flex: 0 0 auto; min-width: 74px; text-align: center; font-size: 17px; }
+.ord-wid button { flex: 0 0 48px; min-height: 42px; font-size: 21px; font-weight: 700; background: var(--panel); border: 2px solid var(--line); }
+.ord-wid button.asl { flex: 0 0 auto; padding: 0 14px; font-size: 15px; }
+.ord-wid button.asl.on { border-color: var(--acc); background: var(--acc-soft); color: var(--acc); }

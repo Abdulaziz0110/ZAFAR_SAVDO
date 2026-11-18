@@ -2,6 +2,8 @@
 
 ## 5.3.2 (versionCode 52) — 2026-11-17
 **Kassa (pc 22):** monoblokdagi 1..4-oynaning har birida o'z narx turi bor; birini o'zgartirsangiz boshqalarining narxi o'zgarmaydi.
+**Kassa (pc 24):** tugmalarni sudrab joylash (☰) va aniq kenglik (−/+).
+**Kassa (pc 23):** Sozlamalarda tugmalar tartibi (▲▼), o'lchami va ko'rinishi (o'ng tugmalar va savat ostidagi tugmalar); sozlamalar sahifasidagi bo'sh joylar yo'qotildi.
 Android ilovada o'zgarish yo'q (faqat versiya raqami).
 
 ## 5.1 (versionCode 35), Savdo Mijoz 5.1 (versionCode 23) — 2026-11-07

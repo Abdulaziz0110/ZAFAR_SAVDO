@@ -21,7 +21,7 @@
     try { window.localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* xotira yo'q */ }
   }
 
-  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {},
+  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {},
     ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'light', notes: [50000, 100000, 200000] };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
@@ -38,6 +38,59 @@
     { id: 'report', b: 'Kassa yopish', s: 'kun hisoboti' },
     { id: 'settings', b: 'Sozlamalar', s: 'admin paroli' }
   ];
+
+  // pc 23: savat ostidagi tugmalar (id — tugma elementi, icon — kvadrat tugma). Tartib, o'lcham va yashirish sozlanadi.
+  var TOOLS = [
+    { id: 'up', btn: 'upBtn', n: '▲ Yuqoriga', icon: 1 },
+    { id: 'down', btn: 'downBtn', n: '▼ Pastga', icon: 1 },
+    { id: 'minus', btn: 'minusBtn', n: '− Kamaytirish', icon: 1 },
+    { id: 'plus', btn: 'plusBtn', n: "+ Ko'paytirish", icon: 1 },
+    { id: 'qty', btn: 'qtyBtn', n: 'Miqdor' },
+    { id: 'price', btn: 'priceBtn', n: 'Narx' },
+    { id: 'del', btn: 'delBtn', n: "O'chirish" },
+    { id: 'clear', btn: 'clearBtn', n: 'Tozalash' }
+  ];
+  var TSZ = { i: [[52, 0], [96, 1], [150, 2]], t: [[84, 0], [100, 1], [190, 2]] };   // [flex-basis px, flex-grow]
+  /** Ro'yxatni saqlangan tartib bo'yicha qaytaradi; tartibda yo'qlari oxirida, asl tartibda. */
+  function orderOf(list, ord) {
+    var out = [], seen = {};
+    (Array.isArray(ord) ? ord : []).forEach(function (id) {
+      list.forEach(function (x) { if (x.id === id && !seen[id]) { seen[id] = 1; out.push(x); } });
+    });
+    list.forEach(function (x) { if (!seen[x.id]) out.push(x); });
+    return out;
+  }
+  /** Savat ostidagi tugmaning kengligi (px): qo'lda berilgan bo'lsa shu, aks holda tanlangan o'lchamniki. */
+  function toolBasis(u, t) {
+    var w = parseInt((u.tw || {})[t.id], 10);
+    if (w >= 40) return w;
+    return (t.icon ? TSZ.i : TSZ.t)[toolSize(t, u) - 1][0];
+  }
+  /** O'ng tomondagi tugma qatorning 6 ulushidan nechtasini egallaydi. */
+  function fnCols(u, f) {
+    var e = (u.el || {})['fn-' + f.id] || {};
+    if (e.cols) return Math.max(1, Math.min(6, parseInt(e.cols, 10) || 1));
+    var n = FN.filter(function (x) { return u.hide.indexOf(x.id) < 0 || x.id === 'settings'; }).length;
+    return Math.min(6, (e.span || 1) * (n <= 4 ? 3 : 2));
+  }
+  function toolSize(t, u) {
+    var n = parseInt(((u || S.ui).tsz || {})[t.id], 10);
+    return n >= 1 && n <= 3 ? n : (t.icon ? 1 : 2);
+  }
+  function applyTools() {
+    var box = document.querySelector('.row-tools');
+    if (!box) return;
+    var u = S.ui;
+    orderOf(TOOLS, u.tord).forEach(function (t) {
+      var b = $(t.btn);
+      if (!b) return;
+      box.appendChild(b);                                   // joyini almashtiradi, bosish hodisalari saqlanadi
+      b.classList.toggle('hidden', (u.thide || []).indexOf(t.id) >= 0);
+      var n = toolSize(t), d = (t.icon ? TSZ.i : TSZ.t)[n - 1], w = parseInt((u.tw || {})[t.id], 10);
+      if (w >= 40) b.style.flex = '0 1 ' + w + 'px';        // qo'lda berilgan kenglik
+      else b.style.flex = n === (t.icon ? 1 : 2) ? '' : d[1] + ' 1 ' + d[0] + 'px';   // asl o'lcham CSS'dan
+    });
+  }
 
   // pc 13: tugmalar ikonkasi (24x24, chiziqli)
   var ICON = {
@@ -111,6 +164,12 @@
     o.wins = Math.max(1, Math.min(4, parseInt(o.wins, 10) || 3));
     if (!Array.isArray(o.hide)) o.hide = [];
     if (!o.el || typeof o.el !== 'object') o.el = {};
+    ['ford', 'tord', 'thide'].forEach(function (k) {
+      o[k] = Array.isArray(o[k]) ? o[k].filter(function (x) { return typeof x === 'string'; }) : [];
+    });
+    if (!o.tsz || typeof o.tsz !== 'object' || Array.isArray(o.tsz)) o.tsz = {};
+    if (!o.tw || typeof o.tw !== 'object' || Array.isArray(o.tw)) o.tw = {};
+    Object.keys(o.tw).forEach(function (k) { var v = parseInt(o.tw[k], 10); if (v >= 40 && v <= 400) o.tw[k] = v; else delete o.tw[k]; });
     return o;
   }
   function fixWins(w) {
@@ -560,12 +619,8 @@
     var box = $('fn');
     box.textContent = '';
     var ret = S.wins.length && W().mode === 'return';
-    var list = FN.filter(function (f) { return S.ui.hide.indexOf(f.id) < 0 || f.id === 'settings'; });
-    var per = list.length <= 4 ? 3 : 2;                     // bitta katak = 6 ning nechtasi
-    var items = list.map(function (f) {
-      var e = (S.ui.el || {})['fn-' + f.id] || {};
-      return { f: f, w: Math.min(6, (e.span || 1) * per) };
-    });
+    var list = orderOf(FN, S.ui.ford).filter(function (f) { return S.ui.hide.indexOf(f.id) < 0 || f.id === 'settings'; });
+    var items = list.map(function (f) { return { f: f, w: fnCols(S.ui, f) }; });
     var rows = [], cur = [], used = 0;
     items.forEach(function (it) {
       if (used + it.w > 6 && cur.length) { rows.push(cur); cur = []; used = 0; }
@@ -1152,6 +1207,7 @@
     var st = $('uiStyle');
     if (!st) { st = document.createElement('style'); st.id = 'uiStyle'; document.head.appendChild(st); }
     st.textContent = css.join('\n');
+    applyTools();
     renderAll();
   }
   function saveUi(u, then) {
@@ -1168,7 +1224,118 @@
     var c = el('div', 'set-card');
     c.appendChild(el('h3', '', title));
     if (text) c.appendChild(el('p', '', text));
-    $('setBody').appendChild(c);
+    $('setBody').firstChild.appendChild(c);
+    return c;
+  }
+  /** Qatorni barmoq yoki sichqoncha bilan sudrab joyini almashtirish (tutqich: .ord-h). onDrop(from, to). */
+  function dragRows(g, onDrop) {
+    var st = null, timer = 0;
+    function rows() { return Array.prototype.slice.call(g.children); }
+    function hit(x, y) {
+      var rs = rows();
+      for (var i = 0; i < rs.length; i++) {
+        var r = rs[i].getBoundingClientRect();
+        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+      }
+      return -1;
+    }
+    function mark() {
+      rows().forEach(function (r, i) { r.classList.toggle('drop', i === st.to && st.to !== st.from); });
+    }
+    function over() {
+      var i = hit(st.x, st.y);
+      if (i >= 0) { st.to = i; mark(); }
+    }
+    function move(e) {
+      if (!st) return;
+      st.x = e.clientX; st.y = e.clientY;
+      over();
+      if (e.cancelable) e.preventDefault();
+    }
+    function scrollTick() {                                 // ro'yxat chetiga yaqin tutilsa, o'zi aylanadi
+      if (!st) return;
+      var sb = $('setBody'), r = sb.getBoundingClientRect();
+      if (st.y < r.top + 70) sb.scrollTop -= 16;
+      else if (st.y > r.bottom - 70) sb.scrollTop += 16;
+      else return;
+      over();
+    }
+    function end(e) {
+      if (!st) return;
+      var s = st;
+      st = null;
+      clearInterval(timer);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', end);
+      document.removeEventListener('pointercancel', end);
+      rows().forEach(function (r) { r.classList.remove('drag', 'drop'); });
+      if (e && e.type === 'pointerup' && s.to !== s.from) onDrop(s.from, s.to);
+    }
+    g.addEventListener('pointerdown', function (e) {
+      var h = e.target.closest ? e.target.closest('.ord-h') : null;
+      if (!h || st) return;
+      var row = h.closest('.ord-row'), i = rows().indexOf(row);
+      if (i < 0) return;
+      st = { from: i, to: i, x: e.clientX, y: e.clientY };
+      row.classList.add('drag');
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
+      timer = setInterval(scrollTick, 40);
+      if (e.cancelable) e.preventDefault();
+    });
+  }
+  /** Tugmalar ro'yxati: har biri uchun tartib (sudrab yoki ▲▼), o'lcham, aniq kenglik (−/+) va ko'rinish. */
+  function ctrlCard(u, title, text, list, o) {
+    var c = card(title, text);
+    c.classList.add('set-span');
+    var g = el('div', 'ord-grid');
+    c.appendChild(g);
+    var items = orderOf(list, u[o.ord]);
+    var ids = items.map(function (x) { return x.id; });
+    function reorder(from, to) {
+      var a = ids.slice(), x = a.splice(from, 1)[0];
+      a.splice(to, 0, x);
+      u[o.ord] = a;
+      saveUi(u, renderSettings);
+    }
+    items.forEach(function (t, i) {
+      var off = o.canHide(t) && o.hidden(u, t);
+      var r = el('div', 'ord-row' + (off ? ' off' : ''));
+      var top = el('div', 'ord-top');
+      var h = el('div', 'ord-h', '☰');
+      h.setAttribute('aria-label', "Sudrab joyini almashtirish");
+      top.appendChild(h);
+      top.appendChild(el('b', '', t.n || t.b));
+      if (o.canHide(t)) {
+        var tg = el('button', 'tg' + (off ? '' : ' on'));
+        tg.appendChild(el('i', '', off ? 'YASHIRIN' : "KO'RINADI"));
+        tg.addEventListener('click', function () { o.toggle(u, t); saveUi(u, renderSettings); });
+        top.appendChild(tg);
+      }
+      r.appendChild(top);
+      var bar = el('div', 'ord-bar');
+      [['▲', -1], ['▼', 1]].forEach(function (m) {
+        btn(bar, m[0], 'ord-mv', function () {
+          var j = i + m[1];
+          if (j >= 0 && j < ids.length) reorder(i, j);
+        });
+      });
+      var cur = o.size(u, t), custom = o.width.custom(u, t);
+      [[1, 'Kichik'], [2, "O'rta"], [3, 'Katta']].forEach(function (s) {
+        btn(bar, s[1], !custom && cur === s[0] ? 'sz on' : 'sz', function () { o.setSize(u, t, s[0]); saveUi(u, renderSettings); });
+      });
+      r.appendChild(bar);
+      var wd = el('div', 'ord-wid');
+      wd.appendChild(el('span', '', 'Kenglik'));
+      btn(wd, '−', 'wd', function () { o.width.step(u, t, -1); saveUi(u, renderSettings); });
+      wd.appendChild(el('b', 'v', o.width.label(u, t)));
+      btn(wd, '+', 'wd', function () { o.width.step(u, t, 1); saveUi(u, renderSettings); });
+      btn(wd, 'Asl', 'wd asl' + (custom ? ' on' : ''), function () { o.width.reset(u, t); saveUi(u, renderSettings); });
+      r.appendChild(wd);
+      g.appendChild(r);
+    });
+    dragRows(g, reorder);
     return c;
   }
   function btn(parent, label, cls, fn) {
@@ -1180,7 +1347,9 @@
   function renderSettings() {
     var u = JSON.parse(JSON.stringify(S.ui));
     $('setWho').textContent = 'Admin: ' + S.grantName;
+    var keepScroll = $('setBody').scrollTop;
     $('setBody').textContent = '';
+    $('setBody').appendChild(el('div', 'set-cols'));
     var c1 = card('Savdo oynalari soni', 'Bir vaqtda nechta xaridorga savat ochiladi');
     var seg = el('div', 'seg2'); c1.appendChild(seg);
     [1, 2, 3, 4].forEach(function (n) {
@@ -1230,23 +1399,56 @@
       ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
         onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
-    var c3 = card("Tugmalar", "Keraksizini yashiring (Sozlamalar tugmasi doim turadi)");
-    FN.forEach(function (f) {
-      if (f.id === 'settings') return;
-      var on = u.hide.indexOf(f.id) < 0;
-      var b = el('button', 'tg' + (on ? ' on' : ''));
-      b.appendChild(el('span', '', f.b)); b.appendChild(el('i', '', on ? "KO'RINADI" : 'YASHIRIN'));
-      b.addEventListener('click', function () {
-        if (on) u.hide.push(f.id); else u.hide = u.hide.filter(function (x) { return x !== f.id; });
-        saveUi(u, renderSettings);
-      });
-      c3.appendChild(b);
+    ctrlCard(u, 'Tugmalar', "O'ng tomondagi tugmalar: ☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; o'lchami va ko'rinishi. Sozlamalar tugmasi doim turadi.", FN, {
+      ord: 'ford',
+      canHide: function (t) { return t.id !== 'settings'; },
+      hidden: function (uu, t) { return uu.hide.indexOf(t.id) >= 0; },
+      toggle: function (uu, t) { if (uu.hide.indexOf(t.id) >= 0) uu.hide = uu.hide.filter(function (x) { return x !== t.id; }); else uu.hide.push(t.id); },
+      size: function (uu, t) { var n = (uu.el['fn-' + t.id] || {}).span || 1; return Math.max(1, Math.min(3, n)); },
+      setSize: function (uu, t, n) {
+        var e = uu.el['fn-' + t.id] || (uu.el['fn-' + t.id] = {});
+        delete e.cols;
+        if (n > 1) e.span = n; else delete e.span;
+      },
+      width: {                                              // qatorning 6 ulushidan nechtasini egallaydi
+        label: function (uu, t) { return fnCols(uu, t) + ' / 6'; },
+        step: function (uu, t, d) {
+          var e = uu.el['fn-' + t.id] || (uu.el['fn-' + t.id] = {});
+          e.cols = Math.max(1, Math.min(6, fnCols(uu, t) + d));
+        },
+        reset: function (uu, t) { var e = uu.el['fn-' + t.id]; if (e) delete e.cols; },
+        custom: function (uu, t) { return !!(uu.el['fn-' + t.id] || {}).cols; }
+      }
+    });
+    ctrlCard(u, 'Savat ostidagi tugmalar', "☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; kengligi (−/+) va ko'rinishi. Sig'masa, ikkinchi qatorga o'tadi.", TOOLS, {
+      ord: 'tord',
+      canHide: function () { return true; },
+      hidden: function (uu, t) { return (uu.thide || []).indexOf(t.id) >= 0; },
+      toggle: function (uu, t) {
+        var h = uu.thide || (uu.thide = []);
+        if (h.indexOf(t.id) >= 0) uu.thide = h.filter(function (x) { return x !== t.id; }); else h.push(t.id);
+      },
+      size: function (uu, t) { return toolSize(t, uu); },
+      setSize: function (uu, t, n) {
+        var z = uu.tsz || (uu.tsz = {});
+        if (uu.tw) delete uu.tw[t.id];
+        if (n === (t.icon ? 1 : 2)) delete z[t.id]; else z[t.id] = n;
+      },
+      width: {                                              // piksel, 10 px qadam bilan
+        label: function (uu, t) { return toolBasis(uu, t) + ' px'; },
+        step: function (uu, t, d) {
+          var z = uu.tw || (uu.tw = {});
+          z[t.id] = Math.max(40, Math.min(400, Math.round((toolBasis(uu, t) + d * 10) / 10) * 10));
+        },
+        reset: function (uu, t) { if (uu.tw) delete uu.tw[t.id]; },
+        custom: function (uu, t) { return !!(uu.tw || {})[t.id]; }
+      }
     });
     var c4 = card("Ko'rinishni o'zgartirish", "Istalgan joyning o'lchami, rangi va matn o'lchami. Hamma oynalarga birdek qo'llanadi.");
     btn(c4, 'Sozlashni boshlash', 'big primary', function () { $('setView').classList.add('hidden'); startEdit(); });
     btn(c4, 'Hammasini asl holiga qaytarish', 'big muted', function () {
-      ask({ title: 'Asl holiga qaytarish', text: "O'lcham va ranglar boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
-        onYes: function () { u.el = {}; return saveUi(u, renderSettings); } });
+      ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
+        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; return saveUi(u, renderSettings); } });
     });
     var c5 = card("1C navbati", "Kompyuter yoki 1C ishlamagan paytdagi sotuvlar. Ular 1C tiklanganda o'zi yoziladi.");
     btn(c5, "Navbatni ko'rish (" + (S.pcQ + S.pcQe + S.outbox.length) + ')', 'big muted', showQueue);
@@ -1268,6 +1470,7 @@
     });
     btn(c6, 'Sahifani qayta yuklash', 'big muted', function () { window.location.reload(); });
     btn(c6, 'Kassani yopish', 'big danger', closeKassa);
+    $('setBody').scrollTop = keepScroll;                 // tugma bosilganda ro'yxat tepaga sakramasin
   }
   // ---------------- panel tavsiyasi ----------------
   function panelApi(op) {
@@ -1375,6 +1578,7 @@
     display: 'Raqam maydoni', numkey: 'Raqam tugmalari', pay: "TO'LOV tugmasi", tile: 'Panel tugmalari', tabs: 'Panel sahifalari'
   };
   FN.forEach(function (f) { NAMES['fn-' + f.id] = 'Tugma: ' + f.b; });
+  TOOLS.forEach(function (t) { NAMES['tool-' + t.id] = 'Tugma: ' + t.n; });
   var COLORS = ['', '#0f6b45', '#1b5e20', '#2e7d32', '#00695c', '#1565c0', '#283593', '#6a1b9a', '#b4570b', '#c62828',
     '#f9a825', '#37474f', '#000000', '#ffffff', '#dcefe5', '#e3f2fd', '#fff3e0', '#fce4ec', '#f6f9f7'];
   function startEdit() {
@@ -1439,6 +1643,7 @@
       [[1, 1, '1 katak'], [2, 1, '2 ta eniga'], [3, 1, 'butun qator'], [1, 2, "2 ta bo'yiga"], [2, 2, '2×2']].forEach(function (x) {
         var on = (e.span || 1) === x[0] && (e.rows || 1) === x[1];
         btn(r1, x[2], on ? 'on' : '', function () {
+          delete e.cols;
           if (x[0] > 1) e.span = x[0]; else delete e.span;
           if (x[1] > 1) e.rows = x[1]; else delete e.rows;
           live();

@@ -171,3 +171,13 @@ Yangi (pc 22) - KASSA: HAR BIR OYNANING O'Z NARX TURI:
  - 1-, 2-, 3-, 4-oynaning narx turi alohida. Birida o'zgartirsangiz, boshqa oynalar va ularning narxlari o'zgarmaydi.
  - Tozalash va sotuvdan keyin faqat shu oynaning narx turi 1 ga qaytadi.
  - Eski saqlangan savatlar (yangilanishdan oldingi) o'z holicha ko'chadi, hech narsa yo'qolmaydi.
+
+Yangi (pc 23) - KASSA: TUGMALAR TARTIBI/O'LCHAMI VA SOZLAMALAR:
+ - Sozlamalar > Tugmalar: har bir tugma uchun tartib (▲▼), o'lcham (Kichik/O'rta/Katta) va ko'rinish.
+ - Sozlamalar > Savat ostidagi tugmalar: Miqdor, Narx, O'chirish, Tozalash, ▲ ▼ − + uchun xuddi shunday. Sig'masa 2-qatorga o'tadi.
+ - Sozlamalar sahifasida oppoq bo'sh joylar yo'qoldi: kartalar ustunlarga siqiq joylashadi.
+ - Hammasini asl holiga qaytarish endi tartib va o'lchamlarni ham qaytaradi.
+
+Yangi (pc 24) - KASSA: SUDRAB JOYLASH VA ANIQ KENGLIK:
+ - Sozlamalar > Tugmalar va Savat ostidagi tugmalar: har bir qatordagi ☰ ni barmoq bilan bosib turib sudrab, istalgan joyga qo'ying (▲▼ ham bor).
+ - Kenglik: savat ostidagi tugmalar uchun 10 px qadam bilan (−/+), o'ng tomondagi tugmalar uchun qatorning 6 ulushidan (1/6 .. 6/6). "Asl" - tayyor o'lchamga qaytaradi.
