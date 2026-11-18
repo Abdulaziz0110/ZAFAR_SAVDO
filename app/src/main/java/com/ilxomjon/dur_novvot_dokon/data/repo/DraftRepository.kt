@@ -24,6 +24,9 @@ import kotlinx.coroutines.withContext
 /**
  * Joriy savdo. Holat XOTIRADA yangilanadi (bosish zumda ko'rinadi), bazaga yozish esa orqada, tartib bilan bajariladi.
  * Saqlash joyi avvalgi ilova bilan bir xil: "user" sozlamalari va "zakaz" jadvali (tugallanmagan buyurtma yo'qolmaydi).
+ *
+ * Narx turi (1..4) HAR BIR SAVDO OYNASINING O'ZINIKI: savdo tugagach yoki kutishga qo'yilgach yangi oyna standart narxdan
+ * (Optom, 4) boshlanadi; kutishdagi savdo o'z narxi bilan saqlanadi va aynan shu narx bilan qaytadi.
  */
 class DraftRepository(
     private val cart: CartDao,
@@ -107,7 +110,7 @@ class DraftRepository(
 
     fun setPriceType(type: PriceType) = setPriceLevel(PriceType.levelOf(type))
 
-    /** v3.1: narx 1..4 (savatchadagilar qayta hisoblanadi). */
+    /** v3.1: narx 1..4 (savatchadagilar qayta hisoblanadi). Faqat JORIY savdo oynasiga ta'sir qiladi. */
     fun setPriceLevel(level: Int) = mutate({ reprice(it.copy(priceType = PriceType.forLevel(level), priceLevel = level.coerceIn(1, 4))) }) { s ->
         prefs.edit().putString(K_PRICE_TYPE, s.priceType.code).putInt(K_PRICE_LEVEL, s.level).apply()
         allLinesWrite(s)
@@ -167,25 +170,28 @@ class DraftRepository(
         if (s.lineFor(line.productId) != null) s else s.copy(lines = s.lines + line)
     }) { s -> lineWrite(s, line.productId) }
 
-    /** Savatchani tozalaydi (do'kon tanlovi saqlanadi). */
+    /** Savatchani tozalaydi (do'kon tanlovi va narx turi saqlanadi — oyna o'sha-o'sha). */
     fun clearLines() = mutate({ it.copy(lines = emptyList()) }) { _ -> cart.clear() }
 
-    /** Savatcha va do'kon tanlovini tozalaydi (buyurtma navbatga qo'yilgandan keyin). */
-    fun finish() = mutate({ it.copy(lines = emptyList(), store = null) }) { _ ->
+    /** Savatcha va do'kon tanlovini tozalaydi; narx turi standartga qaytadi (yangi savdo oynasi). */
+    fun finish() = mutate({ it.copy(lines = emptyList(), store = null, priceType = PriceType.WHOLESALE, priceLevel = 0) }) { _ ->
         cart.clear()
-        prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "").apply()
+        prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "")
+            .putString(K_PRICE_TYPE, PriceType.WHOLESALE.code).putInt(K_PRICE_LEVEL, 0).apply()
     }
 
     /**
      * Buyurtma navbatga qo'yilgandan keyin: savatcha va do'kon tanlovi DARHOL va SINXRON tozalanadi
      * (orqadagi yozuvlar kutiladi, keyin bazadan o'chiriladi). Jarayon shundan keyin o'lsa, savatcha qaytib chiqmaydi.
+     * Narx turi ham standartga qaytadi: keyingi savdo oynasi oldingisining narxini meros qilib olmaydi.
      */
     suspend fun finishNow() {
-        _state.update { it.copy(lines = emptyList(), store = null) }
+        _state.update { it.copy(lines = emptyList(), store = null, priceType = PriceType.WHOLESALE, priceLevel = 0) }
         flush()
         withContext(Dispatchers.IO) {
             cart.clear()
-            prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "").commit()
+            prefs.edit().putString(K_STORE_ID, "").putString(K_REGION_ID, "").putString(K_STORE_NAME, "")
+                .putString(K_PRICE_TYPE, PriceType.WHOLESALE.code).putInt(K_PRICE_LEVEL, 0).commit()
         }
     }
 
@@ -195,15 +201,21 @@ class DraftRepository(
         allLinesWrite(s)
     }
 
-    /** Kutishdagi savatchani faol qiladi: do'kon, rejim, valyuta, narx turi va qatorlar birga. */
-    fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>) =
-        mutate({ DraftState(store = store, priceType = priceType, currency = currency, mode = mode, lines = lines) }) { s ->
+    /**
+     * Kutishdagi savatchani faol qiladi: do'kon, rejim, valyuta, narx turi va qatorlar birga.
+     * [level] (1..4) berilsa — savdo aynan shu narx bilan qaytadi; berilmasa (0) narx [priceType] dan olinadi (3 yoki 4).
+     */
+    fun activate(store: Store?, mode: DealMode, currency: Currency, priceType: PriceType, lines: List<CartLine>, level: Int = 0) {
+        val lv = if (level in 1..4) level else 0
+        val type = if (lv != 0) PriceType.forLevel(lv) else priceType
+        mutate({ DraftState(store = store, priceType = type, currency = currency, mode = mode, lines = lines, priceLevel = lv) }) { s ->
             prefs.edit().putString(K_STORE_ID, store?.id.orEmpty()).putString(K_REGION_ID, store?.regionId.orEmpty())
-                .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, priceType.code).putInt(K_PRICE_LEVEL, 0)
+                .putString(K_STORE_NAME, store?.name.orEmpty()).putString(K_PRICE_TYPE, type.code).putInt(K_PRICE_LEVEL, lv)
                 .putString(K_CURRENCY, currency.code).putString(K_MODE, mode.code).apply()
             cart.clear()
             allLinesWrite(s)
         }
+    }
 
     /** Savatchadagi narxlarni joriy savdo turi/valyutaga qayta hisoblaydi. */
     private fun reprice(s: DraftState): DraftState {
