@@ -165,3 +165,9 @@ Yangi (pc 16):
  - Chekni 1C'ning o'zi chiqaradi (1C sensor oynasidagi chek, kompyuterdagi chek printeriga).
  - To'lovdan keyin oyna darhol bo'shaydi (dialog yo'q). Tozalash/sotuvdan keyin narx turi 1 ga qaytadi.
  - Sozlamalar: "Kirishda parol so'ralmasin", "Blok tugmasini yashirish".
+
+
+Yangi (pc 22) - KASSA: HAR BIR OYNANING O'Z NARX TURI:
+ - 1-, 2-, 3-, 4-oynaning narx turi alohida. Birida o'zgartirsangiz, boshqa oynalar va ularning narxlari o'zgarmaydi.
+ - Tozalash va sotuvdan keyin faqat shu oynaning narx turi 1 ga qaytadi.
+ - Eski saqlangan savatlar (yangilanishdan oldingi) o'z holicha ko'chadi, hech narsa yo'qolmaydi.

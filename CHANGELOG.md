@@ -1,9 +1,8 @@
 # CHANGELOG
 
-## 5.3.1 (versionCode 51) — 2026-11-17
-**Har bir savdo oynasining o'z narx turi bor.** Kutishdagi savdo o'z narx turini (1..4) eslab qoladi va qaytarilganda aynan shu
-narxda ochiladi; yangi savdo kutishga qo'yilgan savdoning narxini olmaydi (optomdan boshlanadi). Baza: draft_cart.price_level
-(eski bazalar ochilganda avtomatik yangilanadi).
+## 5.3.2 (versionCode 52) — 2026-11-17
+**Kassa (pc 22):** monoblokdagi 1..4-oynaning har birida o'z narx turi bor; birini o'zgartirsangiz boshqalarining narxi o'zgarmaydi.
+Android ilovada o'zgarish yo'q (faqat versiya raqami).
 
 ## 5.1 (versionCode 35), Savdo Mijoz 5.1 (versionCode 23) — 2026-11-07
 **1C'ga yozish 1C kartochkasidagidek bo'ldi.**

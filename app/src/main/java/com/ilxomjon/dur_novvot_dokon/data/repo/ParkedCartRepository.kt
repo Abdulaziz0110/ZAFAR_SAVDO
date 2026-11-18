@@ -25,7 +25,6 @@ data class ParkedCart(
     val priceType: PriceType,
     val created: Long,
     val lines: List<CartLine>,
-    val priceLevel: Int = 0,
 ) {
     val total: Double get() = lines.sumOf { it.total }
 }
@@ -56,15 +55,12 @@ class ParkedCartRepository(
                 w.insertOrThrow("draft_cart", null, ContentValues().apply {
                     put("store_id", d.store?.id.orEmpty()); put("store_name", d.store?.name.orEmpty()); put("region_id", d.store?.regionId.orEmpty())
                     put("mode", d.mode.code); put("currency", d.currency.code); put("price_type", d.priceType.code)
-                    put("price_level", d.level)
                     put("created", System.currentTimeMillis()); put("lines_json", toJson(d.lines))
                 })
                 w.execSQL("DELETE FROM zakaz")
             }
         }
         draft.finishNow()
-        // Yangi savdo oynasi o'z narx turi bilan boshlanadi: kutishga qo'yilgan savdoning narxi unga o'tmaydi
-        draft.resetPrice()
         refresh()
         return true
     }
@@ -74,7 +70,7 @@ class ParkedCartRepository(
         if (draft.state.value.lines.isNotEmpty()) return null
         val p = withContext(Dispatchers.IO) { readAll().firstOrNull { it.id == id } } ?: return null
         val store = catalog.storeById(p.storeId) ?: Store(p.storeId, p.regionId, p.storeName, "", 0.0, 0.0)
-        draft.activate(store, p.mode, p.currency, p.priceType, p.lines, p.priceLevel)
+        draft.activate(store, p.mode, p.currency, p.priceType, p.lines)
         // Avval faol savatcha bazaga yozilsin, keyin qoralama o'chirilsin: o'rtada o'lsa ham tovar yo'qolmaydi (ikki nusxa qoladi).
         draft.flush()
         withContext(Dispatchers.IO) { db.writableDatabase.delete("draft_cart", "id = ?", arrayOf(id.toString())) }
@@ -96,7 +92,6 @@ class ParkedCartRepository(
             db.writableDatabase.insert("draft_cart", null, ContentValues().apply {
                 put("store_id", p.storeId); put("store_name", p.storeName); put("region_id", p.regionId)
                 put("mode", p.mode.code); put("currency", p.currency.code); put("price_type", p.priceType.code)
-                put("price_level", p.priceLevel)
                 put("created", p.created); put("lines_json", toJson(p.lines))
             })
         }
@@ -106,13 +101,13 @@ class ParkedCartRepository(
     private fun readAll(): List<ParkedCart> {
         val out = ArrayList<ParkedCart>()
         db.readableDatabase.rawQuery(
-            "SELECT id, store_id, store_name, region_id, mode, currency, price_type, created, lines_json, price_level FROM draft_cart ORDER BY id", null,
+            "SELECT id, store_id, store_name, region_id, mode, currency, price_type, created, lines_json FROM draft_cart ORDER BY id", null,
         ).use { c ->
             while (c.moveToNext()) {
                 out += ParkedCart(
                     c.getLong(0), c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getString(3).orEmpty(),
                     DealMode.fromCode(c.getString(4)), Currency.fromCode(c.getString(5)), PriceType.fromCode(c.getString(6)),
-                    c.getLong(7), fromJson(c.getString(8)), c.getInt(9),
+                    c.getLong(7), fromJson(c.getString(8)),
                 )
             }
         }

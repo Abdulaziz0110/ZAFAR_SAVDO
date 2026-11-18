@@ -74,7 +74,7 @@
     return (neg ? '-' : '') + t;
   }
 
-  function emptyWin() { return { lines: [], mode: 'sale', dmode: 'sum', dval: 0, id: '' }; }
+  function emptyWin() { return { lines: [], mode: 'sale', dmode: 'sum', dval: 0, id: '', ptype: 'Цена1' }; }
 
   var S = {
     token: load('k_token', ''),
@@ -83,7 +83,7 @@
     ui: mergeUi(load('k_ui', {})),
     wins: [],
     w: 0, sel: -1, disp: '', mult: 0,
-    ptype: load('k_ptype', 'Цена1'),
+    ptype: load('k_ptype', 'Цена1'),      // eski umumiy narx turi: faqat eski savatlarni ko'chirish uchun (v5.3.1: narx turi har oynada alohida)
     page: 0,
     pay: null,
     last: load('k_last', null),
@@ -101,6 +101,9 @@
   if (L.PRICE_TYPES.indexOf(S.ptype) < 0) S.ptype = 'Цена1';
   S.wins = fixWins(load('k_wins', []));
   function W() { return S.wins[S.w]; }
+  /** Oynaning o'z narx turi (har bir oynada alohida). */
+  function WPT(w) { return w && L.PRICE_TYPES.indexOf(w.ptype) >= 0 ? w.ptype : 'Цена1'; }
+  function PT() { return WPT(W()); }
 
   function mergeUi(u) {
     var o = JSON.parse(JSON.stringify(UI_DEFAULT));
@@ -116,6 +119,7 @@
     var out = [];
     for (var i = 0; i < Math.max(n, w.length); i++) {
       var x = w[i] && Array.isArray(w[i].lines) ? w[i] : emptyWin();
+      if (L.PRICE_TYPES.indexOf(x.ptype) < 0) x.ptype = x.lines.length && L.PRICE_TYPES.indexOf(S.ptype) >= 0 ? S.ptype : 'Цена1';
       if (i < n || x.lines.length) out.push(x);     // tovari bor oyna o'chirilmaydi
     }
     return out;
@@ -204,8 +208,8 @@
     ask({
       title: shown ? 'Narx turi' : 'Rejim',
       choices: L.PRICE_TYPES.map(function (p) {
-        return { label: shown ? ptypeLabel(p) : String(L.PRICE_TYPES.indexOf(p) + 1), on: p === S.ptype, pick: function () {
-          S.ptype = p; save('k_ptype', p);
+        return { label: shown ? ptypeLabel(p) : String(L.PRICE_TYPES.indexOf(p) + 1), on: p === PT(), pick: function () {
+          if (W().ptype !== p) { W().ptype = p; W().id = ''; }
           repriceAll(true);
           renderAll();
         } };
@@ -386,7 +390,7 @@
         var g = S.byCode[l.code];
         if (!g) return;
         if (l.m) return;                                   // qo'lda yozilgan narx o'zgarmaydi
-        var p = L.priceOf(g, S.ptype, S.data.rate);
+        var p = L.priceOf(g, WPT(w), S.data.rate);
         if (p !== l.price) { l.price = p; n++; w.id = ''; }
       });
     });
@@ -460,7 +464,7 @@
   function addGoods(g, milli, weighted) {
     if (!g || !S.data) return;
     var w = W();
-    var price = L.priceOf(g, S.ptype, S.data.rate);
+    var price = L.priceOf(g, WPT(w), S.data.rate);
     if (price <= 0) { toast(g.n + ": bu narx turida narx yo'q", true); return; }
     var mult = S.mult;
     S.mult = 0;
@@ -509,7 +513,7 @@
   function clearWin() {
     S.wins[S.w] = emptyWin();
     S.sel = -1; S.mult = 0; S.disp = '';
-    if (S.ptype !== 'Цена1') { S.ptype = 'Цена1'; save('k_ptype', S.ptype); }   // Tozalash va sotuvdan keyin — 1-narx
+    // Tozalash va sotuvdan keyin shu oynaning narx turi 1 ga qaytadi (emptyWin), boshqa oynalarga tegmaydi
     if (S.w >= S.ui.wins) { S.wins.splice(S.w, 1); S.w = 0; }   // sozlamada kamaytirilgan oyna bo'shasa — yo'qoladi
     saveWins();
     renderAll();
@@ -535,11 +539,11 @@
 
   // ---------------- chizish ----------------
   function renderAll() {
-    $('ptypeName').textContent = ptypeLabel(S.ptype);
+    $('ptypeName').textContent = ptypeLabel(PT());
     // xaridorga bilinmasin: yuqoridagi tugma faqat sozlamada yoqilsa; aks holda raqam maydoni burchagida kichik raqam
     $('ptypeBtn').classList.toggle('hidden', !S.ui.ptypeShow);
     $('lockBtn').classList.toggle('hidden', !!(S.ui.hideLock || S.ui.auto));
-    $('ptypeTag').textContent = S.ui.ptypeShow ? '' : String(L.PRICE_TYPES.indexOf(S.ptype) + 1);
+    $('ptypeTag').textContent = S.ui.ptypeShow ? '' : String(L.PRICE_TYPES.indexOf(PT()) + 1);
     renderMode(); renderWins(); renderCart(); renderDisplay(); renderDot(); renderFn(); renderQueue();
   }
   function renderMode() {
@@ -669,7 +673,7 @@
     b.setAttribute('data-ui', 'tile');
     b.appendChild(el('span', 'tn', g.n));
     var p = el('span', 'tp');
-    p.appendChild(el('span', '', money(L.priceOf(g, S.ptype, S.data.rate))));
+    p.appendChild(el('span', '', money(L.priceOf(g, PT(), S.data.rate))));
     b.appendChild(p);
     return b;
   }
@@ -753,12 +757,12 @@
       return;
     }
     var recent = !k.text.trim() && k.kind === 'goods';
-    var res = k.text.trim() ? L.search(S.data.g, k.text, S.ptype, S.data.rate, 60) :
+    var res = k.text.trim() ? L.search(S.data.g, k.text, PT(), S.data.rate, 60) :
       recent ? S.recent.map(function (c) { return S.byCode[c]; }).filter(Boolean) : [];
     if (recent && res.length) box.appendChild(el('div', 'kb-sub', 'Oxirgi qidirilganlar'));
     if (k.kind === 'price') {
       var pc = L.cents(k.text);
-      res = S.data.g.filter(function (g) { return L.priceOf(g, S.ptype, S.data.rate) === pc; }).slice(0, 60);
+      res = S.data.g.filter(function (g) { return L.priceOf(g, PT(), S.data.rate) === pc; }).slice(0, 60);
     }
     res.forEach(function (g) { box.appendChild(tile(g)); });
     if (!res.length) box.appendChild(el('div', 'grid-msg', k.text.trim() ? 'Topilmadi' : 'Nomini yozing'));
@@ -789,8 +793,8 @@
   }
   function showGoods(g) {
     var rows = S.ui.ptypeShow ? L.PRICE_TYPES.map(function (p) {
-      return { a: ptypeLabel(p) + (p === S.ptype ? ' (hozirgi)' : ''), b: money(L.priceOf(g, p, S.data.rate)), cls: p === S.ptype ? 'big' : '' };
-    }) : [{ a: 'Narx', b: money(L.priceOf(g, S.ptype, S.data.rate)), cls: 'big' }];
+      return { a: ptypeLabel(p) + (p === PT() ? ' (hozirgi)' : ''), b: money(L.priceOf(g, p, S.data.rate)), cls: p === PT() ? 'big' : '' };
+    }) : [{ a: 'Narx', b: money(L.priceOf(g, PT(), S.data.rate)), cls: 'big' }];
     if (S.ui.stock) rows.push({ a: 'Qoldiq', b: qtyText(L.milli(g.s)), cls: g.s > 0 ? '' : 'warn' });
     rows.push({ a: 'Kod', b: g.c });
     info(g.n, rows, [{ label: "Savatga qo'shish", cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); addGoods(g, 1000, false); } }]);
@@ -946,7 +950,7 @@
     if (st.e) { $('payErr').textContent = st.e; beep(); return; }
     var p = S.pay, w = W();
     var body = {
-      id: w.id, token: S.token, kind: w.mode, ptype: S.ptype,
+      id: w.id, token: S.token, kind: w.mode, ptype: WPT(w),
       client: p.client ? p.client[0] : '',
       discount: L.centsText(st.discount), cash: L.centsText(p.cash), card: L.centsText(p.card), click: L.centsText(p.click),
       lines: w.lines.map(function (l) { return { code: l.code, name: l.name, qty: L.milliText(l.milli), price: L.centsText(l.price), m: l.m ? 1 : 0 }; })
@@ -1487,7 +1491,7 @@
       if (!l.m) { toast("Yangi narxni raqam panelida yozing, keyin «Narx»ni bosing", true); return; }
       var g = S.byCode[l.code];
       l.m = false;
-      if (g) l.price = L.priceOf(g, S.ptype, S.data.rate);
+      if (g) l.price = L.priceOf(g, PT(), S.data.rate);
       touchWin(); renderCart(); renderWins();
       toast('Asl narx qaytarildi');
       return;
@@ -1535,7 +1539,7 @@
       var v = takeDisp('Narx');
       if (v == null || !S.data) return;
       var pc = L.cents(v);
-      var res = S.data.g.filter(function (g) { return L.priceOf(g, S.ptype, S.data.rate) === pc; });
+      var res = S.data.g.filter(function (g) { return L.priceOf(g, PT(), S.data.rate) === pc; });
       if (res.length === 1) { addGoods(res[0], 1000, false); return; }
       if (!res.length) { toast(money(pc) + " narxli tovar yo'q", true); return; }
       openKb('price', money(pc) + ' narxli tovarlar');

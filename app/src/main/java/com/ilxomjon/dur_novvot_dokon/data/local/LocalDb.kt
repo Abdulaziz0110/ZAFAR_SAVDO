@@ -32,8 +32,6 @@ class LocalDb(context: Context) : SQLiteOpenHelper(context.applicationContext, N
             "CREATE TABLE IF NOT EXISTS draft_cart (id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT, store_name TEXT, region_id TEXT, " +
                 "mode TEXT, currency TEXT, price_type TEXT, created INTEGER, lines_json TEXT)"
         )
-        // Har bir kutishdagi savdoning o'z narx turi (1..4); eski qatorlarda 0 (price_type dan olinadi)
-        addColumnIfMissing(db, "draft_cart", "price_level", "INTEGER DEFAULT 0")
     }
 
     private fun addColumnIfMissing(db: SQLiteDatabase, table: String, column: String, definition: String) {
