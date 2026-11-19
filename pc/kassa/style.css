@@ -89,7 +89,7 @@ body.ret .wins button.on { color: var(--ret); }
 .hbtn b { font-size: 16px; }
 .hbtn.exit { background: rgba(0, 0, 0, .22); }
 
-.body { flex: 1; display: grid; grid-template-columns: 1fr 470px; gap: var(--gap); padding: var(--gap); min-height: 0; }
+.body { flex: 1; display: grid; grid-template-columns: 1fr 394px; gap: var(--gap); padding: var(--gap); min-height: 0; }
 .left, .right { background: var(--panel); border-radius: 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .right { padding: 8px; gap: 8px; }
 
@@ -459,3 +459,18 @@ body.dark .row.flash { animation-name: rowflashd; }
 .ord-wid button { flex: 0 0 48px; min-height: 42px; font-size: 21px; font-weight: 700; background: var(--panel); border: 2px solid var(--line); }
 .ord-wid button.asl { flex: 0 0 auto; padding: 0 14px; font-size: 15px; }
 .ord-wid button.asl.on { border-color: var(--acc); background: var(--acc-soft); color: var(--acc); }
+
+/* pc 25: tugma nomi/ikonkasi, balandlik, ikonka tanlash; o'ng panel 470 dan 394 px ga (taxminan 2 sm torroq) */
+.row-tools .sq { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.row-tools .sq .ic, .ask-choices .ic, .ord-lab .ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.row-tools .sq .ic { width: 24px; height: 24px; }
+.ask-choices.icons { grid-template-columns: repeat(5, 1fr); max-height: 52vh; overflow-y: auto; }
+.ask-choices.icons button { display: flex; align-items: center; justify-content: center; padding: 0; }
+.ask-choices .ic { width: 30px; height: 30px; }
+.ord-lab { display: flex; gap: 6px; }
+.ord-lab .lb { min-height: 44px; background: var(--panel); border: 2px solid var(--line); font-size: 15px; font-weight: 700; }
+.ord-lab .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding: 0 10px; }
+.ord-lab .ic-b { flex: 0 0 56px; display: flex; align-items: center; justify-content: center; padding: 0; }
+.ord-lab .ic { width: 26px; height: 26px; }
+.ord-lab .asl { flex: 0 0 64px; }
+.ord-lab .asl.on { border-color: var(--acc); color: var(--acc); }

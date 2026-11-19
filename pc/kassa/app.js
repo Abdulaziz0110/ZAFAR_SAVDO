@@ -21,7 +21,7 @@
     try { window.localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* xotira yo'q */ }
   }
 
-  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {},
+  var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {}, lab: {},
     ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'light', notes: [50000, 100000, 200000] };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
@@ -41,14 +41,14 @@
 
   // pc 23: savat ostidagi tugmalar (id — tugma elementi, icon — kvadrat tugma). Tartib, o'lcham va yashirish sozlanadi.
   var TOOLS = [
-    { id: 'up', btn: 'upBtn', n: '▲ Yuqoriga', icon: 1 },
-    { id: 'down', btn: 'downBtn', n: '▼ Pastga', icon: 1 },
-    { id: 'minus', btn: 'minusBtn', n: '− Kamaytirish', icon: 1 },
-    { id: 'plus', btn: 'plusBtn', n: "+ Ko'paytirish", icon: 1 },
-    { id: 'qty', btn: 'qtyBtn', n: 'Miqdor' },
-    { id: 'price', btn: 'priceBtn', n: 'Narx' },
-    { id: 'del', btn: 'delBtn', n: "O'chirish" },
-    { id: 'clear', btn: 'clearBtn', n: 'Tozalash' }
+    { id: 'up', btn: 'upBtn', n: '▲ Yuqoriga', icon: 1, d: '▲', ic: 'up' },
+    { id: 'down', btn: 'downBtn', n: '▼ Pastga', icon: 1, d: '▼', ic: 'down' },
+    { id: 'minus', btn: 'minusBtn', n: '− Kamaytirish', icon: 1, d: '−', ic: 'minus' },
+    { id: 'plus', btn: 'plusBtn', n: "+ Ko'paytirish", icon: 1, d: '+', ic: 'plus' },
+    { id: 'qty', btn: 'qtyBtn', n: 'Miqdor', d: 'Miqdor', ic: 'qty' },
+    { id: 'price', btn: 'priceBtn', n: 'Narx', d: 'Narx', ic: 'price' },
+    { id: 'del', btn: 'delBtn', n: "O'chirish", d: "O'chirish", ic: 'trash' },
+    { id: 'clear', btn: 'clearBtn', n: 'Tozalash', d: 'Tozalash', ic: 'eraser' }
   ];
   var TSZ = { i: [[52, 0], [96, 1], [150, 2]], t: [[84, 0], [100, 1], [190, 2]] };   // [flex-basis px, flex-grow]
   /** Ro'yxatni saqlangan tartib bo'yicha qaytaradi; tartibda yo'qlari oxirida, asl tartibda. */
@@ -59,6 +59,14 @@
     });
     list.forEach(function (x) { if (!seen[x.id]) out.push(x); });
     return out;
+  }
+  var RIGHT_W = 394;                                          // o'ng panelning asl kengligi (px), oldin 470
+  /** Yorliq tugmaga sig'masa, shrift o'lchamini kichraytiradi; asl o'lchamga sig'sa 0 qaytaradi. */
+  function fitFont(text, cols, base, hasIcon) {
+    var rw = parseInt((((S.ui || {}).el || {}).right || {}).w, 10) || RIGHT_W;
+    var avail = cols * ((rw - 16 - 30) / 6) + (cols - 1) * 6 - 8 - (hasIcon ? 40 : 0);
+    var fs = Math.max(11, Math.floor(avail / (0.53 * Math.max(1, String(text).length))));
+    return fs < base ? fs : 0;
   }
   /** Savat ostidagi tugmaning kengligi (px): qo'lda berilgan bo'lsa shu, aks holda tanlangan o'lchamniki. */
   function toolBasis(u, t) {
@@ -86,6 +94,12 @@
       if (!b) return;
       box.appendChild(b);                                   // joyini almashtiradi, bosish hodisalari saqlanadi
       b.classList.toggle('hidden', (u.thide || []).indexOf(t.id) >= 0);
+      var lb = (u.lab || {})['tool-' + t.id] || {}, mode = lb.m || 'text', name = lb.t || t.d;
+      b.textContent = '';
+      if (mode !== 'text') b.appendChild(icon(lb.i || t.ic));
+      if (mode !== 'icon') b.appendChild(document.createTextNode(name));
+      b.setAttribute('aria-label', name);
+      if (mode === 'icon') b.title = name; else b.removeAttribute('title');
       var n = toolSize(t), d = (t.icon ? TSZ.i : TSZ.t)[n - 1], w = parseInt((u.tw || {})[t.id], 10);
       if (w >= 40) b.style.flex = '0 1 ' + w + 'px';        // qo'lda berilgan kenglik
       else b.style.flex = n === (t.icon ? 1 : 2) ? '' : d[1] + ' 1 ' + d[0] + 'px';   // asl o'lcham CSS'dan
@@ -106,7 +120,25 @@
     last: '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
     sales: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
     report: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-    settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>'
+    settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+    up: '<path d="M12 19V5M5 12l7-7 7 7"/>',
+    down: '<path d="M12 5v14M5 12l7 7 7-7"/>',
+    minus: '<path d="M5 12h14"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    trash: '<path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+    eraser: '<path d="M16 3l5 5-11 11H5l-2-2 13-14z"/><path d="M12 20h9"/>',
+    star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    cart: '<circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M2 3h3l2.6 12h11L21 7H6"/>',
+    cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 12h.01M18 12h.01"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+    tick: '<path d="m4 12.5 5 5L20 6.5"/>',
+    cross: '<path d="M6 6l12 12M18 6 6 18"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+    box: '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>',
+    home: '<path d="M3 11 12 3l9 8M5 10v10h14V10"/>',
+    bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+    phone: '<path d="M6 3h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
   };
   function icon(id) {
     var NS = 'http://www.w3.org/2000/svg';
@@ -169,6 +201,12 @@
     });
     if (!o.tsz || typeof o.tsz !== 'object' || Array.isArray(o.tsz)) o.tsz = {};
     if (!o.tw || typeof o.tw !== 'object' || Array.isArray(o.tw)) o.tw = {};
+    if (!o.lab || typeof o.lab !== 'object' || Array.isArray(o.lab)) o.lab = {};
+    Object.keys(o.lab).forEach(function (k) {
+      var l = o.lab[k];
+      if (!/^(fn|tool)-[a-z]+$/.test(k) || !l || typeof l !== 'object') { delete o.lab[k]; return; }
+      o.lab[k] = { t: typeof l.t === 'string' ? l.t.slice(0, 24) : '', m: l.m === 'text' || l.m === 'icon' || l.m === 'both' ? l.m : '', i: typeof l.i === 'string' && ICON[l.i] ? l.i : '' };
+    });
     Object.keys(o.tw).forEach(function (k) { var v = parseInt(o.tw[k], 10); if (v >= 40 && v <= 400) o.tw[k] = v; else delete o.tw[k]; });
     return o;
   }
@@ -318,8 +356,10 @@
     $('askPad').classList.toggle('hidden', !o.pw);
     var ch = $('askChoices');
     ch.textContent = '';
+    ch.classList.toggle('icons', !!o.icons);
     (o.choices || []).forEach(function (c) {
-      var b = el('button', c.on ? 'on' : '', c.label);
+      var b = el('button', c.on ? 'on' : '', c.icon ? '' : c.label);
+      if (c.icon) b.appendChild(icon(c.icon));
       b.addEventListener('click', function () { closeAsk(); c.pick(); });
       ch.appendChild(b);
     });
@@ -643,12 +683,20 @@
         if (f.id === 'check' && S.check) { b.classList.add('on'); sub = 'skanerlang…'; }
         if (f.id === 'disc' && S.wins.length && discount()) sub = 'bekor qilish';
         if (f.id === 'settings' && S.ps) sub = 'yangi panel tavsiyasi';
-        b.appendChild(icon(f.id));
-        var tx = el('span', 'tx');
-        var bt = el('b', '', f.b);
-        if (f.id === 'settings' && (S.ps || S.pcQe)) bt.appendChild(el('i', 'badge-dot'));
-        tx.appendChild(bt);
-        b.appendChild(tx);
+        var lb = (S.ui.lab || {})['fn-' + f.id] || {};
+        var mode = lb.m || 'both', name = lb.t || f.b;
+        var dot = f.id === 'settings' && (S.ps || S.pcQe);
+        if (mode !== 'text') b.appendChild(icon(lb.i || f.id));
+        if (mode !== 'icon') {
+          var tx = el('span', 'tx');
+          var bt = el('b', '', name);
+          var fz = fitFont(name, it.w, f.big ? 22 : 18, f.id === 'settings' && mode !== 'text');
+          if (fz) bt.style.fontSize = fz + 'px';
+          if (dot) bt.appendChild(el('i', 'badge-dot'));
+          tx.appendChild(bt);
+          b.appendChild(tx);
+        } else if (dot) b.appendChild(el('i', 'badge-dot'));
+        b.setAttribute('aria-label', name);
         b.title = sub;
         box.appendChild(b);
       });
@@ -1227,6 +1275,45 @@
     $('setBody').firstChild.appendChild(c);
     return c;
   }
+  var ICON_PICK = ['panel', 'search', 'price', 'code', 'qty', 'disc', 'ret', 'check', 'debt', 'last', 'sales', 'report', 'settings',
+    'up', 'down', 'minus', 'plus', 'trash', 'eraser', 'star', 'user', 'cart', 'cash', 'list', 'tick', 'cross', 'refresh', 'box', 'home', 'bell', 'phone'];
+  /** Tugma yorlig'i (nom, ko'rinish rejimi, ikonka) sozlamasini o'zgartiradi; hammasi asl bo'lsa yozuv o'chadi. */
+  function setLab(u, key, patch) {
+    var old = (u.lab || {})[key] || {}, l = {};
+    ['t', 'm', 'i'].forEach(function (k) { l[k] = Object.prototype.hasOwnProperty.call(patch, k) ? patch[k] : (old[k] || ''); });
+    if (!u.lab) u.lab = {};
+    if (!l.t && !l.m && !l.i) delete u.lab[key]; else u.lab[key] = l;
+  }
+  function pickIcon(cur, def, done) {
+    ask({
+      title: 'Ikonka tanlang', text: '', icons: true,
+      choices: ICON_PICK.map(function (k) {
+        return { label: '', icon: k, on: k === (cur || def), pick: function () { done(k === def ? '' : k); } };
+      })
+    });
+  }
+  /** −/qiymat/+/Asl qatori. g: { label, step, reset, custom } */
+  function stepRow(parent, title, g, u, t) {
+    var wd = el('div', 'ord-wid');
+    wd.appendChild(el('span', '', title));
+    btn(wd, '−', 'wd', function () { g.step(u, t, -1); saveUi(u, renderSettings); });
+    wd.appendChild(el('b', 'v', g.label(u, t)));
+    btn(wd, '+', 'wd', function () { g.step(u, t, 1); saveUi(u, renderSettings); });
+    btn(wd, 'Asl', 'wd asl' + (g.custom(u, t) ? ' on' : ''), function () { g.reset(u, t); saveUi(u, renderSettings); });
+    parent.appendChild(wd);
+  }
+  /** Tugma balandligi (el[key].h, px): asl qiymat CSS'dan, qo'lda berilsa 10 px qadam bilan. */
+  function heightOf(prefix, def) {
+    return {
+      label: function (u, t) { var h = (u.el[prefix + t.id] || {}).h; return h ? h + ' px' : 'Asl'; },
+      step: function (u, t, d) {
+        var e = u.el[prefix + t.id] || (u.el[prefix + t.id] = {});
+        e.h = Math.max(30, Math.min(240, Math.round(((e.h || def) + d * 10) / 10) * 10));
+      },
+      reset: function (u, t) { var e = u.el[prefix + t.id]; if (e) delete e.h; },
+      custom: function (u, t) { return !!(u.el[prefix + t.id] || {}).h; }
+    };
+  }
   /** Qatorni barmoq yoki sichqoncha bilan sudrab joyini almashtirish (tutqich: .ord-h). onDrop(from, to). */
   function dragRows(g, onDrop) {
     var st = null, timer = 0;
@@ -1326,13 +1413,28 @@
         btn(bar, s[1], !custom && cur === s[0] ? 'sz on' : 'sz', function () { o.setSize(u, t, s[0]); saveUi(u, renderSettings); });
       });
       r.appendChild(bar);
-      var wd = el('div', 'ord-wid');
-      wd.appendChild(el('span', '', 'Kenglik'));
-      btn(wd, '−', 'wd', function () { o.width.step(u, t, -1); saveUi(u, renderSettings); });
-      wd.appendChild(el('b', 'v', o.width.label(u, t)));
-      btn(wd, '+', 'wd', function () { o.width.step(u, t, 1); saveUi(u, renderSettings); });
-      btn(wd, 'Asl', 'wd asl' + (custom ? ' on' : ''), function () { o.width.reset(u, t); saveUi(u, renderSettings); });
-      r.appendChild(wd);
+      stepRow(r, 'Kenglik', o.width, u, t);
+      stepRow(r, 'Balandlik', o.height, u, t);
+      var lk = o.key(t), lb = (u.lab || {})[lk] || {}, lmode = lb.m || o.defMode;
+      var lm = el('div', 'ord-bar');
+      [['both', 'Ikonka+nom'], ['text', 'Nom'], ['icon', 'Ikonka']].forEach(function (m) {
+        btn(lm, m[1], lmode === m[0] ? 'sz on' : 'sz', function () {
+          setLab(u, lk, { m: m[0] === o.defMode ? '' : m[0] });
+          saveUi(u, renderSettings);
+        });
+      });
+      r.appendChild(lm);
+      var ln = el('div', 'ord-lab');
+      btn(ln, 'Nom: ' + (lb.t || o.defName(t)), 'lb nm', function () {
+        openKb('text', 'Tugma nomi', function (txt) { setLab(u, lk, { t: txt.trim().slice(0, 24) }); saveUi(u, renderSettings); });
+        S.kb.text = lb.t || ''; renderKb();
+      });
+      var ib = btn(ln, '', 'lb ic-b', function () {
+        pickIcon(lb.i, o.defIcon(t), function (k) { setLab(u, lk, { i: k }); saveUi(u, renderSettings); });
+      });
+      ib.appendChild(icon(lb.i || o.defIcon(t)));
+      btn(ln, 'Asl', 'lb asl' + (lb.t || lb.i || lb.m ? ' on' : ''), function () { setLab(u, lk, { t: '', i: '', m: '' }); saveUi(u, renderSettings); });
+      r.appendChild(ln);
       g.appendChild(r);
     });
     dragRows(g, reorder);
@@ -1399,8 +1501,10 @@
       ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
         onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
-    ctrlCard(u, 'Tugmalar', "O'ng tomondagi tugmalar: ☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; o'lchami va ko'rinishi. Sozlamalar tugmasi doim turadi.", FN, {
+    ctrlCard(u, 'Tugmalar', "O'ng tomondagi tugmalar: ☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; o'lchami, nomi va ikonkasi. Sozlamalar tugmasi doim turadi.", FN, {
       ord: 'ford',
+      key: function (t) { return 'fn-' + t.id; }, defMode: 'both', defName: function (t) { return t.b; }, defIcon: function (t) { return t.id; },
+      height: heightOf('fn-', 60),
       canHide: function (t) { return t.id !== 'settings'; },
       hidden: function (uu, t) { return uu.hide.indexOf(t.id) >= 0; },
       toggle: function (uu, t) { if (uu.hide.indexOf(t.id) >= 0) uu.hide = uu.hide.filter(function (x) { return x !== t.id; }); else uu.hide.push(t.id); },
@@ -1420,8 +1524,10 @@
         custom: function (uu, t) { return !!(uu.el['fn-' + t.id] || {}).cols; }
       }
     });
-    ctrlCard(u, 'Savat ostidagi tugmalar', "☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; kengligi (−/+) va ko'rinishi. Sig'masa, ikkinchi qatorga o'tadi.", TOOLS, {
+    ctrlCard(u, 'Savat ostidagi tugmalar', "☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; kengligi, balandligi, nomi va ikonkasi. Sig'masa, ikkinchi qatorga o'tadi.", TOOLS, {
       ord: 'tord',
+      key: function (t) { return 'tool-' + t.id; }, defMode: 'text', defName: function (t) { return t.d; }, defIcon: function (t) { return t.ic; },
+      height: heightOf('tool-', 50),
       canHide: function () { return true; },
       hidden: function (uu, t) { return (uu.thide || []).indexOf(t.id) >= 0; },
       toggle: function (uu, t) {
@@ -1444,11 +1550,21 @@
         custom: function (uu, t) { return !!(uu.tw || {})[t.id]; }
       }
     });
+    var cw = card("O'ng panel kengligi", "Raqamlar va tugmalar qismi. Torroq qilsangiz, ro'yxat (savat) kengayadi.");
+    stepRow(cw, 'Kenglik', {
+      label: function (uu) { return (parseInt((uu.el.right || {}).w, 10) || RIGHT_W) + ' px'; },
+      step: function (uu, _t, d) {
+        var e = uu.el.right || (uu.el.right = {});
+        e.w = Math.max(300, Math.min(700, Math.round(((parseInt(e.w, 10) || RIGHT_W) + d * 10) / 10) * 10));
+      },
+      reset: function (uu) { if (uu.el.right) delete uu.el.right.w; },
+      custom: function (uu) { return !!(uu.el.right || {}).w; }
+    }, u, null);
     var c4 = card("Ko'rinishni o'zgartirish", "Istalgan joyning o'lchami, rangi va matn o'lchami. Hamma oynalarga birdek qo'llanadi.");
     btn(c4, 'Sozlashni boshlash', 'big primary', function () { $('setView').classList.add('hidden'); startEdit(); });
     btn(c4, 'Hammasini asl holiga qaytarish', 'big muted', function () {
-      ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
-        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; return saveUi(u, renderSettings); } });
+      ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar, nom/ikonkalar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
+        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; u.lab = {}; return saveUi(u, renderSettings); } });
     });
     var c5 = card("1C navbati", "Kompyuter yoki 1C ishlamagan paytdagi sotuvlar. Ular 1C tiklanganda o'zi yoziladi.");
     btn(c5, "Navbatni ko'rish (" + (S.pcQ + S.pcQe + S.outbox.length) + ')', 'big muted', showQueue);
@@ -1626,7 +1742,7 @@
       rows.appendChild(r);
     }
     stepper("Matn o'lchami", 'fs', cs ? Math.round(parseFloat(cs.fontSize)) : 16, 1, 10, 60, 'px');
-    if (id === 'right') stepper('Kenglik', 'w', node ? Math.round(node.getBoundingClientRect().width) : 470, 20, 320, 900, 'px');
+    if (id === 'right') stepper('Kenglik', 'w', node ? Math.round(node.getBoundingClientRect().width) : RIGHT_W, 20, 320, 900, 'px');
     else stepper('Balandlik', 'h', node ? Math.round(node.getBoundingClientRect().height) : 50, 4, 24, 240, 'px');
     if (id === 'fn-panel' || id === 'tile' || id === 'tabs') {
       var rp = el('div', 'ed-row');

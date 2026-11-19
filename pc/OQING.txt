@@ -181,3 +181,9 @@ Yangi (pc 23) - KASSA: TUGMALAR TARTIBI/O'LCHAMI VA SOZLAMALAR:
 Yangi (pc 24) - KASSA: SUDRAB JOYLASH VA ANIQ KENGLIK:
  - Sozlamalar > Tugmalar va Savat ostidagi tugmalar: har bir qatordagi ☰ ni barmoq bilan bosib turib sudrab, istalgan joyga qo'ying (▲▼ ham bor).
  - Kenglik: savat ostidagi tugmalar uchun 10 px qadam bilan (−/+), o'ng tomondagi tugmalar uchun qatorning 6 ulushidan (1/6 .. 6/6). "Asl" - tayyor o'lchamga qaytaradi.
+
+Yangi (pc 25) - KASSA: TUGMA NOMI/IKONKASI, BALANDLIK, O'NG PANEL TORAYDI:
+ - Sozlamalar > Tugmalar va Savat ostidagi tugmalar: har bir tugma uchun Balandlik (-/+), nom (ekran klaviaturasida yoziladi) va ikonka (31 tadan tanlanadi).
+ - Ko'rinish rejimi: Ikonka+nom / faqat Nom / faqat Ikonka. "Asl" - tugmaning nomi, ikonkasi va rejimini asl holiga qaytaradi.
+ - O'ng panel (raqamlar va tugmalar) 470 dan 394 px ga toraydi (taxminan 2 sm), ro'yxat shuncha kengaydi. Sozlamalar > "O'ng panel kengligi" dan o'zgartirish mumkin.
+ - Uzun nomli tugmalarda yozuv sig'masa, shrift o'zi kichrayadi.
