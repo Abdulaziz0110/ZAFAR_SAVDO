@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 38 — 2026-11-20
+**Sensor va kompyuter kassasi jonli bir xil** (savat, oyna, narx turi, sozlamalar — darhol). **PLU** hamma joyda kichik belgi.
+**Panel** shaxmatdek, yozuv o'rtada, yirik va qalin.
+
 ## Kompyuter pc 37 — 2026-11-20
 Narx turi o'zgarganda pastda chiqadigan ogohlantirish olib tashlandi (summani to'sardi).
 

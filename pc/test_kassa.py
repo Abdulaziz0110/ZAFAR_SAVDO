@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -553,6 +554,44 @@ class ServiceTest(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.svc.link_barcode("x", "4780000000024", code)
 
+    def test_live_state_sync(self):
+        """pc 37: monoblok va kompyuter oynasi — biri savatni o'zgartirsa, ikkinchisining kutayotgan so'rovi darhol qaytadi."""
+        tok = self.login()
+        st0 = self.svc.get_state(tok, "1")
+        r0, ur0 = st0["r"], st0["ur"]
+        t0 = time.time()
+        self.assertEqual(self.svc.watch_state(tok, "1", r0, ur0, timeout=0.2)["r"], r0)       # o'zgarmadi — vaqt tugadi
+        self.assertGreaterEqual(time.time() - t0, 0.15)
+        got = []
+        th = threading.Thread(target=lambda: got.append(self.svc.watch_state(tok, "1", r0, ur0, timeout=10)))
+        th.start()
+        time.sleep(0.1)
+        t1 = time.time()
+        r = self.svc.put_state(tok, "1", {"at": 5, "wins": [{"lines": [1]}], "w": 0, "cid": "A"})
+        th.join(5)
+        self.assertLess(time.time() - t1, 2)                                                  # darhol
+        self.assertEqual(got[0]["r"], r["r"])
+        self.assertNotEqual(r["r"], r0)
+        self.assertEqual((got[0]["cid"], got[0]["wins"]), ("A", [{"lines": [1]}]))
+        self.assertEqual(self.svc.watch_state(tok, "2", self.svc.get_state(tok, "2")["r"], ur0, timeout=0.1)["r"],
+                         self.svc.rev_base)                                                   # boshqa monoblok (k=2) — alohida
+        grant = self.svc.admin(tok, "1234")["grant"]
+        self.svc.put_ui(tok, grant, {"theme": "qora"})
+        self.assertNotEqual(self.svc.watch_state(tok, "1", r["r"], ur0, timeout=5)["ur"], ur0)  # sozlama ham
+        with self.assertRaises(PermissionError):
+            self.svc.watch_state("x", "1", 0, 0, timeout=0.1)
+
+    def test_plu_from_codes(self):
+        """pc 37: tarozi PLU — onec_export codes.json'dan; tovar ma'lumotida "pl"."""
+        self.svc.data(0)
+        code = self.svc.snap["g"][0]["c"]
+        kassa.save_json(os.path.join(self.svc.here, kassa.CODES_FILE),
+                        {"v": 1, "items": [{"c": code, "n": "x", "p": "501", "b": []}, {"c": "yo'q", "p": "7"}]})
+        self.svc._repanel()
+        g = {x["c"]: x for x in self.svc.snap["g"]}
+        self.assertEqual(g[code]["pl"], "501")
+        self.assertEqual(sum(1 for x in self.svc.snap["g"] if "pl" in x), 1)
+
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]
         self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")
@@ -666,8 +705,9 @@ class ServiceTest(unittest.TestCase):
         tok = self.login()
         st = {"at": 5, "wins": [{"lines": [{"code": "15", "milli": 1000}]}]}
         self.svc.put_state(tok, "1", st)
-        self.assertEqual(self.svc.get_state(tok, "1"), st)
-        self.assertEqual(self.svc.get_state(tok, "../../x"), {})
+        strip = lambda d: {k: v for k, v in d.items() if k not in ("r", "ur")}       # pc 37: jonli sinxron raqamlari
+        self.assertEqual(strip(self.svc.get_state(tok, "1")), st)
+        self.assertEqual(strip(self.svc.get_state(tok, "../../x")), {})
         with self.assertRaises(kc.KassaError):
             self.svc.put_state(tok, "1", {"x": "y" * (kassa.MAX_STATE + 1)})
         grant = self.svc.admin(tok, "1234")["grant"]

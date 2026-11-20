@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 37) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 38) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,13 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## pc 38 (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| **Monoblok sensori va kompyuterdagi kassa jonli bir xil:** savatlar, tanlangan oyna, narx turi, sotuvdan keyin tozalanish — biri o'zgartirsa ikkinchisida darhol (kutib turgan so'rov, ~0,15 soniya); sozlamalar ham. Ikkalasi bir xil manzilda (`?k=` bir xil yoki yo'q) bo'lishi kerak. To'lov oynasi ochiq bo'lsa, boshqa ekrandagi o'zgarish to'lovdan keyin keladi. Ikkala ekranda bir vaqtda o'zgartirilsa — oxirgisi qoladi | VERIFIED (test_kassa, ikki brauzer: A→B 144 ms, B→A 145 ms, oyna almashishi 131 ms) / monoblokda IMPLEMENTED-UNVERIFIED |
+| **Tarozi PLU** savatda, qidiruvda, panelda, panel tavsiyasida, narx tekshirishda kichik belgi bilan — 1C'dan «tovar kodlari» (codes.json, har 6 soatda) orqali; PLU'si yo'q tovarda ko'rinmaydi | VERIFIED (test_kassa, brauzer) / haqiqiy 1C PLU manbasi topilishi IMPLEMENTED-UNVERIFIED |
+| **Panel va panel tavsiyasi:** shaxmat taxtasidek (katakma-katak rang), yozuv o'rtada, yirikroq va qalinroq | VERIFIED (brauzer, rasm) |
 
 ## pc 36 — dasturchi rejimi (2026-11-20)
 | Funksiya | Holat |

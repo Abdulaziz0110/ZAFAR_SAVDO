@@ -599,17 +599,59 @@
   }
 
   // ---------------- savatlarni saqlash (monoblok + kompyuter) ----------------
-  var syncTimer = 0;
+  // pc 37: bir xil manzildagi (k) hamma oynalar — monoblok sensori va kompyuterdagi kassa — jonli bir xil: biri o'zgartirsa,
+  // ikkinchisining kutib turgan so'rovi (/api/state?w=1) darhol qaytadi va savatlar, tanlangan oyna, narx turi yangilanadi.
+  var CID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);   // shu ekran (o'z o'zgarishini qaytarmaslik uchun)
+  var syncTimer = 0, pushing = 0, watching = false;
   function saveWins() {
     S.stateAt = Date.now();
+    S.remote = null;                                   // kutib turgan boshqa ekran holatidan shu (yangiroq) o'zgarish ustun
     save('k_wins', S.wins); save('k_state_at', S.stateAt);
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(pushState, 300);
+    syncTimer = setTimeout(function () { syncTimer = 0; pushState(); }, 80);
   }
   function pushState() {
     if (!S.token) return;
-    api('POST', '/api/state', { token: S.token, k: TERM, state: { at: S.stateAt, wins: S.wins, w: S.w, outbox: S.outbox } }, 10000)
-      .catch(function () { /* kompyuter yo'q — keyingi o'zgarishda yana urinadi */ });
+    pushing++;
+    api('POST', '/api/state', { token: S.token, k: TERM, state: { at: S.stateAt, wins: S.wins, w: S.w, outbox: S.outbox, cid: CID } }, 10000)
+      .then(function (j) { pushing--; if (j && j.r != null && (S.rev == null || j.r > S.rev)) S.rev = j.r; },
+        function () { pushing--; /* kompyuter yo'q — keyingi o'zgarishda yana urinadi */ });
+  }
+  /** Boshqa ekrandan kelgan holat. Shu ekranda yuborilmagan o'zgarish bo'lsa — shunisi ustun (u yuboriladi). */
+  function applyRemote(st) {
+    if (!st || st.cid === CID || !Array.isArray(st.wins) || syncTimer || pushing) return;
+    if (S.pay || !hidden('prog') || !hidden('busy')) { S.remote = st; return; }   // to'lov paytida emas — keyin
+    S.remote = null;
+    S.wins = fixWins(st.wins);
+    S.w = Math.max(0, Math.min(st.w || 0, S.wins.length - 1));
+    S.sel = -1;
+    if (st.at) S.stateAt = st.at;
+    save('k_wins', S.wins); save('k_state_at', S.stateAt);
+    renderAll();
+  }
+  function watchState() {
+    if (watching || !S.token) return;
+    watching = true;
+    var tok = S.token;
+    api('GET', '/api/state?t=' + encodeURIComponent(tok) + '&k=' + TERM + '&w=1&r=' + (S.rev == null ? '' : S.rev) +
+      '&u=' + (S.urev == null ? '' : S.urev), undefined, 40000).then(function (st) {
+      watching = false;
+      if (!st || st.r == null) { setTimeout(watchState, 3000); return; }
+      var first = S.rev == null;
+      var uiNew = S.urev != null && st.ur !== S.urev;
+      S.urev = st.ur;
+      if (uiNew) loadUi().then(function () { if (!hidden('setView')) renderSettings(); });
+      if (st.r !== S.rev) {
+        // shu ekranda yuborilayotgan o'zgarish bor — u tugagach serverdagi oxirgisi (kimniki bo'lsa) olinadi
+        if (!first && st.cid !== CID && (syncTimer || pushing)) { setTimeout(watchState, 150); return; }
+        S.rev = st.r;
+        if (!first) applyRemote(st);
+      }
+      setTimeout(watchState, 30);
+    }, function (e) {
+      watching = false;
+      if (e.message !== 'login') setTimeout(watchState, 3000);
+    });
   }
   function pullState() {
     return api('GET', '/api/state?t=' + encodeURIComponent(S.token) + '&k=' + TERM, undefined, 10000).then(function (st) {
@@ -724,6 +766,7 @@
     renderAll();
     loadUi();
     pullState();
+    watchState();
     refreshData(true);
     sendOutbox();
   }
@@ -1065,7 +1108,10 @@
       row.setAttribute('role', 'listitem');
       row.setAttribute('data-i', i);
       row.appendChild(el('span', 'rn', String(i + 1)));
-      var nm = el('span', 'nm', l.name);
+      var nm = el('span', 'nm');
+      var lg = S.byCode[l.code];
+      if (lg && lg.pl) nm.appendChild(el('small', 'plu', 'PLU ' + lg.pl));
+      nm.appendChild(document.createTextNode(l.name));
       if (!S.byCode[l.code] && S.data) nm.appendChild(el('i', '', "1C'da yo'q"));
       row.appendChild(nm);
       if (S.ui.stock) {
@@ -1114,6 +1160,7 @@
     b.setAttribute('data-code', g.c);
     b.setAttribute('data-ui', 'tile');
     b.appendChild(el('span', 'tn', g.n));
+    if (g.pl) b.appendChild(el('span', 'tpl', 'PLU ' + g.pl));      // pc 37: tarozi PLU (1C'da bo'lsa)
     var p = el('span', 'tp');
     p.appendChild(el('span', '', money(L.priceOf(g, PT(), S.data.rate))));
     b.appendChild(p);
@@ -1278,6 +1325,7 @@
     }) : [{ a: 'Narx', b: money(L.priceOf(g, PT(), S.data.rate)), cls: 'big' }];
     if (S.ui.stock) rows.push({ a: 'Qoldiq', b: qtyText(L.milli(g.s)), cls: g.s > 0 ? '' : 'warn' });
     rows.push({ a: 'Kod', b: g.c });
+    if (g.pl) rows.push({ a: 'PLU (tarozi)', b: g.pl });
     info(g.n, rows, [{ label: "Savatga qo'shish", cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); addGoods(g, 1000, false); } }]);
   }
   // ---------------- savdolar ro'yxati: istalgan chekni qayta chiqarish ----------------
@@ -2981,6 +3029,8 @@
   window.addEventListener('unhandledrejection', function () { busy(false); });
 
   function tickClock() {
+    if (S.remote) applyRemote(S.remote);               // to'lov tugagach — boshqa ekrandagi o'zgarish
+    if (S.token && hidden('login') && !watching) watchState();
     var d = new Date();
     var p = function (n) { return (n < 10 ? '0' : '') + n; };
     $('clock').textContent = p(d.getHours()) + ':' + p(d.getMinutes());

@@ -601,3 +601,14 @@ html, body { touch-action: pan-x pan-y; }
   opacity: .75; transition: left .15s; }
 .dev-sw.on { background: #f59e0b; border-color: #f59e0b; }
 .dev-sw.on i { left: 27px; background: #fff; opacity: 1; }
+
+/* pc 37: tarozi PLU — hamma joyda kichik belgi (savat, qidiruv, panel) */
+.tile .tpl { font-size: 12px; font-weight: 700; color: var(--ink2); line-height: 1.1; }
+.row .nm .plu { display: inline-block; font-size: 12px; font-weight: 800; color: var(--ink2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 0 5px; margin-right: 6px; vertical-align: 2px; line-height: 17px; }
+/* pc 37: panel (va panel tavsiyasi) — shaxmat taxtasidek, yozuv o'rtada, yirik va qalin (7 ustun: juft katak — boshqa rang) */
+.panel-grid .tile { justify-content: center; align-items: center; text-align: center; gap: 4px; }
+.panel-grid .tile:not(.empty):nth-child(even) { box-shadow: inset 0 0 0 999px rgba(128, 128, 128, .17); }
+.panel-grid .tile .tn { font-size: 19px; font-weight: 900; line-height: 1.12; overflow-wrap: anywhere; }
+.panel-grid .tile .tp { font-size: 18px; font-weight: 900; justify-content: center; }
+.panel-grid .tile .tpl { font-size: 13px; }

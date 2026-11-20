@@ -723,6 +723,7 @@ SALE_WAIT = 45            # sotuv 1C'ga shuncha soniyada yozilmasa — navbatda 
 RETRY_SEC = 60            # 1C ishlamasa navbatni qayta urinish oralig'i
 GRANT_SEC = 15 * 60       # admin ruxsati (sozlamalar) amal qilish vaqti
 MAX_STATE = 600_000
+CODES_FILE = "codes.json"           # onec_export.py --codes natijasi (PLU) — kassa bilan bir papkada
 
 
 class Retry(kc.KassaError):
@@ -759,6 +760,12 @@ class KassaService:
         self.make_bridge = bridge
         self.bridge = None
         self.cloud = None           # pc 36: 1C yozuvlari navbati (dasturchi rejimida shtrix kod biriktirish)
+        # pc 37: savatlar va sozlamalar monoblok <-> kompyuter oynalari orasida jonli (long-poll): har o'zgarishda raqam oshadi
+        self.state_cv = threading.Condition()
+        self.rev_base = int(clock() * 1000)
+        self.state_rev = {}
+        self.ui_rev = self.rev_base
+        self.plu_cache = (None, {})
         self.br_lock = threading.Lock()
         mode = load_json(os.path.join(here, MODE_FILE), {})
         self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
@@ -1423,21 +1430,49 @@ class KassaService:
         return self.call(go, timeout=40)
 
     # --- monoblok holati (savatlar) — elektr o'chsa ham shu yerda qoladi ---
+    @staticmethod
+    def term_key(k):
+        return "".join(ch for ch in str(k or "1") if ch.isalnum())[:16] or "1"
+
     def state_path(self, k):
-        k = "".join(ch for ch in str(k or "1") if ch.isalnum())[:16] or "1"
-        return os.path.join(self.here, "kassa_state_%s.json" % k)
+        return os.path.join(self.here, "kassa_state_%s.json" % self.term_key(k))
+
+    def _revs(self, k):
+        return {"r": self.state_rev.get(self.term_key(k), self.rev_base), "ur": self.ui_rev}
 
     def get_state(self, token, k):
         self.who(token)
-        return load_json(self.state_path(k), {})
+        st = load_json(self.state_path(k), {})
+        with self.state_cv:
+            revs = self._revs(k)
+        return dict(st if isinstance(st, dict) else {}, **revs)
 
     def put_state(self, token, k, state):
         self.who(token)
+        if not isinstance(state, dict):
+            raise kc.KassaError("Holat noto'g'ri")
         raw = json.dumps(state, ensure_ascii=False)
-        if len(raw) > MAX_STATE or not isinstance(state, dict):
+        if len(raw) > MAX_STATE:
             raise kc.KassaError("Holat juda katta")
-        save_json(self.state_path(k), state)
-        return {"ok": True}
+        with self.state_cv:
+            save_json(self.state_path(k), state)
+            kk = self.term_key(k)
+            self.state_rev[kk] = self.state_rev.get(kk, self.rev_base) + 1
+            revs = self._revs(k)
+            self.state_cv.notify_all()
+        return dict(ok=True, **revs)
+
+    def watch_state(self, token, k, r, ur, timeout=25.0):
+        """pc 37: boshqa oyna (monoblok yoki kompyuter) savatni yoki sozlamani o'zgartirguncha kutadi (ko'pi bilan timeout).
+        @return yangi holat (r/ur raqamlari bilan) — o'zgarmagan bo'lsa ham (keyingi so'rov shu raqamlar bilan)."""
+        self.who(token)
+        kk = self.term_key(k)
+
+        def changed():
+            return str(self.state_rev.get(kk, self.rev_base)) != str(r) or str(self.ui_rev) != str(ur)
+        with self.state_cv:
+            self.state_cv.wait_for(changed, timeout=max(0.0, min(float(timeout), 30.0)))
+        return self.get_state(token, k)
 
     # --- interfeys sozlamalari (hamma oyna va monobloklar uchun bitta) ---
     def get_ui(self):
@@ -1448,6 +1483,9 @@ class KassaService:
         if not isinstance(ui, dict) or len(json.dumps(ui)) > 200_000:
             raise kc.KassaError("Sozlama noto'g'ri")
         save_json(os.path.join(self.here, UI_FILE), ui)
+        with self.state_cv:
+            self.ui_rev += 1
+            self.state_cv.notify_all()
         return {"ok": True}
 
     def ask_update(self, token, grant):
@@ -1533,10 +1571,30 @@ class KassaService:
         self.full_at = self.stock_at = self.clock()
         log.info("kassa: ma'lumot yangilandi (%d tovar, %d mijoz)", len(snap["g"]), len(snap["cl"]))
 
+    def plu_map(self):
+        """pc 37: tarozi PLU raqamlari — onec_export «tovar kodlari» natijasidan (codes.json, 1C'dan har 6 soatda). Yo'q bo'lsa {}."""
+        path = os.path.join(self.here, CODES_FILE)
+        try:
+            mt = os.path.getmtime(path)
+        except OSError:
+            return {}
+        if self.plu_cache[0] == mt:
+            return self.plu_cache[1]
+        data = load_json(path, {})
+        out = {}
+        for it in (data.get("items") if isinstance(data, dict) else None) or []:
+            if isinstance(it, dict) and it.get("c") and it.get("p"):
+                out[str(it["c"])] = str(it["p"])[:8]
+        self.plu_cache = (mt, out)
+        return out
+
     def _decorate(self, snap):
-        """Mashhurlik (qidiruvda yuqorida) va tasdiqlangan panel."""
+        """Mashhurlik (qidiruvda yuqorida), tarozi PLU va tasdiqlangan panel."""
         st = self.stats
         snap["g"] = [dict(g, f=st[g["c"]]) if st.get(g["c"]) else g for g in snap.get("g", [])]
+        plu = self.plu_map()
+        if plu:
+            snap["g"] = [dict(g, pl=plu[g["c"]]) if plu.get(g["c"]) else g for g in snap["g"]]
         own = load_json(os.path.join(self.here, PANEL_FILE), {})
         if isinstance(own, dict) and isinstance(own.get("pnl"), list) and own["pnl"]:
             snap["pnl"] = own["pnl"]
@@ -1895,6 +1953,8 @@ def make_handler(service, static_dir):
                     if path == "/api/ui":
                         return self._json(200, service.get_ui())
                     service.who(tok)
+                    if path == "/api/state" and params.get("w") == "1":
+                        return self._json(200, service.watch_state(tok, params.get("k", "1"), params.get("r", ""), params.get("u", "")))
                     if path == "/api/state":
                         return self._json(200, service.get_state(tok, params.get("k", "1")))
                     if path == "/api/report":
