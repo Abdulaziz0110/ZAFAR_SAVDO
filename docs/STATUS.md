@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 29) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 30) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -610,3 +610,10 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Sozlamalar tugmasidagi qizil nuqta: panel tavsiyasi sozlamalar ochilganda «ko'rildi» bo'ladi; 1C'ga yozilmagan sotuv bo'lsa sozlamalar tepasida qizil karta (sababi va «Navbatni ko'rish») | VERIFIED (brauzer) |
 | Narx turi 2 rejim: «Tugma bilan» (avvalgidek) yoki «Barmoqlar bilan» — ro'yxat ustida N barmoq bilan 3 sm pastga surish = Narx N (surish ko'rsatkichi bilan) | VERIFIED (Chromium'da soxta ko'p barmoqli teginish) / monoblok ekranida IMPLEMENTED-UNVERIFIED |
 | Android lint: ExifInterface(InputStream) va deleteSharedPreferences faqat API 24+ da (Android 6 da xavfsiz o'rinbosar) | VERIFIED (kompilyatsiya; lint CI'da) |
+
+## pc 30 (2026-11-20) — telefondan 1C'ga yozish kassa ko'prigi orqali
+| Funksiya | Holat |
+|---|---|
+| Sabab: bu kompyuterda yashirin 1C (V83.Application) ochilgach darhol yopiladi («Сбой при удаленном вызове процедуры», «Вызванный объект был отключен от клиентов») — telefon yozuvlari (shtrix kod, kassa paneli, ko'p tovarga birdan, kirim, to'lov ...) shu sababli ishlamagan | VERIFIED (xato matnlari va kod tahlili) |
+| Endi «oyna orqali» yozuvlar ochiq turgan kassa ko'prigi 1C'ida bajariladi: har amal *.rpq (JSON) -> 1C -> *.rps; obyektlar raqam bilan saqlanadi; alohida 1C oynasi ochilmaydi (1C seanslari ko'paymaydi) | VERIFIED (test_onec_bridge: soxta 1C bilan shtrix kod yozuvi to'liq) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Ko'prik versiyasi 6: yangilangach eski ko'prik 1C o'zi yopilib, yangisi ochiladi; RPC paytida ham kassa sotuvlari kutib qolmaydi (so'rovlar orasida bajariladi) | IMPLEMENTED-UNVERIFIED |

@@ -27,12 +27,12 @@ log = logging.getLogger("bridge")
 
 EPF_NAME = "kassa_bridge.epf"
 JOBS_DIR = "kassa_jobs"
-BRIDGE_VERSION = "5"
+BRIDGE_VERSION = "6"
 
 # --------------------------------------------------------------------------- 1C kodi (tashqi ishlov moduli)
 
 BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job -> ПродажаРозница (1C sensor oynasi bilan bir xil), natija *.res
-Перем ПечатьСсылка, ПечатьВозврат;
+Перем ПечатьСсылка, ПечатьВозврат, РпцОбъекты, РпцСлед;
 
 Функция Ч(Знач С)
 	С = СокрЛП(С);
@@ -231,6 +231,170 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 	Возврат СокрЛП(Док.Номер) + Символы.Таб + Формат(Док.Дата, "ДФ='dd.MM.yyyy HH:mm'");
 КонецФункции
 
+// ---- v6 (pc 30): telefondan 1C'ga yozish ham SHU 1C orqali (alohida yashirin 1C ochilmaydi) ----
+// Dastur har bir amalni (*.rpq, JSON) yuboradi: xususiyatni o'qish/yozish, metod chaqirish; obyektlar raqam bilan saqlanadi.
+Функция РпцИз(З)
+	Если ТипЗнч(З) <> Тип("Соответствие") Тогда
+		Возврат З;
+	КонецЕсли;
+	Х = З.Получить("h");
+	Если Х <> Неопределено Тогда
+		Об = РпцОбъекты.Получить(Х);
+		Если Об = Неопределено Тогда
+			ВызватьИсключение "1C obyekti topilmadi (" + XMLСтрока(Х) + ")";
+		КонецЕсли;
+		Возврат Об;
+	КонецЕсли;
+	Д = З.Получить("d");
+	Если Д <> Неопределено Тогда
+		Возврат Дата(Д);
+	КонецЕсли;
+	Если З.Получить("u") <> Неопределено Тогда
+		Возврат Неопределено;
+	КонецЕсли;
+	Возврат З.Получить("v");
+КонецФункции
+
+Функция РпцВ(Рез)
+	С = Новый Соответствие;
+	Т = ТипЗнч(Рез);
+	Если Рез = Неопределено Или Рез = Null Тогда
+		С.Вставить("u", 1);
+		Возврат С;
+	КонецЕсли;
+	Если Т = Тип("Число") Или Т = Тип("Строка") Или Т = Тип("Булево") Тогда
+		С.Вставить("v", Рез);
+		Возврат С;
+	КонецЕсли;
+	Если Т = Тип("Дата") Тогда
+		С.Вставить("d", Формат(Рез, "ДФ=yyyyMMddHHmmss; ДП=00010101000000"));
+		Возврат С;
+	КонецЕсли;
+	РпцСлед = РпцСлед + 1;
+	РпцОбъекты.Вставить(РпцСлед, Рез);
+	С.Вставить("h", РпцСлед);
+	Возврат С;
+КонецФункции
+
+Функция РпцАмал(Зап)
+	Оп   = Зап.Получить("op");
+	Имя  = Зап.Получить("n");
+	Х    = Зап.Получить("h");
+	Пред = "";
+	Об   = Неопределено;
+	Если Х <> Неопределено И Х <> 0 Тогда
+		Об = РпцИз(Зап);
+		Пред = "Об.";
+	КонецЕсли;
+	Арг = Новый Массив;
+	Сп = Зап.Получить("a");
+	Если Сп <> Неопределено Тогда
+		Для Каждого А Из Сп Цикл
+			Арг.Добавить(РпцИз(А));
+		КонецЦикла;
+	КонецЕсли;
+	Рез = Неопределено;
+	Если Оп = "get" Тогда
+		Выполнить("Рез = " + Пред + Имя);
+	КонецЕсли;
+	Если Оп = "set" Тогда
+		Зн = РпцИз(Зап.Получить("v"));
+		Выполнить(Пред + Имя + " = Зн");
+	КонецЕсли;
+	Если Оп = "call" Или Оп = "proc" Тогда
+		Код = Пред + Имя + "(";
+		Для Н = 0 По Арг.ВГраница() Цикл
+			Код = Код + ?(Н > 0, ", ", "") + "Арг[" + XMLСтрока(Н) + "]";
+		КонецЦикла;
+		Код = Код + ")";
+		Если Оп = "call" Тогда
+			Выполнить("Рез = " + Код);
+		Иначе
+			Выполнить(Код);
+		КонецЕсли;
+	КонецЕсли;
+	Если Оп = "new" Тогда
+		Рез = Новый(Имя);
+	КонецЕсли;
+	Если Оп = "str" Тогда
+		Рез = Строка(Арг[0]);
+	КонецЕсли;
+	Если Оп = "eq" Тогда
+		Рез = (Арг[0] = Арг[1]);
+	КонецЕсли;
+	Если Оп = "free" Тогда
+		РпцОбъекты = Новый Соответствие;
+		РпцСлед = 0;
+	КонецЕсли;
+	Возврат РпцВ(Рез);
+КонецФункции
+
+Процедура РпцФайл(Ф, Папка)
+	Асос = Папка + "\" + Ф.ИмяБезРасширения;
+	Отв = Новый Соответствие;
+	Попытка
+		Чт = Новый ЧтениеJSON;
+		Чт.ОткрытьФайл(Ф.ПолноеИмя, "UTF-8");
+		Зап = ПрочитатьJSON(Чт, Истина);
+		Чт.Закрыть();
+		Отв.Вставить("r", РпцАмал(Зап));
+		Отв.Вставить("ok", Истина);
+	Исключение
+		Отв.Вставить("ok", Ложь);
+		Отв.Вставить("e", СтрЗаменить(СтрЗаменить(ОписаниеОшибки(), Символы.ПС, " "), Символы.ВК, " "));
+	КонецПопытки;
+	Зп = Новый ЗаписьJSON;
+	Зп.УстановитьСтроку();
+	ЗаписатьJSON(Зп, Отв);
+	ЗаписатьТекст(Асос + ".rps", Зп.Закрыть());
+	УдалитьФайлы(Ф.ПолноеИмя);
+КонецПроцедуры
+
+Процедура РпцСеанс(Папка, Оболочка)
+	// tez rejim: so'rovlar kechikishsiz bajariladi; 20 soniya so'rov kelmasa — oddiy (1 soniyalik) aylanishga qaytadi
+	Если РпцОбъекты = Неопределено Тогда
+		РпцОбъекты = Новый Соответствие;
+		РпцСлед = 0;
+	КонецЕсли;
+	Охирги = ТекущаяДата();
+	Пульс  = ТекущаяДата();
+	Бекор  = 0;
+	Пока Истина Цикл
+		Файлы = НайтиФайлы(Папка, "*.rpq");
+		Если Файлы.Количество() > 0 Тогда
+			Для Каждого Ф Из Файлы Цикл
+				РпцФайл(Ф, Папка);
+			КонецЦикла;
+			Охирги = ТекущаяДата();
+			Бекор  = 0;
+		Иначе
+			Бекор = Бекор + 1;
+			Если ТекущаяДата() - Охирги > 20 Или ФайлЕсть(Папка + "\stop.flag") Тогда
+				Прервать;
+			КонецЕсли;
+			Если Бекор > 200 Тогда
+				// so'rovlar orasida kassa sotuvi ham kutib qolmasin; protsessorni band qilmaslik uchun qisqa kutish
+				ИшлаТопшириклар(Папка);
+				Если Оболочка <> Неопределено Тогда
+					Попытка
+						Оболочка.Run("cmd /c ping -n 1 127.0.0.1 >nul", 0, Истина);
+					Исключение
+					КонецПопытки;
+				КонецЕсли;
+			КонецЕсли;
+		КонецЕсли;
+		Если ТекущаяДата() - Пульс >= 5 Тогда
+			Попытка
+				ЗаписатьТекст(Папка + "\1c___VER__.alive", "1");
+			Исключение
+			КонецПопытки;
+			Пульс = ТекущаяДата();
+		КонецЕсли;
+	КонецЦикла;
+	РпцОбъекты = Новый Соответствие;
+	РпцСлед = 0;
+КонецПроцедуры
+
 Функция ФайлЕсть(Путь)
 	Ф = Новый Файл(Путь);
 	Возврат Ф.Существует();
@@ -322,6 +486,9 @@ BSL = r"""// IMSOFT kassa ko'prigi v__VER__: 1C ochiq turadi, papkadagi *.job ->
 		КонецЕсли;
 		Попытка
 			ИшлаТопшириклар(Папка);
+			Если НайтиФайлы(Папка, "*.rpq").Количество() > 0 Тогда
+				РпцСеанс(Папка, Оболочка);
+			КонецЕсли;
 		Исключение
 			Попытка
 				ЗаписатьТекст(Папка + "\1c.error", ОписаниеОшибки());
@@ -921,3 +1088,206 @@ class Bridge:
                     break                 # 1C yopildi — keyingi safar qayta ochiladi
             self.sleep(0.3)
         return out
+
+
+# --------------------------------------------------------------------------- pc 30: telefon yozuvlari shu 1C orqali
+
+class RpcError(Exception):
+    """1C amalni bajarmadi (xato matni 1C'dan) yoki ko'prik javob bermadi."""
+
+
+class RpcAttrError(RpcError, AttributeError):
+    """Xususiyat yo'q — getattr(obj, "X", standart) ishlashi uchun AttributeError ham."""
+
+
+# Qiymat qaytarmaydigan metodlar (1C'da "Рез = Об.Записать()" xato bo'ladi) va qaytaradiganlar.
+# Ro'yxatda yo'q nom — xususiyat deb o'qiladi.
+RPC_PROCS = frozenset(("Записать", "Очистить", "УстановитьНовыйКод", "УстановитьПараметр", "Установить",
+                       "УстановитьПометкуУдаления", "Удалить", "Вставить", "Заполнить", "Прочитать", "УстановитьСсылкуНового"))
+RPC_FUNCS = frozenset(("НайтиПоКоду", "НайтиПоНаименованию", "НайтиПоРеквизиту", "НайтиПоНомеру", "Пустая",
+                       "УникальныйИдентификатор", "СоздатьДокумент", "СоздатьЭлемент", "СоздатьГруппу", "Получить", "Добавить",
+                       "Выполнить", "Выбрать", "Следующий", "ПолучитьОбъект", "Количество", "Скопировать", "Остатки",
+                       "ПустаяСсылка", "СоздатьМенеджерЗаписи", "ПолучитьСсылку", "Выгрузить", "Пустой", "Найти",
+                       "ЭтоГруппа", "Владелец", "ПолучитьНовыйКод"))
+_RPC_NAME = re.compile(r"^[A-Za-z_Ѐ-ӿ][0-9A-Za-z_Ѐ-ӿ]*$")
+
+
+class RObj:
+    """Ko'prik 1C'idagi obyekt (raqami bilan). Xuddi COM obyekti kabi ishlatiladi: obj.Наименование, obj.Записать()."""
+    __slots__ = ("_rpc", "_h")
+
+    def __init__(self, rpc, h):
+        object.__setattr__(self, "_rpc", rpc)
+        object.__setattr__(self, "_h", h)
+
+    def __getattr__(self, name):
+        if name.startswith("_") or not _RPC_NAME.match(name):
+            raise AttributeError(name)
+        if name in RPC_PROCS:
+            return lambda *a: self._rpc.op("proc", self._h, name, list(a))
+        if name in RPC_FUNCS:
+            return lambda *a: self._rpc.op("call", self._h, name, list(a))
+        return self._rpc.op("get", self._h, name)
+
+    def __setattr__(self, name, value):
+        if not _RPC_NAME.match(name):
+            raise AttributeError(name)
+        self._rpc.op("set", self._h, name, value=value)
+
+    def __bool__(self):
+        return True
+
+    def __str__(self):
+        return str(self._rpc.op("str", 0, "", [self]))
+
+    def __eq__(self, other):
+        if isinstance(other, RObj):
+            return bool(self._rpc.op("eq", 0, "", [self, other]))
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((id(self._rpc), self._h))
+
+    def __repr__(self):
+        return "<1C #%s>" % self._h
+
+
+class RRoot(RObj):
+    """1C global konteksti (V83.Application o'rnida): Справочники, Документы, Константы ...; String/NewObject."""
+    __slots__ = ()
+
+    def String(self, v):  # noqa: N802 — COM nomi
+        return str(self._rpc.op("str", 0, "", [v]))
+
+    def NewObject(self, name, *args):  # noqa: N802
+        return self._rpc.op("new", 0, name, list(args))
+
+
+class Rpc:
+    """Telefondan 1C'ga yozish uchun alohida yashirin 1C ochilmaydi (bu kompyuterda V83.Application 1 soniyada yopiladi va
+    ortiqcha 1C seansi bo'ladi): har bir amal ochiq turgan ko'prik 1C'iga *.rpq fayl bilan yuboriladi, javob *.rps."""
+
+    OP_SEC = 300           # bitta amal (masalan katta hujjatni o'tkazish yoki kassa sotuvi tugashini kutish)
+    START_SEC = 180
+
+    def __init__(self, bridge, clock=time.time, sleep=time.sleep):
+        self.br = bridge
+        self.clock = clock
+        self.sleep = sleep
+        self.n = 0
+        self.sid = uuid.uuid4().hex[:6]
+        self.root = RRoot(self, 0)
+        self.used = False
+
+    def wait_ready(self, timeout=None):
+        """Ko'prik 1C ochiq bo'lishini kutadi (kassa xizmati ochadi). @raise RpcError."""
+        end = self.clock() + (self.START_SEC if timeout is None else timeout)
+        while not self.br.alive():
+            if self.clock() >= end:
+                raise RpcError("1C ko'prigi ochilmadi (kassa dasturi 1C'ni ocholmadi) — keyinroq qayta yuboring")
+            self.sleep(1)
+        return self
+
+    @staticmethod
+    def enc(v):
+        import datetime as _dt
+        from decimal import Decimal
+        if isinstance(v, RObj):
+            return {"h": v._h}
+        if v is None:
+            return {"u": 1}
+        if isinstance(v, bool):
+            return {"v": v}
+        if isinstance(v, Decimal):
+            return {"v": float(v)}
+        if isinstance(v, (int, float, str)):
+            return {"v": v}
+        if isinstance(v, _dt.datetime):
+            return {"d": v.strftime("%Y%m%d%H%M%S")}
+        if isinstance(v, _dt.date):
+            return {"d": v.strftime("%Y%m%d") + "000000"}
+        raise RpcError("1C'ga yuborib bo'lmaydigan qiymat: %r" % (v,))
+
+    def dec(self, r):
+        import datetime as _dt
+        if not isinstance(r, dict) or "u" in r:
+            return None
+        if "h" in r:
+            return RObj(self, r["h"])
+        if "d" in r:
+            d = str(r["d"] or "")
+            if len(d) < 14 or d.startswith("0001"):
+                return _dt.datetime(1, 1, 1)
+            return _dt.datetime(int(d[0:4]), int(d[4:6]), int(d[6:8]), int(d[8:10]), int(d[10:12]), int(d[12:14]))
+        return r.get("v")
+
+    def op(self, kind, h, name="", args=None, value=None):
+        import json
+        if kind in ("get", "set", "call", "proc") and not _RPC_NAME.match(name or ""):
+            raise RpcError("noto'g'ri nom: %r" % (name,))
+        req = {"op": kind, "h": h, "n": name}
+        if args is not None:
+            req["a"] = [self.enc(x) for x in args]
+        if kind == "set":
+            req["v"] = self.enc(value)
+        self.n += 1
+        self.used = True
+        os.makedirs(self.br.jobs, exist_ok=True)
+        base = self.br._p("r%s_%07d" % (self.sid, self.n))
+        tmp = base + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(req, f, ensure_ascii=False)
+        os.replace(tmp, base + ".rpq")
+        res = base + ".rps"
+        start = check = self.clock()
+        delay = 0.002
+        while not os.path.exists(res):
+            now = self.clock()
+            if now - check >= 5:
+                check = now
+                self.br.heartbeat()
+                if self.br.alive_version() is None:
+                    self._drop(base)
+                    raise RpcError("1C ko'prigi yopildi (amal: %s)" % name)
+            if now - start >= self.OP_SEC:
+                self._drop(base)
+                raise RpcError("1C javob bermadi (amal: %s)" % name)
+            self.sleep(delay)
+            delay = min(delay * 1.6, 0.05)
+        text = ""
+        for _ in range(20):
+            try:
+                with open(res, "r", encoding="utf-8-sig") as f:
+                    text = f.read()
+                break
+            except OSError:
+                self.sleep(0.05)
+        try:
+            os.remove(res)
+        except OSError:
+            pass
+        try:
+            r = json.loads(text)
+        except ValueError:
+            raise RpcError("1C javobi tushunarsiz: %s" % text[:200])
+        if not r.get("ok"):
+            msg = str(r.get("e") or "1C xatosi")[:600]
+            if kind == "get":
+                raise RpcAttrError(msg)
+            raise RpcError(msg)
+        return self.dec(r.get("r"))
+
+    def _drop(self, base):
+        try:
+            os.remove(base + ".rpq")
+        except OSError:
+            pass
+
+    def close(self):
+        """Seans tugadi — 1C'dagi obyektlar ro'yxati tozalanadi."""
+        if self.used:
+            try:
+                self.op("free", 0)
+            except (RpcError, OSError) as e:
+                log.debug("ko'prik seansini yopish: %s", e)
+            self.used = False

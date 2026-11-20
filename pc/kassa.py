@@ -738,6 +738,7 @@ class KassaService:
         self.use_app = use_app
         self.make_bridge = bridge
         self.bridge = None
+        self.br_lock = threading.Lock()
         mode = load_json(os.path.join(here, MODE_FILE), {})
         self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
         self.warm_at = 0.0
@@ -1102,9 +1103,17 @@ class KassaService:
             self._apply_stock(sale_from_json(item["sale"]), -item["res"]["_debt_delta"], undo=True)
 
     def _br(self):
-        if self.bridge is None:
-            self.bridge = self.make_bridge()
-        return self.bridge
+        with self.br_lock:
+            if self.bridge is None:
+                self.bridge = self.make_bridge()
+            return self.bridge
+
+    def bridge_rpc(self):
+        """pc 30: telefondan 1C'ga yozish uchun shu ko'prik 1C'i (alohida 1C ochilmaydi). Ko'prik yopiq bo'lsa —
+        kassa aylanishi uni ochadi, shu yerda tayyor bo'lishi kutiladi. @raise onec_bridge.RpcError"""
+        import onec_bridge
+        self._set_bridge_mode()
+        return onec_bridge.Rpc(self._br()).wait_ready()
 
     def _print_errs(self, br):
         try:

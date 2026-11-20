@@ -396,6 +396,10 @@ class Writer:
         self.backup_dir = os.path.join(here, "backup")
         # v3.12: tovar (shtrix, narx, PLU, yangi tovar) o'zgardi — telefonlarga kodlar/narxlar qayta yuborilsin
         self.goods_changed = False
+        # pc 30: "oyna orqali" yozuv kassa ko'prigining OCHIQ 1C'i orqali (alohida yashirin 1C ochilmaydi).
+        # rpc_factory() -> onec_bridge.Rpc yoki None (kassa o'chiq) — onec_export kassa ishga tushgach beradi.
+        self.rpc_factory = None
+        self._rpc = None
 
     # --- bulut ---
     def pending(self):
@@ -451,6 +455,12 @@ class Writer:
             if self._opened:
                 self.onec.close()
             self._opened = False
+            if self._rpc is not None:
+                try:
+                    self._rpc.close()
+                except Exception as e:  # noqa: BLE001
+                    log.debug("ko'prik seansi: %s", e)
+                self._rpc = None
 
     def _load_mode(self):
         want = str(getattr(self.cfg, "onec_mode", "auto") or "auto").lower()
@@ -475,7 +485,7 @@ class Writer:
         log.info("1C: tovar moduli COM'da ishlamadi - endi 1C oynasi orqali yoziladi (Konfigurator kerak emas)")
 
     def can_switch(self):
-        return (self.mode == "com" and self.app_onec is not None
+        return (self.mode == "com" and (self.app_onec is not None or self.rpc_factory is not None)
                 and str(getattr(self.cfg, "onec_mode", "auto") or "auto").lower() == "auto")
 
     def idle(self):
@@ -494,6 +504,14 @@ class Writer:
                 log.debug("1C oynasini yopish: %s", e)
 
     def conn(self):
+        if self.mode == "app" and self.rpc_factory is not None:
+            if self._rpc is None:
+                try:
+                    self._rpc = self.rpc_factory()
+                except Exception as e:  # noqa: BLE001 — ko'prik ochilmadi: so'rov xato bilan qaytadi, keyin qayta yuboriladi
+                    raise SystemExit(str(e)[:250])
+            if self._rpc is not None:
+                return self._rpc.root
         if self.mode == "app" and self.app_onec is not None:
             self.app_onec.connect()
             return self.app_onec.c

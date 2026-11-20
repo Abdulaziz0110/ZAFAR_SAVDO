@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Kompyuter pc 30 — 2026-11-20
+**Telefondan 1C'ga yozish tuzatildi:** shtrix kod, kassa paneli, ko'p tovarga birdan va boshqa yozuvlar endi kassa ko'prigining
+ochiq 1C'i orqali yoziladi — alohida yashirin 1C ochilmaydi (bu kompyuterda u darhol yopilib qolardi). Yangilangach
+telefonda «1C'ga kiritish» → «Xatolarni qayta yuborish» bosing.
+
 ## Kompyuter pc 29 — 2026-11-20
 **Sensor kassa sozlamalari:** tugmalar kengligi aniq (1/3, 1/2, 2/3, to'liq) va «yangi qatordan»; Panel va Qidiruv'ni TO'LOV tepasiga
 teng ikkiga bir tugma bilan joylash; har tugmaning yozuv o'lchami va qalinligi; hamma tugmalar yozuvi foizi; tugma va panel burchaklari.

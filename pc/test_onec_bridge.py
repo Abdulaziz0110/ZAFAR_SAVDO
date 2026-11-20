@@ -279,5 +279,208 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(br.leftovers(), ({"x": ("OK", "7", "01.01.2026 10:00")}, set()))
 
 
+# ---------------------------------------------------------------- pc 30: telefon yozuvlari ko'prik 1C'i orqali (RPC)
+
+class _Ref:
+    def __init__(self, code="", name="", empty=False):
+        self.Код = code
+        self.Наименование = name
+        self._empty = empty
+        self.obj = None
+
+    def Пустая(self):
+        return self._empty
+
+    def УникальныйИдентификатор(self):
+        return "uuid-" + str(self.Код or self.Наименование)
+
+    def ПолучитьОбъект(self):
+        return self.obj
+
+
+class _Rows:
+    def __init__(self):
+        self.rows = []
+
+    def Добавить(self):
+        r = type("Row", (), {})()
+        self.rows.append(r)
+        return r
+
+
+class _Obj:
+    def __init__(self, ref, log):
+        self.Ссылка = ref
+        self.log = log
+        self.ТабШтрихкодов = _Rows()
+        self.ШтрихКод = ""
+
+    def Записать(self, *a):
+        if hasattr(self, "Наименование"):
+            self.Ссылка.Наименование = self.Наименование
+        if hasattr(self, "Товар"):
+            self.Ссылка.Товар = self.Товар
+        self.log.append(("write", self.Ссылка.Наименование))
+
+
+class _Cat:
+    def __init__(self, items, log):
+        self.items = items
+        self.log = log
+
+    def НайтиПоКоду(self, code):
+        for r in self.items:
+            if str(r.Код) == str(code):
+                return r
+        return _Ref(empty=True)
+
+    def НайтиПоНаименованию(self, name, exact=False):
+        for r in self.items:
+            if r.Наименование == name:
+                return r
+        return _Ref(empty=True)
+
+    def СоздатьЭлемент(self):
+        ref = _Ref(code=str(len(self.items) + 900))
+        o = _Obj(ref, self.log)
+        ref.obj = o
+        self.items.append(ref)
+        return o
+
+
+class Fake1CRpc:
+    """BSL'dagi РпцАмал bilan bir xil qoidalar: get/set/call/proc/new/str/eq/free, obyektlar raqam bilan."""
+
+    def __init__(self, folder, root):
+        import threading
+        self.folder, self.root, self.objs, self.n = folder, root, {}, 0
+        self.stop = False
+        self.calls = []
+        self.t = threading.Thread(target=self.loop, daemon=True)
+        self.t.start()
+
+    def to1c(self, z):
+        if "h" in z:
+            return self.objs[z["h"]]
+        if "d" in z:
+            return ("date", z["d"])
+        if "u" in z:
+            return None
+        return z["v"]
+
+    def out(self, v):
+        if v is None:
+            return {"u": 1}
+        if isinstance(v, (bool, int, float, str)):
+            return {"v": v}
+        self.n += 1
+        self.objs[self.n] = v
+        return {"h": self.n}
+
+    def do(self, q):
+        op, name, h = q["op"], q.get("n"), q.get("h", 0)
+        ob_ = self.root if not h else self.objs[h]
+        args = [self.to1c(a) for a in q.get("a", [])]
+        self.calls.append((op, name))
+        if op == "get":
+            return getattr(ob_, name)
+        if op == "set":
+            setattr(ob_, name, self.to1c(q["v"]))
+            return None
+        if op == "call":
+            return getattr(ob_, name)(*args)
+        if op == "proc":
+            getattr(ob_, name)(*args)
+            return None
+        if op == "str":
+            v = args[0]
+            return v if isinstance(v, str) else str(v)
+        if op == "free":
+            self.objs.clear()
+            return None
+        raise ValueError(op)
+
+    def loop(self):
+        import json
+        import time
+        while not self.stop:
+            for f in sorted(os.listdir(self.folder)):
+                if not f.endswith(".rpq"):
+                    continue
+                p = os.path.join(self.folder, f)
+                with open(p, encoding="utf-8") as fh:
+                    q = json.load(fh)
+                try:
+                    ans = {"ok": True, "r": self.out(self.do(q))}
+                except Exception as e:  # noqa: BLE001
+                    ans = {"ok": False, "e": "{Модуль}: %s" % e}
+                tmp = p[:-4] + ".rps.part"
+                with open(tmp, "w", encoding="utf-8-sig") as fh:
+                    json.dump(ans, fh, ensure_ascii=False)
+                os.replace(tmp, p[:-4] + ".rps")
+                os.remove(p)
+            time.sleep(0.002)
+
+
+class RpcTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.br = ob.Bridge('File="D:\\Baza";', self.dir, "x.exe")
+        os.makedirs(self.br.jobs, exist_ok=True)
+        with open(os.path.join(self.br.jobs, "1c_%s.alive" % ob.BRIDGE_VERSION), "w") as f:
+            f.write("1")
+        self.log = []
+        g = _Ref("1001", "Garden 1.2 L")
+        g.obj = _Obj(g, self.log)
+        root = type("Root", (), {})()
+        root.Справочники = type("Sp", (), {})()
+        root.Справочники.Товары = _Cat([g], self.log)
+        root.Справочники.Штрих = _Cat([], self.log)
+        self.fake = Fake1CRpc(self.br.jobs, root)
+        self.g = g
+
+    def tearDown(self):
+        self.fake.stop = True
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_writer_barcode_through_bridge(self):
+        import datetime as dt
+        import onec_write
+        w = onec_write.Writer.__new__(onec_write.Writer)
+        w.now = lambda: dt.datetime(2026, 11, 20, 15, 0)
+        w.goods_changed = False
+        rpc = ob.Rpc(self.br).wait_ready(1)
+        res = w.barcode(rpc.root, {"id": "r1", "party": "Garden 1.2 L", "party_code": "1001", "bc": "4870202522466"})
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["goods"], "1001")
+        bars = self.fake.root.Справочники.Штрих.items
+        self.assertEqual(bars[0].obj.Наименование, "4870202522466")
+        self.assertIs(bars[0].obj.Товар, self.g)                                # obyekt raqam orqali qaytdi
+        self.assertEqual(bars[0].obj.ДатаПоступ, ("date", "20261120150000"))
+        self.assertEqual(self.g.obj.ШтрихКод, "4870202522466")
+        self.assertEqual(self.g.obj.ТабШтрихкодов.rows[0].ШтрихКод, "4870202522466")
+        self.assertIn(("proc", "Записать"), self.fake.calls)                    # protsedura "Рез = ..." siz chaqiriladi
+        # ikkinchi marta — "allaqachon shu tovarda"
+        res2 = w.barcode(rpc.root, {"id": "r2", "party": "Garden 1.2 L", "party_code": "1001", "bc": "4870202522466"})
+        self.assertEqual(res2["st"], "skip")
+        rpc.close()
+        self.assertEqual(self.fake.objs, {})
+
+    def test_errors_and_missing_attr(self):
+        rpc = ob.Rpc(self.br).wait_ready(1)
+        self.assertEqual(getattr(rpc.root.Справочники.Товары.НайтиПоКоду(1001), "Нет", "std"), "std")
+        with self.assertRaises(ob.RpcError):
+            rpc.root.Справочники.Yoq.НайтиПоКоду(1)
+        with self.assertRaises(ob.RpcError):
+            rpc.op("get", 0, "Справочники; Удалить")                          # faqat oddiy nomlar
+        self.assertEqual(ob.Rpc.enc(Decimal("1.5")), {"v": 1.5})
+
+    def test_bridge_closed(self):
+        self.fake.stop = True
+        os.remove(os.path.join(self.br.jobs, "1c_%s.alive" % ob.BRIDGE_VERSION))
+        with self.assertRaises(ob.RpcError):
+            ob.Rpc(self.br, sleep=lambda s: None, clock=iter(range(0, 10000, 50)).__next__).wait_ready(100)
+
+
 if __name__ == "__main__":
     unittest.main()

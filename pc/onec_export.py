@@ -1667,6 +1667,9 @@ def loop(cfg):
         kassa_svc = kassa.start(cfg, HERE, cloud, OneC, OneCApp, wake=waker.event.set)
     except Exception as e:  # noqa: BLE001
         log.warning("kassa oynasi ishga tushmadi: %s", e)
+    # pc 30: telefon yozuvlari kassa ko'prigining ochiq 1C'i orqali (yashirin V83.Application bu kompyuterda yopilib qoladi)
+    if kassa_svc is not None and getattr(kassa_svc, "make_bridge", None) is not None:
+        writer.rpc_factory = kassa_svc.bridge_rpc
 
     def do_writes():
         """1C'ga yozish navbati (Admin tasdiqlagan). Tovar o'zgargan bo'lsa — kodlar/narxlar darhol telefonlarga."""
