@@ -548,8 +548,7 @@
         ptPullShow(0);
         var p = L.PRICE_TYPES[ptG.n - 1];
         if (!p) { beep(); return; }
-        setPtype(p);
-        toast(ptypeLabel(p), false, 1500);
+        setPtype(p);                                         // pc 36: ogohlantirish yo'q — summani to'sardi; oynadagi N belgisi yetarli
       }
     }, { passive: false });
     function end(e) {
@@ -581,7 +580,7 @@
       var n = mg.n;
       mg = null;
       ptPullShow(0);
-      if (n >= 1) { var pt = L.PRICE_TYPES[n - 1]; setPtype(pt); toast(ptypeLabel(pt), false, 1500); }
+      if (n >= 1) { var pt = L.PRICE_TYPES[n - 1]; setPtype(pt); }
     }
     cart.addEventListener('pointerup', mouseEnd);
     cart.addEventListener('pointerleave', function () { if (mg) { mg = null; ptPullShow(0); } });

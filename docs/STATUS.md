@@ -666,6 +666,7 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Funksiya | Holat |
 |---|---|
 | Kassa yuqori qatorida, oynalar chap tomonida yozuvsiz almashtirgich — dasturchi rejimini yoqadi/o'chiradi (admin ruxsati; parolsiz kirish yoqiq bo'lsa parol so'ramaydi), qayta ochilganda saqlanadi | VERIFIED (brauzer, demo server) |
+| Narx turi o'zgarganda pastdagi «Narx N» ogohlantirishi olib tashlandi (summani to'sardi); qaysi narx ekani oyna yozuvidagi N belgisida | VERIFIED (kod) |
 | Dasturchi rejimida bazada yo'q shtrix kod skanerlansa: biriktirish oynasi — avval shu kodga yaqin tovarlar (mavjud shtrix kodlar bilan umumiy boshlanishi eng uzun, so'ng son jihatdan yaqin), nom yozilsa istalgan tovar; tanlab tasdiqlansa kod kassada darhol ishlaydi va 1C'ga telefon yozuvlari navbati («bc») orqali yoziladi; boshqa tovardagi kod rad etiladi; tarozi kodlari bu oynaga tushmaydi | VERIFIED (test_kassa, brauzer: biriktirildi, qayta skanda topildi) / haqiqiy 1C'ga yozilishi IMPLEMENTED-UNVERIFIED |
 
 ## 5.3.6 (versionCode 56) + Savdo Mijoz 5.4 (versionCode 32) + iPhone (veb) agent va mijoz — 2026-11-20
