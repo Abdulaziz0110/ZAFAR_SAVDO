@@ -140,9 +140,10 @@ CLIENTS_Q = (
 # pc 33: mijozning UMUMIY qarzi (hamma xodim/agentlar bo'yicha — telefondagi hisobot bilan bir xil). Avval faqat "Дукон"
 # bo'yicha olinardi — agent orqali olingan qarzlar kassada ko'rinmasdi.
 DEBTS_Q = (
-    "ВЫБРАТЬ О.Контрагент.Код КАК Код, СУММА(О.СуммаОстаток) КАК С, СУММА(О.СуммаВалОстаток) КАК В "
+    "ВЫБРАТЬ О.Контрагент.Код КАК Код, О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, "
+    "СУММА(О.СуммаВалОстаток) КАК В "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О "
-    "СГРУППИРОВАТЬ ПО О.Контрагент.Код"
+    "СГРУППИРОВАТЬ ПО О.Контрагент.Код, О.Контрагент.Наименование"
 )
 DEBT_ONE_Q = (
     "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК В "
@@ -211,14 +212,26 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
             b_out[bc] = code              # Справочник.Штрих — 1C'dagi kabi asosiy manba
     for bc, code in extra_bc.items():
         b_out.setdefault(bc, code)        # tovar kartochkasidagi shtrix kod — qo'shimcha
-    debt = {code_text(r.get("Код")): (round(fnum(r.get("С")), 2), round(fnum(r.get("В")), 2)) for r in debts}
+    # pc 35: qarz avval kod bo'yicha, topilmasa nom bo'yicha (kod ko'rinishi farq qilsa ham qarz yo'qolmasin)
+    debt, debt_name = {}, {}
+    for r in debts:
+        v = (round(fnum(r.get("С")), 2), round(fnum(r.get("В")), 2))
+        k = code_text(r.get("Код")).strip()
+        if k:
+            debt[k] = (round(debt.get(k, (0, 0))[0] + v[0], 2), round(debt.get(k, (0, 0))[1] + v[1], 2))
+        n = text(r.get("Имя")).strip().lower()
+        if n:
+            debt_name[n] = (round(debt_name.get(n, (0, 0))[0] + v[0], 2), round(debt_name.get(n, (0, 0))[1] + v[1], 2))
     c_out = []
+    matched = 0
     for r in clients:
         code = code_text(r.get("Код"))
         name = text(r.get("Имя"))
         if not code or not name:
             continue
-        ds, du = debt.get(code, (0.0, 0.0))
+        ds, du = debt.get(code.strip()) or debt_name.get(name.strip().lower()) or (0.0, 0.0)
+        if ds or du:
+            matched += 1
         c_out.append([code, name, text(r.get("Тел")), ds, du, 1 if fnum(r.get("Пост")) else 0])
     c_out.sort(key=lambda x: (x[5], x[1].lower()))
     g_out.sort(key=lambda x: x["n"].lower())
@@ -227,6 +240,7 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
         "lock": bool(consts.get("lock")), "chk": consts.get("chk") or {},
         "store": consts.get("store", ""), "title": title,
         "g": g_out, "b": b_out, "pnl": panel or [], "cl": c_out,
+        "dn": len(debts), "dm": matched,          # dasturchi rejimi: qarz qatorlari va qarzi topilgan mijozlar
     }
 
 
@@ -381,11 +395,15 @@ class KassaOneC:
         return []
 
     def debts(self, c):
-        try:
-            return self.query(c, DEBTS_Q, ["Код", "С", "В"])
-        except Exception as e:  # noqa: BLE001
-            log.warning("kassa: qarzlar: %s", str(e)[:120])
-            return []
+        for q, f in ((DEBTS_Q, ["Код", "Имя", "С", "В"]),
+                     (DEBTS_Q.replace(", О.Контрагент.Наименование КАК Имя", "").replace(", О.Контрагент.Наименование", ""), ["Код", "С", "В"])):
+            try:
+                rows = self.query(c, q, f)
+                log.info("kassa: qarzlar %d qator", len(rows))
+                return rows
+            except Exception as e:  # noqa: BLE001
+                log.warning("kassa: qarzlar: %s", str(e)[:200])
+        return []
 
     def staff(self, c):
         try:

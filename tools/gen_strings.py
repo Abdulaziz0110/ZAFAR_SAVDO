@@ -986,6 +986,7 @@ STRINGS.update({
  'lb_err_no_host_lpd': "Printer ulangan kompyuter IP manzilini kiriting (\"Kompyuterni topish\" yoki qo'lda).",
  'lb_err_lpd_queue': "Kompyuterda \"%1$s\" nomli ulashilgan printer yo'q (%2$s). Xprinter ▸ Свойства принтера ▸ Доступ ▸ \"Общий доступ\" — nomini ilovadagidek yozing.",
  'lb_err_lpd': "Kompyuter ishni qabul qilmadi: %1$s",
+ 'lb_err_pc': "Telefon kompyuterni to'g'ridan-to'g'ri ko'rmadi (Tailscale o'chiq bo'lishi mumkin), kompyuter orqali ham chiqmadi: %1$s",
  'lb_err_lpd_net': "Kompyuterga (%1$s) ulanib bo'lmadi: %2$s\n\nKompyuter yoniqmi, \"LPD Print Service\" yoqilganmi, telefon o'sha Wi-Fi tarmog'idami — tekshiring.",
 
 })
@@ -1740,6 +1741,58 @@ STRINGS.update({
  'notif_channel_orders': 'Buyurtmalar',
  'ord_notif_off': "Bildirishnoma ruxsati yo'q — yangi buyurtma haqida xabar kelmaydi. Bosing va ruxsat bering.",
  'ord_relay_off': "Fon xizmati o'chiq — ilova yopiq bo'lsa xabar kechikadi. Boshqaruv -> Ko'prik dan yoqing.",
+})
+
+# pc 35: matnli yorliq (boshqa sessiyada strings.xml'ga to'g'ridan-to'g'ri qo'shilgan edi — generatorga ko'chirildi)
+STRINGS.update({
+ 'tl_title': 'Matnli etiketka',
+ 'tl_sub': '58x40 etiketka, Arial 14: matn yozing, chop eting, tarixdan qayta chiqaring',
+ 'tl_hint': "58×40 mm, Arial 14. Matn sig'masa, shrift o'zi kichrayadi. Chiqqan har bir etiketka tarixda saqlanadi.",
+ 'tl_text_hint': 'Etiketka matni',
+ 'tl_copies_hint': 'Nusxa soni',
+ 'tl_preview': "Etiketka ko'rinishi",
+ 'tl_print': 'Chop etish',
+ 'tl_save': 'Saqlash',
+ 'tl_new': 'Yangi etiketka',
+ 'tl_editing': 'Tahrirlanmoqda: #%1$d',
+ 'tl_history': 'Chiqarilgan etiketkalar',
+ 'tl_empty': "Hali etiketka yo'q. Matn yozib, «Chop etish» ni bosing.",
+ 'tl_item_sub': '%1$s · %2$d nusxa · %3$d marta chiqarilgan',
+ 'tl_item_unprinted': '%1$s · %2$d nusxa · chop etilmagan',
+ 'tl_act_reprint': 'Qayta chiqarish',
+ 'tl_act_edit': 'Tahrirlash',
+ 'tl_act_delete': "O'chirish",
+ 'tl_empty_text': 'Avval etiketka matnini yozing',
+ 'tl_saved': 'Saqlandi',
+ 'tl_deleted': "O'chirildi",
+ 'tl_print_failed': 'Chop etilmadi, etiketka saqlandi: %1$s',
+ 'tl_delete_q': "Bu etiketka tarixdan o'chirilsinmi?",
+ 'tl_cancel': 'Bekor qilish',
+})
+OVERRIDES.update({
+ 'tl_title': 'Матнли этикетка',
+ 'tl_sub': '58x40 этикетка, Arial 14: матн ёзинг, чоп этинг, тарихдан қайта чиқаринг',
+ 'tl_hint': '58×40 мм, Arial 14. Матн сиғмаса, шрифт ўзи кичраяди. Чиққан ҳар бир этикетка тарихда сақланади.',
+ 'tl_text_hint': 'Этикетка матни',
+ 'tl_copies_hint': 'Нусха сони',
+ 'tl_preview': 'Этикетка кўриниши',
+ 'tl_print': 'Чоп этиш',
+ 'tl_save': 'Сақлаш',
+ 'tl_new': 'Янги этикетка',
+ 'tl_editing': 'Таҳрирланмоқда: #%1$d',
+ 'tl_history': 'Чиқарилган этикеткалар',
+ 'tl_empty': 'Ҳали этикетка йўқ. Матн ёзиб, «Чоп этиш» ни босинг.',
+ 'tl_item_sub': '%1$s · %2$d нусха · %3$d марта чиқарилган',
+ 'tl_item_unprinted': '%1$s · %2$d нусха · чоп этилмаган',
+ 'tl_act_reprint': 'Қайта чиқариш',
+ 'tl_act_edit': 'Таҳрирлаш',
+ 'tl_act_delete': 'Ўчириш',
+ 'tl_empty_text': 'Аввал этикетка матнини ёзинг',
+ 'tl_saved': 'Сақланди',
+ 'tl_deleted': 'Ўчирилди',
+ 'tl_print_failed': 'Чоп этилмади, этикетка сақланди: %1$s',
+ 'tl_delete_q': 'Бу этикетка тарихдан ўчирилсинми?',
+ 'tl_cancel': 'Бекор қилиш',
 })
 
 def lat_text(s): return re.sub(r'\{\{(.*?)\}\}', r'\1', s)

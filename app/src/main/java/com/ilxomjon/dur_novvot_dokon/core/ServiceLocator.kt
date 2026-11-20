@@ -450,6 +450,9 @@ object ServiceLocator {
             l.relayActive = { !AppRole.isAdmin && cloudReady }
             l.relayPrint = { data, copies -> relayClient.printLabels(data, copies) }
             l.relayRefreshCodes = { catalog.sync() }
+            // pc 35: Admin Tailscale'siz — kompyuter ko'prigi orqali
+            l.pcPrintActive = { AppRole.isAdmin }
+            l.pcPrint = { data, copies -> relayHost.printViaPc(data, copies) }
         }
     }
     /** v3.0 Admin: agentlar ko'prigi. */

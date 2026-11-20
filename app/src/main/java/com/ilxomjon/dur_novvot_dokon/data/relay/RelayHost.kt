@@ -94,6 +94,29 @@ class RelayHost(
 
     val isConfigured: Boolean get() = config()?.isValid == true
 
+    /** pc 35: Admin telefoni kompyuterni to'g'ridan-to'g'ri ko'rmasa (Tailscale o'chiq) — yorliq internet orqali kompyuter
+     *  ko'prigiga (lb navbati); kompyuter uni Xprinter'ga chiqaradi. @return printer nomi. @throws IllegalStateException */
+    suspend fun printViaPc(data: ByteArray, copies: Int, waitMs: Long = 60_000): String {
+        val c = config()?.takeIf { it.isValid } ?: throw IllegalStateException("internet ulanishi sozlanmagan")
+        val db = cloud(c.dbUrl)
+        val hb = runCatching { map(db, c.path("hb")) }.getOrDefault(emptyMap())
+        if (!pcAlive(hb)) throw IllegalStateException("kompyuter dasturi ishlamayapti (o'chiq yoki uyquda)")
+        if ((hb["lb"] as? Number)?.toInt() != 1) throw IllegalStateException("kompyuter Xprinter'ni topmadi")
+        val id = CloudDb.newKey()
+        io { db.put(c.path("lb/$id"), linkedMapOf("at" to CloudDb.SERVER_TIME, "n" to copies, "b" to B64.encode(data))) }
+        runCatching { io { db.put(c.path("sig"), CloudDb.SERVER_TIME) } }
+        val deadline = now() + waitMs
+        while (now() < deadline) {
+            kotlinx.coroutines.delay(1200)
+            val r = runCatching { io { db.get(c.path("lbr/$id")) } }.getOrNull() as? Map<*, *> ?: continue
+            runCatching { io { db.delete(c.path("lbr/$id")) } }
+            if (r["ok"] == true) return r["q"]?.toString().orEmpty()
+            throw IllegalStateException(r["e"]?.toString() ?: "printer xatosi")
+        }
+        runCatching { io { db.delete(c.path("lb/$id")) } }
+        throw IllegalStateException("kompyuter javob bermadi")
+    }
+
     private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
     @Suppress("UNCHECKED_CAST")

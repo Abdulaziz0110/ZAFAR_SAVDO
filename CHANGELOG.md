@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.3.5 (versionCode 55) + kompyuter pc 35 — 2026-11-20
+**Yorliq Tailscale'siz:** Admin telefoni kompyuterni ko'rmasa, yorliq internet orqali kompyuterga boradi va Xprinter'da chiqadi.
+**Kassa:** mijoz qarzi kod yoki nom bo'yicha topiladi.
+
 ## Kompyuter pc 34 — 2026-11-20
 **Kassa:** ekran barmoq bilan kattalashmaydi; tugmalar uchun 91 ta ikonka. **1C ko'prigi:** katta "ko'p tovarga birdan" amali fayl
 band bo'lganda to'xtab qolmaydi (qayta o'qiydi).

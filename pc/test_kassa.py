@@ -768,5 +768,20 @@ class ConfTest(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
 
+class DebtMatchTest(unittest.TestCase):
+    def test_debt_by_code_then_by_name(self):
+        clients = [{"Код": "000055", "Имя": "Ali", "Тел": "", "Пост": 0}, {"Код": 77.0, "Имя": "Vali aka", "Тел": "", "Пост": 0},
+                   {"Код": 88.0, "Имя": "Yo'q", "Тел": "", "Пост": 0}]
+        debts = [{"Код": "000055", "Имя": "Ali", "С": 1000.0, "В": 0.0},
+                 {"Код": " 77 ", "Имя": "VALI AKA", "С": 2500.5, "В": 1.0},     # kod boshqacha ko'rinishda — nom bo'yicha
+                 {"Код": "000055", "Имя": "Ali", "С": 500.0, "В": 0.0}]          # bir nechta qator — qo'shiladi
+        snap = kassa.build_snapshot([], [], [], [], clients, debts, {})
+        d = {c[1]: c[3] for c in snap["cl"]}
+        self.assertEqual(d["Ali"], 1500.0)
+        self.assertEqual(d["Vali aka"], 2500.5)
+        self.assertEqual(d["Yo'q"], 0.0)
+        self.assertEqual((snap["dn"], snap["dm"]), (3, 2))
+
+
 if __name__ == "__main__":
     unittest.main()

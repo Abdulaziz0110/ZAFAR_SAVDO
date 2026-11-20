@@ -2245,6 +2245,7 @@
         ['Oxirgi xato', S.pcErr || '—'], ['Ekran', window.innerWidth + ' × ' + window.innerHeight + ' px'],
         ['Mijozlar', S.data ? S.data.cl.length + ' ta · qarzdor ' + S.data.cl.filter(function (c) { return c[3] > 0; }).length +
           ' · haqdor ' + S.data.cl.filter(function (c) { return c[3] < 0; }).length : '?'],
+        ["1C'dagi qarz qatorlari", S.data && S.data.dn !== undefined ? S.data.dn + ' ta · mijozga mos keldi ' + S.data.dm : '?'],
         ['Mavzu', themeOf(u.theme).n + ' (' + u.theme + ')'], ['Sozlama hajmi', JSON.stringify(S.ui).length + ' bayt']]
         .forEach(function (x) {
           var r = el('div', 'dev-row');

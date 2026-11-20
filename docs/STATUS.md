@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 34) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 55) + kompyuter dasturi 5.4 (pc 35) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -654,3 +654,10 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | «Ko'p tovarga birdan» 1561-amalda «Ошибка совместного доступа к файлу ...rpq»: ko'prik v7 — so'rov fayli band bo'lsa javob bermay 30 soniyagacha qayta o'qiydi (amal bajarilmagan, ikki marta bajarilmaydi) | IMPLEMENTED-UNVERIFIED |
 | Kassa ekrani ikki barmoq / Ctrl+g'ildirak / Ctrl +/- bilan kattalashmaydi | VERIFIED (CSS va hodisalar, brauzer) |
 | Tugmalar uchun 91 ta ikonka (strelkalarning 14 turi va boshqalar), keng tanlash oynasi | VERIFIED (brauzer) |
+
+## pc 35 + ilova 5.3.5 (versionCode 55) (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
+| Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |

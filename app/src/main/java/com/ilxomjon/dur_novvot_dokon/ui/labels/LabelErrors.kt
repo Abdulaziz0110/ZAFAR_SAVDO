@@ -14,6 +14,7 @@ internal fun Context.labelErrorText(e: Exception): String {
         reason == "no_printer" -> getString(if (s.lpd) R.string.lb_err_no_host_lpd else R.string.lb_err_no_route)
         reason == "lpd_queue" -> getString(R.string.lb_err_lpd_queue, s.queue, s.host)
         reason != null && reason.startsWith("lpd:") -> getString(R.string.lb_err_lpd, reason.removePrefix("lpd:"))
+        reason != null && reason.startsWith("pc:") -> getString(R.string.lb_err_pc, reason.removePrefix("pc:"))
         reason == "bad_key" -> getString(R.string.lb_err_key)
         reason != null && reason.startsWith("printer") -> getString(R.string.lb_err_printer, reason.substringAfter(':', "").trim().ifEmpty { reason })
         s.lpd -> getString(R.string.lb_err_lpd_net, s.host, describeError(e))

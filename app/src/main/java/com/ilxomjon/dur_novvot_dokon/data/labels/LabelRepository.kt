@@ -373,9 +373,36 @@ class LabelRepository(
         val s = _state.value
         val relay = relayPrint
         if (relayActive() && relay != null) return LabelPrinterClient.Sent.Printed(copies, relay(data, copies).ifEmpty { s.queue })
-        if (s.host.isBlank()) throw LabelPrinterClient.PrintError("no_printer")
-        printRawTo(s.host, s.queue, data)
-        return LabelPrinterClient.Sent.Printed(copies, s.queue)
+        return LabelPrinterClient.Sent.Printed(copies, directOrPc(s, data, copies))
+    }
+
+    /** pc 35: Admin telefoni. Avval to'g'ridan-to'g'ri (Wi-Fi / Tailscale); kompyuter ko'rinmasa — internet orqali kompyuter
+     *  ko'prigiga (kompyuter yorliqni o'zi Xprinter'ga chiqaradi). @return navbat (printer) nomi */
+    private suspend fun directOrPc(s: LabelState, data: ByteArray, copies: Int): String {
+        val pc = pcPrint?.takeIf { pcPrintActive() }
+        if (s.host.isBlank()) {
+            if (pc == null) throw LabelPrinterClient.PrintError("no_printer")
+            return viaPc(pc, data, copies, null)
+        }
+        try {
+            printRawTo(s.host, s.queue, data)
+            return s.queue
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (pc == null || (e as? LabelPrinterClient.PrintError)?.reason == "lpd_queue") throw e
+            return viaPc(pc, data, copies, e)
+        }
+    }
+
+    private suspend fun viaPc(pc: suspend (ByteArray, Int) -> String, data: ByteArray, copies: Int, first: Exception?): String {
+        try {
+            return pc(data, copies).ifEmpty { _state.value.queue }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw LabelPrinterClient.PrintError("pc:" + (e.message ?: first?.message ?: e.javaClass.simpleName))
+        }
     }
 
     fun setRotate(on: Boolean) { _state.update { it.copy(rotate = on) }; p.edit().putBoolean("rotate", on).apply() }
@@ -516,12 +543,15 @@ class LabelRepository(
     @Volatile var relayActive: () -> Boolean = { false }
     @Volatile var relayPrint: (suspend (ByteArray, Int) -> String)? = null
     @Volatile var relayRefreshCodes: (suspend () -> Unit)? = null
+    /** pc 35: Admin — kompyuter ko'prigi orqali (Tailscale'siz) chop etish. null — mavjud emas. */
+    @Volatile var pcPrint: (suspend (ByteArray, Int) -> String)? = null
+    @Volatile var pcPrintActive: () -> Boolean = { false }
 
     /** Windows'ning ulashilgan printeriga to'g'ridan-to'g'ri: har yorliq TSPL bitmap, bitta LPR ish. */
     private suspend fun printLpd(b: LabelBatch, only: List<LabelData>): LabelPrinterClient.Sent {
         val s = _state.value
         val viaAdmin = relayActive()
-        if (s.host.isBlank() && !viaAdmin) throw LabelPrinterClient.PrintError("no_printer")
+        if (s.host.isBlank() && !viaAdmin && !(pcPrint != null && pcPrintActive())) throw LabelPrinterClient.PrintError("no_printer")
         val data = withContext(Dispatchers.Default) {
             val o = java.io.ByteArrayOutputStream()
             for (d in only) o.write(tsplOf(render(b, d), d.copies, s))
@@ -533,8 +563,7 @@ class LabelRepository(
             val queue = relay(data, copies)
             return LabelPrinterClient.Sent.Printed(copies, queue.ifEmpty { s.queue })
         }
-        printRawTo(s.host, s.queue, data)
-        return LabelPrinterClient.Sent.Printed(copies, s.queue)
+        return LabelPrinterClient.Sent.Printed(copies, directOrPc(s, data, copies))
     }
 
     private suspend fun printRawTo(host: String, queue: String, data: ByteArray) {
