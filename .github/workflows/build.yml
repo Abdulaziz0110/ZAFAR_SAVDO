@@ -250,7 +250,30 @@ jobs:
         id: lint
         continue-on-error: true
         shell: bash
-        run: ./gradlew --no-daemon :app:lintAdminDebug :mijoz:lintDebug
+        run: ./gradlew --no-daemon --continue :app:lintAdminDebug :mijoz:lintDebug
+
+      - name: Lint errors (all)
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          n = 0
+          for f in glob.glob("*/build/reports/lint-results*.xml") + glob.glob("*/build/intermediates/lint_intermediate_text_report/**/*.xml", recursive=True):
+              try:
+                  root = ET.parse(f).getroot()
+              except Exception as e:
+                  print("skip", f, e)
+                  continue
+              for i in root.iter("issue"):
+                  if i.get("severity") in ("Error", "Fatal"):
+                      loc = i.find("location")
+                      where = (loc.get("file", "") + ":" + loc.get("line", "")) if loc is not None else ""
+                      print("LINT-ERROR", i.get("id"), where, i.get("message"))
+                      n += 1
+          print("lint errors total:", n)
+          PY
 
       - name: PC script tests
         id: pctests
