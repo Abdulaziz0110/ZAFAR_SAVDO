@@ -22,7 +22,11 @@
   }
 
   var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {}, lab: {},
-    ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'oq', col: {}, notes: [50000, 100000, 200000] };
+    ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'oq', col: {}, notes: [50000, 100000, 200000],
+    tz: 0, bw: 0, rb: -1, rp: -1, ptSwipe: false };
+  // pc 29: yozuv va burchak chegaralari
+  var TZ_MIN = 70, TZ_MAX = 160, RB_DEF = 12, RP_DEF = 16, R_MAX = 40;
+  var BW = [['', 'Asl'], [700, 'Qalin'], [900, 'Juda qalin']];
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
     { id: 'search', b: 'Qidiruv', s: "nomi bo'yicha", big: true },
@@ -80,6 +84,24 @@
     if (e.cols) return Math.max(1, Math.min(6, parseInt(e.cols, 10) || 1));
     var n = FN.filter(function (x) { return u.hide.indexOf(x.id) < 0 || x.id === 'settings'; }).length;
     return Math.min(6, (e.span || 1) * (n <= 4 ? 3 : 2));
+  }
+  /** pc 29: o'ng tugmalarni 6 ustunli qatorlarga bo'lish. "Yangi qatordan" belgilangan tugma qatorni boshlaydi.
+   *  Bo'sh qolgan joy avval kengligi qo'lda berilmagan tugmalarga, ular bo'lmasa hammasiga bo'linadi. */
+  function fnRows(u, list) {
+    var rows = [], cur = [], used = 0;
+    list.forEach(function (f) {
+      var e = (u.el || {})['fn-' + f.id] || {}, w = fnCols(u, f);
+      if (cur.length && (used + w > 6 || e.br)) { rows.push(cur); cur = []; used = 0; }
+      cur.push({ f: f, w: w, fixed: !!e.cols }); used += w;
+    });
+    if (cur.length) rows.push(cur);
+    rows.forEach(function (r) {
+      var left = 6 - r.reduce(function (a, it) { return a + it.w; }, 0);
+      var grow = r.filter(function (it) { return !it.fixed; });
+      if (!grow.length) grow = r;
+      for (var i = 0; left > 0; i = (i + 1) % grow.length, left--) grow[i].w++;
+    });
+    return rows;
   }
   function toolSize(t, u) {
     var n = parseInt(((u || S.ui).tsz || {})[t.id], 10);
@@ -294,6 +316,17 @@
       o.lab[k] = { t: typeof l.t === 'string' ? l.t.slice(0, 24) : '', m: l.m === 'text' || l.m === 'icon' || l.m === 'both' ? l.m : '', i: typeof l.i === 'string' && ICON[l.i] ? l.i : '' };
     });
     Object.keys(o.tw).forEach(function (k) { var v = parseInt(o.tw[k], 10); if (v >= 40 && v <= 400) o.tw[k] = v; else delete o.tw[k]; });
+    var tz = parseInt(o.tz, 10);
+    o.tz = tz >= TZ_MIN && tz <= TZ_MAX && tz !== 100 ? tz : 0;
+    o.bw = o.bw === 700 || o.bw === 900 ? o.bw : 0;
+    ['rb', 'rp'].forEach(function (k) { var v = parseInt(o[k], 10); o[k] = v >= 0 && v <= R_MAX ? v : -1; });   // -1 — asl
+    o.ptSwipe = o.ptSwipe === true;
+    Object.keys(o.el).forEach(function (k) {
+      var e = o.el[k];
+      if (!e || typeof e !== 'object') { delete o.el[k]; return; }
+      if (e.fw !== undefined && e.fw !== 700 && e.fw !== 900) delete e.fw;
+      if (e.br !== undefined && e.br !== true) delete e.br;
+    });
     return o;
   }
   function fixWins(w) {
@@ -386,16 +419,73 @@
   }
   function ptypeLabel(p) { return 'Narx ' + (L.PRICE_TYPES.indexOf(p) + 1); }
   function hidden(id) { return $(id).classList.contains('hidden'); }
+  /** Oynaning narx turini o'zgartiradi (tugma, uzoq bosish yoki barmoqlar bilan surish). */
+  function setPtype(p) {
+    if (W().ptype !== p) { W().ptype = p; W().id = ''; }
+    repriceAll(true);
+    renderAll();
+  }
+  // ---------------- pc 29: narx turi barmoqlar bilan (ro'yxat ustida N barmoq bilan 3 sm pastga — Narx N) ----------------
+  var PT_PULL = 113;                                          // 3 sm (CSS: 96 nuqta = 2.54 sm)
+  var ptG = null;
+  function avgXY(tl) {
+    var x = 0, y = 0;
+    for (var i = 0; i < tl.length; i++) { x += tl[i].clientX; y += tl[i].clientY; }
+    return { x: x / tl.length, y: y / tl.length };
+  }
+  function ptPullShow(n, frac) {
+    var box = $('ptPull');
+    if (!box) {
+      box = el('div', 'pt-pull hidden');
+      box.id = 'ptPull';
+      box.appendChild(el('b', ''));
+      var bar = el('i', ''); bar.appendChild(el('span', '')); box.appendChild(bar);
+      document.querySelector('.left').appendChild(box);
+    }
+    if (n < 1) { box.classList.add('hidden'); return; }
+    box.firstChild.textContent = n <= L.PRICE_TYPES.length ? 'Narx ' + n : n + ' barmoq — narx turi yo\'q';
+    box.lastChild.firstChild.style.width = Math.round(Math.min(1, frac) * 100) + '%';
+    box.classList.toggle('ready', frac >= 1 && n <= L.PRICE_TYPES.length);
+    box.classList.remove('hidden');
+  }
+  function bindPtSwipe() {
+    var cart = $('cart');
+    cart.addEventListener('touchstart', function (e) {
+      if (!S.ui.ptSwipe || S.edit || !S.wins.length) return;
+      var n = e.touches.length, c = avgXY(e.touches);
+      if (!ptG) ptG = { n: n, x0: c.x, y0: c.y, top: cart.scrollTop <= 0, done: false };
+      else if (n > ptG.n && !ptG.done) { ptG.n = n; ptG.x0 = c.x; ptG.y0 = c.y; }   // barmoqlar birin-ketin tushadi
+    }, { passive: true });
+    cart.addEventListener('touchmove', function (e) {
+      if (!ptG || ptG.done) return;
+      if (ptG.n === 1 && !ptG.top) return;                    // 1 barmoq — ro'yxat aylantirilmoqda
+      if (ptG.n >= 2 && e.cancelable) e.preventDefault();       // ko'p barmoq: brauzer kattalashtirmasin
+      var c = avgXY(e.touches), dy = c.y - ptG.y0, dx = Math.abs(c.x - ptG.x0);
+      if (dy < 12 || dx > dy) { ptPullShow(0); return; }
+      ptPullShow(ptG.n, dy / PT_PULL);
+      if (dy >= PT_PULL) {
+        ptG.done = true;
+        ptPullShow(0);
+        var p = L.PRICE_TYPES[ptG.n - 1];
+        if (!p) { beep(); return; }
+        setPtype(p);
+        toast(ptypeLabel(p), false, 1500);
+      }
+    }, { passive: false });
+    function end(e) {
+      if (e.touches.length) return;
+      ptG = null;
+      ptPullShow(0);
+    }
+    cart.addEventListener('touchend', end);
+    cart.addEventListener('touchcancel', end);
+  }
   function choosePtype() {
     var shown = S.ui.ptypeShow;
     ask({
       title: shown ? 'Narx turi' : 'Rejim',
       choices: L.PRICE_TYPES.map(function (p) {
-        return { label: shown ? ptypeLabel(p) : String(L.PRICE_TYPES.indexOf(p) + 1), on: p === PT(), pick: function () {
-          if (W().ptype !== p) { W().ptype = p; W().id = ''; }
-          repriceAll(true);
-          renderAll();
-        } };
+        return { label: shown ? ptypeLabel(p) : String(L.PRICE_TYPES.indexOf(p) + 1), on: p === PT(), pick: function () { setPtype(p); } };
       })
     });
   }
@@ -727,9 +817,11 @@
   function renderAll() {
     $('ptypeName').textContent = ptypeLabel(PT());
     // xaridorga bilinmasin: yuqoridagi tugma faqat sozlamada yoqilsa; aks holda raqam maydoni burchagida kichik raqam
-    $('ptypeBtn').classList.toggle('hidden', !S.ui.ptypeShow);
+    var ptBtn = S.ui.ptypeShow && !S.ui.ptSwipe;            // pc 29: barmoqlar rejimida tugma yo'q
+    $('ptypeBtn').classList.toggle('hidden', !ptBtn);
     $('lockBtn').classList.toggle('hidden', !!(S.ui.hideLock || S.ui.auto));
-    $('ptypeTag').textContent = S.ui.ptypeShow ? '' : String(L.PRICE_TYPES.indexOf(PT()) + 1);
+    $('ptypeTag').textContent = ptBtn ? '' : String(L.PRICE_TYPES.indexOf(PT()) + 1);
+    document.querySelector('.left').classList.toggle('pt-swipe', !!S.ui.ptSwipe);
     renderMode(); renderWins(); renderCart(); renderDisplay(); renderDot(); renderFn(); renderQueue();
   }
   function renderMode() {
@@ -747,17 +839,7 @@
     box.textContent = '';
     var ret = S.wins.length && W().mode === 'return';
     var list = orderOf(FN, S.ui.ford).filter(function (f) { return S.ui.hide.indexOf(f.id) < 0 || f.id === 'settings'; });
-    var items = list.map(function (f) { return { f: f, w: fnCols(S.ui, f) }; });
-    var rows = [], cur = [], used = 0;
-    items.forEach(function (it) {
-      if (used + it.w > 6 && cur.length) { rows.push(cur); cur = []; used = 0; }
-      cur.push(it); used += it.w;
-    });
-    if (cur.length) rows.push(cur);
-    rows.forEach(function (r) {
-      var left = 6 - r.reduce(function (a, it) { return a + it.w; }, 0);
-      for (var i = 0; left > 0; i = (i + 1) % r.length, left--) r[i].w++;
-    });
+    var rows = fnRows(S.ui, list);
     rows.forEach(function (r) {
       r.forEach(function (it) {
         var f = it.f;
@@ -777,7 +859,7 @@
         if (mode !== 'icon') {
           var tx = el('span', 'tx');
           var bt = el('b', '', name);
-          var fz = fitFont(name, it.w, f.big ? 22 : 18, f.id === 'settings' && mode !== 'text');
+          var fz = fitFont(name, it.w, Math.round(18 * (S.ui.tz || 100) / 100), f.id === 'settings' && mode !== 'text');
           if (fz) bt.style.fontSize = fz + 'px';
           if (dot) bt.appendChild(el('i', 'badge-dot'));
           tx.appendChild(bt);
@@ -1368,12 +1450,45 @@
       if (id === 'numkey' && e.h) css.push('.main-pad{grid-auto-rows:' + e.h + 'px !important}');
       if (id === 'right' && e.w) css.push('.body{grid-template-columns:1fr ' + e.w + 'px !important}');
       if (id === 'tile' && e.fs) css.push('.tile .tn{font-size:' + e.fs + 'px !important}');
+      // pc 29: tugma yozuvining qalinligi va (yozuv o'lchami berilsa) ikonka ham shunga mos kattalashadi
+      if (e.fw) css.push(sel + ',' + sel + ' b,' + sel + ' span{font-weight:' + e.fw + ' !important}');
+      if (e.fs && /^(fn|tool)-/.test(id)) {
+        var isz = Math.round(e.fs * (id.indexOf('fn-') === 0 ? 1.5 : 1.4));
+        css.push(sel + ' .ic{width:' + isz + 'px !important;height:' + isz + 'px !important}');
+      }
     });
+    css = uiGlobalCss(u).concat(css);
     var st = $('uiStyle');
     if (!st) { st = document.createElement('style'); st.id = 'uiStyle'; document.head.appendChild(st); }
     st.textContent = css.join('\n');
     applyTools();
     renderAll();
+  }
+  /** pc 29: hamma tugmalar yozuvi (foiz), qalinligi va burchaklar. Alohida tugma sozlamasi bulardan ustun turadi. */
+  function uiGlobalCss(u) {
+    var css = [], k = (u.tz || 100) / 100;
+    function px(n) { return Math.round(n * k) + 'px'; }
+    if (u.tz) {
+      css.push('.fn button .tx b,.fn button.fn-big .tx b{font-size:' + px(18) + '}');
+      css.push('.fn button .ic,.fn button.fn-big .ic{width:' + px(27) + ';height:' + px(27) + '}');
+      css.push('.row-tools .sq{font-size:' + px(24) + '}');
+      css.push('.row-tools .danger,.row-tools .muted{font-size:' + px(17) + '}');
+      css.push('.row-tools .sq .ic{width:' + px(24) + ';height:' + px(24) + '}');
+      css.push('.main-pad button{font-size:' + px(30) + '}');
+      css.push('.pad button.act{font-size:' + px(22) + '}');
+      css.push('.pay-btn{font-size:' + px(30) + '}');
+      css.push('.wins button{font-size:' + px(21) + '}');
+      css.push('.hbtn b{font-size:' + px(16) + '}');
+    }
+    if (u.bw) {
+      css.push('.fn button,.fn button b,.row-tools button,.main-pad button,.pay-btn,.wins button,.hbtn b,.notes .note{font-weight:' + u.bw + '}');
+      css.push('.fn button .ic,.row-tools .sq .ic{stroke-width:' + (u.bw === 900 ? 3 : 2.5) + '}');
+    }
+    var r = [];
+    if (u.rb >= 0) r.push('--r:' + u.rb + 'px');
+    if (u.rp >= 0) r.push('--rp:' + u.rp + 'px');
+    if (r.length) css.push('body{' + r.join(';') + '}');
+    return css;
   }
   function saveUi(u, then) {
     return api('POST', '/api/ui', { token: S.token, grant: S.grant, ui: u }, 15000).then(function (j) {
@@ -1383,7 +1498,11 @@
     }).catch(function (e) { if (e.message !== 'login') toast('Sozlama saqlanmadi: ' + e.message, true); });
   }
   function openSettings() {
-    adminPw('Kassa sozlamalari', function () { $('setView').classList.remove('hidden'); renderSettings(); });
+    adminPw('Kassa sozlamalari', function () {
+      $('setView').classList.remove('hidden'); renderSettings();
+      // pc 29: yangi panel tavsiyasi sozlamalar ochilganda "ko'rildi" bo'ladi — qizil nuqta qolib ketmaydi
+      if (S.ps) panelApi('dismiss').then(function () { S.ps = false; renderFn(); }).catch(function () { /* keyingi safar */ });
+    });
   }
   function card(title, text) {
     var c = el('div', 'set-card');
@@ -1554,6 +1673,7 @@
   function ctrlCard(u, title, text, list, o) {
     var c = card(title, text);
     c.classList.add('set-span');
+    if (o.extra) o.extra(c, u);
     var g = el('div', 'ord-grid');
     c.appendChild(g);
     var items = orderOf(list, u[o.ord]);
@@ -1587,12 +1707,29 @@
         });
       });
       var cur = o.size(u, t), custom = o.width.custom(u, t);
-      [[1, 'Kichik'], [2, "O'rta"], [3, 'Katta']].forEach(function (s) {
-        btn(bar, s[1], !custom && cur === s[0] ? 'sz on' : 'sz', function () { o.setSize(u, t, s[0]); saveUi(u, renderSettings); });
-      });
+      if (o.chips) {
+        r.appendChild(bar);
+        bar = el('div', 'ord-bar');
+        o.chips(bar, u, t);
+      } else {
+        [[1, 'Kichik'], [2, "O'rta"], [3, 'Katta']].forEach(function (s) {
+          btn(bar, s[1], !custom && cur === s[0] ? 'sz on' : 'sz', function () { o.setSize(u, t, s[0]); saveUi(u, renderSettings); });
+        });
+      }
       r.appendChild(bar);
       stepRow(r, 'Kenglik', o.width, u, t);
       stepRow(r, 'Balandlik', o.height, u, t);
+      // pc 29: yozuv o'lchami va qalinligi (ikonka ham yozuvga mos kattalashadi)
+      stepRow(r, 'Yozuv', fontOf(o.key, o.fontBase), u, t);
+      var fwBar = el('div', 'ord-bar'), fe = u.el[o.key(t)] || {};
+      BW.forEach(function (x) {
+        btn(fwBar, x[1], (fe.fw || '') === x[0] ? 'sz on' : 'sz', function () {
+          var e = u.el[o.key(t)] || (u.el[o.key(t)] = {});
+          if (x[0]) e.fw = x[0]; else delete e.fw;
+          saveUi(u, renderSettings);
+        });
+      });
+      r.appendChild(fwBar);
       var lk = o.key(t), lb = (u.lab || {})[lk] || {}, lmode = lb.m || o.defMode;
       var lm = el('div', 'ord-bar');
       [['both', 'Ikonka+nom'], ['text', 'Nom'], ['icon', 'Ikonka']].forEach(function (m) {
@@ -1618,6 +1755,19 @@
     dragRows(g, reorder);
     return c;
   }
+  /** pc 29: tugma yozuvi o'lchami (el[key].fs, px), 1 px qadam bilan; asl qiymat "hamma tugmalar yozuvi" foiziga mos. */
+  function fontOf(key, base) {
+    function def(u, t) { return Math.round(base(t) * (u.tz || 100) / 100); }
+    return {
+      label: function (u, t) { var f = (u.el[key(t)] || {}).fs; return f ? f + ' px' : 'Asl'; },
+      step: function (u, t, d) {
+        var e = u.el[key(t)] || (u.el[key(t)] = {});
+        e.fs = Math.max(10, Math.min(60, (e.fs || def(u, t)) + d * 2));
+      },
+      reset: function (u, t) { var e = u.el[key(t)]; if (e) delete e.fs; },
+      custom: function (u, t) { return !!(u.el[key(t)] || {}).fs; }
+    };
+  }
   function btn(parent, label, cls, fn) {
     var b = el('button', cls || 'big muted', label);
     b.addEventListener('click', fn);
@@ -1630,6 +1780,12 @@
     var keepScroll = $('setBody').scrollTop;
     $('setBody').textContent = '';
     $('setBody').appendChild(el('div', 'set-cols'));
+    if (S.pcQe) {                                           // pc 29: qizil nuqta sababi — 1C'ga yozilmagan sotuvlar
+      var cq = card("1C'ga yozilmagan sotuvlar: " + S.pcQe, "Sozlamalar tugmasidagi qizil nuqta shular uchun. Har birini «Qayta» " +
+        "(1C'ga yana urinish) yoki «O'chirish» qiling — nuqta yo'qoladi.");
+      cq.classList.add('set-alert');
+      btn(cq, "Navbatni ko'rish", 'big danger', showQueue);
+    }
     var c1 = card('Savdo oynalari soni', 'Bir vaqtda nechta xaridorga savat ochiladi');
     var seg = el('div', 'seg2'); c1.appendChild(seg);
     [1, 2, 3, 4].forEach(function (n) {
@@ -1675,6 +1831,36 @@
       ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
         onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
+    // pc 29: narx turini almashtirish usuli
+    var cpt = card('Narx turini almashtirish', u.ptSwipe
+      ? "Ro'yxat (savat) ustiga barmoqlarni qo'yib 3 sm pastga suring: 1 barmoq — Narx 1, 2 barmoq — Narx 2, 3 — Narx 3, 4 — Narx 4. " +
+        "Ro'yxat uzun bo'lsa, 1 barmoq bilan avval eng tepaga chiqing. Hozirgi narx turi raqam maydoni burchagida turadi."
+      : "Yuqoridagi «Narx turi» tugmasi bilan.");
+    var pseg = el('div', 'seg2'); cpt.appendChild(pseg);
+    btn(pseg, 'Tugma bilan', u.ptSwipe ? '' : 'on', function () { u.ptSwipe = false; u.ptypeShow = true; saveUi(u, renderSettings); });
+    btn(pseg, 'Barmoqlar bilan', u.ptSwipe ? 'on' : '', function () { u.ptSwipe = true; saveUi(u, renderSettings); });
+    // pc 29: hamma tugmalar yozuvi, qalinligi va burchaklar
+    var cf = card('Yozuv va burchaklar', "Hamma tugmalarga birdek. Bitta tugmani alohida o'zgartirish — pastdagi «Tugmalar» bo'limida.");
+    stepRow(cf, 'Tugmalar yozuvi', {
+      label: function (uu) { return (uu.tz || 100) + '%'; },
+      step: function (uu, _t, d) { var v = Math.max(TZ_MIN, Math.min(TZ_MAX, (uu.tz || 100) + d * 10)); uu.tz = v === 100 ? 0 : v; },
+      reset: function (uu) { uu.tz = 0; },
+      custom: function (uu) { return !!uu.tz; }
+    }, u, null);
+    var bwb = el('div', 'ord-bar');
+    bwb.appendChild(el('span', 'bw-l', 'Qalinligi'));
+    BW.forEach(function (x) {
+      btn(bwb, x[1], (u.bw || '') === x[0] ? 'sz on' : 'sz', function () { u.bw = x[0] || 0; saveUi(u, renderSettings); });
+    });
+    cf.appendChild(bwb);
+    [['rb', 'Tugma burchagi', RB_DEF], ['rp', 'Panel burchagi', RP_DEF]].forEach(function (x) {
+      stepRow(cf, x[1], {
+        label: function (uu) { return (uu[x[0]] >= 0 ? uu[x[0]] : x[2]) + ' px'; },
+        step: function (uu, _t, d) { uu[x[0]] = Math.max(0, Math.min(R_MAX, (uu[x[0]] >= 0 ? uu[x[0]] : x[2]) + d * 2)); },
+        reset: function (uu) { uu[x[0]] = -1; },
+        custom: function (uu) { return uu[x[0]] >= 0; }
+      }, u, null);
+    });
     var ct = card('Mavzu (rejim)', "Savdo turingizga mos tayyor ranglar. Tanlagach, ranglarni pastda alohida sozlash mumkin.");
     ct.classList.add('set-span');
     var tgr = el('div', 'th-grid');
@@ -1716,6 +1902,36 @@
       ord: 'ford',
       key: function (t) { return 'fn-' + t.id; }, defMode: 'both', defName: function (t) { return t.b; }, defIcon: function (t) { return t.id; },
       height: heightOf('fn-', 60),
+      fontBase: function () { return 18; },
+      extra: function (cc, uu) {
+        btn(cc, "Panel va Qidiruv — TO'LOV tepasida yonma-yon (teng ikkiga)", 'big primary', function () {
+          var pair = ['panel', 'search'];
+          uu.ford = orderOf(FN, uu.ford).map(function (x) { return x.id; }).filter(function (id) { return pair.indexOf(id) < 0; }).concat(pair);
+          uu.hide = uu.hide.filter(function (x) { return pair.indexOf(x) < 0; });
+          pair.forEach(function (id, k) {
+            var e = uu.el['fn-' + id] || (uu.el['fn-' + id] = {});
+            delete e.span; delete e.rows; e.cols = 3;
+            if (k === 0) e.br = true; else delete e.br;
+          });
+          saveUi(uu, renderSettings);
+          toast("Panel va Qidiruv TO'LOV tepasida yonma-yon");
+        });
+      },
+      chips: function (bar, uu, t) {                        // aniq kenglik: qatorning qancha qismi
+        var e = uu.el['fn-' + t.id] || {};
+        [[2, '1/3'], [3, '1/2'], [4, '2/3'], [6, "To'liq"]].forEach(function (x) {
+          btn(bar, x[1], e.cols === x[0] ? 'sz on' : 'sz', function () {
+            var ee = uu.el['fn-' + t.id] || (uu.el['fn-' + t.id] = {});
+            delete ee.span; ee.cols = x[0];
+            saveUi(uu, renderSettings);
+          });
+        });
+        btn(bar, 'Yangi qatordan', e.br ? 'sz br on' : 'sz br', function () {
+          var ee = uu.el['fn-' + t.id] || (uu.el['fn-' + t.id] = {});
+          if (ee.br) delete ee.br; else ee.br = true;
+          saveUi(uu, renderSettings);
+        });
+      },
       canHide: function (t) { return t.id !== 'settings'; },
       hidden: function (uu, t) { return uu.hide.indexOf(t.id) >= 0; },
       toggle: function (uu, t) { if (uu.hide.indexOf(t.id) >= 0) uu.hide = uu.hide.filter(function (x) { return x !== t.id; }); else uu.hide.push(t.id); },
@@ -1739,6 +1955,7 @@
       ord: 'tord',
       key: function (t) { return 'tool-' + t.id; }, defMode: 'text', defName: function (t) { return t.d; }, defIcon: function (t) { return t.ic; },
       height: heightOf('tool-', 50),
+      fontBase: function (t) { return t.icon ? 24 : 17; },
       canHide: function () { return true; },
       hidden: function (uu, t) { return (uu.thide || []).indexOf(t.id) >= 0; },
       toggle: function (uu, t) {
@@ -2161,6 +2378,7 @@
       renderAll();
     });
     on('ptypeBtn', choosePtype);
+    bindPtSwipe();
     // yashirin rejim: raqam maydonini 1 soniya bosib turish — faqat xodimlar biladi
     var lpTimer = 0;
     var disp = $('display');

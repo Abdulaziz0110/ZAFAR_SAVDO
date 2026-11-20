@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 28) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 29) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -599,3 +599,14 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Printer tanlash: Admin ilovasidagi ulashish nomi (`lq`, standart "xprinter") -> printer nomi -> Xprinter/label nomli birinchi printer | VERIFIED (test) |
 | Kompyuter holatida `lb:1` — Admin ilovasi (5.3.4) yorliqni o'zi chiqarmaydi; printer topilmasa yoki eski kompyuter dasturi bo'lsa Admin avvalgidek chiqaradi | VERIFIED (V53Test) |
 | Eski Admin ilovasi (5.3.3) bilan bir vaqtda ishlasa juda kam holda bitta yorliq ikki marta chiqishi mumkin — ilovani 5.3.4 ga yangilang | IMPLEMENTED-UNVERIFIED |
+
+## pc 29 (2026-11-20) — sensor kassa sozlamalari
+| Funksiya | Holat |
+|---|---|
+| O'ng tugmalar: aniq kenglik (1/3, 1/2, 2/3, To'liq) va «Yangi qatordan»; bo'sh joy kengligi qo'lda berilmagan tugmalarga bo'linadi | VERIFIED (brauzer, Playwright) |
+| Bir tugma bilan: «Panel va Qidiruv — TO'LOV tepasida yonma-yon (teng ikkiga)» | VERIFIED (brauzer) |
+| Har bir tugma (o'ng va savat ostidagi): yozuv o'lchami (px, ikonka ham mos kattalashadi) va qalinligi (Asl / Qalin / Juda qalin) | VERIFIED (brauzer) |
+| Hamma tugmalar yozuvi (70–160%), qalinligi; tugma va panel burchagi (0–40 px) | VERIFIED (brauzer) |
+| Sozlamalar tugmasidagi qizil nuqta: panel tavsiyasi sozlamalar ochilganda «ko'rildi» bo'ladi; 1C'ga yozilmagan sotuv bo'lsa sozlamalar tepasida qizil karta (sababi va «Navbatni ko'rish») | VERIFIED (brauzer) |
+| Narx turi 2 rejim: «Tugma bilan» (avvalgidek) yoki «Barmoqlar bilan» — ro'yxat ustida N barmoq bilan 3 sm pastga surish = Narx N (surish ko'rsatkichi bilan) | VERIFIED (Chromium'da soxta ko'p barmoqli teginish) / monoblok ekranida IMPLEMENTED-UNVERIFIED |
+| Android lint: ExifInterface(InputStream) faqat API 24+ da chaqiriladi | VERIFIED (kompilyatsiya; lint CI'da) |

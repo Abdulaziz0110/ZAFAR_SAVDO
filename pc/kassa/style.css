@@ -502,3 +502,25 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 /* pc 27: yangi mijoz tugmasi */
 .cl.new-client { border: 2px dashed var(--acc); background: var(--acc-soft); }
 .cl.new-client b { color: var(--acc); }
+
+/* pc 29: burchaklar sozlanadi — --r (tugmalar, maydonlar, katakchalar), --rp (panellar va oynalar) */
+:root { --rp: 16px; }
+.left, .right, .set-card { border-radius: var(--rp); }
+.sheet, .login-card, .prog-box, .editor { border-radius: calc(var(--rp) + 4px); }
+.tile, .kb-results .cl, .tg, .ord-row, .col-item, .notes .note, .ord-h { border-radius: var(--r); }
+.row { border-radius: calc(var(--r) / 2); }
+/* pc 29: narx turi barmoqlar bilan — surish ko'rsatkichi */
+.left.pt-swipe .cart { touch-action: pan-y; }
+.pt-pull { position: absolute; left: 50%; top: 46px; transform: translateX(-50%); z-index: 4; min-width: 220px; padding: 10px 18px;
+  background: var(--panel); border: 3px solid var(--acc); border-radius: var(--rp); box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  text-align: center; pointer-events: none; }
+.pt-pull b { display: block; font-size: 30px; font-weight: 900; color: var(--acc); }
+.pt-pull i { display: block; height: 10px; margin-top: 8px; border-radius: 5px; background: var(--acc-soft); overflow: hidden; }
+.pt-pull i span { display: block; height: 100%; width: 0; background: var(--acc); }
+.pt-pull.ready { background: var(--acc); }
+.pt-pull.ready b { color: var(--acc-ink); }
+/* pc 29: tugma sozlamasi — kenglik tanlovi va yangi qator */
+.ord-bar button.br { flex: 0 0 auto; padding: 0 12px; }
+.set-card.set-alert { border: 3px solid var(--warn); }
+.set-card.set-alert h3 { color: var(--warn); }
+.ord-bar .bw-l { flex: 1; align-self: center; font-size: 15px; color: var(--ink2); }

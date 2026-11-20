@@ -88,9 +88,13 @@ class ProductImages(context: Context) {
         _ids.value = _ids.value - productId
     }
 
-    private fun orientation(source: Uri): Int = runCatching {
-        resolver.openInputStream(source)?.use { android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) } ?: 1
-    }.getOrDefault(1)
+    /** Rasm burilishi (EXIF). ExifInterface(InputStream) — Android 7+ (API 24); undan eskisida rasm burilmaydi. */
+    private fun orientation(source: Uri): Int {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return 1
+        return runCatching {
+            resolver.openInputStream(source)?.use { android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) } ?: 1
+        }.getOrDefault(1)
+    }
 
     private fun rotate(b: Bitmap, exif: Int): Bitmap {
         val deg = when (exif) {

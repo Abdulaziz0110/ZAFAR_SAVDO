@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## Kompyuter pc 29 — 2026-11-20
+**Sensor kassa sozlamalari:** tugmalar kengligi aniq (1/3, 1/2, 2/3, to'liq) va «yangi qatordan»; Panel va Qidiruv'ni TO'LOV tepasiga
+teng ikkiga bir tugma bilan joylash; har tugmaning yozuv o'lchami va qalinligi; hamma tugmalar yozuvi foizi; tugma va panel burchaklari.
+**Narx turi barmoqlar bilan:** sozlamada yoqilsa, ro'yxat ustida 1-4 barmoq bilan pastga surish narx turini 1-4 ga o'zgartiradi.
+Sozlamalar tugmasidagi qizil nuqta endi qolib ketmaydi (sababi sozlamalarda ko'rinadi).
+
 ## 5.3.4 (versionCode 54) + kompyuter pc 28 — 2026-11-20
 **Agent yorlig'i kompyuter printeridan:** agent chop etgan narx yorlig'ini endi do'kon kompyuteri o'zi Xprinter'ga chiqaradi —
 Admin telefoni yoniq bo'lishi shart emas. Kompyuterda printer topilmasa Admin telefoni avvalgidek chiqaradi.
