@@ -36,7 +36,6 @@
     { id: 'disc', b: 'Chegirma', s: 'summa yoki %' },
     { id: 'ret', b: 'Qaytarish', s: 'tovar qaytdi' },
     { id: 'check', b: 'Narx tekshirish', s: "sotmasdan ko'rish" },
-    { id: 'debt', b: "Qarz to'lash", s: "mijoz to'lovi" },
     { id: 'last', b: 'Oxirgi chek', s: 'qayta chiqarish' },
     { id: 'sales', b: 'Savdolar', s: 'istalgan chek' },
     { id: 'report', b: 'Kassa yopish', s: 'kun hisoboti' },
@@ -926,12 +925,25 @@
   function renderWins() {
     var box = $('wins');
     box.textContent = '';
-    if (S.wins.length <= 1) return;
+    // pc 33: har oynada narx turi belgisi (N1..N4, har biri o'z rangida) — qaysi narxda sotilayotgani doim ko'rinadi
+    function pill(w) {
+      var n = L.PRICE_TYPES.indexOf(WPT(w)) + 1;
+      return el('i', 'pt-pill pt' + n, 'N' + n);
+    }
+    if (S.wins.length <= 1) {
+      var one = el('div', 'pt-one');
+      one.appendChild(el('small', '', 'Narx'));
+      one.appendChild(pill(W()));
+      box.appendChild(one);
+      return;
+    }
     S.wins.forEach(function (w, i) {
       var b = el('button', i === S.w ? 'on' : '');
       b.setAttribute('data-w', i);
       b.setAttribute('data-ui', 'wins');
-      b.appendChild(el('span', '', (i + 1) + '-oyna'));
+      var t = el('span', '', (i + 1) + '-oyna');
+      t.appendChild(pill(w));
+      b.appendChild(t);
       b.appendChild(el('small', '', w.lines.length ? money(L.total(w.lines)) : "bo'sh"));
       box.appendChild(b);
     });
@@ -1252,10 +1264,15 @@
   }
   /** pc 31: CHEKLI / CHEKSIZ tugmasi bir bosilsa — darhol naqd savdo (dialogsiz). */
   function quickPay(print) {
-    if (S.busySale || !startPay(false)) return;
+    if (S.busySale) return;
+    var w = W();
+    // pc 33: savat bo'sh — TO'LOV qarz to'lash oynasini ochadi (alohida «Qarz to'lash» tugmasi yo'q)
+    if (w.mode === 'sale' && !w.lines.length) { openPay(true, print); return; }
+    if (!startPay(false)) return;
     submitPay(print);
   }
   function openPay(debtOnly, print) {
+    if (!debtOnly && W().mode === 'sale' && !W().lines.length) debtOnly = true;   // bo'sh savat — qarz to'lovi
     if (!startPay(debtOnly)) return;
     var w = W(), t = S.pay.total;
     renderNotes();
@@ -2157,6 +2174,8 @@
       [['Kompyuter dasturi', S.pcVer || '?'], ["Ma'lumot versiyasi", S.pcData || '?'], ['Terminal (monoblok)', TERM],
         ['1C navbati', S.pcQ + ' kutmoqda · ' + S.pcQe + ' xato · monoblokda ' + S.outbox.length],
         ['Oxirgi xato', S.pcErr || '—'], ['Ekran', window.innerWidth + ' × ' + window.innerHeight + ' px'],
+        ['Mijozlar', S.data ? S.data.cl.length + ' ta · qarzdor ' + S.data.cl.filter(function (c) { return c[3] > 0; }).length +
+          ' · haqdor ' + S.data.cl.filter(function (c) { return c[3] < 0; }).length : '?'],
         ['Mavzu', themeOf(u.theme).n + ' (' + u.theme + ')'], ['Sozlama hajmi', JSON.stringify(S.ui).length + ' bayt']]
         .forEach(function (x) {
           var r = el('div', 'dev-row');
@@ -2543,10 +2562,6 @@
     disp.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     on('queueBadge', function () { adminPw("1C navbatini ko'rish", showQueue); });
     on('lockBtn', function () { lock(''); });
-    on('exitBtn', function () {
-      ask({ title: 'Kassadan chiqish', text: "Kassa oynasi yopiladi. Savatlar saqlanib qoladi.", yes: 'Ha, chiqish',
-        onYes: function () { closeKassa(); return Promise.resolve(); } });
-    });
 
     $('cart').addEventListener('click', function (e) {
       var r = e.target.closest ? e.target.closest('.row') : null;

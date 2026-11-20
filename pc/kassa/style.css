@@ -575,3 +575,13 @@ body.ret .pay-row .pay-btn.alt { background: var(--ret-top); }
 .th-prev .r i.p { grid-column: span 2; }
 .ord-bar { flex-wrap: wrap; }
 .ord-bar button.br { flex: 1 1 100%; }
+
+/* pc 33: oyna tugmasida narx turi belgisi */
+.pt-pill { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; font-size: 13px; font-weight: 900; font-style: normal;
+  line-height: 20px; vertical-align: 3px; letter-spacing: 0; }
+.pt-pill.pt1 { background: #e3f2e6; color: #1b5e20; }
+.pt-pill.pt2 { background: #ffcc80; color: #5a3000; }
+.pt-pill.pt3 { background: #90caf9; color: #0c2a52; }
+.pt-pill.pt4 { background: #f8a5c2; color: #4a0e24; }
+.pt-one { display: flex; align-items: center; gap: 6px; color: var(--top-ink); padding: 0 10px; font-weight: 700; }
+.pt-one .pt-pill { font-size: 18px; line-height: 28px; padding: 0 12px; vertical-align: 0; }

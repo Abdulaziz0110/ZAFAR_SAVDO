@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 32) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 33) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -637,3 +637,12 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | 10 mavzu qayta chizildi (5 yorug': Oq, Dengiz, Issiq krem, Lavanda, Anor; 5 qorong'i: Grafit, Tungi ko'k, Zumrad, Qahva, Kontrast), tanlashda kichik namuna | VERIFIED (brauzer) |
 | Ranglarda alohida: ro'yxat (savat) foni, o'ng tugmalar foni va yozuvi | VERIFIED (brauzer) |
 | Dasturchi rejimi (yoqilsa — texnik ma'lumot; qo'shimchalar keyin) | VERIFIED (brauzer) |
+
+## pc 33 (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| «Qarz to'lash» tugmasi olib tashlandi: savat bo'sh bo'lsa TO'LOV (bir yoki uzoq bosish) qarz to'lash oynasini ochadi (mijoz tanlash bilan) | VERIFIED (brauzer) |
+| Mijoz qarzi: kassada endi UMUMIY qarz (hamma xodim/agentlar bo'yicha, telefondagi hisobot bilan bir xil); avval faqat «Дукон» bo'yicha edi | VERIFIED (test) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
+| Oyna tugmalarida narx turi belgisi N1..N4 (har biri o'z rangida); bitta oyna bo'lsa yuqorida «Narx N» | VERIFIED (brauzer) |
+| «Kassadan chiqish» tugmasi olib tashlandi (kassani yopish — Sozlamalar → 1C va dastur) | VERIFIED (brauzer) |
+| Dasturchi rejimida: mijozlar soni, qarzdorlar va haqdorlar soni | VERIFIED (brauzer) |

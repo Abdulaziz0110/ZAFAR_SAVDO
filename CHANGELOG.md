@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 33 — 2026-11-20
+**Kassa:** qarz to'lash TO'LOV tugmasi ichida (savat bo'sh bo'lsa); mijozning umumiy qarzi ko'rinadi; oyna tugmalarida narx turi
+belgisi (N1..N4); «Kassadan chiqish» tugmasi olib tashlandi.
+
 ## Kompyuter pc 32 — 2026-11-20
 **Kassa:** sozlamalarga parolsiz kirish; sozlamalar 5 bo'limga ajratildi va tugma sozlamalari yig'iq; narx turini sichqoncha bilan
 tortib o'zgartirish; to'lov tugmalarida «TO'LOV» + belgi; savat ostidagi tugmalar rangli; 10 mavzu qayta chizildi;
