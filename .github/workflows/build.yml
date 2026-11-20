@@ -3,7 +3,7 @@
 #   1) unzips it SYNCHRONOUSLY (old files are removed, except .git, .github, signing and *.zip) and commits the sources,
 #   2) builds two APKs - Savdo (admin package), Mijoz (debug, signed with SIGNING_* secrets if present) and uploads them as an artifact,
 #   3) runs unit tests, lint, the PC script tests and the iPhone (web) agent tests; reports go to the "reports" artifact,
-#   4) publishes the iPhone agent (web/agent) to Cloudflare Pages (free, works with a private repo),
+#   4) publishes the iPhone agent (web/agent) and client (web/mijoz -> /mijoz/) to Cloudflare Pages (free, works with a private repo),
 #      and (v4.0) the new APKs + version.json to a hidden folder there - the apps update themselves.
 #      Without the CLOUDFLARE_* secrets this job is skipped (green) - APKs are not affected.
 #   5) (v4.0) "smoke": installs the three APKs on an Android emulator and opens each one - a crash on start is reported.
@@ -226,10 +226,12 @@ jobs:
           path: upd
           key: upd-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Save iPhone agent (cache)
+      - name: Save iPhone agent and client (cache)
         uses: actions/cache/save@v4
         with:
-          path: web/agent
+          path: |
+            web/agent
+            web/mijoz
           key: web-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload APKs
@@ -299,7 +301,9 @@ jobs:
         id: webtests
         continue-on-error: true
         shell: bash
-        run: node web/agent/test/core.test.js
+        run: |
+          node web/agent/test/core.test.js
+          node web/mijoz/test/mcore.test.js
 
       - name: Remove signing files
         if: always()
@@ -352,18 +356,23 @@ jobs:
             echo "::notice::iPhone agent not published: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets"
           fi
 
-      - name: Restore iPhone agent (cache)
+      - name: Restore iPhone agent and client (cache)
         if: steps.chk.outputs.ok == 'true'
         uses: actions/cache/restore@v4
         with:
-          path: web/agent
+          path: |
+            web/agent
+            web/mijoz
           key: web-${{ github.run_id }}-${{ github.run_attempt }}
           fail-on-cache-miss: true
 
       - name: Site folder
         if: steps.chk.outputs.ok == 'true'
         shell: bash
-        run: mkdir -p site && cp -r web/agent/. site/
+        run: |
+          mkdir -p site && cp -r web/agent/. site/
+          # iPhone mijoz ilovasi: https://<loyiha>.pages.dev/mijoz/ (umumiy core.js ildizda)
+          mkdir -p site/mijoz && cp -r web/mijoz/. site/mijoz/ && rm -rf site/mijoz/test site/test
 
       - name: Self-update folder (v4.0)
         if: steps.chk.outputs.ok == 'true'
