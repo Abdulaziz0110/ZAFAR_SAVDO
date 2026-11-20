@@ -609,4 +609,4 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Hamma tugmalar yozuvi (70–160%), qalinligi; tugma va panel burchagi (0–40 px) | VERIFIED (brauzer) |
 | Sozlamalar tugmasidagi qizil nuqta: panel tavsiyasi sozlamalar ochilganda «ko'rildi» bo'ladi; 1C'ga yozilmagan sotuv bo'lsa sozlamalar tepasida qizil karta (sababi va «Navbatni ko'rish») | VERIFIED (brauzer) |
 | Narx turi 2 rejim: «Tugma bilan» (avvalgidek) yoki «Barmoqlar bilan» — ro'yxat ustida N barmoq bilan 3 sm pastga surish = Narx N (surish ko'rsatkichi bilan) | VERIFIED (Chromium'da soxta ko'p barmoqli teginish) / monoblok ekranida IMPLEMENTED-UNVERIFIED |
-| Android lint: ExifInterface(InputStream) faqat API 24+ da chaqiriladi | VERIFIED (kompilyatsiya; lint CI'da) |
+| Android lint: ExifInterface(InputStream) va deleteSharedPreferences faqat API 24+ da (Android 6 da xavfsiz o'rinbosar) | VERIFIED (kompilyatsiya; lint CI'da) |
