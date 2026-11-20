@@ -45,6 +45,9 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.Date
 
+/** iPhone veb-ilovalari (agent va mijoz) joylashgan sayt — UPDATE_URL berilmagan bo'lsa. */
+private const val WEB_HOST = "https://zafar-savdo-agent.pages.dev"
+
 /** Bitta import yozuvi (jurnal). */
 data class ImportLog(val at: Long, val name: String, val source: String, val added: Int, val removed: Int, val same: Int, val from: Long, val to: Long)
 
@@ -458,7 +461,11 @@ class ShareRepository(
     fun loginText(clientId: String, phone: String): String {
         val c = store.client(clientId) ?: return ""
         val m = c.members.firstOrNull { it.phone == Phone.normalize(phone) } ?: return ""
-        return context.getString(R.string.mb_share_text, c.name, ShopCode.fromUrl(store.dbUrl), Phone.pretty(m.phone), m.password)
+        val shop = ShopCode.fromUrl(store.dbUrl)
+        // v5.3.6: iPhone uchun veb-ilova (Cloudflare Pages, agent saytining /mijoz/ qismi); do'kon kodi havolada — o'zi yoziladi
+        val host = Regex("^(https://[^/]+)/").find(com.ilxomjon.dur_novvot_dokon.BuildConfig.UPDATE_URL)?.groupValues?.get(1) ?: WEB_HOST
+        val web = host + "/mijoz/#s=" + android.net.Uri.encode(shop)
+        return context.getString(R.string.mb_share_text, c.name, shop, Phone.pretty(m.phone), m.password, web)
     }
 
     fun linkCode(clientId: String = store.current()?.id.orEmpty()): String {

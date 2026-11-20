@@ -707,7 +707,7 @@ STRINGS.update({
  'mb_short_password': 'Parol kamida %1$d belgi bo\'lsin',
  'mb_add_fail': "Qo'shib bo'lmadi",
  'mb_no_name': 'Ismsiz', 'mb_send': "Kirish ma'lumoti",
- 'mb_share_text': "Savdo Mijoz ilovasiga kirish\nMijoz: %1$s\nDo'kon kodi: %2$s\nTelefon: %3$s\nParol: %4$s\n\nIlovani oching → \"Kirish\" → shu uchtasini kiriting. Faqat bir marta so'raladi.",
+ 'mb_share_text': "Savdo Mijoz ilovasiga kirish\nMijoz: %1$s\nDo'kon kodi: %2$s\nTelefon: %3$s\nParol: %4$s\n\nAndroid: ilovani oching → \"Kirish\" → shu uchtasini kiriting.\niPhone: %5$s — Safari'da oching → Ulashish → \"Bosh ekranga qo'shish\" → kiring.\nFaqat bir marta so'raladi.",
  'mb_remove': "Telefonni o'chirish",
  'mb_remove_msg': "%1$s endi kira olmaydi. Xavfsizlik uchun kalitlar almashtiriladi — qolgan telefonlar o'zi qayta ulanadi.",
  'mb_removed': "Telefon o'chirildi, kalitlar yangilandi",

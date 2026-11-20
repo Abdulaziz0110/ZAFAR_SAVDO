@@ -53,6 +53,7 @@ class HomeFragment : Fragment() {
         b.btnNewSale.setOnClickListener { main()?.openTab(R.id.nav_sale) }
         bindSlot(b.btnSlot3, 3)
         bindSlot(b.btnSlot4, 4)
+        addTiles()
         b.toolbar.inflateMenu(R.menu.home_menu)
         b.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.action_menu) { openMenu(); true } else false }
         launchOnStarted { Locator.data.state.collect { render(it) } }
@@ -110,6 +111,25 @@ class HomeFragment : Fragment() {
             )
             true
         }
+    }
+
+    /**
+     * v5.4: yangi ko'rinish — ikki tanlanadigan tugma o'rniga HAMMA amallar yirik ikonkali plitkalar to'rida (3 ustun).
+     * Eski tugmalar qatori va "uzoq bosing" izohi yashiriladi.
+     */
+    private fun addTiles() {
+        val row = b.btnSlot3.parent as? ViewGroup ?: return
+        val parent = row.parent as? ViewGroup ?: return
+        if (parent.findViewWithTag<View>("home_tiles") != null) return
+        row.visibility = View.GONE
+        b.tvSlotHint.visibility = View.GONE
+        val grid = uz.imsoft.shared.android.Ui.tiles(
+            requireContext(),
+            slots().map { sl -> uz.imsoft.shared.android.Ui.Tile(sl.title, sl.icon) { sl.go() } },
+            columns = 3,
+        )
+        grid.tag = "home_tiles"
+        parent.addView(grid, parent.indexOfChild(row) + 1)
     }
 
     private fun openMenu() {

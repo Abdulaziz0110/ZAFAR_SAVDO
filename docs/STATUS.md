@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 55) + kompyuter dasturi 5.4 (pc 35) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 35) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -106,7 +106,7 @@ Belgilar:
 | Bio matni savdoda yirikroq (ikkala ilovada) | VERIFIED (kompilyatsiya) |
 | **Kassa paneli telefondan** (1C: Константы.тов1…тов336, 8 sahifa x 42): tugmaga tovar qo'yish/bo'shatish, "ko'p sotilganlar bilan to'ldirish", bitta so'rov bilan saqlash, bekor qilsa eski holat qaytadi | VERIFIED (6 Kotlin + 5 Python test) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | 1C baza kodi (BaseOld.zip) o'qildi: savdo oynasi (РеализацияСенсор1) ПродажаРозница hujjatini qanday to'ldirishi, Товары rekvizitlari, dastur moduli (мМобилАпп) tasdiqlandi | VERIFIED (manba o'qildi) |
-| Xodim (agent) ko'rinishini alohida soddalashtirish, statistika, Mijoz ilovasi dizayni, veb-agentni ilova bilan bir xil qilish | NOT-IMPLEMENTED (keyingi qism) |
+| Xodim (agent) ko'rinishini alohida soddalashtirish, statistika, Mijoz ilovasi dizayni, veb-agentni ilova bilan bir xil qilish | IMPLEMENTED — pastdagi «5.3.6 + iPhone» bo'limiga qarang |
 | Sensor savdo oynasi (monoblok) | IMPLEMENTED — kompyuter dasturi pc 8-20 (pastdagi "Kompyuter 5.4 — kassa" bo'limi) |
 
 ## 5.2 — 3-qism: tekshiruvda topilgan kamchiliklar yopildi
@@ -209,7 +209,7 @@ Belgilar:
 | "Ta'minotchi" -> "Yuk beruvchi" (hamma matnlar) | VERIFIED (0 ta eski so'z qoldi) |
 | Yuk beruvchiga to'lovda bizning qarzimiz ko'rsatiladi | VERIFIED (kod) / 1C ma'lumoti bilan IMPLEMENTED-UNVERIFIED |
 | Tarixdagi eski dollar summalari ko'rsatilishi (kiritish emas) | IMPLEMENTED-UNVERIFIED (ataylab qoldirildi — 1C'da eski dollar qarzlar bor) |
-| **1C'ga yoziladigan shakllar 1C bilan to'liq bir xil** (yangi tovar: guruh, brend, o'lchov birligi, hajmi, shtrix/tarozi turi, avtomatik shtrix; kirim; qolgan hujjatlar) | NOT-IMPLEMENTED — keyingi ish. Hozircha faqat yuk beruvchi qarzi qo'shildi; to'liq moslash uchun 1C'dan guruh/brend/o'lchov/tarozi ro'yxatlarini kompyuter orqali yuborish va `onec_write.py` ni kengaytirish kerak |
+| **1C'ga yoziladigan shakllar 1C bilan to'liq bir xil** (yangi tovar: guruh, brend, o'lchov birligi, hajmi, shtrix/tarozi turi, avtomatik shtrix; kirim; qolgan hujjatlar) | IMPLEMENTED (5.1 dan: OneCFormFragment — guruh/brend/birlik/tarozi 1C ro'yxatlari bilan, avtomatik shtrix; `onec_write.py` CARD_REFS) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 
 ## 5.0.4 — vidjet
 | Narsa | Holat |
@@ -661,3 +661,15 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## 5.3.6 (versionCode 56) + Savdo Mijoz 5.4 (versionCode 32) + iPhone (veb) agent va mijoz — 2026-11-20
+| Funksiya | Holat |
+|---|---|
+| **iPhone Mijoz (veb-ilova)** `web/mijoz` → `https://<sayt>/mijoz/`: do'kon kodi + telefon + parol bilan kirish (Android bilan bir xil shifrlangan yozuv), qarz, narxlar (Optom/Naqd/1-2-narx, $), guruhlar, qidiruv, savatcha va buyurtma (do'kon ruxsat bersa), buyurtmalar holati, hisob-kitob (kunlar bo'yicha, hujjat qatorlari), «Yangilash» (do'kondan yangi ma'lumot so'rash), internetsiz oxirgi ma'lumot, bosh ekranga o'rnatish | VERIFIED (mcore 6 test + Chromium E2E 14 tekshiruv) / iPhone Safari'da IMPLEMENTED-UNVERIFIED |
+| Admin ▸ Mijoz ▸ telefon «Kirish ma'lumoti» matnida iPhone havolasi (do'kon kodi havolada — o'zi yoziladi) | VERIFIED (kompilyatsiya) |
+| Sayt: CI `web/mijoz` ni Cloudflare Pages'dagi agent saytining `/mijoz/` qismiga joylaydi; ikki ilovaning keshi bir-birini o'chirmaydi | VERIFIED (workflow, ASCII) / joylash CI'da |
+| **iPhone agent ilovaga o'xshash:** emoji o'rniga ilovadagi kabi chiziqli ikonkalar, plitkalar | VERIFIED (agent E2E o'tdi, rasm) |
+| **Xodim (agent) soddalashtirildi:** shtrix kod partiyasi faqat Adminda (menyu va tugma), holat (diagnostika) kartasi xodimga faqat muammo bo'lsa ko'rinadi | VERIFIED (kompilyatsiya, 330 test) |
+| **Savdo Mijoz (Android) yangi bosh sahifa:** hamma amallar yirik ikonkali plitkalarda (3 ustun) — ikki tanlanadigan tugma va «uzoq bosing» izohi o'rniga | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| Statistika (kun/hafta/oy/yil, eng ko'p sotilgan, foyda, mijozlar; mijoz bilan / mijozsiz) | VERIFIED (avvaldan bor: StatsFragment, `StatsClientsTest`) |
+| iPhone Mijoz'da yo'q (faqat Android): mijozning o'z kassasi (POS), chek printeri, vidjet, statistika | NOT-IMPLEMENTED (iPhone brauzeri USB/Bluetooth printer va vidjetni qo'llamaydi) |

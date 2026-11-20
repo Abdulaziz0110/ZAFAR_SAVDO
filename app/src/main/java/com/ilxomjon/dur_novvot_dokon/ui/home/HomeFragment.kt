@@ -56,6 +56,8 @@ class HomeFragment : Fragment() {
         val adminRole = com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin
         binding.toolbar.menu.findItem(R.id.action_boss)?.isVisible = adminRole
         binding.toolbar.menu.findItem(R.id.action_stats)?.isVisible = adminRole
+        // v5.3.6 (soddalashtirilgan agent): shtrix kod partiyasi faqat Adminda
+        binding.toolbar.menu.findItem(R.id.action_barcodes)?.isVisible = adminRole
         binding.btnLoad.setOnClickListener { vm.sync() }
         binding.btnRetry.setOnClickListener { vm.retryPending() }
         binding.btnQueue.setOnClickListener { navigator().push(OutboxFragment()) }
@@ -124,7 +126,7 @@ class HomeFragment : Fragment() {
             Slot("payment", getString(R.string.home_payment), R.drawable.ic_payment, false) { navigator().openTab(R.id.nav_payment) },
             Slot("report", getString(R.string.home_report), R.drawable.ic_report, false, go { com.ilxomjon.dur_novvot_dokon.ui.report.ReportFragment() }),
             Slot("dayend", getString(R.string.dayend_title), R.drawable.ic_report, false, go { DayEndFragment() }),
-            Slot("barcodes", getString(R.string.bb_title), R.drawable.ic_barcode, false, go { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment() }),
+            Slot("barcodes", getString(R.string.bb_title), R.drawable.ic_barcode, true, go { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment() }),
             Slot("queue", getString(R.string.queue_title), R.drawable.ic_sync, false, go { OutboxFragment() }),
             Slot("labels", getString(R.string.home_labels), R.drawable.ic_label, true, go { com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment() }),
             Slot("scale", getString(R.string.sc_title), R.drawable.ic_scale, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment() }),
@@ -198,6 +200,8 @@ class HomeFragment : Fragment() {
         }
         val items = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.items(ctx, d)
         val ok = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.allOk(items)
+        // v5.3.6 (soddalashtirilgan agent): xodimga holat kartasi faqat muammo bo'lsa ko'rinadi
+        b.cardDiag.show(com.ilxomjon.dur_novvot_dokon.core.AppRole.isAdmin || !ok)
         b.tvDiagHead.text = com.ilxomjon.dur_novvot_dokon.ui.diag.DiagSummary.headline(ctx, items)
         b.tvDiagHead.setTextColor(
             if (ok) androidx.core.content.ContextCompat.getColor(ctx, R.color.brand_success)

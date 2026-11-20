@@ -1,0 +1,13 @@
+{
+ "url": "https://dokon-test-default-rtdb.firebaseio.com",
+ "phone": "90 123 45 67",
+ "pw": "parol123",
+ "loginKey": "07ea211c6868d294202b76d601fb994b0f3ec005",
+ "rec": {
+  "s": "AAECAwQFBgcICQoLDA0ODw==",
+  "i": 1000,
+  "c": "ZGVmZ2hpamtsbW5vgfGcTpXO4yYQUOXVPnRaamTjWipO8XehU68ozGWKvJCPGLnQm01i6MPngyk8Xj4wPYfLUPLb+OPuuVqHg6bs7AyhAHaFfUDyzULBNMumq3hxtY91j0UlOwXA3j137KC8Y6fEohzr6bp4bKDBc9YTEx1//mjgacUM4DnvSA2K+A==",
+  "v": 1
+ },
+ "blob": "H4sIAElIAGsC/41SwU7CQBD9lc1cPGjIzpIt1htK9GRQMR4kHFpaIrFlsdBG03DzG/xAv8R92y0CcrBpm7dv972Z2ZmaKroQfCYoWgP0gm4g/WPJ6TyxLGlNWCyAB1ESvZuFiF4jkEW0TiFUgZYdSJZHjZI0Bl3Tyv6VdrQ7Xtp1g47qVsUUQfmKNvC2eDwmlpIRe5jlkbgxWZIusLxNK6TEykltTdyYyM653WVIxsyeCrGt/baeTOwefBWMLk1icoD7sijfRN74htpJex1tsfQYN0dQU+ZyU1IFzByyZGdOI/iMzLqsxPfnF6u/ebM9VtOygN7nLmG4yrdMS8UuiAq2nL2UeoPc/xW3rYt/A/qidgJumQNvG9NXTXcwezQnmamA7NeU8OGyk/vJwXlqqp3bkdy2t3VWXR1qdOSg+7btTl/EjfP+aT9GPvsZjpApEnK1vBgMCz33r/sPYtR/GgyR6swYTBmdhuG5baKwcuFeN8qYTXIoa1E8Nw5ufgD5aZz/KQMAAA=="
+}

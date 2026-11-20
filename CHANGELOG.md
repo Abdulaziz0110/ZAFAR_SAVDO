@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 5.3.6 (versionCode 56) + Savdo Mijoz 5.4 (versionCode 32) + iPhone — 2026-11-20
+**iPhone Mijoz (yangi):** `<sayt>/mijoz/` — kirish, qarz, narxlar, buyurtma, hisob-kitob, internetsiz ham. Admin «Kirish ma'lumoti»
+matnida iPhone havolasi. **iPhone agent:** ilovadagi kabi ikonkalar. **Xodim:** soddaroq bosh sahifa. **Savdo Mijoz:** bosh sahifada
+hamma amallar yirik plitkalarda.
+
 ## 5.3.5 (versionCode 55) + kompyuter pc 35 — 2026-11-20
 **Yorliq Tailscale'siz:** Admin telefoni kompyuterni ko'rmasa, yorliq internet orqali kompyuterga boradi va Xprinter'da chiqadi.
 **Kassa:** mijoz qarzi kod yoki nom bo'yicha topiladi.

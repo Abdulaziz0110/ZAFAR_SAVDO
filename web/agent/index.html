@@ -51,9 +51,13 @@ main { flex: 1; padding: 0 16px 16px; }
 .btn:disabled { opacity: .45; }
 .btn:active { filter: brightness(.92); }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
-.tile { background: var(--sc); color: var(--on-sc); border: 0; border-radius: 16px; height: 84px; display: flex; flex-direction: column;
+.tile { background: var(--surface); color: var(--on); border: 0; border-radius: 18px; height: 96px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.05); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px; text-align: center; }
-.tile span.i { font-size: 24px; }
+.tile span.i { font-size: 24px; width: 46px; height: 46px; border-radius: 14px; background: color-mix(in srgb, var(--primary) 14%, transparent);
+  display: flex; align-items: center; justify-content: center; }
+svg.si { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -5px; flex: none; }
+.tile svg.si { width: 26px; height: 26px; }
+.icon-btn svg.si { width: 24px; height: 24px; }
 input, textarea, select { width: 100%; font: inherit; color: var(--on); background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 12px; margin: 6px 0; }
 textarea { min-height: 90px; }

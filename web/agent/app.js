@@ -5,6 +5,19 @@
  */
 (function () {
   'use strict';
+  // v5.4: ilova bilan bir xil ko'rinish — emoji o'rniga chiziqli ikonkalar (Android ilovadagi kabi)
+  var IC = {
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11l2-8H6.2"/>',
+    ret: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/>',
+    pay: '<rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10h19M16 14.5h2.5"/>',
+    clock: '<circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3 2"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-7"/>',
+    trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  };
+  function ic(n) { return '<svg class="si" viewBox="0 0 24 24">' + (IC[n] || '') + '</svg>'; }
   var C = window.Core;
   var VERSION = '1.0';
   var $app = document.getElementById('app');
@@ -322,8 +335,8 @@
   }
 
   function header(title, back) {
-    return '<header class="bar">' + (back ? '<button class="icon-btn" data-act="back" aria-label="Orqaga">&#8592;</button>' : '') +
-      '<h1>' + esc(title) + '</h1>' + (back ? '' : '<button class="icon-btn" data-act="settings" aria-label="Sozlamalar">&#9881;</button>') + '</header>';
+    return '<header class="bar">' + (back ? '<button class="icon-btn" data-act="back" aria-label="Orqaga">' + ic('back') + '</button>' : '') +
+      '<h1>' + esc(title) + '</h1>' + (back ? '' : '<button class="icon-btn" data-act="settings" aria-label="Sozlamalar">' + ic('settings') + '</button>') + '</header>';
   }
 
   function offlineBanner() {
@@ -402,12 +415,12 @@
       '<div class="muted">Katalog: ' + (S.catAt ? hm(S.catAt) : 'yuklanmagan') + ' · ' + hb + '</div>' +
       '<button class="btn small tonal" data-act="sync-cat">Katalogni yangilash</button></div>' +
       (S.cat ? '' : '<div class="banner">Katalog hali yuklanmagan. "Katalogni yangilash" bosing (Admin internetda bo\'lishi kerak).</div>') +
-      '<button class="btn" data-act="new-sale" style="min-height:60px">&#128722; Yangi savdo</button>' +
+      '<button class="btn" data-act="new-sale" style="min-height:60px">' + ic('cart') + ' Yangi savdo</button>' +
       '<div class="tiles">' +
-      '<button class="tile" data-act="new-return"><span class="i">&#8617;</span>Qaytarib olish</button>' +
-      '<button class="tile" data-act="pay"><span class="i">&#128179;</span>To\'lov</button>' +
-      '<button class="tile" data-act="ledger"><span class="i">&#128338;</span>1C tarixi</button>' +
-      '<button class="tile" data-act="report"><span class="i">&#128202;</span>Hisobot</button></div>' +
+      '<button class="tile" data-act="new-return"><span class="i">' + ic('ret') + '</span>Qaytarib olish</button>' +
+      '<button class="tile" data-act="pay"><span class="i">' + ic('pay') + '</span>To\'lov</button>' +
+      '<button class="tile" data-act="ledger"><span class="i">' + ic('clock') + '</span>1C tarixi</button>' +
+      '<button class="tile" data-act="report"><span class="i">' + ic('chart') + '</span>Hisobot</button></div>' +
       '<div class="card"><div class="label">Bugun</div>' +
       '<div>Savdolar: ' + t.o + ' ta · ' + money(t.os, false) + (t.ou ? ' + ' + money(t.ou, true) : '') + '</div>' +
       '<div>To\'lovlar: ' + t.p + ' ta · ' + money(t.ps, false) + '</div>' +
@@ -429,10 +442,10 @@
   function vSale() {
     var d = S.draft;
     var st = store(d.storeId);
-    return '<header class="bar"><button class="icon-btn" data-act="back">&#8592;</button>' +
+    return '<header class="bar"><button class="icon-btn" data-act="back">' + ic('back') + '</button>' +
       '<div class="store" data-act="pick-store" style="flex:1;min-width:0"><div style="min-width:0"><div class="t" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
       esc(st ? st.name : 'Do\'konni tanlang') + ' &#9662;</div><div class="muted">' + (st ? debtText(st) : 'Bosing — do\'kon tanlash') + '</div></div></div>' +
-      (d.lines.length ? '<button class="icon-btn" data-act="clear" aria-label="Tozalash">&#128465;</button>' : '') + '</header>' +
+      (d.lines.length ? '<button class="icon-btn" data-act="clear" aria-label="Tozalash">' + ic('trash') + '</button>' : '') + '</header>' +
       '<main><div class="sticky">' + offlineBanner() +
       seg('level', [[1, '1'], [2, '2'], [3, 'Naqd'], [4, 'Optom']], d.level) +
       '<div class="row2">' + seg('usd', [['0', "So'm"], ['1', '$']], d.usd ? '1' : '0') + seg('mode', [['1', 'Savdo'], ['2', 'Qaytarish']], d.mode) + '</div>' +
@@ -691,7 +704,7 @@
 
   function vSent() {
     var rows = S.outbox.slice(0, 200).map(function (it) {
-      return '<div class="doc"><div class="k' + (it.t === '4' ? ' pay' : it.mode === '2' ? ' ret' : '') + '">' + (it.t === '4' ? '&#128179;' : it.mode === '2' ? '&#8617;' : '&#128722;') + '</div>' +
+      return '<div class="doc"><div class="k' + (it.t === '4' ? ' pay' : it.mode === '2' ? ' ret' : '') + '">' + (it.t === '4' ? ic('pay') : it.mode === '2' ? ic('ret') : ic('cart')) + '</div>' +
         '<div class="m"><div><b>' + esc(it.code) + '</b> · ' + esc(it.storeName) + '</div><div class="muted">' + hm(it.at) + '</div><div>' + statusChip(it) + '</div></div>' +
         '<div class="a">' + money(it.sum, it.usd) + '</div></div>';
     }).join('');
@@ -704,7 +717,7 @@
   function vLedger() {
     var n = S.hist.docs.length;
     return header('1C tarixi', true) + '<main><div class="sticky">' + offlineBanner() +
-      '<div class="muted" data-act="hist-sync" style="padding:6px 0">&#8635; ' + (S.hist.at ? "Admin'dan: " + hm(S.hist.at) + ' · ' + n + ' ta hujjat. Bosing — yangilash' : "Admin hali yubormagan yoki yuklanmoqda. Bosing — yangilash") +
+      '<div class="muted" data-act="hist-sync" style="padding:6px 0">' + ic('refresh') + ' ' + (S.hist.at ? "Admin'dan: " + hm(S.hist.at) + ' · ' + n + ' ta hujjat. Bosing — yangilash' : "Admin hali yubormagan yoki yuklanmoqda. Bosing — yangilash") +
       (histBusy ? ' <span class="sp"></span>' : '') + '</div>' +
       '<input id="hq" type="search" placeholder="Qidirish: mijoz, tovar, sana (01.11)" value="' + esc(S.params.hq || '') + '"></div>' +
       '<div id="list"></div></main>';
@@ -729,7 +742,7 @@
       var goods = d.lines.filter(function (l) { return l.product && (d.kind === 'sale' || d.kind === 'return'); });
       var sub = goods.length ? goods.map(function (l) { return l.product; }).join(', ') : (d.lines.map(function (l) { return l.product; }).filter(Boolean).join('; ') || d.text);
       var cls = d.kind === 'payment' ? ' pay' : d.kind === 'return' ? ' ret' : '';
-      html += '<div class="doc" data-act="hdoc" data-i="' + S.hist.docs.indexOf(d) + '"><div class="k' + cls + '">' + (d.kind === 'payment' ? '&#128179;' : d.kind === 'return' ? '&#8617;' : '&#128722;') + '</div>' +
+      html += '<div class="doc" data-act="hdoc" data-i="' + S.hist.docs.indexOf(d) + '"><div class="k' + cls + '">' + (d.kind === 'payment' ? ic('pay') : d.kind === 'return' ? ic('ret') : ic('cart')) + '</div>' +
         '<div class="m"><div><b>' + KT[d.kind] + '</b>' + (goods.length ? ' · ' + goods.length + ' xil' : '') + '</div>' +
         '<div class="muted">' + C.stampTime(d.stamp) + (d.owner ? ' · ' + esc(d.owner.name) : '') + ' · ' + esc(sub).slice(0, 140) + '</div></div>' +
         '<div class="a">' + (d.som ? money(d.som, false) : '') + (d.usd ? ' ' + money(d.usd, true) : '') + '</div></div>';
