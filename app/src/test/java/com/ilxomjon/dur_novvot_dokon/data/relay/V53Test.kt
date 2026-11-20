@@ -166,6 +166,7 @@ class V53Test {
     private val written = ArrayList<String>()
     private val inserted = ArrayList<String>()
     private val barcodes = ArrayList<String>()
+    private val labels = ArrayList<Int>()
 
     private val server = object : RelayHost.Server {
         override suspend fun agentByPhone(phone: String): Pair<RawAgent, String>? = null
@@ -183,13 +184,13 @@ class V53Test {
         object : RelayHost.Hooks {
             override fun adminAgentId() = "A0"
             override fun codes(): Pair<Long, ByteArray>? = null
-            override suspend fun printLabels(data: ByteArray) = ""
+            override suspend fun printLabels(data: ByteArray): String { labels += data.size; return "xprinter" }
             override suspend fun mirrorSale(sale: RelayCodec.Sale, key: String) = Unit
             override fun written(agentId: String, type: String, payload: String) { written += payload }
             override suspend fun barcode(productId: String, name: String, code: String): Boolean { barcodes += "$productId=$code"; return true }
             override fun branchStores() = listOf("S1")
             override fun blockedDevices() = listOf("dev9")
-            override fun pcLink() = inbox to mapOf("host" to "192.168.1.5", "database" to "baza", "user" to "sa", "password" to "p")
+            override fun pcLink() = inbox to mapOf("host" to "192.168.1.5", "database" to "baza", "user" to "sa", "password" to "p", "lq" to "xprinter")
             override fun updateUrl() = "https://x.pages.dev/u/abc/"
         },
         now = { clock },
@@ -219,6 +220,22 @@ class V53Test {
         assertEquals("pc", (db.get(cfg.path("hb")) as Map<String, Any?>)["h"])
     }
 
+    @Test fun pcWithLabelPrinterPrintsAgentLabels() = runBlocking {
+        db.put(cfg.path("hb"), linkedMapOf("at" to clock, "h" to "pc", "q" to 0, "e" to "", "v" to "28", "lb" to 1))
+        db.put(cfg.path("lb/" + CloudDb.newKey()), linkedMapOf("at" to clock, "n" to 1, "b" to uz.imsoft.shared.B64.encode(byteArrayOf(1, 2))))
+        host.pump()
+        assertTrue(labels.isEmpty())
+        assertTrue(db.get(cfg.path("lb")) != null)
+    }
+
+    @Test fun oldPcLeavesLabelsToAdmin() = runBlocking {
+        db.put(cfg.path("hb"), linkedMapOf("at" to clock, "h" to "pc", "q" to 0, "e" to "", "v" to "27"))
+        db.put(cfg.path("lb/" + CloudDb.newKey()), linkedMapOf("at" to clock, "n" to 1, "b" to uz.imsoft.shared.B64.encode(byteArrayOf(1, 2))))
+        host.pump()
+        assertEquals(listOf(2), labels)
+        assertNull(db.get(cfg.path("lb")))
+    }
+
     @Test fun whenPcIsSilentAdminTakesOver() = runBlocking {
         db.put(cfg.path("hb"), linkedMapOf("at" to clock - 30 * 60_000, "h" to "pc", "q" to 0, "e" to "", "v" to "5.3"))
         queueSale("sale-2")
@@ -245,6 +262,7 @@ class V53Test {
         val rl = db.get("p/$inbox/rl") as Map<String, Any?>
         assertEquals(cfg.key, rl["key"])
         assertEquals("192.168.1.5", rl["host"])
+        assertEquals("xprinter", rl["lq"])
         assertEquals("https://x.pages.dev/u/abc/", db.get("p/$inbox/upd"))
         @Suppress("UNCHECKED_CAST")
         val ax = db.get(cfg.path("ax")) as Map<String, Any?>

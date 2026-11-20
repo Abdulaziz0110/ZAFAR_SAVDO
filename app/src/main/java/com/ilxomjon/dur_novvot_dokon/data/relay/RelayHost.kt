@@ -109,8 +109,11 @@ class RelayHost(
         // v5.3: kompyuter ko'prigi ishlab turgan bo'lsa — so'rov, savdo va katalogni U bajaradi (ikki joydan yozilmasin).
         // Kompyuter o'chiq/uyquda bo'lsa (holati eskirgan) — Admin o'zi bajaradi, avvalgidek.
         runCatching { publishLink(db, c) }
-        val pc = runCatching { pcAlive(map(db, c.path("hb"))) }.getOrDefault(false)
+        val hb = runCatching { map(db, c.path("hb")) }.getOrDefault(emptyMap())
+        val pc = pcAlive(hb)
         pcHost = pc
+        // pc 28: kompyuter yorliq printerini topgan bo'lsa — agent yorliqlarini U chop etadi
+        val pcLabels = pc && (hb["lb"] as? Number)?.toInt() == 1
         // 1) so'rovlar
         if (!pc) for ((id, v) in map(db, c.path("rq"))) {
             val o = (v as? Map<*, *>) ?: continue
@@ -144,7 +147,7 @@ class RelayHost(
             }
         }
         // 3) yorliqlar
-        for ((id, v) in map(db, c.path("lb"))) {
+        if (!pcLabels) for ((id, v) in map(db, c.path("lb"))) {
             val o = (v as? Map<*, *>) ?: continue
             val res = LinkedHashMap<String, Any?>()
             try {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.3.4 (versionCode 54) + kompyuter pc 28 — 2026-11-20
+**Agent yorlig'i kompyuter printeridan:** agent chop etgan narx yorlig'ini endi do'kon kompyuteri o'zi Xprinter'ga chiqaradi —
+Admin telefoni yoniq bo'lishi shart emas. Kompyuterda printer topilmasa Admin telefoni avvalgidek chiqaradi.
+
 ## Kompyuter pc 27 — 2026-11-20
 **Kassa:** to'lovda mijoz tanlashda ro'yxatda yo'q mijozni shu yerda qo'shish (ism + telefon) — 1C'ga darhol yoziladi.
 Android: lint xatosi (tooltipText) tuzatildi, ilova ishlashi o'zgarmagan.

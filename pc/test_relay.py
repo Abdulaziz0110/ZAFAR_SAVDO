@@ -299,5 +299,56 @@ class RelayTest(unittest.TestCase):
         self.assertEqual(c["host"], "192.168.1.5,1433")
 
 
+
+class LabelTest(unittest.TestCase):
+    PR = [("Microsoft Print to PDF", ""), ("XP-365B", "xprinter"), ("Canon", "canon")]
+
+    def test_pick_printer(self):
+        self.assertEqual(relay.pick_label_printer(self.PR, "xprinter"), "XP-365B")
+        self.assertEqual(relay.pick_label_printer(self.PR, "canon"), "Canon")
+        self.assertEqual(relay.pick_label_printer(self.PR, ""), "XP-365B")
+        self.assertEqual(relay.pick_label_printer([("Label TSC", "")], "yoq"), "Label TSC")
+        self.assertIsNone(relay.pick_label_printer([("Canon", "c")], "xprinter"))
+
+    def _relay(self, printers):
+        cloud, sql, r, clock = make()
+        sent = []
+        r.labels = relay.LabelSink("xprinter", enum=lambda: printers, send=lambda n, d: sent.append((n, d)), clock=lambda: clock[0])
+        return cloud, r, sent
+
+    def test_agent_label_printed_once_on_pc(self):
+        import base64
+        cloud, r, sent = self._relay(self.PR)
+        cloud.call("PUT", "g/%s/lb/j1" % KEY, {"at": 1, "n": 2, "b": base64.b64encode(b"TSPL").decode()})
+        r.pump()
+        self.assertEqual(sent, [("XP-365B", b"TSPL")])
+        g = cloud.db["g"][KEY]
+        self.assertNotIn("j1", g.get("lb", {}))
+        self.assertTrue(g["lbr"]["j1"]["ok"])
+        self.assertEqual(g["lbr"]["j1"]["q"], "XP-365B")
+        self.assertEqual(g["hb"]["lb"], 1)
+        r.pump()
+        self.assertEqual(len(sent), 1)
+
+    def test_printer_error_reported(self):
+        import base64
+        cloud, sql, r, clock = make()
+        r.labels = relay.LabelSink("xprinter", enum=lambda: self.PR, send=lambda n, d: (_ for _ in ()).throw(OSError("offline")), clock=lambda: clock[0])
+        cloud.call("PUT", "g/%s/lb/j2" % KEY, {"at": 1, "n": 1, "b": base64.b64encode(b"X").decode()})
+        r.pump()
+        res = cloud.db["g"][KEY]["lbr"]["j2"]
+        self.assertFalse(res["ok"])
+        self.assertIn("offline", res["e"])
+
+    def test_no_printer_leaves_job_for_admin(self):
+        import base64
+        cloud, r, sent = self._relay([("Canon", "canon")])
+        cloud.call("PUT", "g/%s/lb/j3" % KEY, {"at": 1, "n": 1, "b": base64.b64encode(b"X").decode()})
+        r.pump()
+        self.assertIn("j3", cloud.db["g"][KEY]["lb"])
+        self.assertEqual(cloud.db["g"][KEY]["hb"]["lb"], 0)
+        self.assertEqual(sent, [])
+
+
 if __name__ == "__main__":
     unittest.main()

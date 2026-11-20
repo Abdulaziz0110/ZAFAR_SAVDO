@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 27) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 28) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -82,7 +82,7 @@ Belgilar:
 | Qurilmalar: bitta telefon — bitta qator (qayta o'rnatishdan qolgan eski yozuvlar yashiriladi, bir bosishda o'chiriladi), oxirgi ko'ringani tepada | VERIFIED (5 test) |
 | Mijoz: printer ulanishi bilan bo'lim ochiladi, ruxsat so'raladi, servis yonadi va navbat chiqadi; holat servis o'chiq bo'lsa ham to'g'ri; sinov cheki servisiz ham; boshqa sinfdagi printerlar ham topiladi | VERIFIED (kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
 | Veb-agent: "Do'kon kodi" (IMSHOP1) ham qabul qilinadi, kod atrofidagi matn e'tiborsiz | VERIFIED (test) |
-| Agent yorliq chop etishi (lb navbati) — hali faqat Admin telefoni orqali | NOT-IMPLEMENTED (kompyuterga ko'chirilmagan) |
+| Agent yorliq chop etishi (lb navbati) — pc 28 dan kompyuter o'zi chop etadi (Admin telefoni shart emas) | VERIFIED (test) / printerda IMPLEMENTED-UNVERIFIED |
 
 ## 5.3 — 2-qism: keraksizlar olib tashlandi, bir xil ishlar bitta joyda
 | Narsa | Holat |
@@ -591,3 +591,11 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada yangi mijoz: to'lovda "Mijozni tanlash" -> ismni yozish -> "+ Yangi mijoz" -> telefon (ixtiyoriy) -> 1C'ga yoziladi (Контрагенты, "Клиенты" guruhi) va darhol tanlanadi; bor nom qayta qo'shilmaydi | VERIFIED (test + brauzer) / 1C'da IMPLEMENTED-UNVERIFIED |
 | Android lint: View.tooltipText (API 26) -> TooltipCompat | VERIFIED (kompilyatsiya; lint CI'da) |
 
+
+## pc 28 + ilova 5.3.4 (versionCode 54) (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| Agent yorlig'i (TSPL) kompyuterdagi Xprinter'ga to'g'ridan-to'g'ri: kompyuter ko'prigi `lb` navbatini oladi (avval o'chiradi, keyin chop etadi — ikki marta chiqmaydi), natijani `lbr` ga yozadi | VERIFIED (test_relay) / printerda IMPLEMENTED-UNVERIFIED |
+| Printer tanlash: Admin ilovasidagi ulashish nomi (`lq`, standart "xprinter") -> printer nomi -> Xprinter/label nomli birinchi printer | VERIFIED (test) |
+| Kompyuter holatida `lb:1` — Admin ilovasi (5.3.4) yorliqni o'zi chiqarmaydi; printer topilmasa yoki eski kompyuter dasturi bo'lsa Admin avvalgidek chiqaradi | VERIFIED (V53Test) |
+| Eski Admin ilovasi (5.3.3) bilan bir vaqtda ishlasa juda kam holda bitta yorliq ikki marta chiqishi mumkin — ilovani 5.3.4 ga yangilang | IMPLEMENTED-UNVERIFIED |

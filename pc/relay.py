@@ -125,6 +125,96 @@ def parse_payment(payload):
     return store, cash, d(8), d(9), (f[6] if len(f) > 6 else "")
 
 
+# ---------------------------------------------------------------- yorliq printeri (pc 28)
+
+LABEL_WANT = "xprinter"     # Admin ilovasidagi ulashish nomi (standart)
+LABEL_HINTS = ("xprinter", "xp-", "label", "tsc", "tspl", "barcode", "\u044d\u0442\u0438\u043a\u0435\u0442")
+LABEL_RECHECK = 300
+
+
+class LabelError(Exception):
+    pass
+
+
+def pick_label_printer(printers, want=""):
+    """printers: [(nom, ulashish nomi)]. Avval Admin'dagi nom (ulashish yoki printer nomi), bo'lmasa Xprinter/label nomlisi."""
+    items = [(str(n or ""), str(sh or "")) for n, sh in printers if n]
+    w = str(want or "").strip().lower()
+    if w:
+        for n, sh in items:
+            if sh.lower() == w or n.lower() == w:
+                return n
+        for n, sh in items:
+            if w in n.lower():
+                return n
+    for hint in LABEL_HINTS:
+        for n, sh in items:
+            if hint in sh.lower() or hint in n.lower():
+                return n
+    return None
+
+
+def enum_printers():
+    import win32print  # noqa
+    flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+    return [(p.get("pPrinterName"), p.get("pShareName")) for p in win32print.EnumPrinters(flags, None, 2)]
+
+
+def raw_print(printer, data, title="IMSOFT yorliq (agent)"):
+    """Tayyor TSPL baytlarini printerga o'zgartirmasdan (RAW)."""
+    import win32print  # noqa
+    h = win32print.OpenPrinter(printer)
+    try:
+        win32print.StartDocPrinter(h, 1, (title, None, "RAW"))
+        try:
+            win32print.StartPagePrinter(h)
+            win32print.WritePrinter(h, data)
+            win32print.EndPagePrinter(h)
+        finally:
+            win32print.EndDocPrinter(h)
+    finally:
+        win32print.ClosePrinter(h)
+
+
+class LabelSink:
+    """Agent yorliqlari shu kompyuterdagi printerga (avval Admin telefoni LPR orqali yuborardi)."""
+
+    def __init__(self, want=LABEL_WANT, enum=enum_printers, send=raw_print, clock=time.time):
+        self.want = want or LABEL_WANT
+        self.enum = enum
+        self.send = send
+        self.clock = clock
+        self._at = None
+        self._name = None
+
+    def printer(self):
+        if self._at is None or self.clock() - self._at > LABEL_RECHECK:
+            try:
+                self._name = pick_label_printer(self.enum(), self.want)
+            except Exception as e:  # noqa: BLE001
+                log.debug("printerlar ro'yxati: %s", e)
+                self._name = None
+            self._at = self.clock()
+        return self._name
+
+    def set_want(self, want):
+        want = want or LABEL_WANT
+        if want != self.want:
+            self.want = want
+            self._at = None
+
+    def print(self, data):
+        name = self.printer()
+        if not name:
+            raise LabelError("no_printer")
+        try:
+            self.send(name, data)
+        except Exception as e:  # noqa: BLE001
+            self._at = None      # keyingi safar printer qayta qidiriladi
+            raise LabelError("printer: %s" % str(e)[:150])
+        return name
+
+
 class Rejected(Exception):
     """Server so'rovni bajarmay rad etdi (qayta yuborish foydasiz)."""
 
@@ -295,8 +385,10 @@ class Server:
 # ---------------------------------------------------------------- ko'prik
 
 class Relay:
-    def __init__(self, cloud, key, server, codes_file=None, clock=time.time, version=""):
+    def __init__(self, cloud, key, server, codes_file=None, clock=time.time, version="", labels=None):
         self.cloud = cloud
+        self.labels = labels
+        self.printed = set()
         self.key = key
         self.server = server
         self.codes_file = codes_file
@@ -445,6 +537,33 @@ class Relay:
                 break       # server ko'rinmayapti - qolganlari keyingi safar (tartib saqlanadi)
         return done
 
+    # --- yorliqlar (agent -> kompyuter printeri) ---
+    def label_jobs(self):
+        """lb/{id}: agent yuborgan TSPL. Avval navbatdan olinadi, keyin chop etiladi - ikki marta chiqmasin."""
+        if self.labels is None or not self.labels.printer():
+            return 0
+        done = 0
+        for jid, o in sorted(self._map("lb").items()):
+            if not isinstance(o, dict) or jid in self.printed:
+                continue
+            self.cloud.call("DELETE", self.path("lb/%s" % jid))
+            self.printed.add(jid)
+            res = {"at": SERVER_TIME}
+            try:
+                data = base64.b64decode(str(o.get("b") or ""))
+                if not data:
+                    raise LabelError("empty")
+                res["q"] = self.labels.print(data)
+                res["ok"] = True
+            except Exception as e:  # noqa: BLE001
+                res["ok"] = False
+                res["e"] = str(e)[:200]
+            self._quiet("PUT", "lbr/%s" % jid, res)
+            done += 1
+        if len(self.printed) > 500:
+            self.printed = set(list(self.printed)[-200:])
+        return done
+
     # --- katalog ---
     def publish_catalog(self):
         snap = self.server.snapshot()
@@ -501,6 +620,10 @@ class Relay:
         except Exception as e:  # noqa: BLE001
             self.error = str(e)[:200]
         try:
+            done += self.label_jobs()
+        except Exception as e:  # noqa: BLE001
+            log.warning("yorliq: %s", e)
+        try:
             asked = self.cloud.call("GET", self.path("creq"), timeout=30)
             asked = asked if isinstance(asked, (int, float)) else 0
             if force_catalog or asked > self.catalog_at * 1000 or self.clock() - self.catalog_at > CATALOG_SEC:
@@ -521,7 +644,9 @@ class Relay:
         try:
             left = self.cloud.call("GET", self.path("ob"), shallow="true", timeout=30)
             q = len(left) if isinstance(left, dict) else 0
-            self.cloud.call("PUT", self.path("hb"), {"at": SERVER_TIME, "q": q, "e": self.error, "v": self.version, "h": HOST_NAME}, print="silent")
+            lb = 1 if self.labels is not None and self.labels.printer() else 0
+            self.cloud.call("PUT", self.path("hb"), {"at": SERVER_TIME, "q": q, "e": self.error, "v": self.version, "h": HOST_NAME, "lb": lb},
+                            print="silent")
         except Exception as e:  # noqa: BLE001
             log.debug("holat: %s", e)
         return done
@@ -542,7 +667,7 @@ def load_conf(here, cfg_ini=None, cloud=None, inbox=""):
         try:
             v = cloud.call("GET", "p/%s/rl" % inbox, timeout=30)
             if isinstance(v, dict) and v.get("key"):
-                fresh = {k: str(v.get(k) or "") for k in ("key", "host", "database", "user", "password")}
+                fresh = {k: str(v.get(k) or "") for k in ("key", "host", "database", "user", "password", "lq")}
                 if fresh != {k: conf.get(k, "") for k in fresh}:
                     conf.update(fresh)
                     try:
@@ -569,15 +694,17 @@ def start(cfg, cloud, here, waker_factory, ini=None, version=""):
         relay = None
         waker = None
         conf_at = 0.0
+        sink = LabelSink()
         while True:
             try:
                 if relay is None or time.time() - conf_at > 300:
                     conf = load_conf(here, ini, cloud, cfg.inbox)
                     conf_at = time.time()
-                    sql = Sql(conf)
+                    sink.set_want(conf.get("lq"))
+                    sql = Sql({k: v for k, v in conf.items() if k != "lq"})
                     if conf.get("key") and sql.ready():
                         if relay is None or relay.key != conf["key"] or relay.server.sql.conf != sql.conf:
-                            relay = Relay(cloud, conf["key"], Server(sql), os.path.join(here, "codes.json"), version=version)
+                            relay = Relay(cloud, conf["key"], Server(sql), os.path.join(here, "codes.json"), version=version, labels=sink)
                             waker = waker_factory(["g/%s/sig" % conf["key"]])
                             log.info("telefonlar ko'prigi ishga tushdi (SQL: %s / %s)", conf.get("host"), conf.get("database"))
                 if relay is None:

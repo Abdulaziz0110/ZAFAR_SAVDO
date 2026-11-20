@@ -477,7 +477,9 @@ object ServiceLocator {
                 override fun pcLink(): Pair<String, Map<String, String>>? {
                     val cfg = secure.serverConfig
                     if (!cfg.isComplete || shareStore.inboxKey.isEmpty()) return null
-                    return shareStore.inboxKey to linkedMapOf("host" to cfg.host, "database" to cfg.database, "user" to cfg.login, "password" to cfg.password)
+                    // pc 28: "lq" — yorliq printerining Windows'dagi ulashish nomi (kompyuter agent yorliqlarini shu printerga chiqaradi)
+                    return shareStore.inboxKey to linkedMapOf("host" to cfg.host, "database" to cfg.database, "user" to cfg.login, "password" to cfg.password,
+                        "lq" to labels.state.value.queue)
                 }
                 override fun lastCosts(): Map<String, Pair<Double, Double>> = onec.lastCosts()
                 override fun written(agentId: String, type: String, payload: String) = agentStats.record(agentId, type, payload)
