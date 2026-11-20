@@ -530,9 +530,48 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .pay-row .pay-btn { min-height: clamp(80px, 12vh, 130px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 6px; line-height: 1.05; }
 .pay-row .pay-btn b { font-size: inherit; font-weight: inherit; }
 .pay-row .pay-btn small { font-size: 12px; font-weight: 600; opacity: .8; letter-spacing: 0; }
-.pay-row .pay-btn.alt { background: var(--top); color: var(--top-ink); }
+.pay-row .pay-btn.alt { background: var(--pay2, var(--top)); color: var(--pay2-ink, var(--top-ink)); }
 body.ret .pay-row .pay-btn.alt { background: var(--ret-top); }
 #clientDebt { font-weight: 800; }
 /* pc 31: ro'yxatdagi tovarlar yirikroq (sozlamada o'zgartiriladi: «Ro'yxat yozuvi», «Ro'yxat qatori balandligi») */
 .row { font-size: 21px; min-height: 40px; padding: 5px 6px; }
 .thead { font-size: 15px; }
+
+/* ================= pc 32 ================= */
+/* to'lov: "TO'LOV" + ikonka (chek / cheksiz) */
+.pay-row .pay-btn .ic { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* ro'yxat va o'ng tugmalar — alohida rang */
+.left { background: var(--cart, var(--panel)); }
+.fn button { background: var(--fn, var(--acc-soft)); color: var(--fn-ink, var(--acc)); }
+.fn button.fn-main { background: var(--acc); color: var(--acc-ink); }
+/* savat ostidagi tugmalar — har biri o'z rangida */
+#upBtn { background: var(--tl-up); color: var(--tl-up-i); }
+#downBtn { background: var(--tl-down); color: var(--tl-down-i); }
+#minusBtn { background: var(--tl-minus); color: var(--tl-minus-i); }
+#plusBtn { background: var(--tl-plus); color: var(--tl-plus-i); }
+#qtyBtn { background: var(--tl-qty); color: var(--tl-qty-i); }
+#priceBtn { background: var(--tl-price); color: var(--tl-price-i); }
+#delBtn { background: var(--tl-del); color: var(--tl-del-i); }
+#clearBtn { background: var(--tl-clear); color: var(--tl-clear-i); }
+.row-tools .sq { font-weight: 800; }
+/* sozlamalar: bo'limlar */
+.set-tabs { position: sticky; top: 0; z-index: 3; display: flex; gap: 8px; padding: 0 0 10px; background: var(--bg); flex-wrap: wrap; }
+.set-tab { flex: 1 1 150px; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 18px; font-weight: 800;
+  background: var(--panel); color: var(--ink2); border: 2px solid var(--line); }
+.set-tab .ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.set-tab.on { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+.ord-open { flex: 0 0 auto; min-height: 40px; padding: 0 14px; font-size: 15px; font-weight: 800; background: var(--panel); border: 2px solid var(--line); }
+.ord-open.on { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+.dev-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.dev-row span { color: var(--ink2); }
+.dev-row b { text-align: right; overflow-wrap: anywhere; }
+/* mavzu tanlash: kichik ko'rinish (namuna) */
+.th-prev { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 64px; padding: 4px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, .4); }
+.th-prev .t { height: 10px; border-radius: 3px; }
+.th-prev .m { flex: 1; display: flex; gap: 3px; }
+.th-prev .c { flex: 3; border-radius: 4px; }
+.th-prev .r { flex: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.th-prev .r i { border-radius: 3px; }
+.th-prev .r i.p { grid-column: span 2; }
+.ord-bar { flex-wrap: wrap; }
+.ord-bar button.br { flex: 1 1 100%; }

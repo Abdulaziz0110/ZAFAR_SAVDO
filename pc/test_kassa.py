@@ -514,9 +514,14 @@ class ServiceTest(unittest.TestCase):
         tok = self.svc.login("5555")["token"]
         self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")
         self.assertTrue(self.svc.admin(tok, "1234")["grant"])
-        for bad in ("5555", "9999", "0000", ""):
+        for bad in ("5555", "9999", "0000"):
             with self.assertRaises(kc.KassaError):
                 self.svc.admin(tok, bad)
+        # pc 32: parolsiz kirish standart yoqiq — kirgan kassir nomidan; o'chirilsa parol so'raladi
+        self.assertEqual(self.svc.admin(tok, "")["name"], "Kassir")
+        kassa.save_json(os.path.join(self.svc.here, kassa.UI_FILE), {"setFree": False})
+        with self.assertRaises(kc.KassaError):
+            self.svc.admin(tok, "")
         with self.assertRaises(PermissionError):
             self.svc.admin("x", "1234")
 

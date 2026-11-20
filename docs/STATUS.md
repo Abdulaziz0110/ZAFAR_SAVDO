@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 31) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 32) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -625,3 +625,15 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Klaviatura/skaner Enter'i tugmani «bosmaydi» (tasodifiy savdo bo'lmaydi); savdo ketayotganda ikkinchi bosish e'tiborsiz | VERIFIED (kod; brauzer) |
 | Nasiyada: mijozning hozirgi qarzi va savdodan keyingi jami qarzi to'lov oynasida | VERIFIED (brauzer) |
 | Ro'yxatdagi tovarlar yirikroq (21 px); sozlamada «Ro'yxat yozuvi» va «Ro'yxat qatori balandligi» | VERIFIED (brauzer) |
+
+## pc 32 (2026-11-20) — kassa sozlamalari tartibi va mavzular
+| Funksiya | Holat |
+|---|---|
+| Sozlamalarga parolsiz kirish (standart yoqiq; «Asosiy» bo'limida o'chirilsa — admin paroli) | VERIFIED (test_kassa, brauzer) |
+| Narx turi sichqoncha bilan: ro'yxatni bosib pastga tortish, har 3 sm — keyingi narx turi, qo'yib yuborilganda o'zgaradi (barmoqlar rejimi yoqiq bo'lsa) | VERIFIED (brauzer) |
+| To'lov tugmalari: «TO'LOV» yozuvi + belgi (chek / chek siz); qorong'i mavzuda ikkinchisi ham ajralib turadi | VERIFIED (brauzer) |
+| Sozlamalar 5 bo'limga: Asosiy, Ko'rinish, Tugmalar, 1C va dastur, Dasturchi; har tugma sozlamasi yig'iq — «Sozlash» bosilganda ochiladi | VERIFIED (brauzer) |
+| Savat ostidagi tugmalar har biri o'z rangida (mavzuga moslanadi; muharrirda alohida o'zgartirish mumkin) | VERIFIED (brauzer) |
+| 10 mavzu qayta chizildi (5 yorug': Oq, Dengiz, Issiq krem, Lavanda, Anor; 5 qorong'i: Grafit, Tungi ko'k, Zumrad, Qahva, Kontrast), tanlashda kichik namuna | VERIFIED (brauzer) |
+| Ranglarda alohida: ro'yxat (savat) foni, o'ng tugmalar foni va yozuvi | VERIFIED (brauzer) |
+| Dasturchi rejimi (yoqilsa — texnik ma'lumot; qo'shimchalar keyin) | VERIFIED (brauzer) |

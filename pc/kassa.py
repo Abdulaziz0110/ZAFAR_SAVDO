@@ -879,23 +879,34 @@ class KassaService:
     def admin(self, token, pw):
         """1C ИзмененияВСенсореСпаролем / sozlamalar: admin (Сотрудники.Админ) paroli. Bazada admin belgilanmagan
         bo'lsa — istalgan ishlayotgan xodim paroli. @return ruxsat kaliti (15 daqiqa)."""
-        self.who(token)
+        who = self.who(token)
         pw = str(pw or "").strip()
         if not pw:
+            # pc 32: sozlamada «Sozlamalarga parolsiz kirish» yoqiq (standart) — kirgan kassir nomidan ruxsat
+            if self.settings_free():
+                return {"ok": True, "name": who[1], "grant": self._new_grant()}
             raise kc.KassaError("Parolni kiriting")
         h = pw_hash(pw)
         any_admin = any(s.get("admin") for s in self.staff)
         for s in self.staff:
             if s["h"] == h and not s["fired"]:
                 if s.get("admin") or not any_admin:
-                    g = secrets.token_urlsafe(16)
-                    now = self.clock()
-                    with self.lock:
-                        self.grants = {k: v for k, v in self.grants.items() if now - v < GRANT_SEC}
-                        self.grants[g] = now
-                    return {"ok": True, "name": s["name"], "grant": g}
+                    return {"ok": True, "name": s["name"], "grant": self._new_grant()}
                 raise kc.KassaError("Bu xodim admin emas")
         raise kc.KassaError("Parol noto'g'ri")
+
+    def _new_grant(self):
+        g = secrets.token_urlsafe(16)
+        now = self.clock()
+        with self.lock:
+            self.grants = {k: v for k, v in self.grants.items() if now - v < GRANT_SEC}
+            self.grants[g] = now
+        return g
+
+    def settings_free(self):
+        """pc 32: sozlamalarga parolsiz kirish (kassa_ui.json "setFree"; yozilmagan bo'lsa — yoqiq)."""
+        ui = load_json(os.path.join(self.here, UI_FILE), {})
+        return not (isinstance(ui, dict) and ui.get("setFree") is False)
 
     def granted(self, token, grant):
         self.who(token)

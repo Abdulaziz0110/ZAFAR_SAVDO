@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Kompyuter pc 32 — 2026-11-20
+**Kassa:** sozlamalarga parolsiz kirish; sozlamalar 5 bo'limga ajratildi va tugma sozlamalari yig'iq; narx turini sichqoncha bilan
+tortib o'zgartirish; to'lov tugmalarida «TO'LOV» + belgi; savat ostidagi tugmalar rangli; 10 mavzu qayta chizildi;
+ro'yxat va o'ng tugmalar rangi alohida sozlanadi; dasturchi rejimi qo'shildi.
+
 ## Kompyuter pc 31 — 2026-11-20
 **Kassa:** TO'LOV ikkiga bo'lindi — CHEKLI va CHEKSIZ: bir bosilsa darhol naqd savdo, uzoq bosilsa to'lov oynasi (chek belgisi
 tugmaga qarab). Nasiyada mijozning hozirgi va savdodan keyingi qarzi ko'rinadi. Ro'yxatdagi tovarlar yirikroq va o'lchami sozlanadi.

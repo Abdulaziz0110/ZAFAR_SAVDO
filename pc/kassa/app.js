@@ -23,7 +23,7 @@
 
   var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {}, lab: {},
     ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'oq', col: {}, notes: [50000, 100000, 200000],
-    tz: 0, bw: 0, rb: -1, rp: -1, ptSwipe: false };
+    tz: 0, bw: 0, rb: -1, rp: -1, ptSwipe: false, setFree: true, dev: false };
   // pc 29: yozuv va burchak chegaralari
   var TZ_MIN = 70, TZ_MAX = 160, RB_DEF = 12, RP_DEF = 16, R_MAX = 40, CART_FS = 21, CART_H = 40;
   var BW = [['', 'Asl'], [700, 'Qalin'], [900, 'Juda qalin']];
@@ -130,22 +130,24 @@
 
   // pc 26: mavzular (savdo turiga mos tayyor ranglar) va ranglarni sozlash
   var THEMES = [
-    { id: 'oq', n: 'Oq', s: 'kunduzgi, universal', dark: 0, v: { 'bg': '#e9eeeb', 'panel': '#ffffff', 'tile': '#f6f9f7', 'muted': '#e2e8e4', 'line': '#d3dcd7', 'ink': '#13201a', 'ink2': '#56665e', 'acc': '#0f6b45', 'acc-ink': '#ffffff', 'acc-soft': '#dcefe5', 'warn': '#b3261e', 'warn-soft': '#fbe3e1', 'ret': '#b4570b', 'ret-ink': '#ffffff', 'ret-soft': '#fdebd8', 'top': '#0f6b45', 'top-ink': '#ffffff', 'ret-top': '#b4570b', 'toast': '#1d2a24', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.7)', 'flash': '#ffe58a' } },
-    { id: 'qora', n: 'Qora', s: 'grafit, tungi', dark: 1, v: { 'bg': '#0c0d0e', 'panel': '#16181a', 'tile': '#1e2124', 'muted': '#282c30', 'line': '#363b41', 'ink': '#f4f6f7', 'ink2': '#b9c1c7', 'acc': '#4ade80', 'acc-ink': '#04140a', 'acc-soft': '#173a26', 'warn': '#ff9d94', 'warn-soft': '#3b1f1d', 'ret': '#f2a64d', 'ret-ink': '#1c1000', 'ret-soft': '#3a2a14', 'top': '#0f2a1c', 'top-ink': '#f4f6f7', 'ret-top': '#4a2c10', 'toast': '#eef1f3', 'toast-ink': '#0e1011', 'busy': 'rgba(0,0,0,.6)', 'flash': '#5f5410' } },
-    { id: 'tun', n: 'Tungi ko\'k', s: 'elektronika, texnika', dark: 1, v: { 'bg': '#080d1c', 'panel': '#111a30', 'tile': '#19243f', 'muted': '#223052', 'line': '#2f3f68', 'ink': '#eef2ff', 'ink2': '#b0bbdc', 'acc': '#6a9bff', 'acc-ink': '#04102e', 'acc-soft': '#1b2f5e', 'warn': '#ff9fa8', 'warn-soft': '#3b1e29', 'ret': '#ffb85c', 'ret-ink': '#1e1200', 'ret-soft': '#3b2d15', 'top': '#14224f', 'top-ink': '#eef2ff', 'ret-top': '#4d3112', 'toast': '#eaf0ff', 'toast-ink': '#0c1226', 'busy': 'rgba(3,6,20,.65)', 'flash': '#5a4f14' } },
-    { id: 'zumrad', n: 'Zumrad', s: 'oziq-ovqat, bozor', dark: 1, v: { 'bg': '#06130f', 'panel': '#0e2119', 'tile': '#143026', 'muted': '#1b3c30', 'line': '#265144', 'ink': '#effaf4', 'ink2': '#b0d3c1', 'acc': '#34e0a1', 'acc-ink': '#03150d', 'acc-soft': '#12432f', 'warn': '#ffa39a', 'warn-soft': '#3d2220', 'ret': '#f5b04f', 'ret-ink': '#1d1100', 'ret-soft': '#3b2c14', 'top': '#0c3a2a', 'top-ink': '#effaf4', 'ret-top': '#4a2f10', 'toast': '#eaf7f0', 'toast-ink': '#0a1511', 'busy': 'rgba(2,12,8,.65)', 'flash': '#5f5a12' } },
-    { id: 'qahva', n: 'Qahva', s: 'kafe, qandolat', dark: 1, v: { 'bg': '#140e0a', 'panel': '#211812', 'tile': '#2b201a', 'muted': '#362a22', 'line': '#4a392e', 'ink': '#f8f0e7', 'ink2': '#d0bfae', 'acc': '#f0b35a', 'acc-ink': '#1f1300', 'acc-soft': '#4a3519', 'warn': '#ff9f90', 'warn-soft': '#402220', 'ret': '#6fd6c6', 'ret-ink': '#002a25', 'ret-soft': '#123a35', 'top': '#2e1f14', 'top-ink': '#f8f0e7', 'ret-top': '#124a43', 'toast': '#f6ece0', 'toast-ink': '#1a110a', 'busy': 'rgba(10,5,2,.65)', 'flash': '#6b5518' } },
-    { id: 'binafsha', n: 'Binafsha', s: 'kosmetika, butik', dark: 1, v: { 'bg': '#110a1b', 'panel': '#1b122c', 'tile': '#251a3b', 'muted': '#30234d', 'line': '#44346b', 'ink': '#f6f0ff', 'ink2': '#c8b9e4', 'acc': '#c58bff', 'acc-ink': '#1c0a30', 'acc-soft': '#3d2764', 'warn': '#ff9eb0', 'warn-soft': '#40202c', 'ret': '#ffc266', 'ret-ink': '#221400', 'ret-soft': '#3d2e16', 'top': '#2a1850', 'top-ink': '#f6f0ff', 'ret-top': '#4d3412', 'toast': '#f1e9ff', 'toast-ink': '#160c26', 'busy': 'rgba(8,3,16,.65)', 'flash': '#5e4d18' } },
-    { id: 'qizil', n: 'Qizil', s: 'go\'sht, fast-food', dark: 1, v: { 'bg': '#150909', 'panel': '#221111', 'tile': '#2d1717', 'muted': '#391e1e', 'line': '#4e2a2a', 'ink': '#fff1ee', 'ink2': '#e0bcb6', 'acc': '#ff7a66', 'acc-ink': '#2b0700', 'acc-soft': '#4d2019', 'warn': '#ffcf6b', 'warn-soft': '#40300f', 'ret': '#7ad6ff', 'ret-ink': '#00202e', 'ret-soft': '#11323f', 'top': '#4a1313', 'top-ink': '#fff1ee', 'ret-top': '#11405a', 'toast': '#fff0ec', 'toast-ink': '#200a07', 'busy': 'rgba(15,3,3,.65)', 'flash': '#5f4a12' } },
-    { id: 'issiq', n: 'Issiq krem', s: 'novvoyxona, shirinlik', dark: 0, v: { 'bg': '#f2e8d8', 'panel': '#fffaf1', 'tile': '#f7eddd', 'muted': '#eadcc6', 'line': '#dccbb0', 'ink': '#2a1a0c', 'ink2': '#6b5640', 'acc': '#b4531a', 'acc-ink': '#ffffff', 'acc-soft': '#f7dcc4', 'warn': '#a8201a', 'warn-soft': '#fbe1dd', 'ret': '#0e6f8c', 'ret-ink': '#ffffff', 'ret-soft': '#d6eef5', 'top': '#8f3d10', 'top-ink': '#ffffff', 'ret-top': '#0e6f8c', 'toast': '#2a1a0c', 'toast-ink': '#ffffff', 'busy': 'rgba(255,250,241,.72)', 'flash': '#ffd98a' } },
-    { id: 'dengiz', n: 'Dengiz', s: 'dorixona, toza', dark: 0, v: { 'bg': '#e3eef6', 'panel': '#ffffff', 'tile': '#f0f6fb', 'muted': '#dbe7f0', 'line': '#c3d5e2', 'ink': '#0e2130', 'ink2': '#496377', 'acc': '#0b6db3', 'acc-ink': '#ffffff', 'acc-soft': '#d3e8f7', 'warn': '#b3261e', 'warn-soft': '#fbe3e1', 'ret': '#b4570b', 'ret-ink': '#ffffff', 'ret-soft': '#fdebd8', 'top': '#0a5a94', 'top-ink': '#ffffff', 'ret-top': '#b4570b', 'toast': '#14283a', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.7)', 'flash': '#ffe58a' } },
-    { id: 'kontrast', n: 'Kontrast', s: 'yorug\' joy, qora-sariq', dark: 1, v: { 'bg': '#000000', 'panel': '#0c0c0c', 'tile': '#1a1a1a', 'muted': '#262626', 'line': '#505050', 'ink': '#ffffff', 'ink2': '#dcdcdc', 'acc': '#ffd400', 'acc-ink': '#000000', 'acc-soft': '#2f2800', 'warn': '#ff8a80', 'warn-soft': '#3a1512', 'ret': '#4dd0ff', 'ret-ink': '#00131c', 'ret-soft': '#0b2f3d', 'top': '#1c1c1c', 'top-ink': '#ffffff', 'ret-top': '#0b3a4d', 'toast': '#ffffff', 'toast-ink': '#000000', 'busy': 'rgba(0,0,0,.7)', 'flash': '#5a4a00' } }
+    { id: 'oq', n: 'Oq', s: 'klassik yashil, kunduzgi', dark: 0, v: { 'bg': '#edf1ee', 'panel': '#ffffff', 'tile': '#f6f9f7', 'muted': '#e4eae6', 'line': '#d5ded9', 'ink': '#13201a', 'ink2': '#55665d', 'acc': '#0e7a4f', 'acc-ink': '#ffffff', 'acc-soft': '#ddf2e6', 'warn': '#c62828', 'warn-soft': '#fde8e7', 'ret': '#c4600c', 'ret-ink': '#ffffff', 'ret-soft': '#fdeedd', 'top': '#0b5e3d', 'top-ink': '#ffffff', 'ret-top': '#b3560a', 'toast': '#16241d', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.72)', 'flash': '#ffe68f', 'cart': '#ffffff', 'fn': '#e3f3ea', 'fn-ink': '#0b5e3d' } },
+    { id: 'dengiz', n: 'Dengiz', s: "toza ko'k, dorixona", dark: 0, v: { 'bg': '#e9f0f7', 'panel': '#ffffff', 'tile': '#f4f8fc', 'muted': '#e2eaf3', 'line': '#cfdbe8', 'ink': '#0e1e2e', 'ink2': '#50637a', 'acc': '#1667c9', 'acc-ink': '#ffffff', 'acc-soft': '#dde9fb', 'warn': '#c62828', 'warn-soft': '#fde8e7', 'ret': '#d0670f', 'ret-ink': '#ffffff', 'ret-soft': '#fdeedd', 'top': '#0f4fa3', 'top-ink': '#ffffff', 'ret-top': '#c25e0c', 'toast': '#12233a', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.72)', 'flash': '#ffe68f', 'cart': '#ffffff', 'fn': '#e4eefc', 'fn-ink': '#0f4fa3' } },
+    { id: 'issiq', n: 'Issiq krem', s: 'novvoyxona, quruq meva', dark: 0, v: { 'bg': '#f3ebdf', 'panel': '#fffaf3', 'tile': '#faf3e9', 'muted': '#eee3d2', 'line': '#e1d2bb', 'ink': '#2a1c0f', 'ink2': '#6d5843', 'acc': '#b4561c', 'acc-ink': '#ffffff', 'acc-soft': '#f7e1cc', 'warn': '#b3261e', 'warn-soft': '#fbe3df', 'ret': '#1f7a8c', 'ret-ink': '#ffffff', 'ret-soft': '#d9eff3', 'top': '#7c3a12', 'top-ink': '#fff7ee', 'ret-top': '#17606e', 'toast': '#2a1c0f', 'toast-ink': '#ffffff', 'busy': 'rgba(255,250,243,.75)', 'flash': '#ffd98a', 'cart': '#fffaf3', 'fn': '#f6e6d4', 'fn-ink': '#7c3a12' } },
+    { id: 'binafsha', n: 'Lavanda', s: 'yumshoq binafsha, butik', dark: 0, v: { 'bg': '#efecf7', 'panel': '#ffffff', 'tile': '#f7f5fc', 'muted': '#e8e4f3', 'line': '#d8d2ea', 'ink': '#1d1730', 'ink2': '#5f5878', 'acc': '#6d3fc8', 'acc-ink': '#ffffff', 'acc-soft': '#ebe2fb', 'warn': '#c2185b', 'warn-soft': '#fce4ee', 'ret': '#d0670f', 'ret-ink': '#ffffff', 'ret-soft': '#fdeedd', 'top': '#4c2a99', 'top-ink': '#ffffff', 'ret-top': '#b3560a', 'toast': '#1d1730', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.72)', 'flash': '#ffe68f', 'cart': '#ffffff', 'fn': '#ece5fa', 'fn-ink': '#4c2a99' } },
+    { id: 'qizil', n: 'Anor', s: "oq va anor qizil, go'sht, fast-food", dark: 0, v: { 'bg': '#f6eeee', 'panel': '#ffffff', 'tile': '#fbf6f6', 'muted': '#f0e5e5', 'line': '#e5d3d3', 'ink': '#2a1215', 'ink2': '#6f5459', 'acc': '#c0303f', 'acc-ink': '#ffffff', 'acc-soft': '#fbe1e4', 'warn': '#a3142a', 'warn-soft': '#fbdfe3', 'ret': '#1d6fb8', 'ret-ink': '#ffffff', 'ret-soft': '#dcebf9', 'top': '#8f1d2c', 'top-ink': '#ffffff', 'ret-top': '#165a96', 'toast': '#2a1215', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.72)', 'flash': '#ffe08a', 'cart': '#ffffff', 'fn': '#f9e5e7', 'fn-ink': '#8f1d2c' } },
+    { id: 'qora', n: 'Grafit', s: 'qora va yashil, tungi', dark: 1, v: { 'bg': '#0f1113', 'panel': '#181b1e', 'tile': '#202428', 'muted': '#2a2f34', 'line': '#3a4046', 'ink': '#f2f5f7', 'ink2': '#a9b3bb', 'acc': '#3ddc84', 'acc-ink': '#04140b', 'acc-soft': '#163a26', 'warn': '#ff8a80', 'warn-soft': '#3d1f1d', 'ret': '#ffb74d', 'ret-ink': '#201200', 'ret-soft': '#3b2c15', 'top': '#121518', 'top-ink': '#f2f5f7', 'ret-top': '#4a3010', 'toast': '#eef2f5', 'toast-ink': '#0f1113', 'busy': 'rgba(0,0,0,.6)', 'flash': '#4f5a17', 'cart': '#16191c', 'fn': '#1f2a24', 'fn-ink': '#7cf0ae' } },
+    { id: 'tun', n: "Tungi ko'k", s: 'elektronika, texnika', dark: 1, v: { 'bg': '#0a1020', 'panel': '#121a2e', 'tile': '#18223a', 'muted': '#213050', 'line': '#2d3e63', 'ink': '#edf2ff', 'ink2': '#a9b6d6', 'acc': '#5b9cff', 'acc-ink': '#03112b', 'acc-soft': '#1a2f5a', 'warn': '#ff8f9a', 'warn-soft': '#3b1d28', 'ret': '#ffb85c', 'ret-ink': '#1e1200', 'ret-soft': '#3b2d15', 'top': '#0e1630', 'top-ink': '#edf2ff', 'ret-top': '#4d3112', 'toast': '#e8eeff', 'toast-ink': '#0a1020', 'busy': 'rgba(3,6,20,.65)', 'flash': '#4d4716', 'cart': '#101828', 'fn': '#18284a', 'fn-ink': '#9cc3ff' } },
+    { id: 'zumrad', n: 'Zumrad', s: "to'q yashil, bozor", dark: 1, v: { 'bg': '#06110f', 'panel': '#0d1d19', 'tile': '#122823', 'muted': '#18332d', 'line': '#22463e', 'ink': '#ecfbf6', 'ink2': '#9fcabd', 'acc': '#2fd6a3', 'acc-ink': '#03150f', 'acc-soft': '#0f3e31', 'warn': '#ff9c91', 'warn-soft': '#3d2220', 'ret': '#f5b04f', 'ret-ink': '#1d1100', 'ret-soft': '#3b2c14', 'top': '#0a2a22', 'top-ink': '#ecfbf6', 'ret-top': '#4a2f10', 'toast': '#e6f7f1', 'toast-ink': '#06110f', 'busy': 'rgba(2,12,8,.65)', 'flash': '#4c5512', 'cart': '#0b1916', 'fn': '#123a30', 'fn-ink': '#7ff0cc' } },
+    { id: 'qahva', n: 'Qahva', s: 'kafe, qandolat', dark: 1, v: { 'bg': '#15100c', 'panel': '#1f1712', 'tile': '#291f19', 'muted': '#342821', 'line': '#47372d', 'ink': '#f7eee4', 'ink2': '#cbb8a5', 'acc': '#e8a952', 'acc-ink': '#1f1300', 'acc-soft': '#45321a', 'warn': '#ff9f90', 'warn-soft': '#402220', 'ret': '#6fd1c2', 'ret-ink': '#002a25', 'ret-soft': '#123a35', 'top': '#2a1d14', 'top-ink': '#f7eee4', 'ret-top': '#124a43', 'toast': '#f5ebdf', 'toast-ink': '#15100c', 'busy': 'rgba(10,5,2,.65)', 'flash': '#5e4b17', 'cart': '#1c1510', 'fn': '#33261a', 'fn-ink': '#f2c27e' } },
+    { id: 'kontrast', n: 'Kontrast', s: "yorug' joy, qora-sariq", dark: 1, v: { 'bg': '#000000', 'panel': '#0b0b0b', 'tile': '#171717', 'muted': '#242424', 'line': '#555555', 'ink': '#ffffff', 'ink2': '#e0e0e0', 'acc': '#ffd400', 'acc-ink': '#000000', 'acc-soft': '#2e2700', 'warn': '#ff8a80', 'warn-soft': '#3a1512', 'ret': '#4dd0ff', 'ret-ink': '#00131c', 'ret-soft': '#0b2f3d', 'top': '#141414', 'top-ink': '#ffd400', 'ret-top': '#0b3a4d', 'toast': '#ffffff', 'toast-ink': '#000000', 'busy': 'rgba(0,0,0,.7)', 'flash': '#5a4a00', 'cart': '#0b0b0b', 'fn': '#1f1f1f', 'fn-ink': '#ffd400' } }
   ];
+
   var THEME_BY_ID = {};
   THEMES.forEach(function (t) { THEME_BY_ID[t.id] = t; });
   // Sozlanadigan ranglar: [o'zgaruvchi, nomi]
   var COLN = [
-    ['bg', 'Fon'], ['panel', "Panel (savat va o'ng panel foni)"], ['tile', 'Katak va maydonlar foni'], ['muted', 'Oddiy tugmalar'], ['line', 'Chiziqlar'],
+    ['bg', 'Fon'], ['cart', "Ro'yxat (savat) foni"], ['fn', "O'ng tugmalar foni"], ['fn-ink', "O'ng tugmalar yozuvi va ikonkasi"],
+    ['panel', "Panel (o'ng tomon va oynalar foni)"], ['tile', 'Katak va maydonlar foni'], ['muted', 'Oddiy tugmalar'], ['line', 'Chiziqlar'],
     ['ink', 'Asosiy yozuv'], ['ink2', 'Ikkinchi darajali yozuv'],
     ['acc', 'Asosiy rang (ikonka, tugma, yozuv)'], ['acc-soft', 'Asosiy rangning yumshoq foni (pastdagi tugmalar)'], ['acc-ink', 'Asosiy rang ustidagi yozuv'],
     ['top', 'Yuqori panel'], ['top-ink', 'Yuqori panel yozuvi'],
@@ -153,6 +155,9 @@
     ['warn', 'Qarz va xato rangi'], ['warn-soft', 'Qarz va xatoning yumshoq foni'], ['toast', 'Xabar oynasi'], ['toast-ink', 'Xabar yozuvi']
   ];
   var COLK = COLN.map(function (c) { return c[0]; });
+  // pc 32: savat ostidagi tugmalar ranglari (asosiy tus) — mavzu foniga aralashtiriladi
+  var TOOL_HUE = [['up', '#3f51b5'], ['down', '#3f51b5'], ['minus', '#ef8f00'], ['plus', '#2e8b3e'], ['qty', '#00897b'],
+    ['price', '#1e74d6'], ['del', '#d32f2f'], ['clear', '#8e44ad']];
   function hex2rgb(h) { h = String(h).replace('#', ''); return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0]; }
   function rgb2hex(r, g, b) {
     return '#' + [r, g, b].map(function (x) { x = Math.max(0, Math.min(255, Math.round(x))); return (x < 16 ? '0' : '') + x.toString(16); }).join('');
@@ -191,6 +196,18 @@
     var t = themeOf(id || u.theme), v = {}, c = ((u && u.col) || {})[t.id] || {};
     Object.keys(t.v).forEach(function (k) { v[k] = t.v[k]; });
     Object.keys(c).forEach(function (k) { if (COLK.indexOf(k) >= 0 && /^#[0-9a-f]{6}$/i.test(c[k])) v[k] = c[k]; });
+    // pc 32: ro'yxat va o'ng tugmalar alohida rangda; mavzuda bo'lmasa — umumiy ranglardan
+    if (!c.cart && (!t.v.cart || c.panel)) v.cart = v.panel;
+    if (!c.fn && (!t.v.fn || c['acc-soft'])) v.fn = v['acc-soft'];
+    if (!c['fn-ink'] && (!t.v['fn-ink'] || c.acc)) v['fn-ink'] = v.acc;
+    // ikkinchi TO'LOV (cheksiz): yorug' mavzuda yuqori qator rangi, qorong'ida asosiy rangning to'qroq tusi
+    v.pay2 = t.dark ? mixHex(v.panel, v.acc, 0.38) : v.top;
+    v['pay2-ink'] = t.dark ? v.ink : v['top-ink'];
+    // savat ostidagi tugmalar: har biri o'z rangida (mavzuga moslanadi)
+    TOOL_HUE.forEach(function (x) {
+      v['tl-' + x[0]] = mixHex(v.panel, x[1], t.dark ? 0.3 : 0.15);
+      v['tl-' + x[0] + '-i'] = t.dark ? mixHex(x[1], '#ffffff', 0.45) : mixHex(x[1], '#000000', 0.12);
+    });
     return v;
   }
   function applyTheme(u) {
@@ -236,6 +253,8 @@
     box: '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>',
     home: '<path d="M3 11 12 3l9 8M5 10v10h14V10"/>',
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+    dev: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+    nochek: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/><path d="M3 3l18 18"/>',
     phone: '<path d="M6 3h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
   };
   function icon(id) {
@@ -321,6 +340,8 @@
     o.bw = o.bw === 700 || o.bw === 900 ? o.bw : 0;
     ['rb', 'rp'].forEach(function (k) { var v = parseInt(o[k], 10); o[k] = v >= 0 && v <= R_MAX ? v : -1; });   // -1 — asl
     o.ptSwipe = o.ptSwipe === true;
+    o.setFree = o.setFree !== false;
+    o.dev = o.dev === true;
     Object.keys(o.el).forEach(function (k) {
       var e = o.el[k];
       if (!e || typeof e !== 'object') { delete o.el[k]; return; }
@@ -479,6 +500,35 @@
     }
     cart.addEventListener('touchend', end);
     cart.addEventListener('touchcancel', end);
+    // pc 32: sichqoncha bilan (kompyuterda): ro'yxatni bosib pastga torting — har 3 sm bitta narx turi, qo'yib yuborilsa o'zgaradi
+    var mg = null, dragged = false;
+    cart.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || !S.ui.ptSwipe || S.edit || !S.wins.length) return;
+      mg = { y0: e.clientY, x0: e.clientX, n: 0 };
+      dragged = false;
+    });
+    cart.addEventListener('pointermove', function (e) {
+      if (!mg || e.pointerType !== 'mouse') return;
+      var dy = e.clientY - mg.y0, dx = Math.abs(e.clientX - mg.x0);
+      if (dy < 12 || dx > dy) { mg.n = 0; ptPullShow(0); return; }
+      dragged = true;
+      mg.n = Math.min(L.PRICE_TYPES.length, Math.floor(dy / PT_PULL));
+      if (mg.n < 1) ptPullShow(1, dy / PT_PULL);
+      else ptPullShow(mg.n, 1);
+      if (e.cancelable) e.preventDefault();
+    });
+    function mouseEnd() {
+      if (!mg) return;
+      var n = mg.n;
+      mg = null;
+      ptPullShow(0);
+      if (n >= 1) { var pt = L.PRICE_TYPES[n - 1]; setPtype(pt); toast(ptypeLabel(pt), false, 1500); }
+    }
+    cart.addEventListener('pointerup', mouseEnd);
+    cart.addEventListener('pointerleave', function () { if (mg) { mg = null; ptPullShow(0); } });
+    cart.addEventListener('click', function (e) {          // tortilgandan keyin qator tanlanmasin
+      if (dragged) { dragged = false; e.stopPropagation(); e.preventDefault(); }
+    }, true);
   }
   function choosePtype() {
     var shown = S.ui.ptypeShow;
@@ -685,6 +735,7 @@
       S.pcQ = j.q || 0; S.pcQa = j.qa || 0;
       if ((j.qe || 0) !== (S.pcQe || 0)) { S.pcQe = j.qe || 0; renderFn(); }
       S.pcv = j.v || '';
+      S.pcErr = j.err || ''; S.pcData = j.data || '';
       showUpdating(j.up || '');
       if (!!j.ps !== !!S.ps) { S.ps = !!j.ps; renderFn(); }
       if (j.pe && j.pe !== S.pe) { if (S.pe !== undefined) toast("1C chekni chiqarmadi: " + j.pe, true, 8000); S.pe = j.pe; }
@@ -828,8 +879,8 @@
     var ret = W().mode === 'return';
     document.body.classList.toggle('ret', ret);
     $('modeBar').classList.toggle('hidden', !ret);
-    $('payChkT').textContent = ret ? 'QAYTARISH · CHEK' : 'CHEKLI';
-    $('payNoT').textContent = ret ? 'QAYTARISH' : 'CHEKSIZ';
+    $('payChkT').textContent = ret ? 'QAYTARISH' : "TO'LOV";
+    $('payNoT').textContent = ret ? 'QAYTARISH' : "TO'LOV";
     $('tDueLabel').textContent = ret ? 'Qaytariladi' : "To'lanadi";
     renderFn();
   }
@@ -1521,17 +1572,29 @@
     }).catch(function (e) { if (e.message !== 'login') toast('Sozlama saqlanmadi: ' + e.message, true); });
   }
   function openSettings() {
-    adminPw('Kassa sozlamalari', function () {
-      $('setView').classList.remove('hidden'); renderSettings();
-      // pc 29: yangi panel tavsiyasi sozlamalar ochilganda "ko'rildi" bo'ladi — qizil nuqta qolib ketmaydi
-      if (S.ps) panelApi('dismiss').then(function () { S.ps = false; renderFn(); }).catch(function () { /* keyingi safar */ });
-    });
+    // pc 32: «Sozlamalarga parolsiz kirish» yoqiq bo'lsa (standart) — parol so'ralmaydi
+    if (S.ui.setFree !== false) {
+      api('POST', '/api/admin', { token: S.token, pw: '' }).then(function (j) {
+        if (!j.ok) throw new Error(j.e || "Ruxsat yo'q");
+        S.grant = j.grant || ''; S.grantName = j.name || S.name;
+        settingsOpened();
+      }).catch(function (e) { if (e.message !== 'login') adminPw('Kassa sozlamalari', settingsOpened); });
+      return;
+    }
+    adminPw('Kassa sozlamalari', settingsOpened);
   }
+  function settingsOpened() {
+    $('setView').classList.remove('hidden'); renderSettings();
+    // pc 29: yangi panel tavsiyasi sozlamalar ochilganda "ko'rildi" bo'ladi — qizil nuqta qolib ketmaydi
+    if (S.ps) panelApi('dismiss').then(function () { S.ps = false; renderFn(); }).catch(function () { /* keyingi safar */ });
+  }
+  var SET_TABS = [['asosiy', 'Asosiy', 'home'], ['korinish', "Ko'rinish", 'star'], ['tugma', 'Tugmalar', 'panel'],
+    ['dastur', '1C va dastur', 'refresh'], ['dev', 'Dasturchi', 'dev']];
   function card(title, text) {
     var c = el('div', 'set-card');
     c.appendChild(el('h3', '', title));
     if (text) c.appendChild(el('p', '', text));
-    $('setBody').firstChild.appendChild(c);
+    $('setBody').querySelector('.set-cols').appendChild(c);
     return c;
   }
   var ICON_PICK = ['panel', 'search', 'price', 'code', 'qty', 'disc', 'ret', 'check', 'debt', 'last', 'sales', 'report', 'settings',
@@ -1633,6 +1696,7 @@
     else if (k === 'ret') { c['ret-ink'] = inkFor(hex); c['ret-soft'] = mixHex(panel, hex, 0.22); }
     else if (k === 'warn') c['warn-soft'] = mixHex(panel, hex, 0.2);
     else if (k === 'toast') c['toast-ink'] = inkFor(hex);
+    else if (k === 'fn') c['fn-ink'] = lumOf(hex) > 0.45 ? mixHex(c.acc || base.acc, '#000000', 0.25) : mixHex(c.acc || base.acc, '#ffffff', 0.45);
   }
   /** Qatorni barmoq yoki sichqoncha bilan sudrab joyini almashtirish (tutqich: .ord-h). onDrop(from, to). */
   function dragRows(g, onDrop) {
@@ -1722,6 +1786,12 @@
         top.appendChild(tg);
       }
       r.appendChild(top);
+      // pc 32: tugma sozlamalari yig'iq — «Sozlash» bosilgandagina ochiladi
+      var rk = o.key(t), opened = S.openRow === rk;
+      var ob = el('button', 'ord-open' + (opened ? ' on' : ''), opened ? 'Yopish' : 'Sozlash');
+      ob.addEventListener('click', function () { S.openRow = opened ? '' : rk; renderSettings(); });
+      top.appendChild(ob);
+      if (!opened) { g.appendChild(r); return; }
       var bar = el('div', 'ord-bar');
       [['▲', -1], ['▼', 1]].forEach(function (m) {
         btn(bar, m[0], 'ord-mv', function () {
@@ -1802,6 +1872,19 @@
     $('setWho').textContent = 'Admin: ' + S.grantName;
     var keepScroll = $('setBody').scrollTop;
     $('setBody').textContent = '';
+    // pc 32: sozlamalar bo'limlarga ajratilgan — bir vaqtda bitta bo'lim
+    var tab = S.setTab || 'asosiy';
+    var tabs = el('div', 'set-tabs');
+    SET_TABS.forEach(function (x) {
+      var tb = btn(tabs, x[1], 'set-tab' + (tab === x[0] ? ' on' : ''), function () {
+        if (S.setTab === x[0]) return;
+        S.setTab = x[0]; S.openRow = '';
+        renderSettings();
+        $('setBody').scrollTop = 0;
+      });
+      tb.insertBefore(icon(x[2]), tb.firstChild);
+    });
+    $('setBody').appendChild(tabs);
     $('setBody').appendChild(el('div', 'set-cols'));
     if (S.pcQe) {                                           // pc 29: qizil nuqta sababi — 1C'ga yozilmagan sotuvlar
       var cq = card("1C'ga yozilmagan sotuvlar: " + S.pcQe, "Sozlamalar tugmasidagi qizil nuqta shular uchun. Har birini «Qayta» " +
@@ -1809,6 +1892,7 @@
       cq.classList.add('set-alert');
       btn(cq, "Navbatni ko'rish", 'big danger', showQueue);
     }
+    if (tab === 'asosiy') {
     var c1 = card('Savdo oynalari soni', 'Bir vaqtda nechta xaridorga savat ochiladi');
     var seg = el('div', 'seg2'); c1.appendChild(seg);
     [1, 2, 3, 4].forEach(function (n) {
@@ -1818,7 +1902,8 @@
     [['autoprint', "To'lovdan keyin chek chiqarish"], ['sound', 'Xatoda ovozli signal'], ['stock', "Ro'yxatda har tovarning qoldig'ini ko'rsatish"],
       ['ptypeShow', "Narx turini yuqorida ochiq ko'rsatish (o'chiq bo'lsa: raqam maydonini 1 soniya bosib turing)"],
       ['chk1c', "Chekni 1C'ning o'zi chiqaradi (kompyuterdagi chek printeri, bazadagi chek)"],
-      ['hideLock', "«Blok» tugmasini yashirish"]]
+      ['hideLock', "«Blok» tugmasini yashirish"],
+      ['setFree', "Sozlamalarga parolsiz kirish (o'chirilsa — admin paroli so'raladi)"]]
       .forEach(function (x) {
         var b = el('button', 'tg' + (u[x[0]] ? ' on' : ''));
         b.appendChild(el('span', '', x[1])); b.appendChild(el('i', '', u[x[0]] ? 'HA' : "YO'Q"));
@@ -1838,30 +1923,62 @@
       openKb('text', 'Chek pastidagi matn', function (t) { u.footer = t.slice(0, 60); saveUi(u, renderSettings); });
       S.kb.text = u.footer || ''; renderKb();
     });
-    var cv = card("Ko'rinish va dastur", 'Kompyuter dasturi: versiya ' + (S.pcv || '?') +
-      ". Telefondan «hozir yangilash» bosilganda kassada «Dastur yangilanmoqda» yozuvi chiqadi va kassa o'zi qayta ochiladi.");
-    btn(cv, 'Yangilanishni hozir tekshirish', 'big muted', function () {
-      api('POST', '/api/update', { token: S.token, grant: S.grant }, 20000).then(function (j) {
-        toast(j.ok ? "Tekshirilmoqda — yangisi bo'lsa kassa o'zi yangilanadi" : (j.e || 'Xato'), !j.ok);
-      }).catch(function (e) { toast(e.message, true); });
-    });
-    var cp = card('Panel', (S.data && S.data.pnls === 'kassa' ? 'Hozir: tasdiqlangan tavsiya.' : "Hozir: 1C'dagi panel.") +
-      " Har hafta eng ko'p sotilgan tovarlardan tavsiya tayyorlanadi: tarozi tovarlari (pistalar, bodomlar, keshu… ketma-ket), " +
-      'keyin shtrix kodlilar, keyin boshqalar. Siz tasdiqlaysiz.');
-    btn(cp, "Tavsiyani ko'rish" + (S.ps ? ' (yangi)' : ''), 'big primary', function () { openSuggest(false); });
-    btn(cp, 'Yangidan hisoblash', 'big muted', function () { openSuggest(true); });
-    if (S.data && S.data.pnls === 'kassa') btn(cp, "1C'dagi panelga qaytish", 'big muted', function () {
-      ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
-        onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
-    });
     // pc 29: narx turini almashtirish usuli
     var cpt = card('Narx turini almashtirish', u.ptSwipe
       ? "Ro'yxat (savat) ustiga barmoqlarni qo'yib 3 sm pastga suring: 1 barmoq — Narx 1, 2 barmoq — Narx 2, 3 — Narx 3, 4 — Narx 4. " +
-        "Ro'yxat uzun bo'lsa, 1 barmoq bilan avval eng tepaga chiqing. Hozirgi narx turi raqam maydoni burchagida turadi."
+        "Ro'yxat uzun bo'lsa, 1 barmoq bilan avval eng tepaga chiqing. Sichqoncha bilan (kompyuterda): ro'yxatni bosib pastga " +
+        "torting — har 3 sm bitta narx turi (1 → 2 → 3 → 4), qo'yib yuborsangiz o'zgaradi. Hozirgi narx turi raqam maydoni burchagida turadi."
       : "Yuqoridagi «Narx turi» tugmasi bilan.");
     var pseg = el('div', 'seg2'); cpt.appendChild(pseg);
     btn(pseg, 'Tugma bilan', u.ptSwipe ? '' : 'on', function () { u.ptSwipe = false; u.ptypeShow = true; saveUi(u, renderSettings); });
     btn(pseg, 'Barmoqlar bilan', u.ptSwipe ? 'on' : '', function () { u.ptSwipe = true; saveUi(u, renderSettings); });
+    }
+    if (tab === 'korinish') {
+    var ct = card('Mavzu (rejim)', "Savdo turingizga mos tayyor ranglar. Tanlagach, ranglarni pastda alohida sozlash mumkin.");
+    ct.classList.add('set-span');
+    var tgr = el('div', 'th-grid');
+    ct.appendChild(tgr);
+    THEMES.forEach(function (t) {
+      var tb = el('button', 'th-btn' + (u.theme === t.id ? ' on' : ''));
+      // pc 32: mavzuning kichik namunasi — yuqori qator, ro'yxat, tugmalar va TO'LOV
+      var tv = themeVars(u, t.id), pv = el('div', 'th-prev');
+      pv.style.background = tv.bg;
+      var pt = el('i', 't'); pt.style.background = tv.top; pv.appendChild(pt);
+      var pm = el('div', 'm'), pc = el('i', 'c'), pr = el('div', 'r');
+      pc.style.background = tv.cart;
+      pr.style.background = tv.panel;
+      [0, 1, 2, 3].forEach(function () { var q = el('i'); q.style.background = tv.fn; pr.appendChild(q); });
+      var pp = el('i', 'p'); pp.style.background = tv.acc; pr.appendChild(pp);
+      pm.appendChild(pc); pm.appendChild(pr); pv.appendChild(pm);
+      tb.appendChild(pv);
+      tb.appendChild(el('b', '', t.n));
+      tb.appendChild(el('small', '', t.s));
+      tb.addEventListener('click', function () { u.theme = t.id; saveUi(u, renderSettings); });
+      tgr.appendChild(tb);
+    });
+    var thNow = themeOf(u.theme), eff = themeVars(u), mine = u.col[thNow.id] || {};
+    var cr = card('Ranglar: ' + thNow.n, "Rangni bosib o'zgartiring. Asosiy rangni o'zgartirsangiz, yumshoq fon va yozuv rangi o'zi moslanadi (keyin alohida ham sozlash mumkin). Har bir mavzu o'z ranglarini eslab qoladi.");
+    cr.classList.add('set-span');
+    var cgr = el('div', 'col-grid');
+    cr.appendChild(cgr);
+    COLN.forEach(function (c) {
+      var k = c[0], custom = !!mine[k];
+      var it = el('div', 'col-item' + (custom ? ' custom' : ''));
+      var pickIt = function () {
+        colorPick(c[1], eff[k], function (hex) { setCol(u, thNow.id, k, hex); saveUi(u, renderSettings); },
+          function () { if (u.col[thNow.id]) delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
+      };
+      var sw = el('button', 'col-sw');
+      sw.style.background = eff[k];
+      sw.setAttribute('aria-label', c[1]);
+      sw.addEventListener('click', pickIt);
+      it.appendChild(sw);
+      it.appendChild(el('span', 'col-n', c[1]));
+      it.appendChild(el('b', 'col-h', eff[k].toUpperCase()));
+      if (custom) btn(it, 'Asl', 'asl', function () { delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
+      cgr.appendChild(it);
+    });
+    btn(cr, "Shu mavzuning hamma ranglarini asl holiga qaytarish", 'big muted', function () { delete u.col[thNow.id]; saveUi(u, renderSettings); });
     // pc 29: hamma tugmalar yozuvi, qalinligi va burchaklar
     var cf = card('Yozuv va burchaklar', "Hamma tugmalarga birdek. Bitta tugmani alohida o'zgartirish — pastdagi «Tugmalar» bo'limida.");
     stepRow(cf, 'Tugmalar yozuvi', {
@@ -1896,43 +2013,24 @@
         custom: function (uu) { return uu[x[0]] >= 0; }
       }, u, null);
     });
-    var ct = card('Mavzu (rejim)', "Savdo turingizga mos tayyor ranglar. Tanlagach, ranglarni pastda alohida sozlash mumkin.");
-    ct.classList.add('set-span');
-    var tgr = el('div', 'th-grid');
-    ct.appendChild(tgr);
-    THEMES.forEach(function (t) {
-      var tb = el('button', 'th-btn' + (u.theme === t.id ? ' on' : ''));
-      var sw = el('div', 'th-sw');
-      [t.v.bg, t.v.panel, t.v.acc, t.v.ink].forEach(function (cc) { var i = el('i'); i.style.background = cc; sw.appendChild(i); });
-      tb.appendChild(sw);
-      tb.appendChild(el('b', '', t.n));
-      tb.appendChild(el('small', '', t.s));
-      tb.addEventListener('click', function () { u.theme = t.id; saveUi(u, renderSettings); });
-      tgr.appendChild(tb);
+    var cw = card("O'ng panel kengligi", "Raqamlar va tugmalar qismi. Torroq qilsangiz, ro'yxat (savat) kengayadi.");
+    stepRow(cw, 'Kenglik', {
+      label: function (uu) { return (parseInt((uu.el.right || {}).w, 10) || RIGHT_W) + ' px'; },
+      step: function (uu, _t, d) {
+        var e = uu.el.right || (uu.el.right = {});
+        e.w = Math.max(300, Math.min(700, Math.round(((parseInt(e.w, 10) || RIGHT_W) + d * 10) / 10) * 10));
+      },
+      reset: function (uu) { if (uu.el.right) delete uu.el.right.w; },
+      custom: function (uu) { return !!(uu.el.right || {}).w; }
+    }, u, null);
+    var c4 = card("Ko'rinishni o'zgartirish", "Istalgan joyning o'lchami, rangi va matn o'lchami. Hamma oynalarga birdek qo'llanadi.");
+    btn(c4, 'Sozlashni boshlash', 'big primary', function () { $('setView').classList.add('hidden'); startEdit(); });
+    btn(c4, 'Hammasini asl holiga qaytarish', 'big muted', function () {
+      ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar, nom/ikonkalar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
+        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; u.lab = {}; u.col = {}; return saveUi(u, renderSettings); } });
     });
-    var thNow = themeOf(u.theme), eff = themeVars(u), mine = u.col[thNow.id] || {};
-    var cr = card('Ranglar: ' + thNow.n, "Rangni bosib o'zgartiring. Asosiy rangni o'zgartirsangiz, yumshoq fon va yozuv rangi o'zi moslanadi (keyin alohida ham sozlash mumkin). Har bir mavzu o'z ranglarini eslab qoladi.");
-    cr.classList.add('set-span');
-    var cgr = el('div', 'col-grid');
-    cr.appendChild(cgr);
-    COLN.forEach(function (c) {
-      var k = c[0], custom = !!mine[k];
-      var it = el('div', 'col-item' + (custom ? ' custom' : ''));
-      var pickIt = function () {
-        colorPick(c[1], eff[k], function (hex) { setCol(u, thNow.id, k, hex); saveUi(u, renderSettings); },
-          function () { if (u.col[thNow.id]) delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
-      };
-      var sw = el('button', 'col-sw');
-      sw.style.background = eff[k];
-      sw.setAttribute('aria-label', c[1]);
-      sw.addEventListener('click', pickIt);
-      it.appendChild(sw);
-      it.appendChild(el('span', 'col-n', c[1]));
-      it.appendChild(el('b', 'col-h', eff[k].toUpperCase()));
-      if (custom) btn(it, 'Asl', 'asl', function () { delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
-      cgr.appendChild(it);
-    });
-    btn(cr, "Shu mavzuning hamma ranglarini asl holiga qaytarish", 'big muted', function () { delete u.col[thNow.id]; saveUi(u, renderSettings); });
+    }
+    if (tab === 'tugma') {
     ctrlCard(u, 'Tugmalar', "O'ng tomondagi tugmalar: ☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; o'lchami, nomi va ikonkasi. Sozlamalar tugmasi doim turadi.", FN, {
       ord: 'ford',
       key: function (t) { return 'fn-' + t.id; }, defMode: 'both', defName: function (t) { return t.b; }, defIcon: function (t) { return t.id; },
@@ -2013,26 +2111,22 @@
         custom: function (uu, t) { return !!(uu.tw || {})[t.id]; }
       }
     });
-    var cw = card("O'ng panel kengligi", "Raqamlar va tugmalar qismi. Torroq qilsangiz, ro'yxat (savat) kengayadi.");
-    stepRow(cw, 'Kenglik', {
-      label: function (uu) { return (parseInt((uu.el.right || {}).w, 10) || RIGHT_W) + ' px'; },
-      step: function (uu, _t, d) {
-        var e = uu.el.right || (uu.el.right = {});
-        e.w = Math.max(300, Math.min(700, Math.round(((parseInt(e.w, 10) || RIGHT_W) + d * 10) / 10) * 10));
-      },
-      reset: function (uu) { if (uu.el.right) delete uu.el.right.w; },
-      custom: function (uu) { return !!(uu.el.right || {}).w; }
-    }, u, null);
-    var c4 = card("Ko'rinishni o'zgartirish", "Istalgan joyning o'lchami, rangi va matn o'lchami. Hamma oynalarga birdek qo'llanadi.");
-    btn(c4, 'Sozlashni boshlash', 'big primary', function () { $('setView').classList.add('hidden'); startEdit(); });
-    btn(c4, 'Hammasini asl holiga qaytarish', 'big muted', function () {
-      ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar, nom/ikonkalar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
-        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; u.lab = {}; u.col = {}; return saveUi(u, renderSettings); } });
+    }
+    if (tab === 'dastur') {
+    var cp = card('Panel', (S.data && S.data.pnls === 'kassa' ? 'Hozir: tasdiqlangan tavsiya.' : "Hozir: 1C'dagi panel.") +
+      " Har hafta eng ko'p sotilgan tovarlardan tavsiya tayyorlanadi: tarozi tovarlari (pistalar, bodomlar, keshu… ketma-ket), " +
+      'keyin shtrix kodlilar, keyin boshqalar. Siz tasdiqlaysiz.');
+    btn(cp, "Tavsiyani ko'rish" + (S.ps ? ' (yangi)' : ''), 'big primary', function () { openSuggest(false); });
+    btn(cp, 'Yangidan hisoblash', 'big muted', function () { openSuggest(true); });
+    if (S.data && S.data.pnls === 'kassa') btn(cp, "1C'dagi panelga qaytish", 'big muted', function () {
+      ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
+        onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
     var c5 = card("1C navbati", "Kompyuter yoki 1C ishlamagan paytdagi sotuvlar. Ular 1C tiklanganda o'zi yoziladi.");
     btn(c5, "Navbatni ko'rish (" + (S.pcQ + S.pcQe + S.outbox.length) + ')', 'big muted', showQueue);
     btn(c5, 'Kunlik hisobot', 'big muted', showReport);
-    var c6 = card('Dastur', 'Kompyuter dasturi versiyasi: ' + (S.pcVer || '?') + ' · terminal: ' + TERM);
+    var c6 = card('Dastur', 'Kompyuter dasturi versiyasi: ' + (S.pcVer || '?') + ' · terminal: ' + TERM +
+      ". Yangilansa kassada «Dastur yangilanmoqda» yozuvi chiqadi va kassa o'zi qayta ochiladi.");
     btn(c6, "Kompyuter dasturini hozir yangilash", 'big primary', function () {
       api('POST', '/api/update', { token: S.token, grant: S.grant }, 15000).then(function (j) {
         if (!j.ok) throw new Error(j.e || 'Xato');
@@ -2049,6 +2143,29 @@
     });
     btn(c6, 'Sahifani qayta yuklash', 'big muted', function () { window.location.reload(); });
     btn(c6, 'Kassani yopish', 'big danger', closeKassa);
+    }
+    if (tab === 'dev') {
+    var cd = card('Dasturchi rejimi', "Yoqilsa, dasturchi uchun qo'shimcha ma'lumot va imkoniyatlar shu bo'limda chiqadi. " +
+      "Kassirlar uchun ish o'zgarmaydi.");
+    var db = el('button', 'tg' + (u.dev ? ' on' : ''));
+    db.appendChild(el('span', '', 'Dasturchi rejimi'));
+    db.appendChild(el('i', '', u.dev ? 'YOQIQ' : "O'CHIQ"));
+    db.addEventListener('click', function () { u.dev = !u.dev; saveUi(u, renderSettings); });
+    cd.appendChild(db);
+    if (u.dev) {
+      var ci = card("Texnik ma'lumot");
+      [['Kompyuter dasturi', S.pcVer || '?'], ["Ma'lumot versiyasi", S.pcData || '?'], ['Terminal (monoblok)', TERM],
+        ['1C navbati', S.pcQ + ' kutmoqda · ' + S.pcQe + ' xato · monoblokda ' + S.outbox.length],
+        ['Oxirgi xato', S.pcErr || '—'], ['Ekran', window.innerWidth + ' × ' + window.innerHeight + ' px'],
+        ['Mavzu', themeOf(u.theme).n + ' (' + u.theme + ')'], ['Sozlama hajmi', JSON.stringify(S.ui).length + ' bayt']]
+        .forEach(function (x) {
+          var r = el('div', 'dev-row');
+          r.appendChild(el('span', '', x[0]));
+          r.appendChild(el('b', '', String(x[1])));
+          ci.appendChild(r);
+        });
+    }
+    }
     $('setBody').scrollTop = keepScroll;                 // tugma bosilganda ro'yxat tepaga sakramasin
   }
   // ---------------- panel tavsiyasi ----------------
@@ -2482,6 +2599,8 @@
     // pc 31: CHEKLI / CHEKSIZ — bir bosish: darhol naqd savdo; uzoq bosish: to'lov oynasi (chek belgisi tugmaga qarab)
     [['payChk', true], ['payNo', false]].forEach(function (x) {
       var b = $(x[0]), t = 0, longDone = false;
+      b.appendChild(icon(x[1] ? 'sales' : 'nochek'));      // chek / chek siz belgisi
+      b.title = (x[1] ? 'Chek bilan' : 'Cheksiz') + " — bir bosish: naqd savdo; uzoq bosish: to'lov oynasi";
       function stop() { clearTimeout(t); t = 0; }
       b.addEventListener('pointerdown', function () {
         stop();
