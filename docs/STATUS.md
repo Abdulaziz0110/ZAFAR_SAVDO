@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 35) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 36) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,12 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## pc 36 — dasturchi rejimi (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| Kassa yuqori qatorida, oynalar chap tomonida yozuvsiz almashtirgich — dasturchi rejimini yoqadi/o'chiradi (admin ruxsati; parolsiz kirish yoqiq bo'lsa parol so'ramaydi), qayta ochilganda saqlanadi | VERIFIED (brauzer, demo server) |
+| Dasturchi rejimida bazada yo'q shtrix kod skanerlansa: biriktirish oynasi — avval shu kodga yaqin tovarlar (mavjud shtrix kodlar bilan umumiy boshlanishi eng uzun, so'ng son jihatdan yaqin), nom yozilsa istalgan tovar; tanlab tasdiqlansa kod kassada darhol ishlaydi va 1C'ga telefon yozuvlari navbati («bc») orqali yoziladi; boshqa tovardagi kod rad etiladi; tarozi kodlari bu oynaga tushmaydi | VERIFIED (test_kassa, brauzer: biriktirildi, qayta skanda topildi) / haqiqiy 1C'ga yozilishi IMPLEMENTED-UNVERIFIED |
 
 ## 5.3.6 (versionCode 56) + Savdo Mijoz 5.4 (versionCode 32) + iPhone (veb) agent va mijoz — 2026-11-20
 | Funksiya | Holat |

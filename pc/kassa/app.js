@@ -920,8 +920,52 @@
     var f = findCode(text);
     if (S.check) { S.check = false; renderFn(); renderDisplay(); if (f) showGoods(f.g); else toast('Topilmadi: ' + text, true); return; }
     if (f) { addGoods(f.g, f.milli, f.w); return; }
+    // pc 36: dasturchi rejimida bazada yo'q shtrix kod — tovarga biriktirish oynasi (avval shu kodga yaqinlar)
+    if (S.ui.dev && /^[0-9A-Za-z]{4,40}$/.test(text) && !L.parseScan(text, S.data.rongta).weighted) {
+      renderDisplay();
+      openLink(text);
+      return;
+    }
     toast('Topilmadi: ' + text, true);
     renderDisplay();
+  }
+  /** pc 36: noma'lum shtrix kodga eng yaqin tovarlar — mavjud shtrix kodlar bilan umumiy boshlanishi (ishlab chiqaruvchi
+   *  prefiksi) eng uzun bo'lganlari; teng bo'lsa son jihatdan yaqinrog'i. Bitta tovar bir marta. */
+  function similarGoods(bc, limit) {
+    var best = {};
+    var min = bc.length >= 8 ? 5 : 3;
+    var num = /^[0-9]{1,15}$/.test(bc) ? Number(bc) : NaN;
+    Object.keys(S.data.b).forEach(function (b) {
+      var code = S.data.b[b];
+      if (!S.byCode[code]) return;
+      var n = 0, m = Math.min(b.length, bc.length);
+      while (n < m && b.charCodeAt(n) === bc.charCodeAt(n)) n++;
+      if (n < min) return;
+      var d = b.length === bc.length && !isNaN(num) && /^[0-9]{1,15}$/.test(b) ? Math.abs(Number(b) - num) : Infinity;
+      var o = best[code];
+      if (!o || n > o.n || (n === o.n && d < o.d)) best[code] = { n: n, d: d, g: S.byCode[code] };
+    });
+    return Object.keys(best).map(function (k) { return best[k]; })
+      .sort(function (a, b) { return b.n - a.n || (a.d === b.d ? 0 : a.d < b.d ? -1 : 1); })
+      .slice(0, limit || 12).map(function (x) { return x.g; });
+  }
+  function openLink(bc) {
+    openKb('link', 'Shtrix kod ' + bc + " bazada yo'q — qaysi tovarga biriktirasiz?", null, bc);
+  }
+  function linkBarcode(bc, g) {
+    ask({
+      title: 'Shtrix kodni biriktirish', yes: 'Biriktirish',
+      text: bc + '  →  ' + g.n + " (kod " + g.c + "). Kassada darhol ishlaydi, 1C'ga ham yoziladi.",
+      onYes: function () {
+        return api('POST', '/api/barcode', { token: S.token, bc: bc, code: g.c }, 45000).then(function (j) {
+          if (!j.ok) throw new Error(j.e || 'Xato');
+          S.data.b[bc] = g.c;
+          closeKb();
+          addGoods(g, 1000, false);
+          toast('Biriktirildi: ' + g.n);
+        });
+      }
+    });
   }
 
   // ---------------- chizish ----------------
@@ -931,6 +975,8 @@
     var ptBtn = S.ui.ptypeShow && !S.ui.ptSwipe;            // pc 29: barmoqlar rejimida tugma yo'q
     $('ptypeBtn').classList.toggle('hidden', !ptBtn);
     $('lockBtn').classList.toggle('hidden', !!(S.ui.hideLock || S.ui.auto));
+    $('devSw').classList.toggle('on', !!S.ui.dev);
+    $('devSw').setAttribute('aria-checked', S.ui.dev ? 'true' : 'false');
     $('ptypeTag').textContent = ptBtn ? '' : String(L.PRICE_TYPES.indexOf(PT()) + 1);
     document.querySelector('.left').classList.toggle('pt-swipe', !!S.ui.ptSwipe);
     renderMode(); renderWins(); renderCart(); renderDisplay(); renderDot(); renderFn(); renderQueue();
@@ -1101,8 +1147,8 @@
   // ---------------- qidiruv / klaviatura ----------------
   var KB_LAT = ['1234567890', 'qwertyuiop', "asdfghjkl'", 'zxcvbnm-.'];
   var KB_CYR = ['1234567890', 'йцукенгшщзхъ', 'фывапролджэ', 'ячсмитьбюё', 'ўқғҳ'];
-  function openKb(kind, title, onText) {
-    S.kb = { kind: kind, text: '', cyr: false, onText: onText };
+  function openKb(kind, title, onText, bc) {
+    S.kb = { kind: kind, text: '', cyr: false, onText: onText, bc: bc || '' };
     $('kbTitle').textContent = title;
     $('kb').classList.toggle('hidden', kind === 'price');
     $('kbResults').classList.toggle('hidden', kind === 'text');
@@ -1181,6 +1227,15 @@
         n++;
       }
       if (!n) box.appendChild(el('div', 'grid-msg', q ? 'Mijoz topilmadi' : "Ismi yoki telefonini yozing (qarzdorlar ko'rsatilgan)"));
+      return;
+    }
+    if (k.kind === 'link') {
+      var lq = k.text.trim();
+      var lres = lq ? L.search(S.data.g, lq, PT(), S.data.rate, 60) : similarGoods(k.bc, 12);
+      box.appendChild(el('div', 'kb-sub', lq ? 'Qidiruv natijasi — tovarni bosing' :
+        lres.length ? 'Shu shtrix kodga yaqinlar (boshqasini topish uchun nomini yozing)' : "Yaqin tovar yo'q — nomini yozing"));
+      lres.forEach(function (g) { box.appendChild(tile(g)); });
+      if (lq && !lres.length) box.appendChild(el('div', 'grid-msg', 'Topilmadi'));
       return;
     }
     var recent = !k.text.trim() && k.kind === 'goods';
@@ -1649,17 +1704,30 @@
       if (then) then();
     }).catch(function (e) { if (e.message !== 'login') toast('Sozlama saqlanmadi: ' + e.message, true); });
   }
-  function openSettings() {
-    // pc 32: «Sozlamalarga parolsiz kirish» yoqiq bo'lsa (standart) — parol so'ralmaydi
+  /** Admin ruxsati: «Sozlamalarga parolsiz kirish» yoqiq bo'lsa (pc 32, standart) — parol so'ralmaydi. */
+  function withAdmin(what, fn) {
     if (S.ui.setFree !== false) {
       api('POST', '/api/admin', { token: S.token, pw: '' }).then(function (j) {
         if (!j.ok) throw new Error(j.e || "Ruxsat yo'q");
         S.grant = j.grant || ''; S.grantName = j.name || S.name;
-        settingsOpened();
-      }).catch(function (e) { if (e.message !== 'login') adminPw('Kassa sozlamalari', settingsOpened); });
+        fn();
+      }).catch(function (e) { if (e.message !== 'login') adminPw(what, fn); });
       return;
     }
-    adminPw('Kassa sozlamalari', settingsOpened);
+    adminPw(what, fn);
+  }
+  function openSettings() { withAdmin('Kassa sozlamalari', settingsOpened); }
+  /** pc 36: yuqoridagi yozuvsiz almashtirgich — dasturchi rejimi. */
+  function toggleDev() {
+    withAdmin('Dasturchi rejimi', function () {
+      var u = JSON.parse(JSON.stringify(S.ui));
+      u.dev = !u.dev;
+      saveUi(u, function () {
+        renderAll();
+        if (!hidden('setView')) renderSettings();
+        toast(u.dev ? 'Dasturchi rejimi yoqildi' : "Dasturchi rejimi o'chirildi");
+      });
+    });
   }
   function settingsOpened() {
     $('setView').classList.remove('hidden'); renderSettings();
@@ -2231,8 +2299,9 @@
     btn(c6, 'Kassani yopish', 'big danger', closeKassa);
     }
     if (tab === 'dev') {
-    var cd = card('Dasturchi rejimi', "Yoqilsa, dasturchi uchun qo'shimcha ma'lumot va imkoniyatlar shu bo'limda chiqadi. " +
-      "Kassirlar uchun ish o'zgarmaydi.");
+    var cd = card('Dasturchi rejimi', "Yuqorida, oynalar chap tomonidagi kichik almashtirgich ham shuni yoqadi/o'chiradi. Yoqiq bo'lsa: " +
+      "bazada yo'q shtrix kod skanerlansa, shu kodga yaqin tovarlar chiqadi — tanlangan tovarga kod biriktiriladi (kassada darhol, 1C'ga ham); " +
+      "pastda texnik ma'lumot.");
     var db = el('button', 'tg' + (u.dev ? ' on' : ''));
     db.appendChild(el('span', '', 'Dasturchi rejimi'));
     db.appendChild(el('i', '', u.dev ? 'YOQIQ' : "O'CHIQ"));
@@ -2753,6 +2822,7 @@
       var t = e.target.closest ? e.target.closest('.tile[data-code]') : null;
       if (!t) return;
       var code = t.getAttribute('data-code');
+      if (S.kb.kind === 'link') { linkBarcode(S.kb.bc, S.byCode[code]); return; }
       if (S.kb.kind === 'goods') {
         S.recent = [code].concat(S.recent.filter(function (x) { return x !== code; })).slice(0, 12);
         save('k_recent', S.recent);
@@ -2761,6 +2831,7 @@
       addGoods(S.byCode[code], 1000, false);
     });
     on('kbClose', closeKb);
+    on('devSw', toggleDev);
 
     on('changeBig', hideChange);
     on('payClose', closePay);

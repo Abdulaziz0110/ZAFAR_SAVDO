@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 36 — 2026-11-20
+**Dasturchi rejimi:** kassa yuqorisida oynalar chap tomonida yozuvsiz almashtirgich. Yoqiq bo'lsa, bazada yo'q shtrix kod
+skanerlanganda yaqin tovarlar chiqadi (istalganini qidirsa ham bo'ladi) — tanlangan tovarga kod biriktiriladi va 1C'ga yoziladi.
+
 ## 5.3.6 (versionCode 56) + Savdo Mijoz 5.4 (versionCode 32) + iPhone — 2026-11-20
 **iPhone Mijoz (yangi):** `<sayt>/mijoz/` — kirish, qarz, narxlar, buyurtma, hisob-kitob, internetsiz ham. Admin «Kirish ma'lumoti»
 matnida iPhone havolasi. **iPhone agent:** ilovadagi kabi ikonkalar. **Xodim:** soddaroq bosh sahifa. **Savdo Mijoz:** bosh sahifada

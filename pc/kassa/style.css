@@ -593,3 +593,11 @@ html, body { touch-action: pan-x pan-y; }
 .ask-choices.icons { grid-template-columns: repeat(8, 1fr); max-height: 62vh; }
 .ask-choices.icons button { min-height: 62px; }
 .ask-choices.icons .ic { width: 32px; height: 32px; }
+
+/* pc 36: dasturchi rejimi almashtirgichi (yozuvsiz) — oynalar chap tomonida */
+.dev-sw { flex: none; width: 54px; height: 30px; min-height: 0; padding: 0; margin: 0 6px 0 2px; border-radius: 15px;
+  background: rgba(255, 255, 255, .22); border: 2px solid rgba(255, 255, 255, .45); position: relative; cursor: pointer; }
+.dev-sw i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--top-ink);
+  opacity: .75; transition: left .15s; }
+.dev-sw.on { background: #f59e0b; border-color: #f59e0b; }
+.dev-sw.on i { left: 27px; background: #fff; opacity: 1; }

@@ -758,6 +758,7 @@ class KassaService:
         self.use_app = use_app
         self.make_bridge = bridge
         self.bridge = None
+        self.cloud = None           # pc 36: 1C yozuvlari navbati (dasturchi rejimida shtrix kod biriktirish)
         self.br_lock = threading.Lock()
         mode = load_json(os.path.join(here, MODE_FILE), {})
         self.bridge_mode = bool(bridge is not None and isinstance(mode, dict) and mode.get("bridge"))
@@ -1371,6 +1372,38 @@ class KassaService:
             return {"ok": True, "client": row}
         return self.call(go, timeout=40)
 
+    def link_barcode(self, token, bc, code):
+        """pc 36 (dasturchi rejimi): bazada yo'q shtrix kodni tovarga biriktirish. Kassada darhol ishlaydi; 1C'ga telefon
+        yozuvlari navbati (w/{inbox}, "bc") orqali yoziladi — ko'prik 1C'i bajaradi, natija telefonda «1C'ga kiritish»da."""
+        who = self.who(token)
+        bc = str(bc or "").strip()
+        code = str(code or "").strip()
+        if not re.fullmatch(r"[0-9A-Za-z]{4,40}", bc):
+            raise kc.KassaError("Shtrix kod noto'g'ri")
+        with self.lock:
+            snap = dict(self.snap or {})
+        goods = {g["c"]: g for g in snap.get("g", [])}
+        g = goods.get(code)
+        if g is None:
+            raise kc.KassaError("Tovar topilmadi")
+        b = dict(snap.get("b") or {})
+        if b.get(bc) not in (None, code):
+            other = goods.get(b[bc])
+            raise kc.KassaError("Bu shtrix kod boshqa tovarda: %s" % (other["n"] if other else b[bc]))
+        if self.cloud is None or not getattr(getattr(self.cloud, "cfg", None), "inbox", ""):
+            raise kc.KassaError("Bulut sozlanmagan — 1C'ga yozib bo'lmaydi")
+        rid = "k" + secrets.token_hex(8)
+        item = {"at": {".sv": "timestamp"}, "k": "bc", "by": ("%s (kassa)" % who[1])[:80],
+                "p": json.dumps({"c": g["n"], "cc": code, "bc": bc}, ensure_ascii=False)}
+        self.cloud.call("PUT", "w/%s/%s" % (self.cloud.cfg.inbox, rid), item, timeout=30)
+        b[bc] = code
+        snap["b"] = b
+        self._publish(snap, save=True)
+        if self.wake is not None:
+            self.wake()
+        log.info("kassa: shtrix kod %s -> %s (%s) 1C navbatiga", bc, code, g["n"])
+        return {"ok": True, "b": [bc, code], "rid": rid}
+
     def print_text(self, token, title, rows):
         """Hisobotni kompyuterdagi chek printeriga (1C orqali) chiqarish."""
         self.who(token)
@@ -1905,6 +1938,8 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/barcode":
+                    return self._json(200, service.link_barcode(body.get("token"), body.get("bc"), body.get("code")))
                 if path == "/api/client":
                     return self._json(200, service.add_client(body.get("token"), body.get("name"), body.get("tel")))
                 if path == "/api/print_text":
@@ -2010,6 +2045,7 @@ def start(cfg, here, cloud=None, onec_cls=None, app_cls=None, wake=None):
                        version=version, wake=wake, bridge=bridge)
     url = "http://%s:%d" % (lan_ip(), conf.port)
     svc.url = url
+    svc.cloud = cloud
     threading.Thread(target=svc.run, daemon=True, name="kassa-1c").start()
 
     def serve():

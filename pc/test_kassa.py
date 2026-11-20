@@ -510,6 +510,49 @@ class ServiceTest(unittest.TestCase):
         with self.assertRaises(kc.KassaError):
             self.svc.add_client(tok, " ")
 
+    def test_link_barcode(self):
+        """pc 36: dasturchi rejimi — noma'lum shtrix kod tovarga biriktiriladi (kassada darhol, 1C'ga navbat orqali)."""
+        tok = self.login()
+        self.svc.data(0)
+        snap = self.svc.snap
+        code = snap["g"][0]["c"]
+        name = snap["g"][0]["n"]
+        with self.assertRaises(kc.KassaError):
+            self.svc.link_barcode(tok, "4780000000017", code)                  # bulut yo'q
+        calls, woke = [], []
+
+        class Cfg:
+            inbox = "INBOX1"
+
+        class Cloud:
+            cfg = Cfg()
+
+            def call(s, method, path, body=None, timeout=0):
+                calls.append((method, path, body))
+
+        self.svc.cloud = Cloud()
+        self.svc.wake = lambda: woke.append(1)
+        r = self.svc.link_barcode(tok, " 4780000000017 ", code)
+        self.assertEqual(r["b"], ["4780000000017", code])
+        self.assertEqual(self.svc.snap["b"]["4780000000017"], code)
+        self.assertEqual(len(calls), 1)
+        m, path, body = calls[0]
+        self.assertEqual((m, path.split("/")[:2]), ("PUT", ["w", "INBOX1"]))
+        self.assertEqual(body["k"], "bc")
+        self.assertEqual(json.loads(body["p"]), {"c": name, "cc": code, "bc": "4780000000017"})
+        self.assertEqual(woke, [1])
+        self.svc.link_barcode(tok, "4780000000017", code)                      # o'sha tovarga qayta — ruxsat
+        other = snap["g"][1]["c"]
+        with self.assertRaises(kc.KassaError):
+            self.svc.link_barcode(tok, "4780000000017", other)                 # boshqa tovarda bor
+        for bad in ("12", "ab cd", "x" * 41):
+            with self.assertRaises(kc.KassaError):
+                self.svc.link_barcode(tok, bad, code)
+        with self.assertRaises(kc.KassaError):
+            self.svc.link_barcode(tok, "4780000000024", "yo'q")
+        with self.assertRaises(PermissionError):
+            self.svc.link_barcode("x", "4780000000024", code)
+
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]
         self.assertEqual(self.svc.admin(tok, "1234")["name"], "Zafar")
