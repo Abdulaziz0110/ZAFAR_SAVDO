@@ -41,8 +41,18 @@ class ShareStore(private val context: Context) {
         build()
     } catch (e: Exception) {
         Log.w("ShareStore", "qayta yaratilmoqda", e)
-        context.deleteSharedPreferences(FILE)
+        dropFile()
         build()
+    }
+
+    /** deleteSharedPreferences — Android 7+ (API 24); undan eskisida faylni tozalab, o'zi o'chiriladi. */
+    private fun dropFile() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            context.deleteSharedPreferences(FILE)
+        } else {
+            context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().commit()
+            java.io.File(java.io.File(context.applicationInfo.dataDir, "shared_prefs"), "$FILE.xml").delete()
+        }
     }
 
     private fun build(): SharedPreferences {
