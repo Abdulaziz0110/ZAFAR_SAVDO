@@ -187,3 +187,14 @@ Yangi (pc 25) - KASSA: TUGMA NOMI/IKONKASI, BALANDLIK, O'NG PANEL TORAYDI:
  - Ko'rinish rejimi: Ikonka+nom / faqat Nom / faqat Ikonka. "Asl" - tugmaning nomi, ikonkasi va rejimini asl holiga qaytaradi.
  - O'ng panel (raqamlar va tugmalar) 470 dan 394 px ga toraydi (taxminan 2 sm), ro'yxat shuncha kengaydi. Sozlamalar > "O'ng panel kengligi" dan o'zgartirish mumkin.
  - Uzun nomli tugmalarda yozuv sig'masa, shrift o'zi kichrayadi.
+
+Yangi (pc 26) - KASSA: 10 TA MAVZU VA RANGLARNI SOZLASH:
+ - Sozlamalar > Mavzu (rejim): Oq, Qora, Tungi ko'k, Zumrad, Qahva, Binafsha, Qizil, Issiq krem, Dengiz, Kontrast. Qora mavzularda fon to'q, yozuv va ikonkalar och rangda.
+ - Sozlamalar > Ranglar: tanlangan mavzuning 20 ta rangi (fon, panel, yozuv, asosiy rang, yuqori panel, qaytarish, qarz...). Rangni bosing > rang, to'yinganlik, yorug'lik tanlang > Tayyor.
+ - Asosiy rangni o'zgartirsangiz, yumshoq fon va yozuv rangi o'zi moslanadi. Har bir mavzu o'z ranglarini alohida eslab qoladi.
+ - Eski "Fon: OQ/QORA" tugmasi o'rniga mavzu tanlanadi (oldingi tanlov o'zi ko'chadi).
+
+Yangi (pc 26) - KASSA: 10 TA MAVZU VA RANGLARNI SOZLASH:
+ - Sozlamalar > Mavzu: Oq, Qora, Tungi ko'k, Zumrad, Qahva, Binafsha, Qizil, Issiq krem, Dengiz, Kontrast. Qorong'i mavzularda fon to'q, yozuv va ikonkalar ochroq.
+ - Sozlamalar > Ranglar: 20 ta rangni (fon, panel, tugmalar, yozuv, asosiy rang, yuqori panel, qaytarish, xato...) bosib o'zgartirish. Har bir mavzuning o'z sozlamasi saqlanadi.
+ - Asosiy rangni o'zgartirsangiz, yumshoq fon va yozuv rangi o'zi moslanadi. "Asl" - qaytaradi.

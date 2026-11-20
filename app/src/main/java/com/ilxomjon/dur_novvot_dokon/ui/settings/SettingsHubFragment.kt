@@ -135,6 +135,7 @@ object HubTiles {
         LABELS -> R.string.hub_labels to listOf(
             tile(f, R.string.ad_labels, R.string.hub_price_labels_sub, R.drawable.ic_label, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.labels.LabelsFragment() }),
             tile(f, R.string.sc_title, R.string.hub_scale_sub, R.drawable.ic_scale, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.ScaleFragment() }),
+            tile(f, R.string.tl_title, R.string.tl_sub, R.drawable.ic_print, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.labels.TextLabelFragment() }),
             tile(f, R.string.bb_title, R.string.hub_batch_sub, R.drawable.ic_barcode, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodeBatchFragment() }),
             tile(f, R.string.hub_scanner, R.string.hub_scanner_sub, R.drawable.ic_qr, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.scan.BarcodesFragment() }),
         )

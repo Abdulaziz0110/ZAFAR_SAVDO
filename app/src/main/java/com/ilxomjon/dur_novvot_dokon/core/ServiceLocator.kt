@@ -294,6 +294,7 @@ object ServiceLocator {
     val reports by lazy { ReportRepository(api, catalog) }
     val history by lazy { HistoryRepository(historyDb) }
     val parked by lazy { ParkedCartRepository(localDb, draft, catalog) }
+    val textLabels by lazy { com.ilxomjon.dur_novvot_dokon.data.labels.TextLabelStore(localDb) }
     val localReports by lazy { LocalReportRepository(historyDb) }
     // v5.3: diagnostika serverni TO'G'RIDAN tekshiradi (bulut yo'li alohida) — xato aniq ko'rinsin
     val diagnostics by lazy { DiagnosticsRepository(app, secure, directApi, network, outbox, historyDb, localDb) }

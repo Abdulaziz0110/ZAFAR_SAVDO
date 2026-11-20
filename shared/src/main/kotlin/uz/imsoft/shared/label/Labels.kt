@@ -22,6 +22,9 @@ data class LabelData(
     val copies: Int = 1,
     /** v5.2 (A7): mahsulot ma'lumoti (bio) — Arial 10, 58x40 etiketkaga 278 belgi sig'adi. */
     val bio: String = "",
+    /** v5.3.3: matnli etiketka — shrift o'lchami (pt) va Arial (Liberation Sans Regular). Asl qiymatlar eski bio yorliqni o'zgartirmaydi. */
+    val bioPt: Float = 10f,
+    val arial: Boolean = false,
 )
 
 /**

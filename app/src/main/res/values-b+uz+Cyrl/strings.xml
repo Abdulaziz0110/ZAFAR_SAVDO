@@ -2374,4 +2374,28 @@
     <string name="notif_channel_orders">Буюртмалар</string>
     <string name="ord_notif_off">Билдиришнома рухсати йўқ — янги буюртма ҳақида хабар келмайди. Босинг ва рухсат беринг.</string>
     <string name="ord_relay_off">Фон хизмати ўчиқ — илова ёпиқ бўлса хабар кечикади. Бошқарув -&gt; Кўприк дан ёқинг.</string>
+    <!-- v5.3.3: matnli etiketka -->
+    <string name="tl_title">Матнли этикетка</string>
+    <string name="tl_sub">58x40 этикетка, Arial 14: матн ёзинг, чоп этинг, тарихдан қайта чиқаринг</string>
+    <string name="tl_hint">58×40 мм, Arial 14. Матн сиғмаса, шрифт ўзи кичраяди. Чиққан ҳар бир этикетка тарихда сақланади.</string>
+    <string name="tl_text_hint">Этикетка матни</string>
+    <string name="tl_copies_hint">Нусха сони</string>
+    <string name="tl_preview">Этикетка кўриниши</string>
+    <string name="tl_print">Чоп этиш</string>
+    <string name="tl_save">Сақлаш</string>
+    <string name="tl_new">Янги этикетка</string>
+    <string name="tl_editing">Таҳрирланмоқда: #%1$d</string>
+    <string name="tl_history">Чиқарилган этикеткалар</string>
+    <string name="tl_empty">Ҳали этикетка йўқ. Матн ёзиб, «Чоп этиш» ни босинг.</string>
+    <string name="tl_item_sub">%1$s · %2$d нусха · %3$d марта чиқарилган</string>
+    <string name="tl_item_unprinted">%1$s · %2$d нусха · чоп этилмаган</string>
+    <string name="tl_act_reprint">Қайта чиқариш</string>
+    <string name="tl_act_edit">Таҳрирлаш</string>
+    <string name="tl_act_delete">Ўчириш</string>
+    <string name="tl_empty_text">Аввал этикетка матнини ёзинг</string>
+    <string name="tl_saved">Сақланди</string>
+    <string name="tl_deleted">Ўчирилди</string>
+    <string name="tl_print_failed">Чоп этилмади, этикетка сақланди: %1$s</string>
+    <string name="tl_delete_q">Бу этикетка тарихдан ўчирилсинми?</string>
+    <string name="tl_cancel">Бекор қилиш</string>
 </resources>

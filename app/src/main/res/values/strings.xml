@@ -2374,4 +2374,28 @@
     <string name="notif_channel_orders">Buyurtmalar</string>
     <string name="ord_notif_off">Bildirishnoma ruxsati yo\'q — yangi buyurtma haqida xabar kelmaydi. Bosing va ruxsat bering.</string>
     <string name="ord_relay_off">Fon xizmati o\'chiq — ilova yopiq bo\'lsa xabar kechikadi. Boshqaruv -&gt; Ko\'prik dan yoqing.</string>
+    <!-- v5.3.3: matnli etiketka -->
+    <string name="tl_title">Matnli etiketka</string>
+    <string name="tl_sub">58x40 etiketka, Arial 14: matn yozing, chop eting, tarixdan qayta chiqaring</string>
+    <string name="tl_hint">58×40 mm, Arial 14. Matn sig\'masa, shrift o\'zi kichrayadi. Chiqqan har bir etiketka tarixda saqlanadi.</string>
+    <string name="tl_text_hint">Etiketka matni</string>
+    <string name="tl_copies_hint">Nusxa soni</string>
+    <string name="tl_preview">Etiketka ko\'rinishi</string>
+    <string name="tl_print">Chop etish</string>
+    <string name="tl_save">Saqlash</string>
+    <string name="tl_new">Yangi etiketka</string>
+    <string name="tl_editing">Tahrirlanmoqda: #%1$d</string>
+    <string name="tl_history">Chiqarilgan etiketkalar</string>
+    <string name="tl_empty">Hali etiketka yo\'q. Matn yozib, «Chop etish» ni bosing.</string>
+    <string name="tl_item_sub">%1$s · %2$d nusxa · %3$d marta chiqarilgan</string>
+    <string name="tl_item_unprinted">%1$s · %2$d nusxa · chop etilmagan</string>
+    <string name="tl_act_reprint">Qayta chiqarish</string>
+    <string name="tl_act_edit">Tahrirlash</string>
+    <string name="tl_act_delete">O\'chirish</string>
+    <string name="tl_empty_text">Avval etiketka matnini yozing</string>
+    <string name="tl_saved">Saqlandi</string>
+    <string name="tl_deleted">O\'chirildi</string>
+    <string name="tl_print_failed">Chop etilmadi, etiketka saqlandi: %1$s</string>
+    <string name="tl_delete_q">Bu etiketka tarixdan o\'chirilsinmi?</string>
+    <string name="tl_cancel">Bekor qilish</string>
 </resources>

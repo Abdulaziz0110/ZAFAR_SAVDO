@@ -32,6 +32,12 @@ class LocalDb(context: Context) : SQLiteOpenHelper(context.applicationContext, N
             "CREATE TABLE IF NOT EXISTS draft_cart (id INTEGER PRIMARY KEY AUTOINCREMENT, store_id TEXT, store_name TEXT, region_id TEXT, " +
                 "mode TEXT, currency TEXT, price_type TEXT, created INTEGER, lines_json TEXT)"
         )
+        // v5.3.3 (faqat qo'shimcha jadval): matnli etiketkalar tarixi. Eski jadvallarga tegilmaydi.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS text_label (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, " +
+                "copies INTEGER NOT NULL DEFAULT 1, created INTEGER NOT NULL DEFAULT 0, printed_at INTEGER NOT NULL DEFAULT 0, " +
+                "prints INTEGER NOT NULL DEFAULT 0)"
+        )
     }
 
     private fun addColumnIfMissing(db: SQLiteDatabase, table: String, column: String, definition: String) {

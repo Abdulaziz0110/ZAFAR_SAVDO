@@ -14,6 +14,14 @@
   --ret-soft: #fdebd8;
   --tile: #f6f9f7;
   --muted: #e2e8e4;
+  --ret-ink: #ffffff;
+  --top: #0f6b45;
+  --top-ink: #ffffff;
+  --ret-top: #b4570b;
+  --toast: #1d2a24;
+  --toast-ink: #ffffff;
+  --busy: rgba(255, 255, 255, .7);
+  --flash: #ffe58a;
   --r: 12px;
   --gap: 8px;
   font-size: 16px;
@@ -69,9 +77,9 @@ input { font: inherit; }
 #main { display: flex; flex-direction: column; }
 .top {
   height: 66px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px;
-  background: var(--acc); color: var(--acc-ink);
+  background: var(--top); color: var(--top-ink);
 }
-body.ret .top { background: var(--ret); }
+body.ret .top { background: var(--ret-top); }
 .who { min-width: 0; flex: 1; }
 .store { font-weight: 700; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cashier { font-size: 14px; opacity: .9; white-space: nowrap; }
@@ -80,11 +88,11 @@ body.ret .top { background: var(--ret); }
 .dot.old { background: #ffcc4d; }
 .dot.bad { background: #ff6b6b; }
 .wins { display: flex; gap: 4px; }
-.wins button { background: rgba(255, 255, 255, .15); color: #fff; min-height: 52px; min-width: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.wins button { background: rgba(255, 255, 255, .15); color: var(--top-ink); min-height: 52px; min-width: 92px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
 .wins button small { font-size: 12px; opacity: .85; }
-.wins button.on { background: #fff; color: var(--acc); font-weight: 700; }
-body.ret .wins button.on { color: var(--ret); }
-.hbtn { background: rgba(255, 255, 255, .15); color: #fff; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; padding: 0 14px; }
+.wins button.on { background: var(--top-ink); color: var(--top); font-weight: 700; }
+body.ret .wins button.on { color: var(--ret-top); }
+.hbtn { background: rgba(255, 255, 255, .15); color: var(--top-ink); min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; padding: 0 14px; }
 .hbtn small { font-size: 12px; opacity: .85; }
 .hbtn b { font-size: 16px; }
 .hbtn.exit { background: rgba(0, 0, 0, .22); }
@@ -93,7 +101,7 @@ body.ret .wins button.on { color: var(--ret); }
 .left, .right { background: var(--panel); border-radius: 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .right { padding: 8px; gap: 8px; }
 
-.mode-bar { background: var(--ret); color: #fff; font-weight: 800; text-align: center; padding: 6px; letter-spacing: .5px; }
+.mode-bar { background: var(--ret); color: var(--ret-ink); font-weight: 800; text-align: center; padding: 6px; letter-spacing: .5px; }
 .thead, .row { display: grid; grid-template-columns: 40px 1fr 92px 104px 120px; gap: 6px; align-items: center; }
 .thead { padding: 8px 12px; color: var(--ink2); font-size: 14px; border-bottom: 2px solid var(--line); }
 .thead span:nth-child(n+3), .row span:nth-child(n+3) { text-align: right; }
@@ -143,11 +151,11 @@ body.ret .t-line.due b { color: var(--ret); }
 .fn button b { font-size: 18px; }
 .fn button.fn-big b { font-size: 22px; }
 .fn button small { font-size: 12px; color: var(--ink2); font-weight: 500; }
-.fn button.fn-main { background: var(--acc); color: #fff; }
-.fn button.fn-main small { color: rgba(255, 255, 255, .85); }
-.fn button.on { background: var(--ret); color: #fff; }
-.fn button.on small { color: rgba(255, 255, 255, .85); }
-.pay-btn { min-height: 84px; font-size: 30px; font-weight: 800; letter-spacing: 1px; background: var(--acc); color: #fff; flex: none; }
+.fn button.fn-main { background: var(--acc); color: var(--acc-ink); }
+.fn button.fn-main small { color: var(--acc-ink); opacity: .85; }
+.fn button.on { background: var(--ret); color: var(--ret-ink); }
+.fn button.on small { color: var(--ret-ink); opacity: .85; }
+.pay-btn { min-height: 84px; font-size: 30px; font-weight: 800; letter-spacing: 1px; background: var(--acc); color: var(--acc-ink); flex: none; }
 body.ret .pay-btn { background: var(--ret); }
 
 /* ---- to'liq ekran oynalar (panel, qidiruv) ---- */
@@ -156,7 +164,7 @@ body.ret .pay-btn { background: var(--ret); }
 .back { min-width: 260px; }
 .tabs { display: flex; gap: 4px; flex: 1; overflow-x: auto; }
 .tabs button { min-width: 64px; min-height: 56px; font-size: 20px; font-weight: 700; background: var(--panel); border: 1px solid var(--line); }
-.tabs button.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+.tabs button.on { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
 .grid {
   flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr);
   gap: 6px; min-height: 0;
@@ -232,18 +240,18 @@ body.ret .pay-sum.due b { color: var(--ret); }
 .ask-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .done { width: min(520px, 94vw); text-align: center; display: flex; flex-direction: column; gap: 12px; padding: 28px; }
-.done-ok { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto; background: var(--acc); color: #fff; font-size: 52px; line-height: 84px; }
+.done-ok { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto; background: var(--acc); color: var(--acc-ink); font-size: 52px; line-height: 84px; }
 .done-info { color: var(--ink2); font-size: 18px; }
 .done-change { font-size: 32px; font-weight: 800; color: var(--acc); }
 .done-btns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
 
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30;
-  background: #1d2a24; color: #fff; padding: 14px 22px; border-radius: 14px; font-size: 18px; font-weight: 600;
+  background: var(--toast); color: var(--toast-ink); padding: 14px 22px; border-radius: 14px; font-size: 18px; font-weight: 600;
   max-width: 90vw; box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
 }
 .toast.err { background: var(--warn); }
-.busy { position: fixed; inset: 0; background: rgba(255, 255, 255, .7); z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 20px; font-weight: 700; }
+.busy { position: fixed; inset: 0; background: var(--busy); z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 20px; font-weight: 700; }
 .spin { width: 56px; height: 56px; border-radius: 50%; border: 6px solid var(--acc-soft); border-top-color: var(--acc); animation: sp .9s linear infinite; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
@@ -341,9 +349,9 @@ body.editing [data-ui].ed-on { outline: 4px solid #3d5afe; }
 
 /* pc 12: panelda hamma narsa KATTA harfda */
 .panel-grid .tile .tn { text-transform: uppercase; }
-.sug-info { flex: 1; font-size: 16px; font-weight: 600; color: #1d2b24; padding: 0 12px; }
+.sug-info { flex: 1; font-size: 16px; font-weight: 600; color: var(--ink); padding: 0 12px; }
 .sug-bar { display: flex; gap: 10px; padding: 8px 12px; flex-wrap: wrap; }
-.tabs button.has { box-shadow: inset 0 -4px 0 #0f6b45; }
+.tabs button.has { box-shadow: inset 0 -4px 0 var(--acc); }
 /* pc 12: narx turi — xaridorga bilinmaydi: raqam maydonining burchagidagi kichik belgi (bosib turing) */
 .display { position: relative; }
 .d-tag { position: absolute; left: 6px; bottom: 3px; font-size: 11px; line-height: 1; opacity: .28; letter-spacing: 1px;
@@ -372,7 +380,7 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .row .st { color: var(--ink2); }
 .row .st.none { color: var(--warn); }
 .row.flash { animation: rowflash .9s ease-out; }
-@keyframes rowflash { 0% { background: #ffe58a; } 100% { background: var(--acc-soft); } }
+@keyframes rowflash { 0% { background: var(--flash); } 100% { background: var(--acc-soft); } }
 .sel-info { display: none; }
 .row-tools { padding: 6px 8px; border-top: 1px solid var(--line); }
 .totals { display: flex; align-items: center; gap: 22px; padding: 6px 14px; }
@@ -380,7 +388,7 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .t-line.due { margin-left: auto; }
 .t-line.due b { font-size: 36px; }
 .left { position: relative; }
-.change-big { position: absolute; left: 12px; right: 12px; top: 40%; min-height: 96px; border-radius: 18px; background: var(--acc); color: #fff;
+.change-big { position: absolute; left: 12px; right: 12px; top: 40%; min-height: 96px; border-radius: 18px; background: var(--acc); color: var(--acc-ink);
   font-size: 44px; font-weight: 900; letter-spacing: 1px; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); z-index: 3; }
 .change-big.debt { background: var(--warn); }
 /* pastdagi tugmalar: ikonka va yirik nom (kichik yozuvlarsiz) */
@@ -398,17 +406,7 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 /* yangilanish yozuvi */
 .upd-bar { background: #ffcc4d; color: #3a2a00; font-weight: 800; font-size: 18px; text-align: center; padding: 6px; flex: none; }
 
-/* ================= qora fon ================= */
-body.dark {
-  --bg: #0f1412; --panel: #1a211e; --ink: #e8efe9; --ink2: #9fb0a7; --line: #2c3631; --acc: #2fb57a; --acc-ink: #06140d;
-  --acc-soft: #173a2a; --warn: #ff8a80; --warn-soft: #3a1d1b; --ret: #e08a3c; --ret-soft: #3b2614; --tile: #141a17; --muted: #27302c;
-}
-body.dark .top { background: #13281e; color: #e8efe9; }
-body.dark.ret .top { background: #4a2a10; }
-body.dark .wins button.on { background: var(--acc); color: #06140d; }
-body.dark .fn button.fn-main, body.dark .pay-btn, body.dark .primary, body.dark .change-big { color: #06140d; }
-body.dark .row.flash { animation-name: rowflashd; }
-@keyframes rowflashd { 0% { background: #6b5a12; } 100% { background: var(--acc-soft); } }
+/* qora va rangli mavzular: ranglar app.js dagi THEMES orqali o'rnatiladi (pc 26) */
 @media print { body.dark { background: #fff; } }
 
 /* pc 20: savat ostidagi tugmalar ixcham — 7 ta bir qatorda */
@@ -474,3 +472,29 @@ body.dark .row.flash { animation-name: rowflashd; }
 .ord-lab .ic { width: 26px; height: 26px; }
 .ord-lab .asl { flex: 0 0 64px; }
 .ord-lab .asl.on { border-color: var(--acc); color: var(--acc); }
+
+/* pc 26: mavzular va ranglarni sozlash */
+.th-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.th-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 92px; padding: 10px; text-align: left;
+  background: var(--tile); border: 3px solid var(--line); color: var(--ink); }
+.th-btn b { font-size: 18px; }
+.th-btn small { font-size: 13px; color: var(--ink2); }
+.th-btn.on { border-color: var(--acc); background: var(--acc-soft); }
+.th-sw { display: flex; gap: 4px; }
+.th-sw i { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(128, 128, 128, .5); display: block; }
+.col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 8px; }
+.col-item { display: flex; align-items: center; gap: 8px; background: var(--tile); border: 1px solid var(--line); border-radius: 12px; padding: 6px 8px; }
+.col-item.custom { border-color: var(--acc); }
+.col-sw { flex: 0 0 52px; min-height: 52px; border: 2px solid rgba(128, 128, 128, .6); border-radius: 12px; padding: 0; }
+.col-n { flex: 1; min-width: 0; font-size: 15px; line-height: 1.2; }
+.col-h { flex: 0 0 auto; font-size: 13px; color: var(--ink2); font-family: Consolas, monospace; }
+.col-item .asl { flex: 0 0 auto; min-height: 44px; padding: 0 12px; font-size: 15px; background: var(--panel); border: 2px solid var(--line); }
+.col-sheet { width: min(780px, 96vw); }
+.col-prev { display: flex; align-items: center; gap: 12px; margin: 6px 0 10px; }
+.col-prev i { display: block; width: 120px; height: 52px; border-radius: 12px; border: 2px solid rgba(128, 128, 128, .6); }
+.col-prev b { font-size: 22px; font-family: Consolas, monospace; }
+.col-row2 { margin-bottom: 10px; }
+.col-l { display: block; font-size: 14px; color: var(--ink2); margin-bottom: 4px; }
+.col-sws { display: flex; flex-wrap: wrap; gap: 6px; }
+.col-sws .sw { width: 44px; min-width: 44px; height: 44px; min-height: 44px; border-radius: 10px; border: 2px solid rgba(128, 128, 128, .6); padding: 0; }
+.col-sws .sw.on { outline: 4px solid var(--acc); outline-offset: 1px; }

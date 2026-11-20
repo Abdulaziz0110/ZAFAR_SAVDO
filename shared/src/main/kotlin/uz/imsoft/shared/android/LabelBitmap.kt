@@ -30,6 +30,11 @@ object LabelBitmap {
 
     private fun bold(): Typeface = font ?: Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
+    /** v5.3.3: oddiy Arial (Liberation Sans Regular) — matnli etiketka uchun. */
+    @Volatile var fontRegular: Typeface? = null
+
+    private fun arial(): Typeface = fontRegular ?: Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+
     /** v5.2: oddiy (qalin emas) Arial — mahsulot ma'lumoti yorlig'i 1C'dagi kabi oddiy yoziladi. */
     private fun plain(): Typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
 
@@ -153,7 +158,9 @@ object LabelBitmap {
         val left = w * 0.02f
         val bw = (w * 0.96f).toInt().coerceAtLeast(10)
         var k = 1f
-        fun row() = lineOf(d.bio, pt(10f, dpi) * k, bw, 40, plain())
+        val pts = d.bioPt.coerceIn(6f, 48f)
+        val face = if (d.arial) arial() else plain()
+        fun row() = lineOf(d.bio, pt(pts, dpi) * k, bw, 40, face)
         var sl = row()
         while (sl.height > h * 0.98f && k > 0.5f) {
             k *= 0.95f

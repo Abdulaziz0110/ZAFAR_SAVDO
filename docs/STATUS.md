@@ -569,3 +569,19 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 - `pc/test_onec_export.py` 22/22, `pc/test_ornatish.py` 6/6, `pc/test_label_printer.py` 19/19, `pc/test_forwarder.py` 8/8.
 - Satrlar (lotin + kirill), resurs havolalari, format argumentlari: xatosiz.
 - Haqiqiy Gradle build (AAPT2, lint) — GitHub Actions'da (`android-build.yml`).
+
+
+## 5.3.3 / pc 26 — shu seansdagi ishlar
+
+| Ish | Holat |
+|---|---|
+| Kassa: narx turi har bir oynada alohida (1..4-oyna bir-biriga ta'sir qilmaydi), eski saqlangan savatlar ko'chadi | VERIFIED (jsdom sinovi: xato eski kodda takrorlandi, yangida yo'q; test_kassa* o'tdi) |
+| Kassa: tugmalar tartibi (sudrab/▲▼), o'lcham, aniq kenglik va balandlik, nom/ikonka (Ikonka+nom / Nom / Ikonka, 31 ikonka), yashirish | VERIFIED (jsdom sinovi, 26 tekshiruv) / ko'rinishi monoblokda IMPLEMENTED-UNVERIFIED |
+| Kassa: 10 ta mavzu (qorong'ilarida to'q fon, och yozuv va ikonka) va 20 ta rangni sozlash; yozuv/ikonka kontrasti hisoblab tekshirilgan | VERIFIED (kontrast hisobi, jsdom) / ko'rinishi monoblokda IMPLEMENTED-UNVERIFIED |
+| Kassa: o'ng panel 470 dan 394 px ga (taxminan 2 sm), sozlanadi; uzun yorliq shrifti o'zi kichrayadi | IMPLEMENTED-UNVERIFIED (monoblokda ko'rinishi sinalmagan) |
+| Admin ilova: Sozlamalar > Yorliqlar > Matnli etiketka (58x40, Arial 14, tarix, qayta chiqarish, tahrirlash, o'chirish) | IMPLEMENTED-UNVERIFIED (Android kompilyatsiyasi GitHub Actions'da; printerda sinalmagan) |
+| Matnli etiketka mantiqi (TextLabels: matnni tozalash, nusxa soni, qisqa ko'rinish) | VERIFIED (kotlinc bilan ishga tushirildi) |
+| Matnli etiketka: ekran matnlari ikkala tilda (lotin/kirill), format argumentlari mos | VERIFIED (skript) |
+| Printerga ulanish (LAN/LPD/bulut, Tailscale) | O'zgartirilmagan: mavjud print() yo'lidan foydalaniladi |
+| Telefondan 1C'ga yozish xatosi ("Вызванный объект был отключен от клиентов", COM uzilishi) | NOT-IMPLEMENTED (tekshirilmoqda) |
+

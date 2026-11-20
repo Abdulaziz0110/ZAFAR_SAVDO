@@ -26,6 +26,7 @@ import uz.imsoft.shared.label.LabelData
 import uz.imsoft.shared.label.LabelKind
 import uz.imsoft.shared.label.LabelPrice
 import uz.imsoft.shared.label.PluImport
+import uz.imsoft.shared.label.TextLabels
 
 /** Ro'yxatdagi tovar: nechta yorliq va (ixtiyoriy) qo'lda yozilgan narx. */
 data class LabelItem(val productId: String, val copies: Int, val price: Double? = null)
@@ -102,6 +103,7 @@ class LabelRepository(
     init {
         // Yorliq shrifti: Arial o'lchamlaridagi Liberation Sans Bold (1C shablonlari Arial qalin)
         runCatching { LabelBitmap.font = android.graphics.Typeface.createFromAsset(context.assets, "fonts/LiberationSans-Bold.ttf") }
+        runCatching { LabelBitmap.fontRegular = android.graphics.Typeface.createFromAsset(context.assets, "fonts/LiberationSans-Regular.ttf") }
     }
 
     private var plu: MutableMap<String, String> = loadMap("plu")
@@ -474,6 +476,29 @@ class LabelRepository(
         val b = LabelBatch(LabelKind.BIO, listOf(LabelData("", "", bio = text)), emptyList(), w, h)
         val r = print(b)
         return when (r) {
+            is LabelPrinterClient.Sent.Printed -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_printed, r.count, r.printer.ifBlank { "Xprinter" })
+            is LabelPrinterClient.Sent.Queued -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_queued, r.count)
+        }
+    }
+
+    private fun textData(text: String, copies: Int) =
+        LabelData("", "", copies = TextLabels.copies(copies), bio = TextLabels.clean(text), bioPt = TextLabels.PT, arial = true)
+
+    /** v5.3.3: matnli etiketka ko'rinishi (58x40, Arial 14) — chop etilmaydi. */
+    fun previewText(text: String): android.graphics.Bitmap {
+        val (w, h) = sizePx()
+        return LabelBitmap.render(textData(text, 1), LabelKind.BIO, w, h, _state.value.dpi)
+    }
+
+    /**
+     * v5.3.3: matnli etiketkani Arial 14 bilan chop etish. Printerga ulanish o'zgarmagan: oddiy [print] orqali
+     * (LAN/LPD/bulut va Tailscale sozlamalari avvalgidek).
+     * @return foydalanuvchiga ko'rsatiladigan natija matni.
+     */
+    suspend fun printText(text: String, copies: Int): String {
+        val (w, h) = sizePx()
+        val b = LabelBatch(LabelKind.BIO, listOf(textData(text, copies)), emptyList(), w, h)
+        return when (val r = print(b)) {
             is LabelPrinterClient.Sent.Printed -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_printed, r.count, r.printer.ifBlank { "Xprinter" })
             is LabelPrinterClient.Sent.Queued -> context.getString(com.ilxomjon.dur_novvot_dokon.R.string.lb_queued, r.count)
         }

@@ -1,7 +1,14 @@
 # CHANGELOG
 
+## 5.3.3 (versionCode 53) — 2026-11-20
+**Matnli etiketka (Sozlamalar > Yorliqlar > Matnli etiketka):** 58x40 etiketkaga Arial 14 bilan erkin matn chop etiladi; har bir etiketka tarixda saqlanadi
+(qayta chiqarish, tahrirlash, o'chirish); matn sig'masa shrift o'zi kichrayadi. Printerga ulanish (LAN/LPD/bulut, Tailscale) o'zgarmagan.
+Baza: yangi `text_label` jadvali (eski jadvallarga tegilmaydi, avtomatik yaratiladi).
+
 ## 5.3.2 (versionCode 52) — 2026-11-17
 **Kassa (pc 22):** monoblokdagi 1..4-oynaning har birida o'z narx turi bor; birini o'zgartirsangiz boshqalarining narxi o'zgarmaydi.
+**Kassa (pc 26):** 10 ta mavzu (Oq, Qora, Tungi ko'k, Zumrad, Qahva, Binafsha, Qizil, Issiq krem, Dengiz, Kontrast), yaxshilangan qora rejim (to'q fon, och yozuv va ikonkalar) va 20 ta rangni sozlash.
+**Kassa (pc 26):** 10 ta mavzu (qorong'ilari to'q fon + och yozuv/ikonka) va 20 ta rangni sozlash.
 **Kassa (pc 25):** tugma nomi/ikonkasi (Ikonka+nom / Nom / Ikonka), tugma balandligi, o'ng panel 470 dan 394 px ga toraydi (sozlanadi).
 **Kassa (pc 24):** tugmalarni sudrab joylash (☰) va aniq kenglik (−/+).
 **Kassa (pc 23):** Sozlamalarda tugmalar tartibi (▲▼), o'lchami va ko'rinishi (o'ng tugmalar va savat ostidagi tugmalar); sozlamalar sahifasidagi bo'sh joylar yo'qotildi.

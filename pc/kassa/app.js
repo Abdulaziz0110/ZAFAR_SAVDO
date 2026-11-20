@@ -22,7 +22,7 @@
   }
 
   var UI_DEFAULT = { wins: 3, stock: false, sound: true, autoprint: true, footer: '', hide: [], el: {}, ford: [], tord: [], thide: [], tsz: {}, tw: {}, lab: {},
-    ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'light', notes: [50000, 100000, 200000] };
+    ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'oq', col: {}, notes: [50000, 100000, 200000] };
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
     { id: 'search', b: 'Qidiruv', s: "nomi bo'yicha", big: true },
@@ -104,6 +104,82 @@
       if (w >= 40) b.style.flex = '0 1 ' + w + 'px';        // qo'lda berilgan kenglik
       else b.style.flex = n === (t.icon ? 1 : 2) ? '' : d[1] + ' 1 ' + d[0] + 'px';   // asl o'lcham CSS'dan
     });
+  }
+
+  // pc 26: mavzular (savdo turiga mos tayyor ranglar) va ranglarni sozlash
+  var THEMES = [
+    { id: 'oq', n: 'Oq', s: 'kunduzgi, universal', dark: 0, v: { 'bg': '#e9eeeb', 'panel': '#ffffff', 'tile': '#f6f9f7', 'muted': '#e2e8e4', 'line': '#d3dcd7', 'ink': '#13201a', 'ink2': '#56665e', 'acc': '#0f6b45', 'acc-ink': '#ffffff', 'acc-soft': '#dcefe5', 'warn': '#b3261e', 'warn-soft': '#fbe3e1', 'ret': '#b4570b', 'ret-ink': '#ffffff', 'ret-soft': '#fdebd8', 'top': '#0f6b45', 'top-ink': '#ffffff', 'ret-top': '#b4570b', 'toast': '#1d2a24', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.7)', 'flash': '#ffe58a' } },
+    { id: 'qora', n: 'Qora', s: 'grafit, tungi', dark: 1, v: { 'bg': '#0c0d0e', 'panel': '#16181a', 'tile': '#1e2124', 'muted': '#282c30', 'line': '#363b41', 'ink': '#f4f6f7', 'ink2': '#b9c1c7', 'acc': '#4ade80', 'acc-ink': '#04140a', 'acc-soft': '#173a26', 'warn': '#ff9d94', 'warn-soft': '#3b1f1d', 'ret': '#f2a64d', 'ret-ink': '#1c1000', 'ret-soft': '#3a2a14', 'top': '#0f2a1c', 'top-ink': '#f4f6f7', 'ret-top': '#4a2c10', 'toast': '#eef1f3', 'toast-ink': '#0e1011', 'busy': 'rgba(0,0,0,.6)', 'flash': '#5f5410' } },
+    { id: 'tun', n: 'Tungi ko\'k', s: 'elektronika, texnika', dark: 1, v: { 'bg': '#080d1c', 'panel': '#111a30', 'tile': '#19243f', 'muted': '#223052', 'line': '#2f3f68', 'ink': '#eef2ff', 'ink2': '#b0bbdc', 'acc': '#6a9bff', 'acc-ink': '#04102e', 'acc-soft': '#1b2f5e', 'warn': '#ff9fa8', 'warn-soft': '#3b1e29', 'ret': '#ffb85c', 'ret-ink': '#1e1200', 'ret-soft': '#3b2d15', 'top': '#14224f', 'top-ink': '#eef2ff', 'ret-top': '#4d3112', 'toast': '#eaf0ff', 'toast-ink': '#0c1226', 'busy': 'rgba(3,6,20,.65)', 'flash': '#5a4f14' } },
+    { id: 'zumrad', n: 'Zumrad', s: 'oziq-ovqat, bozor', dark: 1, v: { 'bg': '#06130f', 'panel': '#0e2119', 'tile': '#143026', 'muted': '#1b3c30', 'line': '#265144', 'ink': '#effaf4', 'ink2': '#b0d3c1', 'acc': '#34e0a1', 'acc-ink': '#03150d', 'acc-soft': '#12432f', 'warn': '#ffa39a', 'warn-soft': '#3d2220', 'ret': '#f5b04f', 'ret-ink': '#1d1100', 'ret-soft': '#3b2c14', 'top': '#0c3a2a', 'top-ink': '#effaf4', 'ret-top': '#4a2f10', 'toast': '#eaf7f0', 'toast-ink': '#0a1511', 'busy': 'rgba(2,12,8,.65)', 'flash': '#5f5a12' } },
+    { id: 'qahva', n: 'Qahva', s: 'kafe, qandolat', dark: 1, v: { 'bg': '#140e0a', 'panel': '#211812', 'tile': '#2b201a', 'muted': '#362a22', 'line': '#4a392e', 'ink': '#f8f0e7', 'ink2': '#d0bfae', 'acc': '#f0b35a', 'acc-ink': '#1f1300', 'acc-soft': '#4a3519', 'warn': '#ff9f90', 'warn-soft': '#402220', 'ret': '#6fd6c6', 'ret-ink': '#002a25', 'ret-soft': '#123a35', 'top': '#2e1f14', 'top-ink': '#f8f0e7', 'ret-top': '#124a43', 'toast': '#f6ece0', 'toast-ink': '#1a110a', 'busy': 'rgba(10,5,2,.65)', 'flash': '#6b5518' } },
+    { id: 'binafsha', n: 'Binafsha', s: 'kosmetika, butik', dark: 1, v: { 'bg': '#110a1b', 'panel': '#1b122c', 'tile': '#251a3b', 'muted': '#30234d', 'line': '#44346b', 'ink': '#f6f0ff', 'ink2': '#c8b9e4', 'acc': '#c58bff', 'acc-ink': '#1c0a30', 'acc-soft': '#3d2764', 'warn': '#ff9eb0', 'warn-soft': '#40202c', 'ret': '#ffc266', 'ret-ink': '#221400', 'ret-soft': '#3d2e16', 'top': '#2a1850', 'top-ink': '#f6f0ff', 'ret-top': '#4d3412', 'toast': '#f1e9ff', 'toast-ink': '#160c26', 'busy': 'rgba(8,3,16,.65)', 'flash': '#5e4d18' } },
+    { id: 'qizil', n: 'Qizil', s: 'go\'sht, fast-food', dark: 1, v: { 'bg': '#150909', 'panel': '#221111', 'tile': '#2d1717', 'muted': '#391e1e', 'line': '#4e2a2a', 'ink': '#fff1ee', 'ink2': '#e0bcb6', 'acc': '#ff7a66', 'acc-ink': '#2b0700', 'acc-soft': '#4d2019', 'warn': '#ffcf6b', 'warn-soft': '#40300f', 'ret': '#7ad6ff', 'ret-ink': '#00202e', 'ret-soft': '#11323f', 'top': '#4a1313', 'top-ink': '#fff1ee', 'ret-top': '#11405a', 'toast': '#fff0ec', 'toast-ink': '#200a07', 'busy': 'rgba(15,3,3,.65)', 'flash': '#5f4a12' } },
+    { id: 'issiq', n: 'Issiq krem', s: 'novvoyxona, shirinlik', dark: 0, v: { 'bg': '#f2e8d8', 'panel': '#fffaf1', 'tile': '#f7eddd', 'muted': '#eadcc6', 'line': '#dccbb0', 'ink': '#2a1a0c', 'ink2': '#6b5640', 'acc': '#b4531a', 'acc-ink': '#ffffff', 'acc-soft': '#f7dcc4', 'warn': '#a8201a', 'warn-soft': '#fbe1dd', 'ret': '#0e6f8c', 'ret-ink': '#ffffff', 'ret-soft': '#d6eef5', 'top': '#8f3d10', 'top-ink': '#ffffff', 'ret-top': '#0e6f8c', 'toast': '#2a1a0c', 'toast-ink': '#ffffff', 'busy': 'rgba(255,250,241,.72)', 'flash': '#ffd98a' } },
+    { id: 'dengiz', n: 'Dengiz', s: 'dorixona, toza', dark: 0, v: { 'bg': '#e3eef6', 'panel': '#ffffff', 'tile': '#f0f6fb', 'muted': '#dbe7f0', 'line': '#c3d5e2', 'ink': '#0e2130', 'ink2': '#496377', 'acc': '#0b6db3', 'acc-ink': '#ffffff', 'acc-soft': '#d3e8f7', 'warn': '#b3261e', 'warn-soft': '#fbe3e1', 'ret': '#b4570b', 'ret-ink': '#ffffff', 'ret-soft': '#fdebd8', 'top': '#0a5a94', 'top-ink': '#ffffff', 'ret-top': '#b4570b', 'toast': '#14283a', 'toast-ink': '#ffffff', 'busy': 'rgba(255,255,255,.7)', 'flash': '#ffe58a' } },
+    { id: 'kontrast', n: 'Kontrast', s: 'yorug\' joy, qora-sariq', dark: 1, v: { 'bg': '#000000', 'panel': '#0c0c0c', 'tile': '#1a1a1a', 'muted': '#262626', 'line': '#505050', 'ink': '#ffffff', 'ink2': '#dcdcdc', 'acc': '#ffd400', 'acc-ink': '#000000', 'acc-soft': '#2f2800', 'warn': '#ff8a80', 'warn-soft': '#3a1512', 'ret': '#4dd0ff', 'ret-ink': '#00131c', 'ret-soft': '#0b2f3d', 'top': '#1c1c1c', 'top-ink': '#ffffff', 'ret-top': '#0b3a4d', 'toast': '#ffffff', 'toast-ink': '#000000', 'busy': 'rgba(0,0,0,.7)', 'flash': '#5a4a00' } }
+  ];
+  var THEME_BY_ID = {};
+  THEMES.forEach(function (t) { THEME_BY_ID[t.id] = t; });
+  // Sozlanadigan ranglar: [o'zgaruvchi, nomi]
+  var COLN = [
+    ['bg', 'Fon'], ['panel', "Panel (savat va o'ng panel foni)"], ['tile', 'Katak va maydonlar foni'], ['muted', 'Oddiy tugmalar'], ['line', 'Chiziqlar'],
+    ['ink', 'Asosiy yozuv'], ['ink2', 'Ikkinchi darajali yozuv'],
+    ['acc', 'Asosiy rang (ikonka, tugma, yozuv)'], ['acc-soft', 'Asosiy rangning yumshoq foni (pastdagi tugmalar)'], ['acc-ink', 'Asosiy rang ustidagi yozuv'],
+    ['top', 'Yuqori panel'], ['top-ink', 'Yuqori panel yozuvi'],
+    ['ret', 'Qaytarish rangi'], ['ret-soft', 'Qaytarishning yumshoq foni'], ['ret-ink', 'Qaytarish ustidagi yozuv'], ['ret-top', 'Qaytarish rejimida yuqori panel'],
+    ['warn', 'Qarz va xato rangi'], ['warn-soft', 'Qarz va xatoning yumshoq foni'], ['toast', 'Xabar oynasi'], ['toast-ink', 'Xabar yozuvi']
+  ];
+  var COLK = COLN.map(function (c) { return c[0]; });
+  function hex2rgb(h) { h = String(h).replace('#', ''); return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0]; }
+  function rgb2hex(r, g, b) {
+    return '#' + [r, g, b].map(function (x) { x = Math.max(0, Math.min(255, Math.round(x))); return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+  }
+  function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, h = 0, s = 0, d = mx - mn;
+    if (d) {
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    return [Math.round(h) % 360, Math.round(s * 100), Math.round(l * 100)];
+  }
+  function hsl2hex(h, s, l) {
+    s /= 100; l /= 100;
+    var k = function (n) { return (n + h / 30) % 12; }, a = s * Math.min(l, 1 - l);
+    var f = function (n) { return l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); };
+    return rgb2hex(f(0) * 255, f(8) * 255, f(4) * 255);
+  }
+  function mixHex(a, b, t) {                                // a va b orasidagi rang; t — b ning ulushi
+    var x = hex2rgb(a), y = hex2rgb(b);
+    return rgb2hex(x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t, x[2] + (y[2] - x[2]) * t);
+  }
+  function lumOf(hex) {
+    var c = hex2rgb(hex).map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function inkFor(hex) {                                      // shu rang ustida o'qiladigan (qora yoki oq) yozuv
+    var l = lumOf(hex), dark = '#0a0f0c';
+    return (l + 0.05) / (lumOf(dark) + 0.05) >= (1.05) / (l + 0.05) ? dark : '#ffffff';
+  }
+  function themeOf(id) { return THEME_BY_ID[id] || THEME_BY_ID.oq; }
+  /** Mavzu ranglari + foydalanuvchi o'zgartirganlari. */
+  function themeVars(u, id) {
+    var t = themeOf(id || u.theme), v = {}, c = ((u && u.col) || {})[t.id] || {};
+    Object.keys(t.v).forEach(function (k) { v[k] = t.v[k]; });
+    Object.keys(c).forEach(function (k) { if (COLK.indexOf(k) >= 0 && /^#[0-9a-f]{6}$/i.test(c[k])) v[k] = c[k]; });
+    return v;
+  }
+  function applyTheme(u) {
+    var t = themeOf(u.theme), v = themeVars(u);
+    var st = $('themeStyle');
+    if (!st) { st = document.createElement('style'); st.id = 'themeStyle'; document.head.appendChild(st); }
+    st.textContent = 'body{' + Object.keys(v).map(function (k) { return '--' + k + ':' + v[k]; }).join(';') + '}';
+    document.body.classList.toggle('dark', !!t.dark);
+    document.body.setAttribute('data-theme', t.id);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', v.top);
   }
 
   // pc 13: tugmalar ikonkasi (24x24, chiziqli)
@@ -201,6 +277,16 @@
     });
     if (!o.tsz || typeof o.tsz !== 'object' || Array.isArray(o.tsz)) o.tsz = {};
     if (!o.tw || typeof o.tw !== 'object' || Array.isArray(o.tw)) o.tw = {};
+    var th = String(o.theme || '');
+    o.theme = THEME_BY_ID[th] ? th : (th === 'dark' ? 'qora' : 'oq');      // eski 'light'/'dark' qiymatlari ko'chiriladi
+    if (!o.col || typeof o.col !== 'object' || Array.isArray(o.col)) o.col = {};
+    Object.keys(o.col).forEach(function (tid) {
+      var c = o.col[tid];
+      if (!THEME_BY_ID[tid] || !c || typeof c !== 'object' || Array.isArray(c)) { delete o.col[tid]; return; }
+      Object.keys(c).forEach(function (k) {
+        if (COLK.indexOf(k) < 0 || !/^#[0-9a-fA-F]{6}$/.test(String(c[k]))) delete c[k]; else c[k] = String(c[k]).toLowerCase();
+      });
+    });
     if (!o.lab || typeof o.lab !== 'object' || Array.isArray(o.lab)) o.lab = {};
     Object.keys(o.lab).forEach(function (k) {
       var l = o.lab[k];
@@ -1230,7 +1316,7 @@
   function applyUi(u) {
     S.ui = u;
     save('k_ui', u);
-    document.body.classList.toggle('dark', u.theme === 'dark');
+    applyTheme(u);
     S.wins = fixWins(S.wins);
     if (S.w >= S.wins.length) S.w = 0;
     var css = [];
@@ -1313,6 +1399,67 @@
       reset: function (u, t) { var e = u.el[prefix + t.id]; if (e) delete e.h; },
       custom: function (u, t) { return !!(u.el[prefix + t.id] || {}).h; }
     };
+  }
+  // ---- rang tanlash oynasi: rang tusi + to'yinganlik + yorug'lik (hammasi bosish bilan)
+  var COLS = null;
+  function colorClose() { $('colModal').classList.add('hidden'); COLS = null; }
+  function colorSet() { COLS.hex = hsl2hex(COLS.h, COLS.s, COLS.l); colorDraw(); }
+  function colorDraw() {
+    var box = $('colBox');
+    box.textContent = '';
+    $('colPrev').style.background = COLS.hex;
+    $('colHex').textContent = COLS.hex.toUpperCase();
+    function row(label, items) {
+      var r = el('div', 'col-row2');
+      r.appendChild(el('span', 'col-l', label));
+      var g = el('div', 'col-sws');
+      items.forEach(function (it) {
+        var b = el('button', 'sw' + (it.on ? ' on' : ''));
+        b.style.background = it.c;
+        b.setAttribute('aria-label', it.c);
+        b.addEventListener('click', it.pick);
+        g.appendChild(b);
+      });
+      r.appendChild(g);
+      box.appendChild(r);
+    }
+    var hues = [];
+    for (var h = 0; h < 360; h += 15) hues.push(h);
+    var hr = hues.map(function (hh) {
+      return {
+        c: hsl2hex(hh, 70, 50), on: COLS.s > 10 && Math.abs(((COLS.h - hh + 540) % 360) - 180) < 8,
+        pick: function () { COLS.h = hh; if (COLS.s < 20) COLS.s = 70; if (COLS.l < 8 || COLS.l > 92) COLS.l = 50; colorSet(); }
+      };
+    });
+    hr.push({ c: '#808080', on: COLS.s <= 10, pick: function () { COLS.s = 0; colorSet(); } });
+    row('Rang', hr);
+    row("To'yinganlik", [0, 25, 50, 75, 100].map(function (ss) {
+      return { c: hsl2hex(COLS.h, ss, COLS.l), on: Math.abs(COLS.s - ss) < 13, pick: function () { COLS.s = ss; colorSet(); } };
+    }));
+    row("Yorug'lik", [6, 14, 24, 36, 50, 64, 76, 88, 96].map(function (ll) {
+      return { c: hsl2hex(COLS.h, COLS.s, ll), on: Math.abs(COLS.l - ll) < 7, pick: function () { COLS.l = ll; colorSet(); } };
+    }));
+  }
+  function colorPick(title, cur, done, reset) {
+    var rgb = hex2rgb(cur), hsl = rgb2hsl(rgb[0], rgb[1], rgb[2]);
+    COLS = { h: hsl[0], s: hsl[1], l: hsl[2], hex: String(cur).toLowerCase() };
+    $('colTitle').textContent = title;
+    $('colNo').onclick = colorClose;
+    $('colYes').onclick = function () { var x = COLS.hex; colorClose(); done(x); };
+    $('colReset').onclick = function () { colorClose(); reset(); };
+    $('colModal').classList.remove('hidden');
+    colorDraw();
+  }
+  /** Mavzu rangini o'zgartiradi; bog'liq ranglar (yozuv, yumshoq fon) mos ravishda hisoblanadi. */
+  function setCol(u, tid, k, hex) {
+    var base = themeVars(u, tid), c = u.col[tid] || (u.col[tid] = {});
+    c[k] = hex;
+    var panel = c.panel || base.panel;
+    if (k === 'acc') { c['acc-ink'] = inkFor(hex); c['acc-soft'] = mixHex(panel, hex, 0.22); }
+    else if (k === 'top') c['top-ink'] = inkFor(hex);
+    else if (k === 'ret') { c['ret-ink'] = inkFor(hex); c['ret-soft'] = mixHex(panel, hex, 0.22); }
+    else if (k === 'warn') c['warn-soft'] = mixHex(panel, hex, 0.2);
+    else if (k === 'toast') c['toast-ink'] = inkFor(hex);
   }
   /** Qatorni barmoq yoki sichqoncha bilan sudrab joyini almashtirish (tutqich: .ord-h). onDrop(from, to). */
   function dragRows(g, onDrop) {
@@ -1483,10 +1630,6 @@
     });
     var cv = card("Ko'rinish va dastur", 'Kompyuter dasturi: versiya ' + (S.pcv || '?') +
       ". Telefondan «hozir yangilash» bosilganda kassada «Dastur yangilanmoqda» yozuvi chiqadi va kassa o'zi qayta ochiladi.");
-    btn(cv, u.theme === 'dark' ? 'Fon: QORA (oqqa o\'tkazish)' : "Fon: OQ (qoraga o'tkazish)", 'big muted', function () {
-      u.theme = u.theme === 'dark' ? 'light' : 'dark';
-      saveUi(u, renderSettings);
-    });
     btn(cv, 'Yangilanishni hozir tekshirish', 'big muted', function () {
       api('POST', '/api/update', { token: S.token, grant: S.grant }, 20000).then(function (j) {
         toast(j.ok ? "Tekshirilmoqda — yangisi bo'lsa kassa o'zi yangilanadi" : (j.e || 'Xato'), !j.ok);
@@ -1501,6 +1644,43 @@
       ask({ title: "1C'dagi panel", text: "Kassada yana 1C'dagi panel ishlatiladi.", yes: 'Qaytish',
         onYes: function () { return panelApi('reset').then(function () { return refreshData(); }).then(renderSettings); } });
     });
+    var ct = card('Mavzu (rejim)', "Savdo turingizga mos tayyor ranglar. Tanlagach, ranglarni pastda alohida sozlash mumkin.");
+    ct.classList.add('set-span');
+    var tgr = el('div', 'th-grid');
+    ct.appendChild(tgr);
+    THEMES.forEach(function (t) {
+      var tb = el('button', 'th-btn' + (u.theme === t.id ? ' on' : ''));
+      var sw = el('div', 'th-sw');
+      [t.v.bg, t.v.panel, t.v.acc, t.v.ink].forEach(function (cc) { var i = el('i'); i.style.background = cc; sw.appendChild(i); });
+      tb.appendChild(sw);
+      tb.appendChild(el('b', '', t.n));
+      tb.appendChild(el('small', '', t.s));
+      tb.addEventListener('click', function () { u.theme = t.id; saveUi(u, renderSettings); });
+      tgr.appendChild(tb);
+    });
+    var thNow = themeOf(u.theme), eff = themeVars(u), mine = u.col[thNow.id] || {};
+    var cr = card('Ranglar: ' + thNow.n, "Rangni bosib o'zgartiring. Asosiy rangni o'zgartirsangiz, yumshoq fon va yozuv rangi o'zi moslanadi (keyin alohida ham sozlash mumkin). Har bir mavzu o'z ranglarini eslab qoladi.");
+    cr.classList.add('set-span');
+    var cgr = el('div', 'col-grid');
+    cr.appendChild(cgr);
+    COLN.forEach(function (c) {
+      var k = c[0], custom = !!mine[k];
+      var it = el('div', 'col-item' + (custom ? ' custom' : ''));
+      var pickIt = function () {
+        colorPick(c[1], eff[k], function (hex) { setCol(u, thNow.id, k, hex); saveUi(u, renderSettings); },
+          function () { if (u.col[thNow.id]) delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
+      };
+      var sw = el('button', 'col-sw');
+      sw.style.background = eff[k];
+      sw.setAttribute('aria-label', c[1]);
+      sw.addEventListener('click', pickIt);
+      it.appendChild(sw);
+      it.appendChild(el('span', 'col-n', c[1]));
+      it.appendChild(el('b', 'col-h', eff[k].toUpperCase()));
+      if (custom) btn(it, 'Asl', 'asl', function () { delete u.col[thNow.id][k]; saveUi(u, renderSettings); });
+      cgr.appendChild(it);
+    });
+    btn(cr, "Shu mavzuning hamma ranglarini asl holiga qaytarish", 'big muted', function () { delete u.col[thNow.id]; saveUi(u, renderSettings); });
     ctrlCard(u, 'Tugmalar', "O'ng tomondagi tugmalar: ☰ ni sudrab yoki ▲▼ bilan joyini almashtiring; o'lchami, nomi va ikonkasi. Sozlamalar tugmasi doim turadi.", FN, {
       ord: 'ford',
       key: function (t) { return 'fn-' + t.id; }, defMode: 'both', defName: function (t) { return t.b; }, defIcon: function (t) { return t.id; },
@@ -1564,7 +1744,7 @@
     btn(c4, 'Sozlashni boshlash', 'big primary', function () { $('setView').classList.add('hidden'); startEdit(); });
     btn(c4, 'Hammasini asl holiga qaytarish', 'big muted', function () {
       ask({ title: 'Asl holiga qaytarish', text: "O'lcham, ranglar, nom/ikonkalar va tugmalar tartibi boshlang'ich holatga qaytadi.", yes: 'Qaytarish',
-        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; u.lab = {}; return saveUi(u, renderSettings); } });
+        onYes: function () { u.el = {}; u.ford = []; u.tord = []; u.tsz = {}; u.tw = {}; u.lab = {}; u.col = {}; return saveUi(u, renderSettings); } });
     });
     var c5 = card("1C navbati", "Kompyuter yoki 1C ishlamagan paytdagi sotuvlar. Ular 1C tiklanganda o'zi yoziladi.");
     btn(c5, "Navbatni ko'rish (" + (S.pcQ + S.pcQe + S.outbox.length) + ')', 'big muted', showQueue);
