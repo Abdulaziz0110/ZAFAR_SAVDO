@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Kompyuter pc 37 — 2026-11-20
+Narx turi o'zgarganda pastda chiqadigan ogohlantirish olib tashlandi (summani to'sardi).
+
 ## Kompyuter pc 36 — 2026-11-20
 **Dasturchi rejimi:** kassa yuqorisida oynalar chap tomonida yozuvsiz almashtirgich. Yoqiq bo'lsa, bazada yo'q shtrix kod
 skanerlanganda yaqin tovarlar chiqadi (istalganini qidirsa ham bo'ladi) — tanlangan tovarga kod biriktiriladi va 1C'ga yoziladi.
