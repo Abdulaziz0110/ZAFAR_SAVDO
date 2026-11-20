@@ -25,7 +25,7 @@
     ptypeShow: false, chk1c: true, hideLock: false, auto: '', theme: 'oq', col: {}, notes: [50000, 100000, 200000],
     tz: 0, bw: 0, rb: -1, rp: -1, ptSwipe: false };
   // pc 29: yozuv va burchak chegaralari
-  var TZ_MIN = 70, TZ_MAX = 160, RB_DEF = 12, RP_DEF = 16, R_MAX = 40;
+  var TZ_MIN = 70, TZ_MAX = 160, RB_DEF = 12, RP_DEF = 16, R_MAX = 40, CART_FS = 21, CART_H = 40;
   var BW = [['', 'Asl'], [700, 'Qalin'], [900, 'Juda qalin']];
   var FN = [
     { id: 'panel', b: 'Panel', s: 'tez tovarlar', big: true },
@@ -828,7 +828,8 @@
     var ret = W().mode === 'return';
     document.body.classList.toggle('ret', ret);
     $('modeBar').classList.toggle('hidden', !ret);
-    $('payBtn').textContent = ret ? 'QAYTARISH' : "TO'LOV";
+    $('payChkT').textContent = ret ? 'QAYTARISH · CHEK' : 'CHEKLI';
+    $('payNoT').textContent = ret ? 'QAYTARISH' : 'CHEKSIZ';
     $('tDueLabel').textContent = ret ? 'Qaytariladi' : "To'lanadi";
     renderFn();
   }
@@ -1187,18 +1188,29 @@
   }
 
   // ---------------- to'lov ----------------
-  function openPay(debtOnly) {
-    if (!S.data) return;
+  /** To'lov boshlanishi: savat tekshiriladi va S.pay tayyorlanadi (hammasi naqd). @return false — boshlanmadi. */
+  function startPay(debtOnly) {
+    if (!S.data) return false;
     var w = W();
-    if (w.mode === 'return' && !w.lines.length) { toast("Qaytariladigan tovarni qo'shing", true); return; }
-    if (!debtOnly && w.mode === 'sale' && !w.lines.length) { toast("Savat bo'sh", true); return; }
+    if (w.mode === 'return' && !w.lines.length) { toast("Qaytariladigan tovarni qo'shing", true); return false; }
+    if (!debtOnly && w.mode === 'sale' && !w.lines.length) { toast("Savat bo'sh", true); return false; }
     if (!w.id) { w.id = L.newId(); saveWins(); }
     var t = total(w), d = discount(w);
     S.pay = { total: t, discount: d, cash: t - d, card: 0, click: 0, field: 'cash', buf: '', client: null };
+    return true;
+  }
+  /** pc 31: CHEKLI / CHEKSIZ tugmasi bir bosilsa — darhol naqd savdo (dialogsiz). */
+  function quickPay(print) {
+    if (S.busySale || !startPay(false)) return;
+    submitPay(print);
+  }
+  function openPay(debtOnly, print) {
+    if (!startPay(debtOnly)) return;
+    var w = W(), t = S.pay.total;
     renderNotes();
     $('payTitle').textContent = w.mode === 'return' ? 'Qaytarish' : (t === 0 ? "Qarz to'lovi" : "To'lov");
     $('pDueLabel').textContent = w.mode === 'return' ? 'Qaytariladi' : "To'lanadi";
-    $('printChk').checked = !!S.ui.autoprint;
+    $('printChk').checked = print === undefined ? !!S.ui.autoprint : !!print;
     $('payErr').textContent = '';
     $('payModal').classList.remove('hidden');
     renderPay();
@@ -1236,20 +1248,29 @@
     var ret = W().mode === 'return';
     if (st.e) { res.className = 'pay-result debt'; res.textContent = st.e; }
     else if (st.change > 0) { res.className = 'pay-result change'; res.textContent = 'Qaytim: ' + money(st.change); }
-    else if (st.debt > 0) { res.className = 'pay-result debt'; res.textContent = (ret ? 'Mijoz qarzidan ayriladi: ' : 'Qarzga: ') + money(st.debt); }
+    else if (st.debt > 0) {
+      res.className = 'pay-result debt';
+      res.textContent = (ret ? 'Mijoz qarzidan ayriladi: ' : 'Qarzga: ') + money(st.debt);
+      // pc 31: nasiyada mijozning hozirgi va savdodan keyingi qarzi
+      if (p.client && !ret) res.textContent += ' · jami qarzi: ' + money(L.cents(p.client[3] || 0) + st.debt);
+    }
     else if (st.debt < 0) { res.className = 'pay-result change'; res.textContent = "Qarz to'lovi: " + money(-st.debt); }
     else { res.className = 'pay-result'; res.textContent = "To'liq to'landi"; }
     var c = p.client;
     $('clientName').textContent = c ? c[1] : 'tanlanmagan';
     var dEl = $('clientDebt');
-    dEl.textContent = c && (c[3] || c[4]) ? ('qarz: ' + money(L.cents(c[3])) + (c[4] ? ' / $' + c[4] : '')) : '';
+    dEl.textContent = c ? ('hozirgi qarzi: ' + money(L.cents(c[3] || 0)) + (c[4] ? ' / $' + c[4] : '')) : '';
     dEl.className = c && c[3] > 0 ? 'debt' : '';
     $('clientClear').classList.toggle('hidden', !c);
     $('payOk').disabled = !!st.e;
   }
-  function submitPay() {
+  function submitPay(quickPrint) {
+    var quick = quickPrint !== undefined;                   // dialogsiz (CHEKLI/CHEKSIZ bir bosilgan)
+    function fail(msg) {
+      if (quick) { S.pay = null; toast(msg, true); } else { $('payErr').textContent = msg; beep(); }
+    }
     var st = payState();
-    if (st.e) { $('payErr').textContent = st.e; beep(); return; }
+    if (st.e) { fail(st.e); return; }
     var p = S.pay, w = W();
     var body = {
       id: w.id, token: S.token, kind: w.mode, ptype: WPT(w),
@@ -1257,21 +1278,23 @@
       discount: L.centsText(st.discount), cash: L.centsText(p.cash), card: L.centsText(p.card), click: L.centsText(p.click),
       lines: w.lines.map(function (l) { return { code: l.code, name: l.name, qty: L.milliText(l.milli), price: L.centsText(l.price), m: l.m ? 1 : 0 }; })
     };
-    var print = $('printChk').checked;
+    var print = quick ? !!quickPrint : $('printChk').checked;
     body.print1c = !!(print && S.ui.chk1c);             // chekni 1C'ning o'zi chiqaradi (kompyuter printeri)
+    S.busySale = true;
     progress(true);
     api('POST', '/api/sale', body, 60000).then(function (j) {
       progress(false);
+      S.busySale = false;
       if (!j.ok) {
-        $('payErr').textContent = j.e || 'Xato';
-        beep();
+        fail(j.e || 'Xato');
         if (/Narx o'zgargan/.test(j.e || '')) refreshData();
         return;
       }
       done(j, print);
     }).catch(function (e) {
       progress(false);
-      if (e.message === 'login') return;
+      S.busySale = false;
+      if (e.message === 'login') { if (quick) S.pay = null; return; }
       // kompyuter javob bermadi: sotuv monoblok navbatiga (ikki marta yozilmaydi — raqami bir xil)
       var pay = payState();
       var local = {
@@ -1853,6 +1876,18 @@
       btn(bwb, x[1], (u.bw || '') === x[0] ? 'sz on' : 'sz', function () { u.bw = x[0] || 0; saveUi(u, renderSettings); });
     });
     cf.appendChild(bwb);
+    // pc 31: ro'yxat (savat) yozuvi va qator balandligi — el.cart (muharrirdagi «Savat» bilan bir xil)
+    [['fs', "Ro'yxat yozuvi", CART_FS, 1, 12, 40], ['h', "Ro'yxat qatori balandligi", CART_H, 4, 30, 90]].forEach(function (x) {
+      stepRow(cf, x[1], {
+        label: function (uu) { var v = (uu.el.cart || {})[x[0]]; return (v || x[2]) + ' px'; },
+        step: function (uu, _t, d) {
+          var e = uu.el.cart || (uu.el.cart = {});
+          e[x[0]] = Math.max(x[4], Math.min(x[5], (e[x[0]] || x[2]) + d * x[3]));
+        },
+        reset: function (uu) { if (uu.el.cart) delete uu.el.cart[x[0]]; },
+        custom: function (uu) { return !!(uu.el.cart || {})[x[0]]; }
+      }, u, null);
+    });
     [['rb', 'Tugma burchagi', RB_DEF], ['rp', 'Panel burchagi', RP_DEF]].forEach(function (x) {
       stepRow(cf, x[1], {
         label: function (uu) { return (uu[x[0]] >= 0 ? uu[x[0]] : x[2]) + ' px'; },
@@ -2444,7 +2479,26 @@
       var b = e.target.closest ? e.target.closest('button[data-fn]') : null;
       if (b && ACT[b.getAttribute('data-fn')]) ACT[b.getAttribute('data-fn')]();
     });
-    on('payBtn', function () { openPay(false); });
+    // pc 31: CHEKLI / CHEKSIZ — bir bosish: darhol naqd savdo; uzoq bosish: to'lov oynasi (chek belgisi tugmaga qarab)
+    [['payChk', true], ['payNo', false]].forEach(function (x) {
+      var b = $(x[0]), t = 0, longDone = false;
+      function stop() { clearTimeout(t); t = 0; }
+      b.addEventListener('pointerdown', function () {
+        stop();
+        longDone = false;
+        t = setTimeout(function () { t = 0; longDone = true; if (!S.edit) openPay(false, x[1]); }, 600);
+      });
+      ['pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, stop); });
+      b.addEventListener('pointerup', stop);
+      b.addEventListener('click', function (e) {
+        b.blur();
+        if (e.detail === 0) return;                         // klaviatura/skaner Enter'i tugmani "bosmasin"
+        if (longDone) { longDone = false; return; }
+        stop();
+        if (!S.edit) quickPay(x[1]);
+      });
+      b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
 
     $('tabs').addEventListener('click', function (e) {
       var p = e.target.getAttribute && e.target.getAttribute('data-page');
@@ -2528,7 +2582,7 @@
     });
     on('clientPick', function () { openKb('client', 'Mijoz'); });
     on('clientClear', function () { if (S.pay) { S.pay.client = null; renderPay(); } });
-    on('payOk', submitPay);
+    on('payOk', function () { submitPay(); });
 
     $('askPad').addEventListener('click', function (e) {
       var k = e.target.getAttribute && e.target.getAttribute('data-k');

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 31 — 2026-11-20
+**Kassa:** TO'LOV ikkiga bo'lindi — CHEKLI va CHEKSIZ: bir bosilsa darhol naqd savdo, uzoq bosilsa to'lov oynasi (chek belgisi
+tugmaga qarab). Nasiyada mijozning hozirgi va savdodan keyingi qarzi ko'rinadi. Ro'yxatdagi tovarlar yirikroq va o'lchami sozlanadi.
+
 ## Kompyuter pc 30 — 2026-11-20
 **Telefondan 1C'ga yozish tuzatildi:** shtrix kod, kassa paneli, ko'p tovarga birdan va boshqa yozuvlar endi kassa ko'prigining
 ochiq 1C'i orqali yoziladi — alohida yashirin 1C ochilmaydi (bu kompyuterda u darhol yopilib qolardi). Yangilangach

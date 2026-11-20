@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 30) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 31) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -617,3 +617,11 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Sabab: bu kompyuterda yashirin 1C (V83.Application) ochilgach darhol yopiladi («Сбой при удаленном вызове процедуры», «Вызванный объект был отключен от клиентов») — telefon yozuvlari (shtrix kod, kassa paneli, ko'p tovarga birdan, kirim, to'lov ...) shu sababli ishlamagan | VERIFIED (xato matnlari va kod tahlili) |
 | Endi «oyna orqali» yozuvlar ochiq turgan kassa ko'prigi 1C'ida bajariladi: har amal *.rpq (JSON) -> 1C -> *.rps; obyektlar raqam bilan saqlanadi; alohida 1C oynasi ochilmaydi (1C seanslari ko'paymaydi) | VERIFIED (test_onec_bridge: soxta 1C bilan shtrix kod yozuvi to'liq) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | Ko'prik versiyasi 6: yangilangach eski ko'prik 1C o'zi yopilib, yangisi ochiladi; RPC paytida ham kassa sotuvlari kutib qolmaydi (so'rovlar orasida bajariladi) | IMPLEMENTED-UNVERIFIED |
+
+## pc 31 (2026-11-20) — sensor kassa to'lovi
+| Funksiya | Holat |
+|---|---|
+| TO'LOV o'rniga ikki katta tugma: CHEKLI va CHEKSIZ. Bir bosish — darhol naqd savdo (chek bilan / chek siz), uzoq bosish (0,6 s) — to'lov oynasi; CHEKLI'dan kirilsa «Chek chiqarish» belgilangan, CHEKSIZ'dan — belgisiz | VERIFIED (brauzer, Playwright) |
+| Klaviatura/skaner Enter'i tugmani «bosmaydi» (tasodifiy savdo bo'lmaydi); savdo ketayotganda ikkinchi bosish e'tiborsiz | VERIFIED (kod; brauzer) |
+| Nasiyada: mijozning hozirgi qarzi va savdodan keyingi jami qarzi to'lov oynasida | VERIFIED (brauzer) |
+| Ro'yxatdagi tovarlar yirikroq (21 px); sozlamada «Ro'yxat yozuvi» va «Ro'yxat qatori balandligi» | VERIFIED (brauzer) |

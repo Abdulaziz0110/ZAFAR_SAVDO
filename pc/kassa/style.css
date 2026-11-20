@@ -524,3 +524,15 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .set-card.set-alert { border: 3px solid var(--warn); }
 .set-card.set-alert h3 { color: var(--warn); }
 .ord-bar .bw-l { flex: 1; align-self: center; font-size: 15px; color: var(--ink2); }
+
+/* pc 31: TO'LOV ikkiga — CHEKLI va CHEKSIZ (bir bosish: naqd savdo; uzoq bosish: to'lov oynasi) */
+.pay-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: none; }
+.pay-row .pay-btn { min-height: clamp(80px, 12vh, 130px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 6px; line-height: 1.05; }
+.pay-row .pay-btn b { font-size: inherit; font-weight: inherit; }
+.pay-row .pay-btn small { font-size: 12px; font-weight: 600; opacity: .8; letter-spacing: 0; }
+.pay-row .pay-btn.alt { background: var(--top); color: var(--top-ink); }
+body.ret .pay-row .pay-btn.alt { background: var(--ret-top); }
+#clientDebt { font-weight: 800; }
+/* pc 31: ro'yxatdagi tovarlar yirikroq (sozlamada o'zgartiriladi: «Ro'yxat yozuvi», «Ro'yxat qatori balandligi») */
+.row { font-size: 21px; min-height: 40px; padding: 5px 6px; }
+.thead { font-size: 15px; }
