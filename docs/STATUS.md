@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 33) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 54) + kompyuter dasturi 5.4 (pc 34) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -646,3 +646,11 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Oyna tugmalarida narx turi belgisi N1..N4 (har biri o'z rangida); bitta oyna bo'lsa yuqorida «Narx N» | VERIFIED (brauzer) |
 | «Kassadan chiqish» tugmasi olib tashlandi (kassani yopish — Sozlamalar → 1C va dastur) | VERIFIED (brauzer) |
 | Dasturchi rejimida: mijozlar soni, qarzdorlar va haqdorlar soni | VERIFIED (brauzer) |
+
+## pc 34 (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| Telefon yozuvlari ko'prik orqali haqiqiy 1C'da ishladi (shtrix kodlar, kassa paneli — «Kiritildi 4») | VERIFIED (foydalanuvchi telefonida) |
+| «Ko'p tovarga birdan» 1561-amalda «Ошибка совместного доступа к файлу ...rpq»: ko'prik v7 — so'rov fayli band bo'lsa javob bermay 30 soniyagacha qayta o'qiydi (amal bajarilmagan, ikki marta bajarilmaydi) | IMPLEMENTED-UNVERIFIED |
+| Kassa ekrani ikki barmoq / Ctrl+g'ildirak / Ctrl +/- bilan kattalashmaydi | VERIFIED (CSS va hodisalar, brauzer) |
+| Tugmalar uchun 91 ta ikonka (strelkalarning 14 turi va boshqalar), keng tanlash oynasi | VERIFIED (brauzer) |

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 34 — 2026-11-20
+**Kassa:** ekran barmoq bilan kattalashmaydi; tugmalar uchun 91 ta ikonka. **1C ko'prigi:** katta "ko'p tovarga birdan" amali fayl
+band bo'lganda to'xtab qolmaydi (qayta o'qiydi).
+
 ## Kompyuter pc 33 — 2026-11-20
 **Kassa:** qarz to'lash TO'LOV tugmasi ichida (savat bo'sh bo'lsa); mijozning umumiy qarzi ko'rinadi; oyna tugmalarida narx turi
 belgisi (N1..N4); «Kassadan chiqish» tugmasi olib tashlandi.

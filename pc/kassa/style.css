@@ -585,3 +585,11 @@ body.ret .pay-row .pay-btn.alt { background: var(--ret-top); }
 .pt-pill.pt4 { background: #f8a5c2; color: #4a0e24; }
 .pt-one { display: flex; align-items: center; gap: 6px; color: var(--top-ink); padding: 0 10px; font-weight: 700; }
 .pt-one .pt-pill { font-size: 18px; line-height: 28px; padding: 0 12px; vertical-align: 0; }
+
+/* pc 34: ikki barmoq bilan ekran kattalashmasin (faqat surish) */
+html, body { touch-action: pan-x pan-y; }
+/* pc 34: ikonka tanlash — ko'p ikonka, keng oyna */
+.sheet.ask.wide { width: min(820px, 96vw); }
+.ask-choices.icons { grid-template-columns: repeat(8, 1fr); max-height: 62vh; }
+.ask-choices.icons button { min-height: 62px; }
+.ask-choices.icons .ic { width: 32px; height: 32px; }
