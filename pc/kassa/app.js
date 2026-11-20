@@ -438,6 +438,7 @@
     $('askText').textContent = o.text || '';
     $('askErr').textContent = '';
     $('askPw').value = '';
+    $('askPw').type = o.num ? 'text' : 'password';            // telefon raqami — ochiq ko'rinadi
     $('askPw').classList.toggle('hidden', !o.pw);
     $('askPad').classList.toggle('hidden', !o.pw);
     var ch = $('askChoices');
@@ -923,6 +924,28 @@
     kb.appendChild(last);
     renderKbResults();
   }
+  /** pc 27: yangi mijoz — ism (qidiruvda yozilgan) + telefon (ixtiyoriy) -> 1C; darhol to'lovga tanlanadi. */
+  function newClient(name) {
+    name = String(name || '').replace(/\s+/g, ' ').trim();
+    if (name.length < 2) { toast('Mijoz ismini yozing', true); return; }
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    ask({
+      title: 'Yangi mijoz: ' + name, text: "Telefon raqami (ixtiyoriy) — raqamlarni bosing, keyin «Saqlash»", pw: true, num: true,
+      yes: 'Saqlash',
+      onYes: function (tel) {
+        return api('POST', '/api/client', { token: S.token, name: name, tel: tel || '' }, 45000).then(function (j) {
+          if (!j.ok) throw new Error(j.e || 'Xato');
+          if (S.data) {
+            S.data.cl.push(j.client);
+            S.data.cl.__idx = null;                    // qidiruv ro'yxati qayta tuziladi
+          }
+          if (S.pay) { S.pay.client = j.client; renderPay(); }
+          closeKb();
+          toast("Mijoz qo'shildi: " + j.client[1] + ' (kodi ' + j.client[0] + ')');
+        });
+      }
+    });
+  }
   function renderKbResults() {
     var k = S.kb;
     var box = $('kbResults');
@@ -932,6 +955,14 @@
       var q = k.text.trim();
       var list = q ? L.searchClients(S.data.cl, q, 60) : S.data.cl.filter(function (c) { return c[3] > 0; }).slice(0, 60);
       var n = 0;
+      if (q.length >= 2) {
+        // pc 27: kerakli mijoz yo'q bo'lsa — shu yerning o'zida 1C'ga qo'shish
+        var nb = el('button', 'cl new-client');
+        nb.setAttribute('data-new', '1');
+        nb.appendChild(el('b', '', '+ Yangi mijoz: ' + q));
+        nb.appendChild(el('small', '', "1C'ga qo'shiladi"));
+        box.appendChild(nb);
+      }
       for (var i = 0; i < list.length; i++) {
         var c = list[i];
         var b = el('button', 'cl');
@@ -2226,6 +2257,8 @@
     });
     $('kbResults').addEventListener('click', function (e) {
       if (!S.kb) return;
+      var nw = e.target.closest ? e.target.closest('button[data-new]') : null;
+      if (nw && S.kb.kind === 'client') { newClient(S.kb.text.trim()); return; }
       var c = e.target.closest ? e.target.closest('button[data-ci]') : null;
       if (c && S.kb.kind === 'client') {
         if (S.pay) { S.pay.client = S.data.cl[parseInt(c.getAttribute('data-ci'), 10)]; renderPay(); }

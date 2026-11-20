@@ -422,6 +422,24 @@ class KassaOneC:
                 log.warning("kassa: sotuv statistikasi: %s", str(e)[:200])
         return {code_text(r.get("Код")): int(fnum(r.get("Н"))) for r in rows or []}
 
+    def new_client(self, c, name, tel):
+        """1C'da yangi mijoz (Справочник.Контрагенты, "Клиенты" guruhida) — Admin ilovasidagi bilan bir xil."""
+        cat = c.Справочники.Контрагенты
+        dup = cat.НайтиПоНаименованию(name, True)
+        if dup is not None and not dup.Пустая():
+            raise kc.KassaError("Bu nomli mijoz 1C'da bor (kodi %s) — ro'yxatdan tanlang" % code_text(dup.Код))
+        obj = cat.СоздатьЭлемент()
+        obj.Родитель = cat.Клиенты
+        try:
+            obj.УстановитьНовыйКод()
+        except Exception:  # noqa: BLE001 - avtomatik raqamlashda kerak emas
+            pass
+        obj.Наименование = name
+        if tel:
+            obj.Тел = tel
+        obj.Записать()
+        return code_text(obj.Код)
+
     def day_sales(self, c, day):
         start = dt.datetime(day.year, day.month, day.day)
         end = start + dt.timedelta(days=1) - dt.timedelta(seconds=1)
@@ -1290,6 +1308,29 @@ class KassaService:
         out.update(day=key, iso=r["day"], e1c=r["e1c"], src="1c" if not r["e1c"] else "kassa")
         return out
 
+    def add_client(self, token, name, tel=""):
+        """pc 27: kassada yangi mijoz qo'shish — 1C'ga darhol yoziladi va ro'yxatga qo'shiladi."""
+        self.who(token)
+        name = " ".join(str(name or "").split())[:150]
+        tel = re.sub(r"[^0-9+ ]", "", str(tel or ""))[:30].strip()
+        if len(name) < 2:
+            raise kc.KassaError("Mijoz ismini yozing")
+        if self.snap is not None:
+            low = name.lower()
+            for row in self.snap.get("cl", []):
+                if str(row[1]).strip().lower() == low:
+                    raise kc.KassaError("Bu nomli mijoz bor (kodi %s) — ro'yxatdan tanlang" % row[0])
+
+        def go():
+            code = self.onec.new_client(self._com(), name, tel)
+            with self.lock:
+                snap = dict(self.snap or {})
+            row = [code, name, tel, 0.0, 0.0, 0]
+            snap["cl"] = list(snap.get("cl", [])) + [row]
+            self._publish(snap, save=True)
+            return {"ok": True, "client": row}
+        return self.call(go, timeout=40)
+
     def print_text(self, token, title, rows):
         """Hisobotni kompyuterdagi chek printeriga (1C orqali) chiqarish."""
         self.who(token)
@@ -1824,6 +1865,8 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/client":
+                    return self._json(200, service.add_client(body.get("token"), body.get("name"), body.get("tel")))
                 if path == "/api/print_text":
                     rows = body.get("rows") if isinstance(body.get("rows"), list) else []
                     return self._json(200, service.print_text(body.get("token"), body.get("title"),

@@ -498,3 +498,7 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .col-sws { display: flex; flex-wrap: wrap; gap: 6px; }
 .col-sws .sw { width: 44px; min-width: 44px; height: 44px; min-height: 44px; border-radius: 10px; border: 2px solid rgba(128, 128, 128, .6); padding: 0; }
 .col-sws .sw.on { outline: 4px solid var(--acc); outline-offset: 1px; }
+
+/* pc 27: yangi mijoz tugmasi */
+.cl.new-client { border: 2px dashed var(--acc); background: var(--acc-soft); }
+.cl.new-client b { color: var(--acc); }

@@ -40,6 +40,23 @@ class Cat:
     def НайтиПоКоду(self, code):  # noqa: N802
         return self.items.get(str(code))
 
+    def НайтиПоНаименованию(self, name, exact):  # noqa: N802
+        for r in self.items.values():
+            if str(r) == name:
+                return r
+        return Obj(Пустая=lambda: True)
+
+    def СоздатьЭлемент(self):  # noqa: N802
+        cat = self
+        el = Obj(Тел="")
+
+        def write():
+            el.Код = float(max(int(k) for k in cat.items) + 1)
+            cat.items[str(int(el.Код))] = Ref(el.Наименование, Код=el.Код, Тел=el.Тел, Родитель=el.Родитель)
+        el.УстановитьНовыйКод = lambda: None
+        el.Записать = write
+        return el
+
 
 class Rows:
     def __init__(self, rows):
@@ -99,7 +116,7 @@ class FakeC:
         savdo = Ref("Savdo", Код=2.0)
         self.parties = {"2": savdo, "55": Ref("Ali", Код=55.0, ЛимитСум=100000, ЛимитВал=0)}
         self.Справочники = Obj(Товары=Cat(self.goods), Сотрудники=Cat(self.staff, Дукон=dukon),
-                               Контрагенты=Cat(self.parties, Савдо=savdo))
+                               Контрагенты=Cat(self.parties, Савдо=savdo, Клиенты=Ref("Klientlar")))
         self.Константы = Obj(Курс=Obj(Получить=lambda: 12700.0), Склад1=Obj(Получить=lambda: Ref("Asosiy")),
                              ПродажаБезОстатков=Obj(Получить=lambda: False), ТипВесы=Obj(Получить=lambda: "RONGTA"))
         self.Перечисления = Obj(ВидВал=Obj(Сум="Сум", Вал="Вал"), ТипЦена=Obj(Цена1="Ц1", Цена2="Ц2", Цена3="Ц3", Цена4="Ц4"),
@@ -478,6 +495,20 @@ class ServiceTest(unittest.TestCase):
         self.svc.put_ui(tok, grant, {"auto": "8"})                                 # bo'shatilgan
         with self.assertRaises(kc.KassaError):
             self.svc.auto_login()
+
+    def test_add_client(self):
+        tok = self.login()
+        self.svc.data(0)
+        r = self.svc.add_client(tok, "  Vali   aka ", "+998 90 1 x 23")
+        self.assertEqual(r["client"], ["56", "Vali aka", "+998 90 1  23", 0.0, 0.0, 0])
+        self.assertEqual(str(self.c.parties["56"].Родитель), "Klientlar")
+        self.assertIn(["56", "Vali aka", "+998 90 1  23", 0.0, 0.0, 0], self.svc.snap["cl"])
+        with self.assertRaises(kc.KassaError):
+            self.svc.add_client(tok, "vali AKA")                               # bor nom
+        with self.assertRaises(kc.KassaError):
+            self.svc.add_client(tok, "Ali")                                    # 1C'da bor
+        with self.assertRaises(kc.KassaError):
+            self.svc.add_client(tok, " ")
 
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]

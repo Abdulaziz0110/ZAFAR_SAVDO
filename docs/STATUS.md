@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 21) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3 (versionCode 50) + kompyuter dasturi 5.4 (pc 27) + Savdo Mijoz 5.3 (versionCode 31), 2026-11-16
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -584,4 +584,10 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Matnli etiketka: ekran matnlari ikkala tilda (lotin/kirill), format argumentlari mos | VERIFIED (skript) |
 | Printerga ulanish (LAN/LPD/bulut, Tailscale) | O'zgartirilmagan: mavjud print() yo'lidan foydalaniladi |
 | Telefondan 1C'ga yozish xatosi ("Вызванный объект был отключен от клиентов", COM uzilishi) | NOT-IMPLEMENTED (tekshirilmoqda) |
+
+## pc 27 (2026-11-20)
+| Funksiya | Holat |
+|---|---|
+| Kassada yangi mijoz: to'lovda "Mijozni tanlash" -> ismni yozish -> "+ Yangi mijoz" -> telefon (ixtiyoriy) -> 1C'ga yoziladi (Контрагенты, "Клиенты" guruhi) va darhol tanlanadi; bor nom qayta qo'shilmaydi | VERIFIED (test + brauzer) / 1C'da IMPLEMENTED-UNVERIFIED |
+| Android lint: View.tooltipText (API 26) -> TooltipCompat | VERIFIED (kompilyatsiya; lint CI'da) |
 

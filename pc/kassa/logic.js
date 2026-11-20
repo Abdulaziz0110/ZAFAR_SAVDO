@@ -337,7 +337,7 @@
   /** Tovar qidiruvi: nom (telefondagi algoritm), kod, narx (tanlangan narx turida, 3+ raqam). */
   function search(goods, q, ptype, rate, limit) {
     if (!goods.length) return [];
-    if (!goods.__idx) Object.defineProperty(goods, '__idx', { value: makeIndex(goods, function (g) { return g.n; }, function (g) { return g.c; }), enumerable: false });
+    if (!goods.__idx) Object.defineProperty(goods, '__idx', { value: makeIndex(goods, function (g) { return g.n; }, function (g) { return g.c; }), enumerable: false, writable: true, configurable: true });
     var hits = query(goods.__idx, q, popularity, 400);
     var raw = String(q || '').replace(/\s/g, '');
     if (/^\d{3,}$/.test(raw)) {
@@ -355,7 +355,7 @@
   /** Mijoz qidiruvi: ism (xuddi shu algoritm) yoki telefon raqami (3+ raqam). */
   function searchClients(cl, q, limit) {
     if (!cl.length) return [];
-    if (!cl.__idx) Object.defineProperty(cl, '__idx', { value: makeIndex(cl, function (c) { return c[1]; }, function (c) { return c[0]; }), enumerable: false });
+    if (!cl.__idx) Object.defineProperty(cl, '__idx', { value: makeIndex(cl, function (c) { return c[1]; }, function (c) { return c[0]; }), enumerable: false, writable: true, configurable: true });
     var digits = String(q || '').replace(/[^0-9]/g, '');
     var hits = query(cl.__idx, q, null, 200);
     if (digits.length >= 3) {

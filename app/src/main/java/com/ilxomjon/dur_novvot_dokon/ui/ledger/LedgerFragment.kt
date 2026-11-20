@@ -93,7 +93,7 @@ class LedgerFragment : Fragment() {
                     bb.btnSync.setIconResource(if (t.isBlank()) R.drawable.ic_sync else R.drawable.ic_sync_alt)
                     val cd = t.ifBlank { getString(R.string.lg_sync_title) }
                     bb.btnSync.contentDescription = cd
-                    bb.btnSync.tooltipText = cd
+                    androidx.appcompat.widget.TooltipCompat.setTooltipText(bb.btnSync, cd)   // tooltipText — API 26+, minSdk 23
                 }
             }
         }

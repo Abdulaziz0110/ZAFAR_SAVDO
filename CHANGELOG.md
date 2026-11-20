@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 27 — 2026-11-20
+**Kassa:** to'lovda mijoz tanlashda ro'yxatda yo'q mijozni shu yerda qo'shish (ism + telefon) — 1C'ga darhol yoziladi.
+Android: lint xatosi (tooltipText) tuzatildi, ilova ishlashi o'zgarmagan.
+
 ## 5.3.3 (versionCode 53) — 2026-11-20
 **Matnli etiketka (Sozlamalar > Yorliqlar > Matnli etiketka):** 58x40 etiketkaga Arial 14 bilan erkin matn chop etiladi; har bir etiketka tarixda saqlanadi
 (qayta chiqarish, tahrirlash, o'chirish); matn sig'masa shrift o'zi kichrayadi. Printerga ulanish (LAN/LPD/bulut, Tailscale) o'zgarmagan.
