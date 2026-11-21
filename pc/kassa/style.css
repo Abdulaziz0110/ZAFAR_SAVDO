@@ -633,3 +633,8 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 34px 1fr 76px 
 .sale-card .sc-btns button { min-height: 52px; padding: 0 14px; }
 .sale-card .dev-ed { background: #f59e0b; color: #1f1300; border-color: #f59e0b; }
 body.sale-edit .mode-bar { background: #6d3fc8; color: #fff; }
+/* pc 39: klaviatura ixchamroq — ekran bo'ylab cho'zilmaydi (harflar bir-biriga yaqin, topish oson) */
+.kb { width: 100%; max-width: 860px; margin: 0 auto; }
+.kb-row button { max-width: 70px; min-height: 56px; }
+.kb-row button.w2 { max-width: 150px; }
+.kb-row button.w5 { max-width: 330px; }

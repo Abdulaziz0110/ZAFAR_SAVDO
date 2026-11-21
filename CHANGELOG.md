@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Kompyuter pc 40 — 2026-11-21
+Klaviatura ixchamroq (eni 860 px gacha, o'rtada).
+
 ## Kompyuter pc 39 + ilova 5.3.7 — 2026-11-21
 Panel yozuvi ingichkaroq; N1 o'rniga raqam maydonida katta raqam; uzun nom 2 qator; PLU alohida ustun; savat ostidagi tugmalar
 teng kvadrat. Savdolar: qalin asosiy ma'lumot, 1C'dagi o'zgarish ko'rinadi, «Takrorlash», dasturchi rejimida «Tahrirlash».

@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 39) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 40) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -666,6 +666,7 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Funksiya | Holat |
 |---|---|
 | Panel yozuvlari ingichkaroq (16 px, 800) — sig'adi | VERIFIED (brauzer, rasm) |
+| (pc 40) Qidiruv va boshqa joylardagi klaviatura ixchamroq: eni ko'pi bilan 860 px, ekran o'rtasida | VERIFIED (brauzer) |
 | Oynalardagi N1 belgisi olib tashlandi; narx turi raqam maydoni boshida katta (30 px) rangli raqam | VERIFIED (brauzer) |
 | Savatda uzun nom — «...» o'rniga kichikroq shrift bilan 2 qator (sig'masa avtomatik) | VERIFIED (kod; demo nomlar sig'adi) |
 | Savatda Summadan keyin tor «PLU» ustuni (4 xonali son); nom oldidagi «PLU 412» olib tashlandi | VERIFIED (brauzer) |
