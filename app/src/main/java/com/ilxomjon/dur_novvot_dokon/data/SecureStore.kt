@@ -82,6 +82,14 @@ class SecureStore(private val context: Context) {
             .putBoolean("relay_mode", enabled && c != null).apply()
     }
 
+    /** v5.3.8: rasm orqali kirim — sun'iy intellekt (Anthropic) kaliti va modeli. Ekranga to'liq CHIQARILMAYDI. */
+    var aiKey: String
+        get() = prefs.getString("ai_key", null).orEmpty()
+        set(v) { prefs.edit().putString("ai_key", v.trim()).apply() }
+    var aiModel: String
+        get() = prefs.getString("ai_model", null).orEmpty()
+        set(v) { prefs.edit().putString("ai_model", v.trim()).apply() }
+
     /** v3.0: ko'chirishda (Agent -> Admin) — faqat parolli zaxiradan. */
     fun restorePassword(password: String) {
         prefs.edit().putString("password", password).commit()

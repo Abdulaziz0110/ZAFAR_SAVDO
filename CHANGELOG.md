@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Ilova 5.3.8 — 2026-11-21
+**Rasm orqali kirim:** yuk xati, chek yoki qo'lda yozilgan ro'yxat rasmi o'qiladi, tovarlar o'zi tanlanadi, har qatorda rasmdagi
+ko'rinishi; tasdiqlanganlarni eslab qoladi (yozuv→tovar, yuk beruvchi, blok→dona, oxirgi narx). Anthropic API kaliti kerak.
+
 ## Kompyuter pc 43 — 2026-11-21
 Savatda nom kengroq, soni doim 3 xona. Klaviaturada katta harf. Xprinter'ga vizitka. Pastda bitta katta «JAMI:».
 Savdolar ikki marta chiqmaydi; savdoni 5 soniya bosib o'chirish.

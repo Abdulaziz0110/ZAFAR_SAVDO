@@ -82,6 +82,10 @@ class WriteFormFragment : CodeFragment() {
             linesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             c.addView(linesBox)
             c.addView(Ui.button(ctx, getString(R.string.wf_add), icon = R.drawable.ic_add) { addLine() })
+            // v5.3.8: rasm orqali kirim (yuk xati, chek, qo'lda yozilgan ro'yxat)
+            if (kind == WriteKind.RECEIPT) {
+                c.addView(Ui.button(ctx, getString(R.string.pr_open), outlined = true, icon = R.drawable.ic_camera) { navigator().push(PhotoReceiptFragment()) })
+            }
         } else {
             c.addView(Ui.section(ctx, getString(R.string.wf_amounts)))
             // v5.0.5: faqat so'm
@@ -112,6 +116,23 @@ class WriteFormFragment : CodeFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // v5.3.8: rasmdan o'qilgan qatorlar shu kirimga qo'shiladi
+        parentFragmentManager.setFragmentResultListener(PhotoReceiptFragment.REQ, viewLifecycleOwner) { _, b ->
+            val ids = b.getStringArray(PhotoReceiptFragment.RES_IDS).orEmpty()
+            val names = b.getStringArray(PhotoReceiptFragment.RES_NAMES).orEmpty()
+            val qty = b.getDoubleArray(PhotoReceiptFragment.RES_QTY) ?: DoubleArray(0)
+            val ps = b.getDoubleArray(PhotoReceiptFragment.RES_SOM) ?: DoubleArray(0)
+            val pu = b.getDoubleArray(PhotoReceiptFragment.RES_USD) ?: DoubleArray(0)
+            for (i in ids.indices) {
+                if (i < names.size && i < qty.size && i < ps.size && i < pu.size) lines += WriteLine(names[i], ids[i], qty[i], ps[i], pu[i])
+            }
+            val pn = b.getString(PhotoReceiptFragment.RES_PARTY).orEmpty()
+            if (pn.isNotEmpty() && party.isEmpty()) { party = pn; partyCode = b.getString(PhotoReceiptFragment.RES_CODE).orEmpty() }
+            val note = b.getString(PhotoReceiptFragment.RES_NOTE).orEmpty()
+            if (note.isNotEmpty() && eNote.text.isNullOrBlank()) eNote.setText(note)
+            render()
+            snack(getString(R.string.pr_added, ids.size))
+        }
         childFragmentManager.setFragmentResultListener(REQ_STORE, viewLifecycleOwner) { _, b ->
             val st = ServiceLocator.catalog.storeById(b.getString(StorePickerSheet.KEY_ID).orEmpty()) ?: return@setFragmentResultListener
             party = st.name

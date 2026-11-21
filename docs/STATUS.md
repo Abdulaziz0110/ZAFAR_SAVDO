@@ -662,6 +662,16 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
 
+## 5.3.8 (versionCode 58) — rasm orqali kirim (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Kirim shaklida «Rasmdan to'ldirish»: kamera/galereya → rasmni sun'iy intellekt (Anthropic Claude, Admin kiritgan API kalit) o'qiydi: yuk beruvchi, sana, valyuta, jami, har qator (nom, miqdor, birlik, narx, summa, rasmdagi o'rni), burilgan rasm, qo'lyozma, kirill/lotin, chizib tashlangan qatorlar | IMPLEMENTED-UNVERIFIED (javobni o'qish — unit test; haqiqiy rasm va kalit bilan sinalmagan) |
+| Har qator tovarga moslanadi: avval o'rganilganlar (aynan yoki o'xshash yozuv, shu yuk beruvchiniki ustun), keyin katalog nomlari (kirill=lotin, q~k, x~h, 1 harf xato); belgisi: o'rganilgan / o'xshash % / taxmin % | VERIFIED (unit test) |
+| Ro'yxatda nom, miqdor, narxni o'zgartirish; har qatorni bosganda rasmning aynan shu qatori kesib ko'rsatiladi (butun rasm, burish); qo'lda qator qo'shish, uzoq bosib o'chirish; bir nechta rasm (uzun ro'yxat) | IMPLEMENTED-UNVERIFIED (qurilmada sinalmagan) |
+| Ogohlantirishlar: qator summasi rasmdagidan farq qiladi, rasmdagi jami bilan farq, oxirgi kirim narxidan 25% dan ko'p farq | VERIFIED (unit test: narx sakrashi) / ekran IMPLEMENTED-UNVERIFIED |
+| O'zini o'zi o'rgatish: «Kirimga o'tkazish»da yozuv→tovar, yuk beruvchi sarlavhasi→1C kontragenti, blok→dona ko'paytiruvchisi (masalan ×12), oxirgi narx eslab qolinadi; keyingi safar o'zi tanlaydi | VERIFIED (unit test) |
+| Kamera ilovani yopib yuborsa ham o'qilgan ro'yxat yo'qolmaydi (24 soat) | IMPLEMENTED-UNVERIFIED |
+
 ## pc 43 (2026-11-21)
 | Funksiya | Holat |
 |---|---|
