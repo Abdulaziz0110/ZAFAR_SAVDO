@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Kompyuter pc 39 + ilova 5.3.7 — 2026-11-21
+Panel yozuvi ingichkaroq; N1 o'rniga raqam maydonida katta raqam; uzun nom 2 qator; PLU alohida ustun; savat ostidagi tugmalar
+teng kvadrat. Savdolar: qalin asosiy ma'lumot, 1C'dagi o'zgarish ko'rinadi, «Takrorlash», dasturchi rejimida «Tahrirlash».
+Mijoz qarzi uchun zaxira so'rov va texnik ma'lumot. Yorliq: Tailscale manzilida avval kompyuter orqali, aniq xato matni.
+
 ## Kompyuter pc 38 — 2026-11-20
 **Sensor va kompyuter kassasi jonli bir xil** (savat, oyna, narx turi, sozlamalar — darhol). **PLU** hamma joyda kichik belgi.
 **Panel** shaxmatdek, yozuv o'rtada, yirik va qalin.

@@ -167,7 +167,8 @@ class FakeC:
                     {"Номер": "000050", "Дата": when, "КК": 55.0, "КН": "Ali", "Сот": "Kassir", "Всего": 12000.0,
                      "Ск": 1000.0, "Нал": 5000.0, "Пер": 2000.0, "Клик": 0.0, "Долг": 25000.0, "Вид": 0, "Савдо": 0}]
         if text == kassa.DAY_LINES_Q:
-            return [{"Номер": "000050", "Имя": "Olma", "Кол": 2.0, "Цена": 6000.0, "Сум": 12000.0}]
+            return [{"Номер": "000050", "Имя": "Olma", "Код": 15.0, "Кол": 2.0, "Цена": 6000.0, "Сум": 12000.0},
+                    {"Номер": "000123", "Имя": "Olma", "Код": 15.0, "Кол": 1.5, "Цена": 6000.0, "Сум": 9000.0}]
         if text == kassa.SALES_STATS_Q:
             assert params["Н2"] - params["Н1"] == dt.timedelta(days=28)
             return [{"Код": 15.0, "Н": 12.0}, {"Код": 16.0, "Н": 3.0}]
@@ -478,11 +479,74 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(by["000123"]["src"], "kassa")
         old = by["000050"]                                                         # 1C'da qilingan savdo
         self.assertEqual((old["src"], old["due"], old["debt"], old["cdebt"], old["cashier"]), ("1c", 11000.0, 4000.0, 29000.0, "Kassir"))
-        self.assertEqual(old["lines"], [{"n": "Olma", "q": 2.0, "p": 6000.0, "s": 12000.0}])
+        self.assertEqual(old["lines"], [{"n": "Olma", "c": "15", "q": 2.0, "p": 6000.0, "s": 12000.0}])
+        self.assertNotIn("ed", by["000123"])                                       # 1C'da o'zgarmagan
+        self.assertEqual(by["000123"]["id"], "sale0001")
         with self.assertRaises(PermissionError):
             self.svc.sales("yo'q")
         with self.assertRaises(kc.KassaError):
             self.svc.sales(tok, "2026-13-45")
+
+    def test_merge_1c_edited(self):
+        """pc 39: kompyuterda (1C'da) o'zgartirilgan kassa savdosi — ro'yxatda 1C'dagi holati, kassa raqami saqlanadi."""
+        items = [{"id": "s1", "src": "kassa", "no": "7", "total": 9000.0, "lines": [{"n": "Olma"}], "cashier": "Zafar"},
+                 {"id": "s2", "src": "kassa", "no": "navbatda", "queued": True, "total": 1.0, "lines": []}]
+        docs = [{"id": "1c:7", "src": "1c", "no": "7", "total": 15000.0, "lines": [{"n": "Olma"}, {"n": "Nok"}], "cashier": "Kassir",
+                 "cname": "Ali"},
+                {"id": "1c:8", "src": "1c", "no": "8", "total": 5.0, "lines": []}]
+        out = kassa.merge_1c(items, docs)
+        self.assertEqual([x["id"] for x in out], ["s1", "s2", "1c:8"])
+        self.assertEqual((out[0]["total"], out[0]["src"], out[0]["ed"], out[0]["cname"], out[0]["cashier"]),
+                         (15000.0, "kassa", 1, "Ali", "Zafar"))
+        self.assertEqual(len(out[0]["lines"]), 2)
+
+    def test_edit_sale_1c(self):
+        """pc 39: dasturchi rejimida savdoni tahrirlash — 1C hujjati qatorlari va to'lovi almashadi, qayta o'tkaziladi."""
+        c = FakeC()
+        old = Doc(c)
+        old.rows.append(Obj(Товары="eski"))
+        old.Таблица.Очистить = lambda: old.rows.clear()
+        old.Контрагент = c.parties["55"]
+        old.Склад = Ref("Asosiy")
+        old.ВидВал, old.ВидПродаж = "Сум", "Ц1"
+        found = []
+
+        def by_no(no, when):
+            found.append((no, when))
+            return Ref("doc", Пустая=lambda: False, ПолучитьОбъект=lambda: old)
+        c.Документы.ПродажаРозница.НайтиПоНомеру = by_no
+        sale = kc.clean_sale(sale_body(client="55", lines=[{"code": "16", "qty": "12", "price": "1000"}], cash="5000"))
+        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"], True, "sale")
+        when = kassa.dt.datetime(2026, 11, 15, 8, 5)
+        no, d = kassa.KassaOneC().edit_sale(c, "000123", when, sale, pay)
+        self.assertEqual((no, d), ("000123", "15.11.2026 08:05"))
+        self.assertEqual(found, [("000123", when)])
+        self.assertEqual(c.written, [old])
+        self.assertEqual(len(old.rows), 1)
+        r = old.rows[0]
+        self.assertEqual((r.Товары, r.Кол, r.Шт, r.Блок, r.ЦенаСум, r.СуммаСум), (c.goods["16"], 12.0, 6, 2.0, 1000.0, 12000.0))
+        self.assertEqual((old.ВсегоСум, old.Нал, old.СкидкаСум), (12000.0, 5000.0, 0.0))
+        c.parties["55"].Наименование = "Ali"
+        sale2 = dict(sale, client="")                                                    # mijozni almashtirib bo'lmaydi
+        with self.assertRaises(kc.KassaError):
+            kassa.KassaOneC().edit_sale(c, "000123", when, sale2, pay)
+
+    def test_edit_sale_service(self):
+        tok = self.login()
+        with self.assertRaises(kc.KassaError):
+            self.svc.edit_sale({"token": tok, "no": "", "date": "15.11.2026", "lines": [{"code": "15", "qty": "1", "price": "6000"}]})
+        with self.assertRaises(kc.KassaError):
+            self.svc.edit_sale({"token": tok, "no": "000123", "date": "15.11.2026 08:05", "lines": []})
+        with self.assertRaises(PermissionError):
+            self.svc.edit_sale({"token": "x", "no": "000123", "date": "15.11.2026", "lines": [{"code": "15", "qty": "1"}]})
+        calls = []
+        self.svc.onec.edit_sale = lambda c, no, when, sale, pay: calls.append((no, when, sale["lines"][0]["name"])) or (no, "15.11.2026 08:05")
+        self.svc.data(0)
+        r = self.svc.edit_sale({"token": tok, "no": "000123", "date": "15.11.2026 08:05", "kind": "sale",
+                                "lines": [{"code": "15", "qty": "2", "price": "6000", "m": 1}], "cash": "12000"})
+        self.assertEqual((r["no"], r["total"], r["edited"], r["lines"][0]["c"]), ("000123", 12000.0, 1, "15"))
+        self.assertEqual(calls, [("000123", kassa.dt.datetime(2026, 11, 15, 8, 5), "Olma")])
+        self.assertEqual(self.svc.full_at, 0.0)
 
     def test_auto_login(self):
         with self.assertRaises(kc.KassaError):
@@ -591,6 +655,28 @@ class ServiceTest(unittest.TestCase):
         g = {x["c"]: x for x in self.svc.snap["g"]}
         self.assertEqual(g[code]["pl"], "501")
         self.assertEqual(sum(1 for x in self.svc.snap["g"] if "pl" in x), 1)
+
+    def test_debts_fallback(self):
+        """pc 39: qarz so'rovi ishlamasa yoki hammasi 0 bo'lsa — telefon hisobotidagi so'rov (nom bo'yicha, sana bilan)."""
+        calls = []
+
+        class One(kassa.KassaOneC):
+            def query(s, c, q, fields, **kw):
+                calls.append((q, kw))
+                if len(calls) == 1:
+                    raise RuntimeError("Поле не найдено Код")
+                if len(calls) == 2:
+                    return [{"Код": "1", "С": 0, "В": 0}]
+                return [{"Имя": "Ali", "С": 150000.0, "В": 0}]
+        o = One(now=lambda: kassa.dt.datetime(2026, 11, 21))
+        rows = o.debts(None)
+        self.assertEqual(rows, [{"Имя": "Ali", "С": 150000.0, "В": 0}])
+        self.assertEqual(calls[2][1], {"К": kassa.dt.datetime(2026, 11, 21)})
+        self.assertIn("Остатки(&К, )", calls[2][0])
+        self.assertEqual((o.debt_diag["nz"], o.debt_diag["s"][0][1]), (1, "Ali"))
+        self.assertEqual(len(o.debt_diag["e"]), 2)
+        snap = kassa.build_snapshot([], [], [], [], [{"Код": "7", "Имя": "ALI ", "Тел": "", "Пост": 0}], rows, {}, "")
+        self.assertEqual(snap["cl"][0][3], 150000.0)                   # nom bo'yicha topildi
 
     def test_admin_password(self):
         tok = self.svc.login("5555")["token"]

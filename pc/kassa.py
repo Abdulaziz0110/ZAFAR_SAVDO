@@ -145,6 +145,12 @@ DEBTS_Q = (
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О "
     "СГРУППИРОВАТЬ ПО О.Контрагент.Код, О.Контрагент.Наименование"
 )
+# pc 39: zaxira — telefon hisobotidagi kabi (onec_data.DEBT_Q): Остатки(&К,) sana bilan, nom bo'yicha
+DEBTS_BY_NAME_Q = (
+    "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, СУММА(О.СуммаВалОстаток) КАК В "
+    "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(&К, ) КАК О "
+    "СГРУППИРОВАТЬ ПО О.Контрагент.Наименование"
+)
 DEBT_ONE_Q = (
     "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК В "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(, Контрагент = &К И Сотрудник = &С) КАК О"
@@ -260,7 +266,7 @@ DAY_DOCS_Q = (
     "ВЫБОР КОГДА Д.Контрагент = ЗНАЧЕНИЕ(Справочник.Контрагенты.Савдо) ТОГДА 1 ИНАЧЕ 0 КОНЕЦ КАК Савдо "
     "ИЗ Документ.ПродажаРозница КАК Д ГДЕ Д.Проведен И Д.Дата МЕЖДУ &Н И &К УПОРЯДОЧИТЬ ПО Д.Дата УБЫВ")
 DAY_LINES_Q = (
-    "ВЫБРАТЬ Т.Ссылка.Номер КАК Номер, Т.Товары.Наименование КАК Имя, Т.Кол КАК Кол, Т.ЦенаСум КАК Цена, "
+    "ВЫБРАТЬ Т.Ссылка.Номер КАК Номер, Т.Товары.Наименование КАК Имя, Т.Товары.Код КАК Код, Т.Кол КАК Кол, Т.ЦенаСум КАК Цена, "
     "Т.СуммаСум КАК Сум ИЗ Документ.ПродажаРозница.Таблица КАК Т "
     "ГДЕ Т.Ссылка.Проведен И Т.Ссылка.Дата МЕЖДУ &Н И &К УПОРЯДОЧИТЬ ПО Т.Ссылка.Дата, Т.НомерСтроки")
 DAY_DOCS_F = ["Номер", "Дата", "КК", "КН", "Сот", "Всего", "Ск", "Нал", "Пер", "Клик", "Долг", "Вид", "Савдо"]
@@ -278,7 +284,8 @@ def day_docs(heads, lines):
     by_no = {}
     for l in lines:
         by_no.setdefault(text(l.get("Номер")), []).append(
-            {"n": text(l.get("Имя")), "q": fnum(l.get("Кол")), "p": fnum(l.get("Цена")), "s": fnum(l.get("Сум"))})
+            {"n": text(l.get("Имя")), "c": code_text(l.get("Код")), "q": fnum(l.get("Кол")), "p": fnum(l.get("Цена")),
+             "s": fnum(l.get("Сум"))})
     out = []
     for h in heads:
         no = text(h.get("Номер"))
@@ -298,6 +305,24 @@ def day_docs(heads, lines):
                     "click": click, "change": 0, "debt": debt, "client": client, "cname": text(h.get("КН")) if client else "",
                     "cdebt": after if client else 0, "lines": by_no.get(no, [])})
     return out
+
+
+def merge_1c(items, docs):
+    """pc 39: kassa savdolari + 1C'dagilar. Kassada qilingan savdo 1C'da keyin o'zgartirilgan bo'lsa (kompyuterda), ro'yxatda
+    1C'dagi HOZIRGI holati (qatorlar, summa, mijoz, to'lov) ko'rinadi — kassa raqami (id) chekni qayta chiqarish uchun qoladi."""
+    by_no = {text(r.get("no")): r for r in docs}
+    out = []
+    for r in items:
+        d = by_no.pop(text(r.get("no")), None) if r.get("no") and not r.get("queued") else None
+        if d is None:
+            out.append(r)
+            continue
+        changed = abs(fnum(d.get("total")) - fnum(r.get("total"))) > 0.005 or len(d.get("lines") or []) != len(r.get("lines") or [])
+        m = dict(d, id=r.get("id") or d["id"], src="kassa", cashier=r.get("cashier") or d.get("cashier"))
+        if changed:
+            m["ed"] = 1                    # 1C'da o'zgartirilgan
+        out.append(m)
+    return out + list(by_no.values())
 
 
 def check_stock(lines, stock_of, kind):
@@ -395,14 +420,30 @@ class KassaOneC:
         return []
 
     def debts(self, c):
-        for q, f in ((DEBTS_Q, ["Код", "Имя", "С", "В"]),
-                     (DEBTS_Q.replace(", О.Контрагент.Наименование КАК Имя", "").replace(", О.Контрагент.Наименование", ""), ["Код", "С", "В"])):
+        """Mijozlar qarzi. pc 39: telefondagi hisobot ishlatadigan so'rov (nom bo'yicha, sana bilan) ham zaxirada;
+        xato/namuna dasturchi rejimidagi «Texnik ma'lumot»da ko'rinadi (self.debt_diag)."""
+        errs, last = [], None
+        for q, f, kw in ((DEBTS_Q, ["Код", "Имя", "С", "В"], {}),
+                         (DEBTS_Q.replace(", О.Контрагент.Наименование КАК Имя", "").replace(", О.Контрагент.Наименование", ""),
+                          ["Код", "С", "В"], {}),
+                         (DEBTS_BY_NAME_Q, ["Имя", "С", "В"], {"К": self.now()})):
             try:
-                rows = self.query(c, q, f)
-                log.info("kassa: qarzlar %d qator", len(rows))
-                return rows
+                rows = self.query(c, q, f, **kw)
             except Exception as e:  # noqa: BLE001
+                errs.append(str(e)[:160])
                 log.warning("kassa: qarzlar: %s", str(e)[:200])
+                continue
+            nz = [r for r in rows if fnum(r.get("С")) or fnum(r.get("В"))]
+            log.info("kassa: qarzlar %d qator (%d tasi nol emas)", len(rows), len(nz))
+            self.debt_diag = {"e": errs, "n": len(rows), "nz": len(nz),
+                              "s": [[code_text(r.get("Код")), text(r.get("Имя")), fnum(r.get("С"))] for r in nz[:3]]}
+            if nz:
+                return rows
+            last = rows
+            errs.append("%d qator, hammasi 0" % len(rows))
+        if last is not None:
+            return last
+        self.debt_diag = {"e": errs, "n": 0, "nz": 0, "s": []}
         return []
 
     def staff(self, c):
@@ -464,13 +505,24 @@ class KassaOneC:
         start = dt.datetime(day.year, day.month, day.day)
         end = start + dt.timedelta(days=1) - dt.timedelta(seconds=1)
         heads = self.query(c, DAY_DOCS_Q, DAY_DOCS_F, Н=start, К=end)
-        lines = self.query(c, DAY_LINES_Q, ["Номер", "Имя", "Кол", "Цена", "Сум"], Н=start, К=end) if heads else []
+        lines = []
+        if heads:
+            try:
+                lines = self.query(c, DAY_LINES_Q, ["Номер", "Имя", "Код", "Кол", "Цена", "Сум"], Н=start, К=end)
+            except Exception as e:  # noqa: BLE001 - kodsiz (eski so'rov) — takrorlashda nom bo'yicha topiladi
+                log.warning("kassa: savdo qatorlari kodi: %s", str(e)[:120])
+                lines = self.query(c, DAY_LINES_Q.replace(" Т.Товары.Код КАК Код,", ""), ["Номер", "Имя", "Кол", "Цена", "Сум"],
+                                   Н=start, К=end)
         return day_docs(heads, lines)
 
     def snapshot(self, c):
         k = self.consts(c)
+        clients = self.clients(c)
         snap = build_snapshot(self.goods(c), self.stock(c, k["store_ref"]), self.barcodes(c), self.panel(c),
-                              self.clients(c), self.debts(c), k, self.title)
+                              clients, self.debts(c), k, self.title)
+        dx = dict(getattr(self, "debt_diag", None) or {})
+        dx["c"] = [[code_text(r.get("Код")), text(r.get("Имя"))] for r in clients[:3]]
+        snap["dx"] = dx                     # dasturchi rejimi: qarz so'rovi xatosi va namunasi
         return snap, self.staff(c)
 
     # --- yozish ---
@@ -545,7 +597,13 @@ class KassaOneC:
         short = check_stock(sale["lines"], lambda code: refs[code][1][0], sale["kind"])
         if short:
             raise kc.KassaError(short)
-        for ln in sale["lines"]:
+        self._fill_rows(doc, sale["lines"], refs, is_return)
+        doc.Записать(c.РежимЗаписиДокумента.Проведение)
+        return text(doc.Номер), when.strftime("%d.%m.%Y %H:%M")
+
+    def _fill_rows(self, doc, lines, refs, is_return):
+        """Hujjat jadvali (1C РасчетНажатие bilan bir xil): tovar, birlik, qoldiq va o'rtacha tannarx, miqdor, narx."""
+        for ln in lines:
             g, (q_have, s_have, u_have) = refs[ln["code"]]
             r = doc.Таблица.Добавить()
             r.Товары = g
@@ -572,6 +630,34 @@ class KassaOneC:
             r.Блок = float(ln["qty"]) / (vol if vol > 0 else 1)
             r.ЦенаСум = float(ln["price"])
             r.СуммаСум = float(kc.line_sum(ln["price"], ln["qty"]))
+
+    def edit_sale(self, c, no, when, sale, pay):
+        """pc 39 (dasturchi rejimi): 1C'dagi mavjud ПродажаРозница — qatorlar va to'lov yangilanadi, sana, mijoz, kassir,
+        narx turi o'zgarmaydi; qayta o'tkaziladi (qoldiq va qarz 1C'ning o'zida qayta hisoblanadi). @return (raqam, sana)."""
+        ref = c.Документы.ПродажаРозница.НайтиПоНомеру(no, when)
+        if ref is None or ref.Пустая():
+            raise kc.KassaError("1C'da hujjat topilmadi: № %s" % no)
+        doc = ref.ПолучитьОбъект()
+        savdo = code_text(c.Справочники.Контрагенты.Савдо.Код)
+        cc = code_text(doc.Контрагент.Код)
+        if (sale["client"] or savdo) != cc:
+            raise kc.KassaError("Tahrirda mijozni almashtirib bo'lmaydi (hujjatda: %s)" % text(doc.Контрагент.Наименование))
+        store = doc.Склад
+        refs = {}
+        for ln in sale["lines"]:
+            if ln["code"] in refs:
+                continue
+            g = self.find(c.Справочники.Товары, ln["code"])
+            if g is None:
+                raise kc.KassaError("1C'da tovar topilmadi: %s" % (ln.get("name") or ln["code"]))
+            refs[ln["code"]] = (g, self.stock_one(c, g, store))
+        doc.Таблица.Очистить()
+        self._fill_rows(doc, sale["lines"], refs, sale["kind"] == kc.KIND_RETURN)
+        doc.ВсегоСум = float(pay["total"])
+        doc.СкидкаСум = float(pay["discount"])
+        doc.Нал = float(pay["cash"])
+        doc.Пер = float(pay["card"])
+        doc.Клик = float(pay["click"])
         doc.Записать(c.РежимЗаписиДокумента.Проведение)
         return text(doc.Номер), when.strftime("%d.%m.%Y %H:%M")
 
@@ -1005,6 +1091,53 @@ class KassaService:
             log.info("kassa: sotuv navbatda qoldi (%s)", e)
             return self._queued(sale["id"], str(e))
 
+    def edit_sale(self, body):
+        """pc 39 (dasturchi rejimi): kassada yoki kompyuterda qilingan savdoni o'zgartirish — to'g'ridan-to'g'ri 1C hujjatida
+        (ko'prik 1C'i orqali). Navbatga tushmaydi: 1C yozmasa kassirga darhol xato."""
+        self.touch()
+        sale = kc.clean_sale(dict(body or {}, id=(body or {}).get("id") or "edit" + secrets.token_hex(6)))
+        emp_code, emp_name, _ = self.who(sale["token"])
+        no = str((body or {}).get("no") or "").strip()
+        date = str((body or {}).get("date") or "").strip()
+        if not re.fullmatch(r"[0-9A-Za-zА-Яа-я-]{1,20}", no) or not re.match(r"^\d\d\.\d\d\.\d{4}", date):
+            raise kc.KassaError("Hujjat raqami yoki sanasi noto'g'ri")
+        if not sale["lines"]:
+            raise kc.KassaError("Savat bo'sh — hujjatni o'chirish 1C'ning o'zida")
+        when = dt.datetime.strptime(date[:16] if len(date) >= 16 else date[:10], "%d.%m.%Y %H:%M" if len(date) >= 16 else "%d.%m.%Y")
+        goods = {g["c"]: g for g in (self.snap or {}).get("g", [])}
+        for l in sale["lines"]:
+            if l["code"] in goods:
+                l["name"] = goods[l["code"]]["n"]
+        pay = kc.settle(kc.cart_total(sale["lines"]), sale["discount"], sale["cash"], sale["card"], sale["click"],
+                        bool(sale["client"]), sale["kind"])
+
+        def go():
+            if self.make_bridge is None:        # COM — faqat 1C oqimida
+                return self.call(lambda: self.onec.edit_sale(self._com(), no, when, sale, pay), timeout=120)
+            rpc = self.bridge_rpc()             # ko'prik 1C'i (fayllar orqali) — shu oqimdan
+            try:
+                return self.onec.edit_sale(rpc.root, no, when, sale, pay)
+            finally:
+                rpc.close()
+        import onec_write
+        try:
+            no2, date2 = go()
+        except kc.KassaError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            log.warning("kassa: savdoni tahrirlash (№ %s): %s", no, str(e)[:300])
+            raise kc.KassaError("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
+        log.info("kassa: %s savdo № %s ni o'zgartirdi (%d qator, %s)", emp_name, no, len(sale["lines"]), pay["total"])
+        self.full_at = 0.0                  # qoldiq va qarz 1C'dan qayta o'qilsin
+        if self.wake is not None:
+            self.wake()
+        return {"ok": True, "no": no2, "date": date2, "kind": sale["kind"], "doc": pay["doc"], "cashier": emp_name,
+                "total": kc.jnum(pay["total"]), "discount": kc.jnum(pay["discount"]), "due": kc.jnum(pay["due"]),
+                "cash": kc.jnum(pay["cash"]), "card": kc.jnum(pay["card"]), "click": kc.jnum(pay["click"]),
+                "change": kc.jnum(pay["change"]), "debt": kc.jnum(pay["debt"]), "client": sale["client"], "edited": 1,
+                "lines": [{"n": l["name"], "c": l["code"], "q": kc.jnum(l["qty"]), "p": kc.jnum(l["price"]),
+                           "s": kc.jnum(kc.line_sum(l["price"], l["qty"]))} for l in sale["lines"]]}
+
     def _queued(self, rid, why):
         with self.qlock:
             item = next((p for p in self.pending if p["id"] == rid), None)
@@ -1045,7 +1178,7 @@ class KassaService:
             "click": kc.jnum(pay["click"]), "change": kc.jnum(pay["change"]), "debt": kc.jnum(pay["debt"]),
             "client": sale["client"], "cname": old[0][1] if old else "",
             "cdebt": round(old[0][3] + debt_delta, 2) if old else 0,
-            "lines": [{"n": l["name"], "q": kc.jnum(l["qty"]), "p": kc.jnum(l["price"]),
+            "lines": [{"n": l["name"], "c": l["code"], "q": kc.jnum(l["qty"]), "p": kc.jnum(l["price"]),
                        "s": kc.jnum(kc.line_sum(l["price"], l["qty"]))} for l in sale["lines"]],
             "_debt_delta": debt_delta,
         }
@@ -1297,9 +1430,7 @@ class KassaService:
         err = ""
         if with_1c:
             try:
-                have = {text(r.get("no")) for r in items}
-                items += [r for r in self.call(lambda: self.onec.day_sales(self._com(), d), timeout=40)
-                          if r["no"] not in have]
+                items = merge_1c(items, self.call(lambda: self.onec.day_sales(self._com(), d), timeout=40))
             except (kc.KassaError, Exception) as e:  # noqa: BLE001 - 1C'siz ham kassa savdolari ko'rinadi
                 err = str(e)[:200]
         items.sort(key=lambda r: (r.get("date", "")[6:10], r.get("date", "")[3:5], r.get("date", "")[:2],
@@ -1998,6 +2129,8 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/sale_edit":
+                    return self._json(200, service.edit_sale(body))
                 if path == "/api/barcode":
                     return self._json(200, service.link_barcode(body.get("token"), body.get("bc"), body.get("code")))
                 if path == "/api/client":

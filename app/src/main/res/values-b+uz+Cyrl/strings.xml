@@ -1185,6 +1185,7 @@
     <string name="lb_err_lpd_queue">Компютерда \"%1$s\" номли улашилган принтер йўқ (%2$s). Xprinter ▸ Свойства принтера ▸ Доступ ▸ \"Общий доступ\" — номини иловадагидек ёзинг.</string>
     <string name="lb_err_lpd">Компютер ишни қабул қилмади: %1$s</string>
     <string name="lb_err_pc">Телефон компютерни тўғридан-тўғри кўрмади (Tailscale ўчиқ бўлиши мумкин), компютер орқали ҳам чиқмади: %1$s</string>
+    <string name="lb_err_relay">Админ телефони / компютер орқали чоп этилмади: %1$s\n\nКомпютер дастури ёниқми ва Xprinter компютерга уланганми — текширинг.</string>
     <string name="lb_err_lpd_net">Компютерга (%1$s) уланиб бўлмади: %2$s\n\nКомпютер ёниқми, \"LPD Print Service\" ёқилганми, телефон ўша Wi-Fi тармоғидами — текширинг.</string>
     <string name="lb_price_1c">1К нархи</string>
     <string name="lb_codes_prices">1К нарх турлари: %1$s</string>

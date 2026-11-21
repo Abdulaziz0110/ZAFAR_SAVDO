@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 38) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 39) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,21 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## pc 39 + 5.3.7 (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Panel yozuvlari ingichkaroq (16 px, 800) — sig'adi | VERIFIED (brauzer, rasm) |
+| Oynalardagi N1 belgisi olib tashlandi; narx turi raqam maydoni boshida katta (30 px) rangli raqam | VERIFIED (brauzer) |
+| Savatda uzun nom — «...» o'rniga kichikroq shrift bilan 2 qator (sig'masa avtomatik) | VERIFIED (kod; demo nomlar sig'adi) |
+| Savatda Summadan keyin tor «PLU» ustuni (4 xonali son); nom oldidagi «PLU 412» olib tashlandi | VERIFIED (brauzer) |
+| Savat ostidagi tugmalar teng kvadrat: eni = savat eni / tugmalar soni, bo'yi = eni (8 tugma × 111 px); sozlamada o'chirsa bo'ladi | VERIFIED (brauzer: 948 px / 8) |
+| Savdolar ro'yxati: kimga, summa, vaqt — qalin; qolgani oddiy | VERIFIED (brauzer) |
+| Kassa savdosi kompyuterda (1C'da) o'zgartirilsa — ro'yxatda 1C'dagi hozirgi holati («1C'da o'zgartirilgan») | VERIFIED (test_kassa) / haqiqiy 1C IMPLEMENTED-UNVERIFIED |
+| «Takrorlash» — o'sha tovarlar, o'sha miqdor, hozirgi narx bilan bo'sh oynaga | VERIFIED (brauzer) |
+| Dasturchi rejimida «Tahrirlash» — savdo oynaga asl narxda ochiladi, «SAQLASH» 1C hujjatini (ko'prik 1C'i orqali) yangilaydi va qayta o'tkazadi; mijoz, sana, kassir o'zgarmaydi | VERIFIED (test_kassa, brauzer demo) / haqiqiy 1C IMPLEMENTED-UNVERIFIED |
+| Mijoz qarzi: zaxira so'rov (telefon hisobotidagi kabi, nom bo'yicha), qarz so'rovi xatosi va namunasi dasturchi rejimidagi «Texnik ma'lumot»da | VERIFIED (test_kassa) / haqiqiy 1C'da sababi IMPLEMENTED-UNVERIFIED |
+| Yorliq (Android 5.3.7): Tailscale manzilida avval kompyuter ko'prigi orqali; agent xatosi «LPD» deb emas, aniq sababi bilan; «Kutilmagan xatolik» o'rniga xato turi | VERIFIED (unit test) / Xprinter IMPLEMENTED-UNVERIFIED |
 
 ## pc 38 (2026-11-20)
 | Funksiya | Holat |

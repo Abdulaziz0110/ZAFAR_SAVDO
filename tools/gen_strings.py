@@ -987,6 +987,7 @@ STRINGS.update({
  'lb_err_lpd_queue': "Kompyuterda \"%1$s\" nomli ulashilgan printer yo'q (%2$s). Xprinter ▸ Свойства принтера ▸ Доступ ▸ \"Общий доступ\" — nomini ilovadagidek yozing.",
  'lb_err_lpd': "Kompyuter ishni qabul qilmadi: %1$s",
  'lb_err_pc': "Telefon kompyuterni to'g'ridan-to'g'ri ko'rmadi (Tailscale o'chiq bo'lishi mumkin), kompyuter orqali ham chiqmadi: %1$s",
+ 'lb_err_relay': "Admin telefoni / kompyuter orqali chop etilmadi: %1$s\n\nKompyuter dasturi yoniqmi va Xprinter kompyuterga ulanganmi — tekshiring.",
  'lb_err_lpd_net': "Kompyuterga (%1$s) ulanib bo'lmadi: %2$s\n\nKompyuter yoniqmi, \"LPD Print Service\" yoqilganmi, telefon o'sha Wi-Fi tarmog'idami — tekshiring.",
 
 })

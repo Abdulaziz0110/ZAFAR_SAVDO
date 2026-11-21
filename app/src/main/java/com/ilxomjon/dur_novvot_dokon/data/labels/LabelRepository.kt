@@ -372,8 +372,19 @@ class LabelRepository(
     private suspend fun sendTspl(data: ByteArray, copies: Int): LabelPrinterClient.Sent {
         val s = _state.value
         val relay = relayPrint
-        if (relayActive() && relay != null) return LabelPrinterClient.Sent.Printed(copies, relay(data, copies).ifEmpty { s.queue })
+        if (relayActive() && relay != null) return LabelPrinterClient.Sent.Printed(copies, viaRelay(relay, data, copies).ifEmpty { s.queue })
         return LabelPrinterClient.Sent.Printed(copies, directOrPc(s, data, copies))
+    }
+
+    /** pc 39: agent telefoni — Admin/kompyuter orqali. Xato aniq sababi bilan (LPD xatosi deb ko'rsatilmasin). */
+    private suspend fun viaRelay(relay: suspend (ByteArray, Int) -> String, data: ByteArray, copies: Int): String {
+        try {
+            return relay(data, copies)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw LabelPrinterClient.PrintError("relay:" + (e.message ?: e.javaClass.simpleName))
+        }
     }
 
     /** pc 35: Admin telefoni. Avval to'g'ridan-to'g'ri (Wi-Fi / Tailscale); kompyuter ko'rinmasa — internet orqali kompyuter
@@ -384,6 +395,18 @@ class LabelRepository(
             if (pc == null) throw LabelPrinterClient.PrintError("no_printer")
             return viaPc(pc, data, copies, null)
         }
+        // pc 39: manzil Tailscale'niki (100.64–127.x) va kompyuter ko'prigi bor — avval kompyuter orqali (Tailscale o'chiq bo'lsa
+        // LPD ulanishini kutib o'tirmaydi); chiqmasa — to'g'ridan-to'g'ri
+        if (pc != null && isTailscale(s.host)) {
+            val viaFirst = try {
+                pc(data, copies).ifEmpty { s.queue }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null.also { pcFirstError = e.message ?: e.javaClass.simpleName }
+            }
+            if (viaFirst != null) return viaFirst
+        }
         try {
             printRawTo(s.host, s.queue, data)
             return s.queue
@@ -391,9 +414,16 @@ class LabelRepository(
             throw e
         } catch (e: Exception) {
             if (pc == null || (e as? LabelPrinterClient.PrintError)?.reason == "lpd_queue") throw e
+            if (isTailscale(s.host)) {      // kompyuter orqali allaqachon urinildi
+                throw LabelPrinterClient.PrintError("pc:" + (pcFirstError ?: "") + " / LPD: " + (e.message ?: e.javaClass.simpleName))
+            }
             return viaPc(pc, data, copies, e)
         }
     }
+
+    @Volatile private var pcFirstError: String? = null
+
+
 
     private suspend fun viaPc(pc: suspend (ByteArray, Int) -> String, data: ByteArray, copies: Int, first: Exception?): String {
         try {
@@ -560,7 +590,7 @@ class LabelRepository(
         val copies = only.sumOf { it.copies }
         val relay = relayPrint
         if (viaAdmin && relay != null) {
-            val queue = relay(data, copies)
+            val queue = viaRelay(relay, data, copies)
             return LabelPrinterClient.Sent.Printed(copies, queue.ifEmpty { s.queue })
         }
         return LabelPrinterClient.Sent.Printed(copies, directOrPc(s, data, copies))
@@ -593,4 +623,13 @@ class LabelRepository(
     /** Kompyuter sozlamasi: faqat yorliq printeri uchun (Firebase sozlanmagan bo'lsa ham). */
     fun iniForPc(): String = "[labels]\n; Narx yorlig'i printeri (label_printer.py)\nkey = ${share.labelKey}\nprinter = \nmode = gdi\nport = ${_state.value.port}\n" +
         if (share.isCloudReady) "\n[firebase]\nurl = ${share.dbUrl}\nsecret = ${share.secret}\n" else ""
+}
+
+/** pc 39: Tailscale manzili (100.64.0.0/10) — telefon unga faqat Tailscale yoniq bo'lsa yetadi. */
+fun isTailscale(host: String): Boolean {
+    val p = host.trim().split('.')
+    if (p.size != 4) return false
+    val a = p[0].toIntOrNull() ?: return false
+    val b = p[1].toIntOrNull() ?: return false
+    return a == 100 && b in 64..127
 }
