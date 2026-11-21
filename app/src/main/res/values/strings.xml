@@ -1759,8 +1759,8 @@
     <string name="pr_rotate">Burish</string>
     <string name="pr_other_goods">Boshqa tovar…</string>
     <string name="pr_no_suppliers">Yuk beruvchilar ro\'yxati hali kelmagan (kompyuter dasturi)</string>
-    <string name="pr_key_hint">Rasmni o\'qish uchun kalit kerak. BEPUL: Google Gemini — aistudio.google.com → «Get API key» (AIza… bilan boshlanadi; bepul kalitda Google rasmlardan o\'z xizmatini yaxshilash uchun foydalanishi mumkin). Pullik, eng aniq: Anthropic Claude — console.anthropic.com (sk-ant-…), har rasm ~1–3 sent. Kalit faqat shu telefonda shifrlangan holda saqlanadi.</string>
-    <string name="pr_key_field">API kalit (AIza… yoki sk-ant-…)</string>
+    <string name="pr_key_hint">Rasmni o\'qish uchun kalit kerak. BEPUL: Google Gemini — aistudio.google.com → «Create API key» → nusxa (AQ.… yoki AIza… bilan boshlanadi; bepul kalitda Google rasmlardan o\'z xizmatini yaxshilash uchun foydalanishi mumkin). Pullik, eng aniq: Anthropic Claude — console.anthropic.com (sk-ant-…), har rasm ~1–3 sent. Kalit faqat shu telefonda shifrlangan holda saqlanadi.</string>
+    <string name="pr_key_field">API kalit (AQ.… / AIza… yoki sk-ant-…)</string>
     <string name="pr_model_field">Model (bo\'sh — avtomatik)</string>
     <string name="pr_key_saved">Kalit saqlangan (o\'zgartirish uchun yangisini yozing)</string>
     <string name="pr_key_ok">Kalit saqlandi</string>

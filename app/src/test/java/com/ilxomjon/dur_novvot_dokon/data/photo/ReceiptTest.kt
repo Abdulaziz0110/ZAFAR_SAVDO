@@ -46,6 +46,7 @@ class ReceiptTest {
     @Test
     fun geminiFreeProvider() {
         assertTrue(ReceiptScan.isGemini("AIzaSyX"))
+        assertTrue(ReceiptScan.isGemini("AQ.Ab8RN6LRmQ"))                  // 2026-yildan AI Studio kalitlari
         assertTrue(!ReceiptScan.isGemini("sk-ant-1"))
         assertEquals(ReceiptScan.GEMINI_MODEL, ReceiptScan.modelFor("AIzaX", ""))
         assertEquals(ReceiptScan.GEMINI_MODEL, ReceiptScan.modelFor("AIzaX", "claude-sonnet-5-5"))

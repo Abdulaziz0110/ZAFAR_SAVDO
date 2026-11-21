@@ -16,8 +16,8 @@ object ReceiptScan {
     const val GEMINI_FALLBACK = "gemini-3.1-flash-lite"
     const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
 
-    /** Kalit turiga qarab: Google ("AIza…") yoki Anthropic ("sk-ant-…"). */
-    fun isGemini(key: String): Boolean = key.trim().startsWith("AIza")
+    /** Kalit turiga qarab: Anthropic — "sk-ant-…"; qolgani Google Gemini ("AQ.…" — 2026-yildan yangi kalitlar, "AIza…" — eskisi). */
+    fun isGemini(key: String): Boolean = key.isNotBlank() && !key.trim().startsWith("sk-ant-")
 
     /** Saqlangan model shu xizmatniki bo'lmasa — standart. */
     fun modelFor(key: String, saved: String): String {

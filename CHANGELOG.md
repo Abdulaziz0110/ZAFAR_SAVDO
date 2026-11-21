@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Ilova 5.3.10 — 2026-11-21
+Google'ning yangi «AQ.…» kalitlari ham qabul qilinadi.
+
 ## Ilova 5.3.9 + kompyuter pc 44 — 2026-11-21
 Rasm orqali kirim bepul Google Gemini kaliti bilan ham ishlaydi. Kassada savdolar ro'yxati ixchamroq.
 

@@ -662,6 +662,11 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
 
+## 5.3.10 (versionCode 60) (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Google AI Studio'ning yangi kalitlari ("AQ.…") ham Gemini deb taniladi (avval faqat "AIza…" — yangi kalit Anthropic'ga yuborilib xato berardi); "sk-ant-…" dan boshqasi — Gemini | VERIFIED (unit test) |
+
 ## 5.3.9 (versionCode 59) + pc 44 (2026-11-21)
 | Funksiya | Holat |
 |---|---|
