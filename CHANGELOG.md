@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Ilova 5.3.11 — 2026-11-21
+«Kirim (rasmdan ham)» — Sozlamalarda va bosh sahifa tugmasida to'g'ridan-to'g'ri.
+
 ## Ilova 5.3.10 — 2026-11-21
 Google'ning yangi «AQ.…» kalitlari ham qabul qilinadi.
 

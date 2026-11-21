@@ -94,6 +94,8 @@ object HubTiles {
         shop += tile(f, R.string.pb_title, if (admin) R.string.hub_products_sub else R.string.hub_products_sub_staff, R.drawable.ic_shopping_bag, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.ProductsFragment() })
         if (admin) {
             shop += tile(f, R.string.hub_clients, R.string.hub_clients_sub, R.drawable.ic_person, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.CLIENTS) })
+            // v5.3.10: kirim — to'g'ridan-to'g'ri (yuk beruvchini shu yerda tanlaydi), rasm orqali ham
+            shop += tile(f, R.string.hub_receipt, R.string.hub_receipt_sub, R.drawable.ic_camera, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.WriteFormFragment.of(uz.imsoft.shared.onec.WriteKind.RECEIPT, "", "") })
             shop += tile(f, R.string.sp_title, R.string.hub_suppliers_sub, R.drawable.ic_truck, 1, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.SUPPLIERS) })
             shop += tile(f, R.string.wr_title, R.string.hub_writes_sub, R.drawable.ic_computer, 0, open(f) { com.ilxomjon.dur_novvot_dokon.ui.admin.WritesFragment() })
             shop += tile(f, R.string.hub_reports, R.string.hub_reports_sub, R.drawable.ic_trending, 0, open(f) { SubHubFragment.of(REPORTS) })

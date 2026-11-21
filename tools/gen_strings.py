@@ -1301,6 +1301,7 @@ STRINGS.update({
  'ph_import_sub': "Kompyuterda (Excel) yozilgan ma'lumotlarni yuklash", 'ph_export_sub': "Ma'lumotlarni faylga chiqarish",
  'ph_on': 'Yoqilgan', 'ph_off': "O'chirilgan", 'ph_refresh_sub': "Tovar va narxlarni qayta yuklash",
  # v5.3.8: rasm orqali kirim
+ 'hub_receipt': 'Kirim (rasmdan ham)', 'hub_receipt_sub': "Yuk beruvchidan tovar kirimi — qo'lda yoki yuk xati rasmi orqali",
  'pr_title': 'Rasm orqali kirim', 'pr_open': 'Rasmdan to\'ldirish (yuk xati, chek, ro\'yxat)',
  'pr_hint': "Yuk xati, chek, nakladnaya yoki qo'lda yozilgan ro'yxatni rasmga oling. Ilova o'qiydi va tovarlarni o'zi tanlaydi; har qatorni bosib rasmdagisini ko'rasiz va tuzatasiz. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o'xshash yozuvni o'zi taniydi.",
  'pr_reading': "Rasm o'qilmoqda… (10–40 soniya)", 'pr_read_ok': '%1$d ta qator o\'qildi — tekshiring',

@@ -1728,6 +1728,8 @@
     <string name="ph_on">Yoqilgan</string>
     <string name="ph_off">O\'chirilgan</string>
     <string name="ph_refresh_sub">Tovar va narxlarni qayta yuklash</string>
+    <string name="hub_receipt">Kirim (rasmdan ham)</string>
+    <string name="hub_receipt_sub">Yuk beruvchidan tovar kirimi — qo\'lda yoki yuk xati rasmi orqali</string>
     <string name="pr_title">Rasm orqali kirim</string>
     <string name="pr_open">Rasmdan to\'ldirish (yuk xati, chek, ro\'yxat)</string>
     <string name="pr_hint">Yuk xati, chek, nakladnaya yoki qo\'lda yozilgan ro\'yxatni rasmga oling. Ilova o\'qiydi va tovarlarni o\'zi tanlaydi; har qatorni bosib rasmdagisini ko\'rasiz va tuzatasiz. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o\'xshash yozuvni o\'zi taniydi.</string>

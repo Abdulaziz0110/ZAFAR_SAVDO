@@ -662,6 +662,11 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
 
+## 5.3.11 (versionCode 61) (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| «Kirim (rasmdan ham)» to'g'ridan-to'g'ri: Sozlamalar → Do'kon bo'limida plitka va bosh sahifadagi 3/4-tugmaga qo'yiladigan amal (avval faqat Yuk beruvchilar → yuk beruvchi → Kirim orqali) | VERIFIED (kod) |
+
 ## 5.3.10 (versionCode 60) (2026-11-21)
 | Funksiya | Holat |
 |---|---|

@@ -133,6 +133,7 @@ class HomeFragment : Fragment() {
             Slot("boss", getString(R.string.boss_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.BossFragment() }),
             Slot("stats", getString(R.string.stt_title), R.drawable.ic_trending, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.StatsFragment() }),
             Slot("clients", getString(R.string.hub_clients), R.drawable.ic_person, false, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.CLIENTS) }),
+            Slot("receipt", getString(R.string.hub_receipt), R.drawable.ic_camera, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.WriteFormFragment.of(uz.imsoft.shared.onec.WriteKind.RECEIPT, "", "") }),
             Slot("suppliers", getString(R.string.sp_title), R.drawable.ic_truck, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.of(com.ilxomjon.dur_novvot_dokon.ui.admin.PartiesFragment.SUPPLIERS) }),
             Slot("products", getString(R.string.pb_title), R.drawable.ic_shopping_bag, false, go { com.ilxomjon.dur_novvot_dokon.ui.admin.ProductsFragment() }),
             Slot("writes", getString(R.string.wr_home), R.drawable.ic_computer, true, go { com.ilxomjon.dur_novvot_dokon.ui.admin.WritesFragment() }),
