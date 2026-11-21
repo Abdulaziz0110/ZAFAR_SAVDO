@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 42) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 43) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,16 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## pc 43 (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Savatda nom kengroq: soni/narxi/summasi ustunlari torroq va shrifti sal kichik; soni doim 3 xonali ("1.000", "0.345") | VERIFIED (brauzer) |
+| Ekran klaviaturasida katta/kichik harf: «⇧» — bir marta / doim / o'chiq; matn yozishda birinchi harf katta | VERIFIED (brauzer: "Zafar") |
+| Vizitka (Xprinter): QR oynasida va sozlamada «Vizitka chiqarish»; har qator eniga sig'adigan eng katta qalin shriftda (Pillow bo'lsa TrueType, bo'lmasa printer shrifti); matn va yorliq o'lchami sozlamada | VERIFIED (test_kassa, rasm) / Xprinter'da IMPLEMENTED-UNVERIFIED |
+| Chegirmasiz — pastda bitta katta qator: chapda «JAMI:», o'ngda summa | VERIFIED (brauzer) |
+| Savdolar ikki marta chiqishi tuzatildi (kassa raqami "34 131" va 1C "34131" bir xil deb olinadi); 1C'da topilmagani belgilanadi | VERIFIED (test_kassa) |
+| Savdoni o'chirish: kartani 5 soniya bosib turish → ogohlantirish → 1C hujjatiga o'chirish belgisi (qoldiq/qarz qaytadi, tiklash mumkin) | VERIFIED (test_kassa) / haqiqiy 1C IMPLEMENTED-UNVERIFIED |
 
 ## pc 42 (2026-11-21)
 | Funksiya | Holat |

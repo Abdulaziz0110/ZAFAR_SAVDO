@@ -606,6 +606,52 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(calls, [("000123", kassa.dt.datetime(2026, 11, 15, 8, 5), "Olma")])
         self.assertEqual(self.svc.full_at, 0.0)
 
+    def test_merge_1c_spaces_and_deleted(self):
+        """pc 43: kassa raqami "34 131", 1C'da "34131" — bitta; o'chirilgani ko'rinmaydi."""
+        items = [{"id": "s1", "no": "34 131", "total": 5.0, "lines": [1]}, {"id": "s2", "no": "34 132", "deleted": 1, "total": 1.0}]
+        docs = [{"id": "1c:34131", "no": "34131", "total": 5.0, "lines": [1]}, {"id": "1c:34132", "no": "34132", "total": 1.0}]
+        out = kassa.merge_1c(items, docs)
+        self.assertEqual([x["id"] for x in out], ["s1"])
+
+    def test_delete_sale(self):
+        tok = self.login()
+        self.svc.sale(sale_body(token=tok, id="del00001"))
+        no = self.svc.done.get("del00001")["no"]
+        marked = []
+
+        class Obj1:
+            def УстановитьПометкуУдаления(s, v):
+                marked.append(v)
+        c = FakeC()
+        c.Документы.ПродажаРозница.НайтиПоНомеру = lambda n, w: Ref("d", Пустая=lambda: False, ПолучитьОбъект=lambda: Obj1())
+        self.svc._com = lambda: c
+        self.svc.make_bridge = None
+        self.svc.call = lambda fn, timeout=0: fn()
+        r = self.svc.delete_sale({"token": tok, "no": no, "date": "15.11.2026 08:05", "id": "del00001"})
+        self.assertEqual((r["ok"], marked), (True, [True]))
+        self.assertEqual(self.svc.done.get("del00001")["deleted"], 1)
+        with self.assertRaises(kc.KassaError):
+            self.svc.delete_sale({"token": tok, "no": "", "date": "15.11.2026"})
+        with self.assertRaises(PermissionError):
+            self.svc.delete_sale({"token": "x", "no": "1", "date": "15.11.2026"})
+
+    def test_card_tspl(self):
+        """pc 43: vizitka — har qator eniga sig'adi, hammasi bo'yiga."""
+        import kassa_card as kcd
+        t = kcd.tspl_text(kcd.DEFAULT_LINES, kcd.dots(58), kcd.dots(40), 58, 40).decode()
+        self.assertIn("SIZE 58 mm,40 mm", t)
+        self.assertEqual(t.count("TEXT "), 6)
+        self.assertTrue(t.rstrip().endswith("PRINT 1,1"))
+        sizes = kcd.fit_sizes(["AAAA", "AAAAAAAA"], 400, 300, lambda txt, sz: (len(txt) * sz * 0.6, sz))
+        self.assertGreater(sizes[0], sizes[1])                                      # qisqa qator — kattaroq
+        self.assertLessEqual(sum(sizes) + kcd.GAP, 300)
+        self.assertLessEqual(8 * sizes[1] * 0.6, 400)
+        b = kcd.build(kcd.DEFAULT_LINES, 58, 40, 2, 2)
+        self.assertTrue(b.startswith(b"SIZE 58 mm,40 mm"))
+        self.assertIn(b"PRINT 1,2", b)
+        self.assertEqual(kcd.clean_lines(["  a  b ", "", None]), ["a b"])
+        self.assertEqual(kcd.clean_lines([]), kcd.DEFAULT_LINES)
+
     def test_auto_login(self):
         with self.assertRaises(kc.KassaError):
             self.svc.auto_login()                                                  # yoqilmagan

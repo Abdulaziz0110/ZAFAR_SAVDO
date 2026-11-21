@@ -315,11 +315,18 @@ def day_docs(heads, lines):
 def merge_1c(items, docs):
     """pc 39: kassa savdolari + 1C'dagilar. Kassada qilingan savdo 1C'da keyin o'zgartirilgan bo'lsa (kompyuterda), ro'yxatda
     1C'dagi HOZIRGI holati (qatorlar, summa, mijoz, to'lov) ko'rinadi — kassa raqami (id) chekni qayta chiqarish uchun qoladi."""
-    by_no = {text(r.get("no")): r for r in docs}
+    def key(no):
+        return re.sub(r"\s", "", text(no))           # pc 43: "34 131" (kassa) == "34131" (1C) — ikki marta chiqmasin
+    by_no = {key(r.get("no")): r for r in docs}
     out = []
     for r in items:
-        d = by_no.pop(text(r.get("no")), None) if r.get("no") and not r.get("queued") else None
+        if r.get("deleted"):
+            by_no.pop(key(r.get("no")), None)
+            continue
+        d = by_no.pop(key(r.get("no")), None) if r.get("no") and not r.get("queued") else None
         if d is None:
+            if r.get("no") and not r.get("queued") and docs:
+                r = dict(r, gone=1)                    # pc 43: 1C'da topilmadi (kompyuterda o'chirilgan / o'tkazilmagan?)
             out.append(r)
             continue
         changed = abs(fnum(d.get("total")) - fnum(r.get("total"))) > 0.005 or len(d.get("lines") or []) != len(r.get("lines") or [])
@@ -1109,6 +1116,76 @@ class KassaService:
             log.info("kassa: sotuv navbatda qoldi (%s)", e)
             return self._queued(sale["id"], str(e))
 
+    def delete_sale(self, body):
+        """pc 43: savdoni o'chirish (5 soniya bosib, tasdiqlab) — 1C hujjatiga o'chirish belgisi (o'tkazish bekor bo'ladi,
+        qoldiq va qarz qaytadi; 1C'da belgini olib tiklasa bo'ladi). Kassa ro'yxatida ham ko'rinmaydi."""
+        body = body or {}
+        _, emp_name, _ = self.who(body.get("token"))
+        no = re.sub(r"\s", "", str(body.get("no") or ""))
+        date = str(body.get("date") or "").strip()
+        rid = str(body.get("id") or "")
+        if not re.fullmatch(r"[0-9A-Za-zА-Яа-я-]{1,20}", no) or not re.match(r"^\d\d\.\d\d\.\d{4}", date):
+            raise kc.KassaError("Hujjat raqami yoki sanasi noto'g'ri")
+        when = dt.datetime.strptime(date[:10], "%d.%m.%Y")
+
+        def mark(c):
+            ref = c.Документы.ПродажаРозница.НайтиПоНомеру(no, when)
+            if ref is None or ref.Пустая():
+                raise kc.KassaError("1C'da hujjat topilmadi: № %s" % no)
+            ref.ПолучитьОбъект().УстановитьПометкуУдаления(True)
+
+        import onec_write
+        try:
+            if self.make_bridge is None:
+                self.call(lambda: mark(self._com()), timeout=90)
+            else:
+                rpc = self.bridge_rpc()
+                try:
+                    mark(rpc.root)
+                finally:
+                    rpc.close()
+        except kc.KassaError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            log.warning("kassa: savdoni o'chirish (№ %s): %s", no, str(e)[:300])
+            raise kc.KassaError("1C: %s" % onec_write.explain_1c_error(str(e))[:250])
+        for r in list(self.done.items.values()):
+            if (rid and r.get("id") == rid) or re.sub(r"\s", "", text(r.get("no"))) == no:
+                self.done.add(dict(r, deleted=1))
+        log.info("kassa: %s savdo № %s (%s) ni o'chirdi", emp_name, no, date)
+        self.full_at = 0.0
+        if self.wake is not None:
+            self.wake()
+        return {"ok": True, "no": no}
+
+    def print_card(self, token, copies=1):
+        """pc 43: do'kon vizitkasi — yorliq printeriga (Xprinter, TSPL RAW)."""
+        self.who(token)
+        import kassa_card
+        import relay
+        ui = load_json(os.path.join(self.here, UI_FILE), {})
+        ui = ui if isinstance(ui, dict) else {}
+        lines = kassa_card.clean_lines(ui.get("card") or kassa_card.DEFAULT_LINES)
+        try:
+            wmm = min(120.0, max(20.0, float(ui.get("labW") or 58)))
+            hmm = min(120.0, max(15.0, float(ui.get("labH") or 40)))
+            gap = min(10.0, max(0.0, float(ui.get("labGap") if ui.get("labGap") is not None else 2)))
+        except (TypeError, ValueError):
+            wmm, hmm, gap = 58.0, 40.0, 2.0
+        data = kassa_card.build(lines, wmm, hmm, gap, copies=max(1, min(20, int(copies or 1))))
+        try:
+            name = relay.pick_label_printer(relay.enum_printers(), str(ui.get("labPrinter") or ""))
+        except Exception as e:  # noqa: BLE001 - pywin32 yo'q
+            raise kc.KassaError("Printerlar ro'yxati olinmadi: %s" % str(e)[:150])
+        if not name:
+            raise kc.KassaError("Yorliq printeri (Xprinter) topilmadi — kompyuterda o'rnatilganmi?")
+        try:
+            relay.raw_print(name, data, "Vizitka")
+        except Exception as e:  # noqa: BLE001
+            raise kc.KassaError("%s: %s" % (name, str(e)[:150]))
+        log.info("kassa: vizitka -> %s (%s x %s mm)", name, wmm, hmm)
+        return {"ok": True, "printer": name}
+
     def edit_sale(self, body):
         """pc 39 (dasturchi rejimi): kassada yoki kompyuterda qilingan savdoni o'zgartirish — to'g'ridan-to'g'ri 1C hujjatida
         (ko'prik 1C'i orqali). Navbatga tushmaydi: 1C yozmasa kassirga darhol xato."""
@@ -1438,6 +1515,8 @@ class KassaService:
             raise kc.KassaError("Sana noto'g'ri")
         key = d.strftime("%d.%m.%Y")
         items = [dict(r, src="kassa") for r in self.done.items.values() if str(r.get("date", "")).startswith(key)]
+        if not with_1c:
+            items = [r for r in items if not r.get("deleted")]
         with self.qlock:
             for p in self.pending:
                 if str(p["res"].get("date", "")).startswith(key):
@@ -2201,6 +2280,10 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/sale_delete":
+                    return self._json(200, service.delete_sale(body))
+                if path == "/api/card":
+                    return self._json(200, service.print_card(body.get("token"), body.get("n") or 1))
                 if path == "/api/picked":
                     return self._json(200, service.picked(body.get("token"), body.get("code")))
                 if path == "/api/sale_edit":

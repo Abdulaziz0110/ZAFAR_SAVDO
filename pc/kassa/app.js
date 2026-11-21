@@ -328,6 +328,8 @@
   var PAY_QR_DEF = '00020101021140440012qr-online.uz01186r0LiBDOhZGJ4m56Zi0202115204531153038605802UZ5910AO"PAYNET"6008Tashkent' +
     '610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz63046D88';
   var PAY_CARD_DEF = '9860 3501 0766 9847';
+  var CARD_DEF = ['ZAFAR QURUQ MEVALARI', '+998 93 647 46 46', '+998 91 123 45 76', '+998 90 778 85 10',
+    'Telegram: @zafarquruqmevalari', 'Instagram: @zafar_quruq_mevalari'];
   function payInfo() {
     return { qr: S.ui.payQr != null ? S.ui.payQr : PAY_QR_DEF, card: S.ui.payCard != null ? S.ui.payCard : PAY_CARD_DEF,
       name: S.ui.payName || '' };
@@ -348,7 +350,9 @@
     box.appendChild(el('div', 'pq-hint', "To'lov qilish uchun QR kodni skanerlang"));
     if (p.card) box.appendChild(el('div', 'pq-card', p.card));
     if (p.name) box.appendChild(el('div', 'pq-name', p.name));
-    info("To'lov", [{ node: box }], [{ label: 'Yopish', cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); } }]);
+    info("To'lov", [{ node: box }], [
+      { label: 'Vizitka chiqarish (Xprinter)', cls: 'muted', fn: printCard },
+      { label: 'Yopish', cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); } }]);
   }
   function icon(id) {
     var NS = 'http://www.w3.org/2000/svg';
@@ -360,13 +364,10 @@
     return svg;
   }
 
-  /** Savatdagi miqdor: birliksiz, nuqta bilan — donali "1", "2"; kiloli "0.122", "1.5". */
+  /** Savatdagi miqdor: birliksiz, doim 3 xona (pc 43) — "1.000", "0.345", "12.500". */
   function qtyText(m) {
     var neg = m < 0; m = Math.abs(m);
-    var t = String(Math.floor(m / 1000));
-    var f = m % 1000;
-    if (f) t += '.' + String(f + 1000).slice(1).replace(/0+$/, '');
-    return (neg ? '-' : '') + t;
+    return (neg ? '-' : '') + Math.floor(m / 1000) + '.' + String(m % 1000 + 1000).slice(1);
   }
 
   function emptyWin() { return { lines: [], mode: 'sale', dmode: 'sum', dval: 0, id: '', ptype: 'Цена1' }; }
@@ -1163,6 +1164,11 @@
     $('tDisc').textContent = money(d) + (w.dmode === 'pct' && w.dval ? ' (' + (w.dval / 100) + '%)' : '');
     $('tDiscLine').classList.toggle('hidden', d === 0);
     $('tDue').textContent = money(t - d);
+    // pc 43: chegirmasiz — Jami va To'lanadi bir xil: bitta katta qator «JAMI:» … summa
+    var solo = d === 0;
+    $('tTotal').parentNode.classList.toggle('hidden', solo);
+    document.querySelector('.totals').classList.toggle('solo', solo);
+    $('tDueLabel').textContent = solo ? (w.mode === 'return' ? 'QAYTARILADI:' : 'JAMI:') : (w.mode === 'return' ? 'Qaytariladi' : "To'lanadi");
     var info = $('selInfo');
     info.textContent = '';
     var s = w.lines[S.sel];
@@ -1224,7 +1230,7 @@
   var KB_LAT = ['1234567890', 'qwertyuiop', "asdfghjkl'", 'zxcvbnm-.'];
   var KB_CYR = ['1234567890', 'йцукенгшщзхъ', 'фывапролджэ', 'ячсмитьбюё', 'ўқғҳ'];
   function openKb(kind, title, onText, bc) {
-    S.kb = { kind: kind, text: '', cyr: false, onText: onText, bc: bc || '' };
+    S.kb = { kind: kind, text: '', cyr: false, onText: onText, bc: bc || '', caps: kind === 'text' ? 1 : 0 };
     $('kbTitle').textContent = title;
     $('kb').classList.toggle('hidden', kind === 'price');
     $('kbResults').classList.toggle('hidden', kind === 'text');
@@ -1237,17 +1243,20 @@
     $('kbText').textContent = k.text;
     var kb = $('kb');
     kb.textContent = '';
+    // pc 43: matn yozishda katta/kichik harf (⇧: bir marta → doim → o'chiq); qidiruvda farqi yo'q — harflar katta ko'rinadi
+    var txt = k.kind === 'text', up = !txt || k.caps > 0;
     (k.cyr ? KB_CYR : KB_LAT).forEach(function (row) {
       var r = el('div', 'kb-row');
       row.split('').forEach(function (ch) {
-        var b = el('button', '', ch.toUpperCase());
-        b.setAttribute('data-ch', ch);
+        var b = el('button', '', up ? ch.toUpperCase() : ch);
+        b.setAttribute('data-ch', txt && k.caps > 0 ? ch.toUpperCase() : ch);
         r.appendChild(b);
       });
       kb.appendChild(r);
     });
     var last = el('div', 'kb-row');
     var ops = [['lang', k.cyr ? 'ABC' : 'АБВ', 'w2'], ['space', "Bo'sh joy", 'w5'], ['back', '⌫', 'w2'], ['clear', 'Tozalash', 'w2']];
+    if (txt) ops.unshift(['shift', k.caps === 2 ? '⇪ KATTA' : k.caps === 1 ? '⇧ Katta' : '⇧ kichik', 'w2' + (k.caps ? ' on' : '')]);
     if (k.kind === 'text') ops.push(['ok', 'Tayyor', 'w2']);
     ops.forEach(function (x) { var b = el('button', x[2], x[1]); b.setAttribute('data-op', x[0]); last.appendChild(b); });
     kb.appendChild(last);
@@ -1389,7 +1398,9 @@
         it.appendChild(el('div', 'sc-sub', (r.kind === 'return' ? 'Qaytarish' : r.doc === 'ОплатаДолга' ? "Qarz to'lovi" : 'Sotuv') +
           ' № ' + r.no + ' · ' + (r.cashier || '') + ' · ' + (r.lines || []).length + ' ta tovar' +
           (r.debt > 0 && r.kind === 'sale' ? ' · qarzga ' + money(L.cents(r.debt)) : '') +
-          (r.src === '1c' ? " · 1C'da qilingan" : '') + (r.ed ? " · 1C'da o'zgartirilgan" : '')));
+          (r.src === '1c' ? " · 1C'da qilingan" : '') + (r.ed ? " · 1C'da o'zgartirilgan" : '') + (r.gone ? " · 1C'da topilmadi" : '')));
+        // pc 43: savdoni o'chirish — kartani 5 soniya bosib turish, keyin ogohlantirish
+        if (r.no && !r.queued && r.no !== 'navbatda' && r.no !== 'xato') holdToDelete(it, r);
         var bt = el('div', 'sc-btns');
         var pr = el('button', 'big primary', 'Chek');
         pr.addEventListener('click', function () { reprint(r); });
@@ -1410,6 +1421,41 @@
       if (!(j.items || []).length) rows.push({ a: 'Savdo yo\'q', b: d.toLocaleDateString('ru-RU') });
       info('Savdolar · ' + d.toLocaleDateString('ru-RU'), rows);
     }).catch(function (e) { busy(false); if (e.message !== 'login') toast('Savdolar olinmadi: ' + e.message, true); });
+  }
+  function holdToDelete(node, r) {
+    var t = 0;
+    function stop() { clearTimeout(t); node.classList.remove('holding'); }
+    node.addEventListener('pointerdown', function (e) {
+      if (e.target.closest && e.target.closest('button')) return;
+      node.classList.add('holding');
+      t = setTimeout(function () { stop(); deleteSale(r); }, 5000);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { node.addEventListener(ev, stop); });
+  }
+  function deleteSale(r) {
+    withAdmin("Savdoni o'chirish", function () {
+      ask({
+        title: "Savdoni o'chirish — № " + r.no, yes: "O'chirish",
+        text: (r.cname || 'Savdo') + ' · ' + money(L.cents(r.total)) + ' · ' + (r.date || '') +
+          ". 1C'da hujjatga o'chirish belgisi qo'yiladi: qoldiq va qarz qaytadi (1C'da belgini olib tiklash mumkin). Rostdan o'chirasizmi?",
+        onYes: function () {
+          return api('POST', '/api/sale_delete', { token: S.token, no: r.no, date: r.date, id: r.id || '' }, 120000).then(function (j) {
+            if (!j.ok) throw new Error(j.e || 'Xato');
+            toast('№ ' + r.no + " o'chirildi");
+            var dd = String(r.date || '');
+            showSales(dd.length >= 10 ? dd.slice(6, 10) + '-' + dd.slice(3, 5) + '-' + dd.slice(0, 2) : '');
+          });
+        }
+      });
+    });
+  }
+  /** pc 43: do'kon vizitkasi — Xprinter'ga. */
+  function printCard() {
+    toast('Vizitka chop etilmoqda…');
+    api('POST', '/api/card', { token: S.token, n: 1 }, 30000).then(function (j) {
+      if (!j.ok) throw new Error(j.e || 'Xato');
+      toast('Vizitka chiqdi: ' + j.printer);
+    }).catch(function (e) { if (e.message !== 'login') toast('Vizitka: ' + e.message, true); });
   }
   /** Savdo qatori -> kassadagi tovar (kodi, bo'lmasa nomi bo'yicha). */
   function goodsOfLine(x) {
@@ -2305,6 +2351,37 @@
       openKb('text', "QR kod matni (to'lov ilovasidagi havola yoki kod)", function (t) { u.payQr = t.trim().slice(0, 600); saveUi(u, renderSettings); });
       S.kb.text = pq.qr; renderKb();
     });
+    // pc 43: vizitka (Xprinter) matni va yorliq o'lchami
+    var cardLines = (u.card && u.card.length ? u.card : CARD_DEF).slice();
+    btn(c2, 'Vizitka matni (' + cardLines.length + ' qator): ' + cardLines.join(' · ').slice(0, 60) + '…', 'tg', function () {
+      var rows = cardLines.map(function (t, i) {
+        var b = el('button', 'big muted', (i + 1) + '. ' + t);
+        b.addEventListener('click', function () {
+          openKb('text', 'Vizitka ' + (i + 1) + '-qator (bo\'sh qoldirsa — o\'chadi)', function (v) {
+            var a = cardLines.slice(); a[i] = v.trim();
+            u.card = a.filter(function (x) { return x; });
+            saveUi(u, renderSettings);
+          });
+          S.kb.text = t; S.kb.caps = 0; renderKb();
+        });
+        return { node: b };
+      });
+      info('Vizitka qatorlari', rows, [
+        { label: "+ Qator qo'shish", cls: 'muted', fn: function () {
+          openKb('text', 'Yangi qator', function (v) { if (v.trim()) { u.card = cardLines.concat([v.trim()]).slice(0, 8); saveUi(u, renderSettings); } });
+        } },
+        { label: 'Sinov: chop etish', cls: 'muted', fn: printCard },
+        { label: 'Yopish', cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); } }]);
+    });
+    btn(c2, "Xprinter yorlig'i o'lchami: " + (u.labW || 58) + ' × ' + (u.labH || 40) + ' mm (oralig\'i ' + (u.labGap != null ? u.labGap : 2) + ' mm)', 'tg', function () {
+      openKb('text', 'Eni x bo\'yi mm (masalan 58x40 yoki 58x40x2)', function (v) {
+        var m = String(v).replace(',', '.').match(/^\s*(\d+(?:\.\d+)?)\s*[x×*]\s*(\d+(?:\.\d+)?)(?:\s*[x×*]\s*(\d+(?:\.\d+)?))?\s*$/i);
+        if (!m) { toast("Masalan: 58x40", true); return; }
+        u.labW = parseFloat(m[1]); u.labH = parseFloat(m[2]); if (m[3]) u.labGap = parseFloat(m[3]);
+        saveUi(u, renderSettings);
+      });
+      S.kb.text = (u.labW || 58) + 'x' + (u.labH || 40); S.kb.caps = 0; renderKb();
+    });
     btn(c2, 'Chek pastidagi matn: ' + (u.footer || '—'), 'tg', function () {
       openKb('text', 'Chek pastidagi matn', function (t) { u.footer = t.slice(0, 60); saveUi(u, renderSettings); });
       S.kb.text = u.footer || ''; renderKb();
@@ -3066,7 +3143,11 @@
       var b = e.target.closest ? e.target.closest('button') : null;
       if (!b || !S.kb) return;
       var ch = b.getAttribute('data-ch'), op = b.getAttribute('data-op');
-      if (ch) S.kb.text = (S.kb.text + ch).slice(0, 60);
+      if (op === 'shift') { S.kb.caps = ((S.kb.caps || 0) + 1) % 3; renderKb(); return; }
+      if (ch) {
+        S.kb.text = (S.kb.text + ch).slice(0, 60);
+        if (S.kb.caps === 1) { S.kb.caps = 0; renderKb(); return; }        // bir martalik katta harf
+      }
       else if (op === 'space') S.kb.text = (S.kb.text + ' ').slice(0, 60);
       else if (op === 'back') S.kb.text = S.kb.text.slice(0, -1);
       else if (op === 'clear') S.kb.text = '';

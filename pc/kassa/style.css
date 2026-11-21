@@ -658,3 +658,14 @@ body.sale-edit .mode-bar { background: #6d3fc8; color: #fff; }
 .payqr .pq-name { font-size: 26px; font-weight: 800; }
 .mv-hint { color: var(--ink2); padding: 8px 2px; }
 .panel-grid .tile.sug-new { outline: 3px solid #f59e0b; outline-offset: -3px; }
+/* pc 43: savatda nom kengroq — soni, narxi, summasi torroq va sal kichik shrift */
+.thead, .row { grid-template-columns: 30px 1fr 76px 92px 108px 40px; }
+body.stockcol .thead, body.stockcol .row { grid-template-columns: 30px 1fr 70px 70px 88px 102px 40px; }
+.row span:nth-child(n+3) { font-size: .86em; }
+.row .nm { font-size: 1em; }
+/* pc 43: chegirmasiz — chapda katta «JAMI:», o'ngda katta summa */
+.totals.solo .t-line.due { margin-left: 0; flex: 1; justify-content: space-between; }
+.totals.solo .t-line.due span { font-size: 34px; font-weight: 900; color: var(--ink); letter-spacing: 1px; }
+.totals.solo .t-line.due b { font-size: 44px; }
+.kb-row button.on { background: var(--acc); color: #fff; }
+.sale-card.holding { background: rgba(220, 38, 38, .14); transition: background 5s linear; }

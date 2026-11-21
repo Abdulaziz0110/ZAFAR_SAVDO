@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 43 — 2026-11-21
+Savatda nom kengroq, soni doim 3 xona. Klaviaturada katta harf. Xprinter'ga vizitka. Pastda bitta katta «JAMI:».
+Savdolar ikki marta chiqmaydi; savdoni 5 soniya bosib o'chirish.
+
 ## Kompyuter pc 42 — 2026-11-21
 Mijoz qarzi: 1C so'rovidagi xato tuzatildi («В» kalit so'z edi). Narx turi klaviaturadan: F1–F4, PageDown/PageUp.
 
