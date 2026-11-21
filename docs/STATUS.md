@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 40) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 41) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,17 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## pc 41 (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Mijoz tanlanganda qarzi 1C'dan jonli (jami, barcha xodimlar bo'yicha); ro'yxatdagi qarz ham yangilanadi; olinmasa sababi shu yerda yoziladi | VERIFIED (test_kassa, brauzer demo) / haqiqiy 1C IMPLEMENTED-UNVERIFIED |
+| Panel nomlari 1C'dagi kabi (katta harfga o'tkazilmaydi) | VERIFIED (brauzer) |
+| Yuqorida (dasturchi almashtirgichi va oynalar orasida) QR tugmasi: to'lov QR kodi (Paynet), karta raqami, egasi ismi; sozlamada o'zgartiriladi; QR internetsiz chiziladi (qrcode.js, MIT) | VERIFIED (brauzer; chizilgan QR qayta o'qilib asl matnga teng) |
+| Qo'lda o'zgartirilgan narx — tagiga chizilmaydi, faqat sal boshqa fon | VERIFIED (kod) |
+| Oyna yozuvini uzoq bosish — ro'yxatni boshqa oynaga ko'chirish (u yerdagilar ostiga qo'shiladi, bu oyna bo'shaydi) | VERIFIED (brauzer) |
+| Panel tavsiyasi: qo'yilgan tugmalar o'zgarmaydi — faqat bo'sh joylarga; tarozi (kg), zavod shtrix kodi yo'q (1C o'zi yaratgan / shtrixsiz) tovarlar, sotuv + qidiruvda tanlanish bo'yicha; tasdiqlashda keyin qo'lda qo'yilganlar ham saqlanadi | VERIFIED (test_kassa, test_kassa_panel) |
+| Panel 8 sahifa tugmasi — pastda, eniga teng | VERIFIED (brauzer: 8 × 164 px) |
 
 ## pc 39 + 5.3.7 (2026-11-21)
 | Funksiya | Holat |

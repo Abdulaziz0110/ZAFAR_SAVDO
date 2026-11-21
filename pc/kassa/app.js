@@ -320,8 +320,36 @@
     'dots': '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
     dev: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
     nochek: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/><path d="M3 3l18 18"/>',
-    phone: '<path d="M6 3h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>'
+    phone: '<path d="M6 3h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' +
+      '<path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2"/>'
   };
+  // pc 40: to'lov QR kodi (Paynet) va karta — sozlamada o'zgartiriladi
+  var PAY_QR_DEF = '00020101021140440012qr-online.uz01186r0LiBDOhZGJ4m56Zi0202115204531153038605802UZ5910AO"PAYNET"6008Tashkent' +
+    '610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz63046D88';
+  var PAY_CARD_DEF = '9860 3501 0766 9847';
+  function payInfo() {
+    return { qr: S.ui.payQr != null ? S.ui.payQr : PAY_QR_DEF, card: S.ui.payCard != null ? S.ui.payCard : PAY_CARD_DEF,
+      name: S.ui.payName || '' };
+  }
+  /** QR kod SVG (qrcode.js, MIT) — internetsiz. */
+  function qrSvg(text) {
+    var q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    var d = el('div', 'qr-img');
+    d.innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    return d;
+  }
+  function openPayQr() {
+    var p = payInfo();
+    var box = el('div', 'payqr');
+    if (p.qr) box.appendChild(qrSvg(p.qr));
+    box.appendChild(el('div', 'pq-hint', "To'lov qilish uchun QR kodni skanerlang"));
+    if (p.card) box.appendChild(el('div', 'pq-card', p.card));
+    if (p.name) box.appendChild(el('div', 'pq-name', p.name));
+    info("To'lov", [{ node: box }], [{ label: 'Yopish', cls: 'primary', fn: function () { $('infoModal').classList.add('hidden'); } }]);
+  }
   function icon(id) {
     var NS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(NS, 'svg');
@@ -1397,6 +1425,34 @@
     S.wins.push(emptyWin());
     return S.wins.length - 1;
   }
+  /** pc 40: oynadagi ro'yxatni boshqa oynaga ko'chirish — u yerdagi tovarlar ostiga qo'shiladi, bu oyna bo'shaydi. */
+  function moveWinDialog(from) {
+    var src = S.wins[from];
+    if (!src) return;
+    if (!src.lines.length) { toast((from + 1) + "-oyna bo'sh — ko'chiradigan narsa yo'q", true); return; }
+    if (src.edit) { toast("Tahrirlanayotgan savdoni ko'chirib bo'lmaydi", true); return; }
+    var btns = [];
+    S.wins.forEach(function (w, i) {
+      if (i === from || w.edit) return;
+      btns.push({ label: (i + 1) + '-oynaga' + (w.lines.length ? ' (' + w.lines.length + ' ta bor)' : " (bo'sh)"), cls: 'primary',
+        fn: function () { moveWin(from, i); } });
+    });
+    btns.push({ label: 'Bekor', cls: 'muted', fn: function () { $('infoModal').classList.add('hidden'); } });
+    info((from + 1) + "-oynadagi ro'yxatni ko'chirish", [
+      { a: 'Tovarlar', b: src.lines.length + ' ta' },
+      { a: 'Summa', b: money(L.total(src.lines)) },
+      { node: el('div', 'mv-hint', "Tanlangan oynadagi tovarlar ostiga qo'shiladi, " + (from + 1) + '-oyna bo\'shaydi.') }
+    ], btns);
+  }
+  function moveWin(from, to) {
+    var src = S.wins[from], dst = S.wins[to];
+    dst.lines = dst.lines.concat(src.lines);
+    S.wins[from] = emptyWin();
+    S.w = to; S.sel = dst.lines.length - 1;
+    $('infoModal').classList.add('hidden');
+    touchWin(); renderAll();
+    toast((from + 1) + '-oynadan ' + (to + 1) + "-oynaga ko'chirildi");
+  }
   /** pc 39: savdoni takrorlash — o'sha tovarlar, o'sha miqdorda, HOZIRGI narxda bo'sh oynaga. */
   function repeatSale(r) {
     if (!S.data) return;
@@ -1494,6 +1550,7 @@
     S.pay = { total: t, discount: d, cash: t - d, card: 0, click: 0, field: 'cash', buf: '', client: null };
     if (w.edit && w.edit.client) {             // tahrir: hujjatdagi mijoz (almashtirilmaydi)
       S.pay.client = S.data.cl.filter(function (c) { return c[0] === w.edit.client; })[0] || [w.edit.client, w.edit.cname, '', 0, 0, 0];
+      setTimeout(liveDebt, 0);
     }
     return true;
   }
@@ -1562,10 +1619,31 @@
     var c = p.client;
     $('clientName').textContent = c ? c[1] : 'tanlanmagan';
     var dEl = $('clientDebt');
-    dEl.textContent = c ? ('hozirgi qarzi: ' + money(L.cents(c[3] || 0)) + (c[4] ? ' / $' + c[4] : '')) : '';
+    dEl.textContent = c ? ('hozirgi qarzi: ' + money(L.cents(c[3] || 0)) + (c[4] ? ' / $' + c[4] : '') +
+      (p.debtSt ? ' · ' + p.debtSt : '')) : '';
     dEl.className = c && c[3] > 0 ? 'debt' : '';
     $('clientClear').classList.toggle('hidden', !c || !!W().edit);     // tahrirda mijoz almashtirilmaydi
     $('payOk').disabled = !!st.e;
+  }
+  /** pc 40: tanlangan mijozning qarzi 1C'dan jonli (ro'yxatdagi eskirgan bo'lishi mumkin). Xato bo'lsa — sababi shu yerda. */
+  function liveDebt() {
+    var p = S.pay;
+    if (!p || !p.client) return;
+    var code = p.client[0];
+    p.debtSt = "1C'dan tekshirilmoqda…";
+    renderPay();
+    api('GET', '/api/debt?t=' + encodeURIComponent(S.token) + '&c=' + encodeURIComponent(code), undefined, 30000).then(function (j) {
+      if (S.pay !== p || !p.client || p.client[0] !== code) return;
+      if (!j.ok) { p.debtSt = "1C'dan olinmadi: " + (j.e || 'xato'); renderPay(); return; }
+      p.client = [p.client[0], p.client[1], p.client[2], j.d, j.u].concat(p.client.slice(5));
+      S.data.cl = S.data.cl.map(function (x) { return x[0] === code ? p.client : x; });
+      p.debtSt = '1C';
+      renderPay();
+    }).catch(function (e) {
+      if (S.pay !== p) return;
+      p.debtSt = "1C'dan olinmadi: " + e.message;
+      renderPay();
+    });
   }
   function submitPay(quickPrint) {
     var quick = quickPrint !== undefined;                   // dialogsiz (CHEKLI/CHEKSIZ bir bosilgan)
@@ -2209,6 +2287,24 @@
       saveUi(u, renderSettings);
     });
     c2.appendChild(ab);
+    // pc 40: yuqoridagi QR tugmasi — to'lov ma'lumoti
+    var pq = { qr: u.payQr != null ? u.payQr : PAY_QR_DEF, card: u.payCard != null ? u.payCard : PAY_CARD_DEF, name: u.payName || '' };
+    btn(c2, "To'lov kartasi: " + (pq.card || '—'), 'tg', function () {
+      openKb('text', 'Karta raqami (16 ta raqam)', function (t) {
+        var d = t.replace(/[^0-9]/g, '').slice(0, 19);
+        u.payCard = d.replace(/(.{4})(?=.)/g, '$1 ');
+        saveUi(u, renderSettings);
+      });
+      S.kb.text = pq.card; renderKb();
+    });
+    btn(c2, 'Karta egasi (ismi): ' + (pq.name || '—'), 'tg', function () {
+      openKb('text', 'Karta egasi ismi', function (t) { u.payName = t.trim().slice(0, 40); saveUi(u, renderSettings); });
+      S.kb.text = pq.name; renderKb();
+    });
+    btn(c2, "To'lov QR kodi matni: " + (pq.qr ? pq.qr.slice(0, 28) + '…' : '—'), 'tg', function () {
+      openKb('text', "QR kod matni (to'lov ilovasidagi havola yoki kod)", function (t) { u.payQr = t.trim().slice(0, 600); saveUi(u, renderSettings); });
+      S.kb.text = pq.qr; renderKb();
+    });
     btn(c2, 'Chek pastidagi matn: ' + (u.footer || '—'), 'tg', function () {
       openKb('text', 'Chek pastidagi matn', function (t) { u.footer = t.slice(0, 60); saveUi(u, renderSettings); });
       S.kb.text = u.footer || ''; renderKb();
@@ -2510,16 +2606,22 @@
     var d = new Date((sug.at || 0) * 1000);
     var here = (sug.sec || []).filter(function (m) { return m.n && m.from < S.sugPage * 42 + 42 && m.to > S.sugPage * 42; })
       .map(function (m) { return m.t; });
-    $('sugInfo').textContent = (S.sugPage + 1) + '-sahifa: ' + (here.join(', ') || "bo'sh") + ' · oxirgi ' + (sug.days || 28) +
-      ' kun sotuvi (' + d.toLocaleDateString('ru-RU') + ') · ' + (sug.sec || []).map(function (m) { return m.t + ' ' + m.n; }).join(', ');
+    var isNew = {};
+    (sug.new || []).forEach(function (x) { isNew[x] = 1; });
+    $('sugInfo').textContent = (S.sugPage + 1) + '-sahifa: ' + (here.join(', ') || "yangi yo'q") + ' · faqat bo\'sh joylarga ' +
+      (sug.new || []).length + " ta (ramkali) — qo'yilganlar o'zgarmaydi · oxirgi " + (sug.days || 28) + ' kun sotuvi va qidiruv (' +
+      d.toLocaleDateString('ru-RU') + ')';
     var grid = $('sugGrid');
     grid.textContent = '';
     for (var k = S.sugPage * 42; k < S.sugPage * 42 + 42; k++) {
       var slot = sug.pnl[k] || ['', ''];
       var g = slot[0] && S.byCode ? S.byCode[slot[0]] : null;
-      if (g) grid.appendChild(tile(g));
-      else if (slot[0]) { var x = el('div', 'tile'); x.appendChild(el('span', 'tn', slot[1])); grid.appendChild(x); }
-      else grid.appendChild(el('div', 'tile empty'));
+      var tl;
+      if (g) tl = tile(g);
+      else if (slot[0]) { tl = el('div', 'tile'); tl.appendChild(el('span', 'tn', slot[1])); }
+      else tl = el('div', 'tile empty');
+      if (isNew[k]) tl.classList.add('sug-new');
+      grid.appendChild(tl);
     }
   }
   function closeSuggest() { $('sugView').classList.add('hidden'); S.sug = null; }
@@ -2830,9 +2932,22 @@
     on('loginBtn', doLogin);
     on('loginExit', closeKassa);
 
+    // pc 40: oyna yozuvini uzoq bosish — ro'yxatni boshqa oynaga ko'chirish
+    var winLp = 0, winLpDone = false;
+    $('wins').addEventListener('pointerdown', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-w]') : null;
+      if (!b) return;
+      winLpDone = false;
+      clearTimeout(winLp);
+      winLp = setTimeout(function () { winLpDone = true; moveWinDialog(parseInt(b.getAttribute('data-w'), 10)); }, 650);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+      $('wins').addEventListener(ev, function () { clearTimeout(winLp); });
+    });
     $('wins').addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('button[data-w]') : null;
       if (!b) return;
+      if (winLpDone) { winLpDone = false; return; }
       S.w = parseInt(b.getAttribute('data-w'), 10); S.sel = -1; S.mult = 0; S.disp = '';
       saveWins();
       renderAll();
@@ -2965,7 +3080,7 @@
       if (nw && S.kb.kind === 'client') { newClient(S.kb.text.trim()); return; }
       var c = e.target.closest ? e.target.closest('button[data-ci]') : null;
       if (c && S.kb.kind === 'client') {
-        if (S.pay) { S.pay.client = S.data.cl[parseInt(c.getAttribute('data-ci'), 10)]; renderPay(); }
+        if (S.pay) { S.pay.client = S.data.cl[parseInt(c.getAttribute('data-ci'), 10)]; renderPay(); liveDebt(); }
         closeKb();
         return;
       }
@@ -2976,12 +3091,16 @@
       if (S.kb.kind === 'goods') {
         S.recent = [code].concat(S.recent.filter(function (x) { return x !== code; })).slice(0, 12);
         save('k_recent', S.recent);
+        // pc 40: qidiruvdan tanlangan — panel tavsiyasi uchun (javob kutilmaydi)
+        if (S.kb.text.trim()) api('POST', '/api/picked', { token: S.token, code: code }, 8000).catch(function () { /* muhim emas */ });
       }
       closeKb();
       addGoods(S.byCode[code], 1000, false);
     });
     on('kbClose', closeKb);
     on('devSw', toggleDev);
+    on('qrBtn', openPayQr);
+    $('qrBtn').appendChild(icon('qr'));
 
     on('changeBig', hideChange);
     on('payClose', closePay);

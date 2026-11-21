@@ -145,6 +145,11 @@ DEBTS_Q = (
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О "
     "СГРУППИРОВАТЬ ПО О.Контрагент.Код, О.Контрагент.Наименование"
 )
+# pc 40: bitta mijozning jami qarzi (barcha xodimlar bo'yicha) — mijoz tanlanganda 1C'dan jonli
+DEBT_TOTAL_ONE_Q = (
+    "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК В "
+    "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(, Контрагент = &К) КАК О"
+)
 # pc 39: zaxira — telefon hisobotidagi kabi (onec_data.DEBT_Q): Остатки(&К,) sana bilan, nom bo'yicha
 DEBTS_BY_NAME_Q = (
     "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, СУММА(О.СуммаВалОстаток) КАК В "
@@ -547,6 +552,15 @@ class KassaOneC:
         r = rows[0] if rows else {}
         return fnum(r.get("С")), fnum(r.get("В"))
 
+    def debt_total(self, c, code):
+        """pc 40: mijozning hozirgi jami qarzi 1C'dan (so'm, $)."""
+        party = self.find(c.Справочники.Контрагенты, code)
+        if party is None:
+            raise kc.KassaError("1C'da mijoz topilmadi: %s" % code)
+        rows = self.query(c, DEBT_TOTAL_ONE_Q, ["С", "В"], К=party)
+        r = rows[0] if rows else {}
+        return fnum(r.get("С")), fnum(r.get("В"))
+
     def write_sale(self, c, sale, pay, employee_code):
         """ПродажаРозница — 1C РасчетНажатие / ВозвратНажатие bilan bir xil. @return (raqam, sana matni)."""
         is_return = sale["kind"] == kc.KIND_RETURN
@@ -802,6 +816,7 @@ UI_FILE = "kassa_ui.json"
 MODE_FILE = "kassa_mode.json"              # {"bridge": true} — 1C ko'prigi ishlatiladi (dastur qayta yonganda ham)
 BRIDGE_WAIT = 8                            # birinchi sotuvda ko'prik natijasini kutish
 PANEL_FILE = "kassa_panel.json"            # admin tasdiqlagan panel (bo'lmasa — 1C'dagi panel)
+HITS_FILE = "kassa_search_hits.json"  # pc 40: qidiruvdan tanlangan tovarlar soni
 SUGGEST_FILE = "kassa_panel_suggest.json"  # haftalik tavsiya
 STATS_SEC = 3600                           # sotuv statistikasi soatda bir o'qiladi
 SUGGEST_SEC = 7 * 24 * 3600                # tavsiya haftada bir
@@ -884,6 +899,9 @@ class KassaService:
         self.retry_at = 0.0
         self.update_asked = threading.Event()
         self.stats = load_json(os.path.join(here, "kassa_stats.json"), {})
+        self.hits = load_json(os.path.join(here, HITS_FILE), {})        # pc 40: qidiruvdan tanlanganlar
+        if not isinstance(self.hits, dict):
+            self.hits = {}
         if not isinstance(self.stats, dict):
             self.stats = {}
         self.stats_at = None
@@ -1749,9 +1767,12 @@ class KassaService:
             self.stats_at = self.clock()
             self.stats = self.onec.sales_stats(self._com())
             save_json(os.path.join(self.here, "kassa_stats.json"), self.stats)
-        if not self.stats:
+        if not self.stats and not self.hits:
             raise kc.KassaError("Oxirgi %d kunda sotuv topilmadi — tavsiya qilib bo'lmaydi" % kp.DAYS)
-        res = kp.suggest(self.snap.get("g", []), self.stats, self.snap.get("b", {}))
+        # pc 40: qo'yilgan tugmalar o'zgarmaydi — faqat bo'sh joylarga (tarozi, 1C shtrixli/shtrixsiz, ko'p sotilgan/qidirilgan)
+        res = kp.fill(self._panel_now(), self.snap.get("g", []), self.stats, self.hits, self.snap.get("b", {}))
+        if not res["new"]:
+            raise kc.KassaError("Panelda bo'sh joy yo'q yoki tavsiya qiladigan yangi tovar yo'q")
         res.update(at=self.clock(), days=kp.DAYS, seen=False)
         save_json(os.path.join(self.here, SUGGEST_FILE), res)
         log.info("kassa: panel tavsiyasi tayyor (%s)", ", ".join("%s %d" % (m["t"], m["n"]) for m in res["sec"]))
@@ -1767,7 +1788,7 @@ class KassaService:
             sug = load_json(sug_path, {})
             if not isinstance(sug, dict) or not sug.get("pnl"):
                 raise kc.KassaError("Tavsiya yo'q")
-            save_json(own_path, {"pnl": sug["pnl"], "at": self.clock(), "sec": sug.get("sec", [])})
+            save_json(own_path, {"pnl": kp.apply_new(self._panel_now(), sug), "at": self.clock(), "sec": sug.get("sec", [])})
             sug["seen"] = True
             save_json(sug_path, sug)
             self._repanel()
@@ -1789,6 +1810,52 @@ class KassaService:
         return {"ok": True, "sug": sug if isinstance(sug, dict) and sug.get("pnl") else None,
                 "src": "kassa" if isinstance(own, dict) and own.get("pnl") else "1c",
                 "own_sec": own.get("sec", []) if isinstance(own, dict) else []}
+
+    def _panel_now(self):
+        """Hozir kassada ko'rinayotgan panel: kassada tasdiqlangan (o'zgartirilgan) bo'lsa — u, aks holda 1C'niki."""
+        own = load_json(os.path.join(self.here, PANEL_FILE), {})
+        if isinstance(own, dict) and isinstance(own.get("pnl"), list) and own["pnl"]:
+            return own["pnl"]
+        return self.pnl1c or (self.snap or {}).get("pnl", [])
+
+    def client_debt(self, token, code):
+        """pc 40: mijoz tanlanganda — qarzi 1C'dan jonli (ro'yxatdagi qarz eskirgan yoki topilmagan bo'lsa ham to'g'ri)."""
+        self.who(token)
+        code = str(code or "").strip()[:20]
+        if not code:
+            raise kc.KassaError("Mijoz kodi yo'q")
+        try:
+            d, u = self.call(lambda: self.onec.debt_total(self._com(), code), timeout=25)
+        except kc.KassaError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            log.warning("kassa: mijoz qarzi (%s): %s", code, str(e)[:200])
+            raise kc.KassaError("1C: %s" % str(e)[:200])
+        with self.lock:
+            snap = dict(self.snap or {})
+        cl = snap.get("cl") or []
+        if any(x[0] == code and (abs(x[3] - d) > 0.005 or abs(x[4] - u) > 0.005) for x in cl):
+            snap["cl"] = [[x[0], x[1], x[2], round(d, 2), round(u, 2)] + list(x[5:]) if x[0] == code else x for x in cl]
+            self._publish(snap, save=True)
+        return {"ok": True, "d": round(d, 2), "u": round(u, 2)}
+
+    def picked(self, token, code):
+        """pc 40: qidiruvdan tanlangan tovar — panel tavsiyasi uchun (ko'p qidirilgan = panelda yo'q, lekin kerak)."""
+        self.who(token)
+        code = str(code or "").strip()[:20]
+        if not code or code not in self.by_code():
+            return {"ok": False}
+        with self.lock:
+            self.hits[code] = self.hits.get(code, 0) + 1
+            data = dict(self.hits)
+        try:
+            save_json(os.path.join(self.here, HITS_FILE), data)
+        except OSError:
+            pass
+        return {"ok": True}
+
+    def by_code(self):
+        return {g["c"] for g in (self.snap or {}).get("g", [])}
 
     def _repanel(self):
         snap = dict(self.snap or {})
@@ -2077,13 +2144,18 @@ def make_handler(service, static_dir):
                     return self._json(401, {"ok": False, "e": "login"})
                 except kc.KassaError as e:
                     return self._json(200, {"ok": False, "e": str(e)})
-            if path in ("/api/state", "/api/report", "/api/queue", "/api/ui"):
+            if path in ("/api/state", "/api/report", "/api/queue", "/api/ui", "/api/debt"):
                 params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
                 tok = urllib.parse.unquote(params.get("t", ""))
                 try:
                     if path == "/api/ui":
                         return self._json(200, service.get_ui())
                     service.who(tok)
+                    if path == "/api/debt":
+                        try:
+                            return self._json(200, service.client_debt(tok, urllib.parse.unquote(params.get("c", ""))))
+                        except kc.KassaError as e:
+                            return self._json(200, {"ok": False, "e": str(e)})
                     if path == "/api/state" and params.get("w") == "1":
                         return self._json(200, service.watch_state(tok, params.get("k", "1"), params.get("r", ""), params.get("u", "")))
                     if path == "/api/state":
@@ -2129,6 +2201,8 @@ def make_handler(service, static_dir):
                     if body.get("auto"):
                         return self._json(200, service.auto_login())
                     return self._json(200, service.login(body.get("pw")))
+                if path == "/api/picked":
+                    return self._json(200, service.picked(body.get("token"), body.get("code")))
                 if path == "/api/sale_edit":
                     return self._json(200, service.edit_sale(body))
                 if path == "/api/barcode":

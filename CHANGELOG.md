@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Kompyuter pc 41 — 2026-11-21
+Mijoz qarzi tanlanganda 1C'dan jonli. Panel nomlari oddiy holatda, sahifa tugmalari pastda. To'lov QR tugmasi (QR, karta, ism).
+Qo'lda narx — faqat sal boshqa fon. Oyna yozuvini uzoq bosib ro'yxatni ko'chirish. Panel tavsiyasi faqat bo'sh joylarga.
+
 ## Kompyuter pc 40 — 2026-11-21
 Klaviatura ixchamroq (eni 860 px gacha, o'rtada).
 

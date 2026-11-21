@@ -44,6 +44,7 @@
       <div class="cashier"><span id="cashierName"></span> · <span id="clock"></span> <span class="dot" id="dataDot"></span></div>
     </div>
     <button id="devSw" class="dev-sw" role="switch" aria-checked="false" aria-label="Dasturchi rejimi"><i></i></button>
+    <button id="qrBtn" class="qr-btn" aria-label="To'lov uchun QR kod va karta raqami"></button>
     <div class="wins" id="wins" role="tablist" aria-label="Savdo oynalari"></div>
     <button id="queueBadge" class="hbtn qbad hidden" data-ui="hbtn"><small>1C'ga yozilmagan</small><b id="queueN">0</b></button>
     <button id="ptypeBtn" class="hbtn" data-ui="hbtn"><small>Narx turi</small><b id="ptypeName">Narx 1</b></button>
@@ -102,10 +103,11 @@
 <!-- PANEL (1C'dagi "Paneli" sahifasi) -->
 <div class="overlay hidden" id="panelView" role="dialog" aria-modal="true" aria-label="Panel">
   <div class="ov-head">
-    <div class="tabs" id="tabs" data-ui="tabs"></div>
+    <div class="pnl-title">Panel</div>
     <button id="panelBack" class="big primary back">← Savdo oynasiga qaytish</button>
   </div>
   <div class="grid panel-grid" id="grid"></div>
+  <div class="tabs tabs-bottom" id="tabs" data-ui="tabs"></div>
 </div>
 
 <!-- QIDIRUV (ekran klaviaturasi bilan) -->
@@ -225,7 +227,6 @@
 <!-- PANEL TAVSIYASI (admin tasdiqlaydi) -->
 <div class="overlay hidden" id="sugView" role="dialog" aria-modal="true" aria-label="Panel tavsiyasi">
   <div class="ov-head">
-    <div class="tabs" id="sugTabs"></div>
     <div class="sug-info" id="sugInfo"></div>
     <button id="sugBack" class="big primary back">← Qaytish</button>
   </div>
@@ -235,6 +236,7 @@
     <button id="sugDismiss" class="big muted">Kerak emas</button>
   </div>
   <div class="grid panel-grid" id="sugGrid"></div>
+  <div class="tabs tabs-bottom" id="sugTabs"></div>
 </div>
 
 <!-- MA'LUMOT (narx tekshirish, hisobot, navbat) -->
@@ -259,6 +261,7 @@
 <div class="busy hidden" id="busy"><div class="spin"></div><div id="busyText">1C'ga yozilmoqda…</div></div>
 <div id="receipt" aria-hidden="true"></div>
 
+<script src="qrcode.js"></script>
 <script src="logic.js"></script>
 <script src="app.js"></script>
 </body>

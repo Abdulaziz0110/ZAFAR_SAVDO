@@ -456,18 +456,68 @@ class ServiceTest(unittest.TestCase):
         self.svc.tick()                                                          # haftalik tavsiya o'zi
         self.assertEqual(self.svc.ping()["ps"], 1)
         r = self.svc.panel_op(tok, grant, "get")
-        self.assertEqual(r["sug"]["pnl"][0], ["15", "Olma"])                     # tarozi (kg) birinchi sahifada
-        self.assertEqual(r["sug"]["pnl"][42], ["16", "Nok"])                     # shtrix kodli — keyingi sahifada
-        self.assertEqual([m["t"] for m in r["sug"]["sec"]], ["TAROZI (KG)", "SHTRIX KODLI"])
+        self.assertEqual(r["sug"]["pnl"][0], ["15", "Olma"])                     # tarozi (kg) birinchi
+        self.assertEqual(r["sug"]["pnl"][1], ["16", "Nok"])                      # pc 40: 1C shtrixli (qisqa) — keyingi bo'sh joyga
+        self.assertEqual(r["sug"]["new"], [0, 1])
+        self.assertEqual([m["t"] for m in r["sug"]["sec"]], ["TAROZI (KG)", "1C SHTRIXLI / SHTRIXSIZ"])
         with self.assertRaises(kc.KassaError):
             self.svc.panel_op(tok, "", "approve")                                # admin ruxsatisiz emas
         self.svc.panel_op(tok, grant, "approve")
-        self.assertEqual((self.svc.snap["pnls"], self.svc.snap["pnl"][42]), ("kassa", ["16", "Nok"]))
+        self.assertEqual((self.svc.snap["pnls"], self.svc.snap["pnl"][1]), ("kassa", ["16", "Nok"]))
         self.assertEqual(self.svc.ping()["ps"], 0)
         self.svc.call(self.svc._refresh_full)                                    # 1C'dan yangilansa ham saqlanadi
         self.assertEqual(self.svc.snap["pnls"], "kassa")
         self.assertEqual(self.svc.panel_op(tok, grant, "reset")["src"], "1c")
         self.assertEqual(self.svc.snap["pnls"], "1c")
+
+    def test_panel_suggest_keeps_user_buttons(self):
+        """pc 40: tavsiya foydalanuvchi qo'ygan tugmalarni o'zgartirmaydi — faqat bo'sh joylarga; qidiruvdan tanlanganlar ham."""
+        tok = self.login()
+        self.svc.data(0)
+        grant = self.svc.admin(tok, "1234")["grant"]
+        own = [["", ""]] * 5 + [["16", "Nok"]]
+        kassa.save_json(os.path.join(self.svc.here, kassa.PANEL_FILE), {"pnl": own, "at": 1})
+        r = self.svc.panel_op(tok, grant, "make")["sug"]
+        self.assertEqual(r["pnl"][5], ["16", "Nok"])                                # joyida
+        self.assertEqual(r["pnl"][0], ["15", "Olma"])
+        self.assertEqual(sum(1 for x in r["pnl"] if x[0] == "16"), 1)              # takrorlanmaydi
+        self.assertEqual(r["new"], [0])
+        own2 = [["", ""]] * 5 + [["16", "Nok"]]
+        own2[0] = ["16", "Nok"]                                                    # tavsiyadan keyin qo'lda qo'yildi
+        kassa.save_json(os.path.join(self.svc.here, kassa.PANEL_FILE), {"pnl": own2, "at": 2})
+        self.svc.panel_op(tok, grant, "approve")
+        self.assertEqual(self.svc.snap["pnl"][0], ["16", "Nok"])                   # qo'lda qo'yilgan saqlandi
+        self.assertNotIn(["15", "Olma"], self.svc.snap["pnl"])
+        self.assertTrue(self.svc.picked(tok, "16")["ok"])
+        self.assertFalse(self.svc.picked(tok, "yo'q")["ok"])
+        self.assertEqual(self.svc.hits, {"16": 1})
+        self.assertEqual(kassa.load_json(os.path.join(self.svc.here, kassa.HITS_FILE), {}), {"16": 1})
+
+    def test_client_debt_live(self):
+        """pc 40: mijoz tanlanganda qarzi 1C'dan jonli; ro'yxatdagi qarz ham yangilanadi."""
+        tok = self.login()
+        self.svc.data(0)
+        seen = []
+        self.svc.onec.debt_total = lambda c, code: seen.append(code) or (125000.0, 3.0)
+        r = self.svc.client_debt(tok, "55")
+        self.assertEqual((r["d"], r["u"], seen), (125000.0, 3.0, ["55"]))
+        row = [x for x in self.svc.snap["cl"] if x[0] == "55"][0]
+        self.assertEqual((row[3], row[4]), (125000.0, 3.0))
+        with self.assertRaises(kc.KassaError):
+            self.svc.client_debt(tok, "")
+        with self.assertRaises(PermissionError):
+            self.svc.client_debt("x", "55")
+
+    def test_debt_total_query(self):
+        c = FakeC()
+        o = kassa.KassaOneC()
+        got = []
+        o.query = lambda cc, q, f, **kw: got.append((q, kw)) or [{"С": 5000.0, "В": 0}]
+        self.assertEqual(o.debt_total(c, "55"), (5000.0, 0.0))
+        self.assertIn("Контрагент = &К)", got[0][0])
+        self.assertNotIn("Сотрудник", got[0][0])
+        with self.assertRaises(kc.KassaError):
+            o.debt_total(c, "999")
 
     def test_sales_list_kassa_and_1c(self):
         tok = self.login()

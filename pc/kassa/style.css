@@ -638,3 +638,23 @@ body.sale-edit .mode-bar { background: #6d3fc8; color: #fff; }
 .kb-row button { max-width: 70px; min-height: 56px; }
 .kb-row button.w2 { max-width: 150px; }
 .kb-row button.w5 { max-width: 330px; }
+/* pc 40: panel nomlari 1C'dagi kabi (katta harfga o'tkazilmaydi) */
+.panel-grid .tile .tn { text-transform: none; }
+/* pc 40: qo'lda o'zgartirilgan narx — tagiga chizilmaydi, faqat sal boshqa rang */
+.row .manual { color: inherit; text-decoration: none; background: rgba(245, 158, 11, .16); border-radius: 6px; padding: 0 4px; }
+/* pc 40: panel sahifalari (8 bo'lim) — pastda, eniga teng cho'zilgan */
+.pnl-title { flex: 1; font-size: 22px; font-weight: 800; padding-left: 6px; }
+.tabs.tabs-bottom { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; overflow: visible; }
+.tabs.tabs-bottom button { min-width: 0; min-height: 64px; font-size: 22px; }
+/* pc 40: to'lov QR tugmasi va oynasi */
+.qr-btn { flex: none; width: 52px; height: 46px; min-height: 0; padding: 0; margin-right: 4px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .18); border: 2px solid rgba(255, 255, 255, .45); color: var(--top-ink); border-radius: 12px; }
+.qr-btn .ic { width: 28px; height: 28px; }
+.payqr { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 12px; }
+.payqr .qr-img { width: min(420px, 60vh); background: #fff; padding: 10px; border-radius: 14px; }
+.payqr .qr-img svg { display: block; width: 100%; height: auto; }
+.payqr .pq-hint { font-size: 18px; color: var(--ink2); }
+.payqr .pq-card { font-size: 40px; font-weight: 900; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.payqr .pq-name { font-size: 26px; font-weight: 800; }
+.mv-hint { color: var(--ink2); padding: 8px 2px; }
+.panel-grid .tile.sug-new { outline: 3px solid #f59e0b; outline-offset: -3px; }

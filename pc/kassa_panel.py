@@ -106,3 +106,62 @@ def suggest(goods, stats, barcodes, slots=SLOTS, page=PAGE):
                 n += 1
         marks.append({"t": title, "from": start, "to": pos, "n": n})
     return {"pnl": out, "sec": marks}
+
+
+# ---------------------------------------------------------------- pc 40: bo'sh joylarga tavsiya
+
+HIT_WEIGHT = 3      # qidiruvdan tanlash — sotuvdan 3 baravar og'irroq (kassir qidirib topyapti = panelda yo'q)
+
+
+def is_factory_barcode(bc):
+    """Ishlab chiqaruvchi (zavod) shtrix kodi — skanerlanadi, panelga kerak emas. 1C o'zi yaratgani: raqamsiz, qisqa (<= 7)
+    yoki do'kon ichki EAN-13 (2 bilan boshlanadi: 20-29)."""
+    s = str(bc or "").strip()
+    if not s.isdigit() or len(s) <= 7:
+        return False
+    return not (len(s) == 13 and s[0] == "2")
+
+
+def fill(current, goods, stats, hits, barcodes, slots=SLOTS):
+    """
+    Foydalanuvchi qo'ygan tugmalar O'ZGARMAYDI — faqat bo'sh joylar to'ldiriladi: avval tarozi (kg) tovarlari (oilalar
+    bo'yicha), keyin zavod shtrix kodi yo'q (1C o'zi yaratgan yoki shtrixsiz) tovarlar — oxirgi [DAYS] kun sotuvi + qidiruvda
+    tanlanishi bo'yicha. @return {"pnl", "sec", "new": [to'ldirilgan joylar]}
+    """
+    cur = []
+    for x in list(current or [])[:slots]:
+        cur.append([str(x[0]), str(x[1])] if isinstance(x, (list, tuple)) and len(x) >= 2 and x[0] else ["", ""])
+    while len(cur) < slots:
+        cur.append(["", ""])
+    on = {x[0] for x in cur if x[0]}
+    factory = {code for bc, code in (barcodes or {}).items() if is_factory_barcode(bc)}
+
+    def score(g):
+        return (stats or {}).get(g["c"], 0) + HIT_WEIGHT * (hits or {}).get(g["c"], 0)
+    cands = [g for g in goods if g["c"] not in on and score(g) > 0]
+    weighted = [g for g in cands if is_weighted(g)]
+    other = [g for g in cands if not is_weighted(g) and g["c"] not in factory]
+    order = [("TAROZI (KG)", g) for fam in _families(_trim(weighted, CAPS[0], score), score) for g in fam]
+    order += [("1C SHTRIXLI / SHTRIXSIZ", g) for g in sorted(other, key=lambda g: (-score(g), fold(g["n"])))]
+    empties = [i for i, x in enumerate(cur) if not x[0]]
+    new, marks = [], {}
+    for i, (title, g) in zip(empties, order):
+        cur[i] = [g["c"], g["n"]]
+        new.append(i)
+        m = marks.setdefault(title, {"t": title, "from": i, "to": i + 1, "n": 0})
+        m["to"] = i + 1
+        m["n"] += 1
+    return {"pnl": cur, "sec": list(marks.values()), "new": new}
+
+
+def apply_new(current, sug, slots=SLOTS):
+    """Tasdiqlash: tavsiyadagi YANGI tugmalar hozirgi panelga — faqat hali bo'sh joylarga va panelda yo'q bo'lsa
+    (tavsiyadan keyin qo'lda qo'yilganlar ham saqlanadi)."""
+    cur = fill(current, [], {}, {}, {}, slots)["pnl"]
+    on = {x[0] for x in cur if x[0]}
+    pnl = sug.get("pnl") or []
+    for i in sug.get("new") or []:
+        if 0 <= i < slots and i < len(pnl) and not cur[i][0] and pnl[i][0] and pnl[i][0] not in on:
+            cur[i] = [pnl[i][0], pnl[i][1]]
+            on.add(pnl[i][0])
+    return cur
