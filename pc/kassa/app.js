@@ -2310,11 +2310,12 @@
       S.kb.text = u.footer || ''; renderKb();
     });
     // pc 29: narx turini almashtirish usuli
-    var cpt = card('Narx turini almashtirish', u.ptSwipe
+    var cpt = card('Narx turini almashtirish', (u.ptSwipe
       ? "Ro'yxat (savat) ustiga barmoqlarni qo'yib 3 sm pastga suring: 1 barmoq — Narx 1, 2 barmoq — Narx 2, 3 — Narx 3, 4 — Narx 4. " +
         "Ro'yxat uzun bo'lsa, 1 barmoq bilan avval eng tepaga chiqing. Sichqoncha bilan (kompyuterda): ro'yxatni bosib pastga " +
         "torting — har 3 sm bitta narx turi (1 → 2 → 3 → 4), qo'yib yuborsangiz o'zgaradi. Hozirgi narx turi raqam maydoni burchagida turadi."
-      : "Yuqoridagi «Narx turi» tugmasi bilan.");
+      : "Yuqoridagi «Narx turi» tugmasi bilan.") + ' Kompyuter klaviaturasida (doim): F1, F2, F3, F4 — Narx 1–4 (yoki Alt+1…4); ' +
+      'PageDown / PageUp — keyingi / oldingi narx turi.');
     var pseg = el('div', 'seg2'); cpt.appendChild(pseg);
     btn(pseg, 'Tugma bilan', u.ptSwipe ? '' : 'on', function () { u.ptSwipe = false; u.ptypeShow = true; saveUi(u, renderSettings); });
     btn(pseg, 'Barmoqlar bilan', u.ptSwipe ? 'on' : '', function () { u.ptSwipe = true; saveUi(u, renderSettings); });
@@ -3237,6 +3238,18 @@
       if (!hidden('doneModal')) $('doneModal').classList.add('hidden');
       if (!hidden('infoModal')) $('infoModal').classList.add('hidden');
       if (!hidden('panelView')) $('panelView').classList.add('hidden');
+      // pc 41: narx turi klaviaturadan — F1..F4 yoki Alt+1..4; PageDown/PageUp — keyingi/oldingi
+      var ptk = { F1: 1, F2: 2, F3: 3, F4: 4 }[e.key] || (e.altKey && /^[1-4]$/.test(e.key) ? parseInt(e.key, 10) : 0);
+      if (!ptk && (e.key === 'PageDown' || e.key === 'PageUp')) {
+        var cur = L.PRICE_TYPES.indexOf(PT()), nn = L.PRICE_TYPES.length;
+        ptk = (cur + (e.key === 'PageDown' ? 1 : nn - 1)) % nn + 1;
+      }
+      if (ptk) {
+        e.preventDefault();
+        if (L.PRICE_TYPES[ptk - 1]) setPtype(L.PRICE_TYPES[ptk - 1]);
+        else beep();
+        return;
+      }
       if (e.key === 'Enter') { e.preventDefault(); enterCode(S.disp); return; }
       if (e.key === 'Backspace') { S.disp = S.disp.slice(0, -1); renderDisplay(); return; }
       if (e.key.length === 1 && /[0-9A-Za-z.\-]/.test(e.key)) { S.disp = (S.disp + e.key).slice(0, 40); SC.disp++; renderDisplay(); e.preventDefault(); }

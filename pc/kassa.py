@@ -141,23 +141,23 @@ CLIENTS_Q = (
 # bo'yicha olinardi — agent orqali olingan qarzlar kassada ko'rinmasdi.
 DEBTS_Q = (
     "ВЫБРАТЬ О.Контрагент.Код КАК Код, О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, "
-    "СУММА(О.СуммаВалОстаток) КАК В "
+    "СУММА(О.СуммаВалОстаток) КАК Вл "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки КАК О "
     "СГРУППИРОВАТЬ ПО О.Контрагент.Код, О.Контрагент.Наименование"
 )
 # pc 40: bitta mijozning jami qarzi (barcha xodimlar bo'yicha) — mijoz tanlanganda 1C'dan jonli
 DEBT_TOTAL_ONE_Q = (
-    "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК В "
+    "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК Вл "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(, Контрагент = &К) КАК О"
 )
 # pc 39: zaxira — telefon hisobotidagi kabi (onec_data.DEBT_Q): Остатки(&К,) sana bilan, nom bo'yicha
 DEBTS_BY_NAME_Q = (
-    "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, СУММА(О.СуммаВалОстаток) КАК В "
+    "ВЫБРАТЬ О.Контрагент.Наименование КАК Имя, СУММА(О.СуммаОстаток) КАК С, СУММА(О.СуммаВалОстаток) КАК Вл "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(&К, ) КАК О "
     "СГРУППИРОВАТЬ ПО О.Контрагент.Наименование"
 )
 DEBT_ONE_Q = (
-    "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК В "
+    "ВЫБРАТЬ ЕСТЬNULL(СУММА(О.СуммаОстаток), 0) КАК С, ЕСТЬNULL(СУММА(О.СуммаВалОстаток), 0) КАК Вл "
     "ИЗ РегистрНакопления.ВзаиморасчетСКонтрагентом.Остатки(, Контрагент = &К И Сотрудник = &С) КАК О"
 )
 STAFF_Q = (
@@ -226,7 +226,7 @@ def build_snapshot(goods, stock, barcodes, panel, clients, debts, consts, title=
     # pc 35: qarz avval kod bo'yicha, topilmasa nom bo'yicha (kod ko'rinishi farq qilsa ham qarz yo'qolmasin)
     debt, debt_name = {}, {}
     for r in debts:
-        v = (round(fnum(r.get("С")), 2), round(fnum(r.get("В")), 2))
+        v = (round(fnum(r.get("С")), 2), round(fnum(r.get("Вл")), 2))
         k = code_text(r.get("Код")).strip()
         if k:
             debt[k] = (round(debt.get(k, (0, 0))[0] + v[0], 2), round(debt.get(k, (0, 0))[1] + v[1], 2))
@@ -428,17 +428,17 @@ class KassaOneC:
         """Mijozlar qarzi. pc 39: telefondagi hisobot ishlatadigan so'rov (nom bo'yicha, sana bilan) ham zaxirada;
         xato/namuna dasturchi rejimidagi «Texnik ma'lumot»da ko'rinadi (self.debt_diag)."""
         errs, last = [], None
-        for q, f, kw in ((DEBTS_Q, ["Код", "Имя", "С", "В"], {}),
+        for q, f, kw in ((DEBTS_Q, ["Код", "Имя", "С", "Вл"], {}),
                          (DEBTS_Q.replace(", О.Контрагент.Наименование КАК Имя", "").replace(", О.Контрагент.Наименование", ""),
-                          ["Код", "С", "В"], {}),
-                         (DEBTS_BY_NAME_Q, ["Имя", "С", "В"], {"К": self.now()})):
+                          ["Код", "С", "Вл"], {}),
+                         (DEBTS_BY_NAME_Q, ["Имя", "С", "Вл"], {"К": self.now()})):
             try:
                 rows = self.query(c, q, f, **kw)
             except Exception as e:  # noqa: BLE001
                 errs.append(str(e)[:160])
                 log.warning("kassa: qarzlar: %s", str(e)[:200])
                 continue
-            nz = [r for r in rows if fnum(r.get("С")) or fnum(r.get("В"))]
+            nz = [r for r in rows if fnum(r.get("С")) or fnum(r.get("Вл"))]
             log.info("kassa: qarzlar %d qator (%d tasi nol emas)", len(rows), len(nz))
             self.debt_diag = {"e": errs, "n": len(rows), "nz": len(nz),
                               "s": [[code_text(r.get("Код")), text(r.get("Имя")), fnum(r.get("С"))] for r in nz[:3]]}
@@ -548,18 +548,18 @@ class KassaOneC:
         return fnum(r.get("Кол")), fnum(r.get("Сум")), fnum(r.get("Вал"))
 
     def debt_one(self, c, party):
-        rows = self.query(c, DEBT_ONE_Q, ["С", "В"], К=party, С=c.Справочники.Сотрудники.Дукон)
+        rows = self.query(c, DEBT_ONE_Q, ["С", "Вл"], К=party, С=c.Справочники.Сотрудники.Дукон)
         r = rows[0] if rows else {}
-        return fnum(r.get("С")), fnum(r.get("В"))
+        return fnum(r.get("С")), fnum(r.get("Вл"))
 
     def debt_total(self, c, code):
         """pc 40: mijozning hozirgi jami qarzi 1C'dan (so'm, $)."""
         party = self.find(c.Справочники.Контрагенты, code)
         if party is None:
             raise kc.KassaError("1C'da mijoz topilmadi: %s" % code)
-        rows = self.query(c, DEBT_TOTAL_ONE_Q, ["С", "В"], К=party)
+        rows = self.query(c, DEBT_TOTAL_ONE_Q, ["С", "Вл"], К=party)
         r = rows[0] if rows else {}
-        return fnum(r.get("С")), fnum(r.get("В"))
+        return fnum(r.get("С")), fnum(r.get("Вл"))
 
     def write_sale(self, c, sale, pay, employee_code):
         """ПродажаРозница — 1C РасчетНажатие / ВозвратНажатие bilan bir xil. @return (raqam, sana matni)."""

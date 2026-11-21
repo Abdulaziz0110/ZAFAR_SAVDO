@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Kompyuter pc 42 — 2026-11-21
+Mijoz qarzi: 1C so'rovidagi xato tuzatildi («В» kalit so'z edi). Narx turi klaviaturadan: F1–F4, PageDown/PageUp.
+
 ## Kompyuter pc 41 — 2026-11-21
 Mijoz qarzi tanlanganda 1C'dan jonli. Panel nomlari oddiy holatda, sahifa tugmalari pastda. To'lov QR tugmasi (QR, karta, ism).
 Qo'lda narx — faqat sal boshqa fon. Oyna yozuvini uzoq bosib ro'yxatni ko'chirish. Panel tavsiyasi faqat bo'sh joylarga.

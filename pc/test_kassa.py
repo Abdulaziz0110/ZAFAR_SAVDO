@@ -137,7 +137,7 @@ class FakeC:
             q, s, u = self.stock.get(str(int(params["Т"].Код)), (0, 0, 0))
             return [{"Кол": q, "Сум": s, "Вал": u}]
         if "Сотрудник = &С" in text:
-            return [{"С": 25000.0, "В": 0.0}]
+            return [{"С": 25000.0, "Вл": 0.0}]
         if text == kassa.GOODS_Q:
             return [{"Код": 15.0, "Имя": "Olma", "Вал": 0, "Ц1": 6000, "Ц2": 5500, "Ц3": 0, "Ц4": 0, "В1": 0, "В2": 0,
                      "В3": 0, "В4": 0, "Ед": "kg", "Гр": "Meva", "ШК": "4780001"},
@@ -152,7 +152,7 @@ class FakeC:
         if text == kassa.CLIENTS_Q:
             return [{"Код": 55.0, "Имя": "Ali", "Тел": "+998901112233", "Пост": 0}]
         if text == kassa.DEBTS_Q:
-            return [{"Код": 55.0, "С": 25000.0, "В": 0.0}]
+            return [{"Код": 55.0, "С": 25000.0, "Вл": 0.0}]
         if text == kassa.STAFF_Q:
             return [{"Код": 7.0, "Имя": "Zafar", "Пароль": "1234", "Уволен": False, "Админ": True},
                     {"Код": 9.0, "Имя": "Kassir", "Пароль": "5555", "Уволен": False, "Админ": False},
@@ -508,11 +508,19 @@ class ServiceTest(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.svc.client_debt("x", "55")
 
+    def test_no_reserved_aliases(self):
+        """pc 41: 1C so'rovida «В» (IN) kalit so'z — «КАК В» xato beradi (Ожидается имя). Taxallus sifatida ishlatilmasin."""
+        import re
+        for name in dir(kassa):
+            q = getattr(kassa, name)
+            if name.endswith("_Q") and isinstance(q, str):
+                self.assertIsNone(re.search(r"КАК (В|ИЛИ|И|НЕ|КАК|ИЗ|ГДЕ|ПО)[\s,)]", q + " "), name)
+
     def test_debt_total_query(self):
         c = FakeC()
         o = kassa.KassaOneC()
         got = []
-        o.query = lambda cc, q, f, **kw: got.append((q, kw)) or [{"С": 5000.0, "В": 0}]
+        o.query = lambda cc, q, f, **kw: got.append((q, kw)) or [{"С": 5000.0, "Вл": 0}]
         self.assertEqual(o.debt_total(c, "55"), (5000.0, 0.0))
         self.assertIn("Контрагент = &К)", got[0][0])
         self.assertNotIn("Сотрудник", got[0][0])
@@ -716,11 +724,11 @@ class ServiceTest(unittest.TestCase):
                 if len(calls) == 1:
                     raise RuntimeError("Поле не найдено Код")
                 if len(calls) == 2:
-                    return [{"Код": "1", "С": 0, "В": 0}]
-                return [{"Имя": "Ali", "С": 150000.0, "В": 0}]
+                    return [{"Код": "1", "С": 0, "Вл": 0}]
+                return [{"Имя": "Ali", "С": 150000.0, "Вл": 0}]
         o = One(now=lambda: kassa.dt.datetime(2026, 11, 21))
         rows = o.debts(None)
-        self.assertEqual(rows, [{"Имя": "Ali", "С": 150000.0, "В": 0}])
+        self.assertEqual(rows, [{"Имя": "Ali", "С": 150000.0, "Вл": 0}])
         self.assertEqual(calls[2][1], {"К": kassa.dt.datetime(2026, 11, 21)})
         self.assertIn("Остатки(&К, )", calls[2][0])
         self.assertEqual((o.debt_diag["nz"], o.debt_diag["s"][0][1]), (1, "Ali"))
@@ -991,9 +999,9 @@ class DebtMatchTest(unittest.TestCase):
     def test_debt_by_code_then_by_name(self):
         clients = [{"Код": "000055", "Имя": "Ali", "Тел": "", "Пост": 0}, {"Код": 77.0, "Имя": "Vali aka", "Тел": "", "Пост": 0},
                    {"Код": 88.0, "Имя": "Yo'q", "Тел": "", "Пост": 0}]
-        debts = [{"Код": "000055", "Имя": "Ali", "С": 1000.0, "В": 0.0},
-                 {"Код": " 77 ", "Имя": "VALI AKA", "С": 2500.5, "В": 1.0},     # kod boshqacha ko'rinishda — nom bo'yicha
-                 {"Код": "000055", "Имя": "Ali", "С": 500.0, "В": 0.0}]          # bir nechta qator — qo'shiladi
+        debts = [{"Код": "000055", "Имя": "Ali", "С": 1000.0, "Вл": 0.0},
+                 {"Код": " 77 ", "Имя": "VALI AKA", "С": 2500.5, "Вл": 1.0},     # kod boshqacha ko'rinishda — nom bo'yicha
+                 {"Код": "000055", "Имя": "Ali", "С": 500.0, "Вл": 0.0}]          # bir nechta qator — qo'shiladi
         snap = kassa.build_snapshot([], [], [], [], clients, debts, {})
         d = {c[1]: c[3] for c in snap["cl"]}
         self.assertEqual(d["Ali"], 1500.0)
