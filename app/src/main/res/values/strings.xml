@@ -1732,7 +1732,7 @@
     <string name="hub_receipt_sub">Yuk beruvchidan tovar kirimi — qo\'lda yoki yuk xati rasmi orqali</string>
     <string name="pr_title">Rasm orqali kirim</string>
     <string name="pr_open">Rasmdan to\'ldirish (yuk xati, chek, ro\'yxat)</string>
-    <string name="pr_hint">Yuk xati, chek, nakladnaya yoki qo\'lda yozilgan ro\'yxatni rasmga oling. Ilova o\'qiydi va tovarlarni o\'zi tanlaydi; har qatorni bosib rasmdagisini ko\'rasiz va tuzatasiz. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o\'xshash yozuvni o\'zi taniydi.</string>
+    <string name="pr_hint">Yuk xati, chek, nakladnaya yoki qo\'lda yozilgan ro\'yxatni rasmga oling. Ilova o\'qiydi va tovarlarni o\'zi tanlaydi; rasm tepada turadi (ikki barmoq bilan kattalashtiring); qatorni bosing — rasmda o\'sha joy ko\'rsatiladi. «Almashtirish» — tovarni boshqasiga o\'zgartirish. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o\'xshash yozuvni o\'zi taniydi.</string>
     <string name="pr_reading">Rasm o\'qilmoqda… (10–40 soniya)</string>
     <string name="pr_read_ok">%1$d ta qator o\'qildi — tekshiring</string>
     <string name="pr_read_fail">Rasm o\'qilmadi: %1$s</string>
@@ -1760,6 +1760,13 @@
     <string name="pr_scan_line">O\'qilgani: %1$s × %2$s = %3$s</string>
     <string name="pr_rotate">Burish</string>
     <string name="pr_other_goods">Boshqa tovar…</string>
+    <string name="pr_hide">Yopish</string>
+    <string name="pr_b_goods">Almashtirish</string>
+    <string name="pr_b_qty">Soni/narx</string>
+    <string name="pr_show_photo">Rasmni ko\'rsatish</string>
+    <string name="pr_n_goods">%1$d ta tovar</string>
+    <string name="pr_no_last">Oldin kirim bo\'lmagan</string>
+    <string name="pr_last_in">Oxirgi kirim: %1$s · %2$s × %3$s · %4$s</string>
     <string name="pr_no_suppliers">Yuk beruvchilar ro\'yxati hali kelmagan (kompyuter dasturi)</string>
     <string name="pr_key_hint">Rasmni o\'qish uchun kalit kerak. BEPUL: Google Gemini — aistudio.google.com → «Create API key» → nusxa (AQ.… yoki AIza… bilan boshlanadi; bepul kalitda Google rasmlardan o\'z xizmatini yaxshilash uchun foydalanishi mumkin). Pullik, eng aniq: Anthropic Claude — console.anthropic.com (sk-ant-…), har rasm ~1–3 sent. Kalit faqat shu telefonda shifrlangan holda saqlanadi.</string>
     <string name="pr_key_field">API kalit (AQ.… / AIza… yoki sk-ant-…)</string>

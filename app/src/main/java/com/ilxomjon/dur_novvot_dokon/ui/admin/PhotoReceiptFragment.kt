@@ -60,6 +60,15 @@ class PhotoReceiptFragment : CodeFragment() {
     private lateinit var tvSum: TextView
     private lateinit var linesBox: LinearLayout
     private lateinit var btnGo: com.google.android.material.button.MaterialButton
+    private lateinit var tvSupHist: TextView
+    private lateinit var btnSupHist: com.google.android.material.button.MaterialButton
+    // v5.3.12: tepada qotirilgan rasm maydoni (kattalashtirish/surish), qator bosilsa — o'sha qatorga
+    private lateinit var viewer: android.widget.FrameLayout
+    private lateinit var zoom: com.ilxomjon.dur_novvot_dokon.ui.common.ZoomImageView
+    private lateinit var tvPh: TextView
+    private lateinit var btnShowPh: com.google.android.material.button.MaterialButton
+    private var curPhoto = -1
+    private var viewerOpen = true
 
     private val ai get() = ServiceLocator.receiptAi
     private val products get() = ServiceLocator.catalog.state.value.products
@@ -88,6 +97,7 @@ class PhotoReceiptFragment : CodeFragment() {
     override fun build(inflater: LayoutInflater): View {
         val p = page(R.string.pr_title)
         val c = p.content
+        buildViewer(p.root)
         c.addView(Ui.hint(ctx, getString(R.string.pr_hint), 4))
         c.addView(
             Ui.buttonRow(
@@ -97,10 +107,15 @@ class PhotoReceiptFragment : CodeFragment() {
             ),
         )
         tvStatus = Ui.hint(ctx, "", 8).also { c.addView(it) }
+        btnShowPh = Ui.button(ctx, getString(R.string.pr_show_photo), outlined = true, icon = R.drawable.ic_image) { showPhotoAt(curPhoto.coerceAtLeast(0)) }
+        c.addView(btnShowPh)
+        btnShowPh.show(false)
         c.addView(Ui.section(ctx, getString(R.string.wf_supplier)))
         tvSup = Ui.title(ctx, "", 4).also { c.addView(it) }
         tvSup.setOnClickListener { pickSupplier() }
-        c.addView(Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickSupplier() })
+        tvSupHist = Ui.hint(ctx, "", 4).also { c.addView(it) }
+        btnSupHist = Ui.button(ctx, getString(R.string.wf_history), outlined = true, icon = R.drawable.ic_history) { supplierHistory() }
+        c.addView(Ui.buttonRow(ctx, Ui.button(ctx, getString(R.string.wf_pick), outlined = true, icon = R.drawable.ic_person) { pickSupplier() }, btnSupHist))
         c.addView(Ui.section(ctx, getString(R.string.wf_goods)))
         linesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         c.addView(linesBox)
@@ -123,6 +138,114 @@ class PhotoReceiptFragment : CodeFragment() {
         launchUi { ServiceLocator.onec.load() }
         render()
         if (ServiceLocator.secure.aiKey.isBlank()) keyDialog()
+    }
+
+    // ---------------- rasm maydoni ----------------
+
+    private fun buildViewer(root: LinearLayout) {
+        val h = (resources.displayMetrics.heightPixels * 0.32f).toInt()
+        viewer = android.widget.FrameLayout(ctx).apply { setBackgroundColor(0xFF202124.toInt()) }
+        zoom = com.ilxomjon.dur_novvot_dokon.ui.common.ZoomImageView(ctx)
+        viewer.addView(zoom, android.widget.FrameLayout.LayoutParams(-1, -1))
+        val bar = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setBackgroundColor(0x99000000.toInt())
+        }
+        fun tb(t: String, f: () -> Unit) = TextView(ctx).apply {
+            text = t
+            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 15f
+            val pd = Ui.dp(ctx, 10)
+            setPadding(pd, Ui.dp(ctx, 6), pd, Ui.dp(ctx, 6))
+            setOnClickListener { f() }
+        }
+        bar.addView(tb("◀") { showPhotoAt(curPhoto - 1) })
+        tvPh = tb("") { zoom.reset() }
+        bar.addView(tvPh)
+        bar.addView(tb("▶") { showPhotoAt(curPhoto + 1) })
+        bar.addView(tb(getString(R.string.pr_rotate)) {
+            photos.getOrNull(curPhoto)?.let { it.rotate = (it.rotate + 90) % 360; save(); showPhotoAt(curPhoto) }
+        })
+        bar.addView(tb(getString(R.string.pr_hide)) { viewerOpen = false; viewer.show(false); btnShowPh.show(photos.isNotEmpty()) })
+        viewer.addView(bar, android.widget.FrameLayout.LayoutParams(-2, -2, android.view.Gravity.TOP or android.view.Gravity.END))
+        root.addView(viewer, 1, LinearLayout.LayoutParams(-1, h))
+        viewer.show(false)
+    }
+
+    private fun showPhotoAt(i: Int) {
+        if (photos.isEmpty()) { viewer.show(false); return }
+        val k = i.coerceIn(0, photos.size - 1)
+        val ph = photos[k]
+        zoom.show(ai.upright(ph.file, ph.rotate))
+        curPhoto = k
+        tvPh.text = "${k + 1}/${photos.size}"
+        viewerOpen = true
+        viewer.show(true)
+        btnShowPh.show(false)
+    }
+
+    private val viewerVisible: Boolean get() = viewer.visibility == View.VISIBLE
+
+    /** Qator bosilganda: rasm maydonida aynan shu qator (kattalashtirilgan, o'rtada). */
+    private fun focusRow(i: Int) {
+        val l = lines.getOrNull(i) ?: return
+        if (l.photo < 0) return
+        if (l.photo != curPhoto || !viewerVisible) showPhotoAt(l.photo)
+        if (l.y1 > l.y0) zoom.focusBand(l.y0, l.y1)
+    }
+
+    // ---------------- tarix (1C'dan, kompyuter yuborgan) ----------------
+
+    private fun supplierNow(): uz.imsoft.shared.onec.Supplier? {
+        val list = ServiceLocator.onec.state.value.suppliers?.list.orEmpty()
+        return list.firstOrNull { supCode.isNotEmpty() && it.code == supCode } ?: list.firstOrNull { supName.isNotEmpty() && it.name == supName }
+    }
+
+    private fun docName(kind: String): String = getString(
+        when (kind) {
+            uz.imsoft.shared.onec.OneCDoc.RECEIPT -> R.string.wf_d_receipt
+            uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY -> R.string.wf_d_pay
+            uz.imsoft.shared.onec.OneCDoc.SUPPLIER_RETURN -> R.string.wf_d_return
+            else -> R.string.wf_d_other
+        },
+    )
+
+    private fun supplierHistory() {
+        val sup = supplierNow() ?: return
+        val docs = sup.docs.sortedByDescending { it.stamp }.take(60)
+        if (docs.isEmpty()) { snack(getString(R.string.wf_no_history)); return }
+        val rows = docs.map { d ->
+            Ui.Row(docName(d.kind) + "  \u2116" + d.number, uz.imsoft.shared.report.Stamp.formatDateTime(d.stamp) +
+                (if (d.lines.isNotEmpty()) " \u00B7 " + getString(R.string.pr_n_goods, d.lines.size) else ""), money2(d.som, d.usd),
+                icon = if (d.kind == uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY) R.drawable.ic_payment else R.drawable.ic_receipt)
+        }
+        Ui.pickSearch(ctx, sup.name, rows, getString(R.string.wf_history_search), getString(R.string.close), keys = docs.map { it.haystack }) { }
+    }
+
+    /** Tovar kodi -> oxirgi kirimlar (eng yangisi birinchi): (hujjat, qator, yuk beruvchi). */
+    private var lastIn: Map<String, List<Triple<uz.imsoft.shared.onec.OneCDoc, uz.imsoft.shared.onec.OneCLine, String>>> = emptyMap()
+
+    private fun indexReceipts() {
+        val out = HashMap<String, ArrayList<Triple<uz.imsoft.shared.onec.OneCDoc, uz.imsoft.shared.onec.OneCLine, String>>>()
+        for (s in ServiceLocator.onec.state.value.suppliers?.list.orEmpty()) {
+            for (d in s.docs) {
+                if (d.kind != uz.imsoft.shared.onec.OneCDoc.RECEIPT) continue
+                for (ln in d.lines) {
+                    val k = ln.code.trim().ifEmpty { "n:" + ln.name.trim().lowercase() }
+                    out.getOrPut(k) { ArrayList() } += Triple(d, ln, s.name)
+                }
+            }
+        }
+        out.values.forEach { l -> l.sortByDescending { it.first.stamp } }
+        lastIn = out
+    }
+
+    private fun lastText(pid: String, name: String): String {
+        val l = (lastIn[pid.trim()] ?: lastIn["n:" + name.trim().lowercase()])?.firstOrNull() ?: return getString(R.string.pr_no_last)
+        val (d, ln, sup) = l
+        val price = if (ln.priceUsd != 0.0 && ln.priceSom == 0.0) usd(ln.priceUsd) else som(ln.priceSom)
+        return getString(R.string.pr_last_in, uz.imsoft.shared.report.Stamp.formatDate(d.stamp), fmtQty(ln.qty), price, sup)
     }
 
     // ---------------- rasm ----------------
@@ -158,6 +281,7 @@ class PhotoReceiptFragment : CodeFragment() {
                 }
                 photos += Photo(f, r.rotate)
                 apply(photos.size - 1, r)
+                showPhotoAt(photos.size - 1)
                 save()
                 tvStatus.text = getString(R.string.pr_read_ok, r.rows.count { !it.crossed }) + (if (r.note.isNotEmpty()) "\n" + r.note else "")
                 render()
@@ -204,6 +328,23 @@ class PhotoReceiptFragment : CodeFragment() {
             supText.isNotEmpty() -> getString(R.string.pr_sup_unknown, supText)
             else -> getString(R.string.wf_not_chosen)
         }
+        val sp = supplierNow()
+        if (sp != null) {
+            val hist = sp.docs.sortedByDescending { it.stamp }.take(6).joinToString("\n") { d ->
+                uz.imsoft.shared.report.Stamp.formatDate(d.stamp) + " \u00B7 " + docName(d.kind) + " \u00B7 " + money2(d.som, d.usd)
+            }
+            val owe = when {
+                sp.oweSom > 0.5 -> getString(R.string.wf_we_owe, som(sp.oweSom))
+                sp.oweSom < -0.5 -> getString(R.string.wf_they_owe, som(-sp.oweSom))
+                else -> getString(R.string.wf_no_debt)
+            }
+            tvSupHist.text = owe + (if (hist.isNotEmpty()) "\n" + hist else "")
+        } else tvSupHist.text = ""
+        tvSupHist.show(tvSupHist.text.isNotEmpty())
+        btnSupHist.show(sp != null && sp.docs.isNotEmpty())
+        if (photos.isNotEmpty() && viewerOpen && !viewerVisible) showPhotoAt(curPhoto.coerceAtLeast(0))
+        btnShowPh.show(photos.isNotEmpty() && !viewerVisible)
+        indexReceipts()
         linesBox.removeAllViews()
         val byId = products.associateBy { it.id }
         val mem = ai.memory()
@@ -213,7 +354,7 @@ class PhotoReceiptFragment : CodeFragment() {
             val p = l.pid?.let { byId[it] }
             val name = Ui.title(ctx, "${i + 1}) " + (p?.name ?: getString(R.string.pr_no_goods)), 0)
             if (p == null) name.setTextColor(ContextCompat.getColor(ctx, R.color.brand_error))
-            name.setOnClickListener { editGoods(i) }
+            name.setOnClickListener { focusRow(i); editGoods(i) }
             box.addView(name)
             val how = when (l.how) {
                 "mem" -> getString(R.string.pr_how_mem)
@@ -222,12 +363,13 @@ class PhotoReceiptFragment : CodeFragment() {
                 "user" -> getString(R.string.pr_how_user)
                 else -> ""
             }
-            box.addView(Ui.hint(ctx, getString(R.string.pr_on_photo, l.text) + (if (how.isNotEmpty()) " · $how" else ""), 2).apply { setOnClickListener { showCrop(i) } })
+            box.addView(Ui.hint(ctx, getString(R.string.pr_on_photo, l.text) + (if (how.isNotEmpty()) " · $how" else ""), 2).apply { setOnClickListener { focusRow(i) } })
             val price = if (usd) usd(l.price) else som(l.price)
             val sum = if (usd) usd(l.qty * l.price) else som(Money.round2(l.qty * l.price))
             val v = Ui.text(ctx, getString(R.string.oc_line, fmtQty(l.qty), price, sum), top = 4)
-            v.setOnClickListener { editQtyPrice(i) }
+            v.setOnClickListener { focusRow(i); editQtyPrice(i) }
             box.addView(v)
+            if (p != null) box.addView(Ui.hint(ctx, lastText(p.id, p.name), 2))
             val warn = ArrayList<String>(3)
             if (l.factor > 1.0) warn += getString(R.string.pr_factor, fmtQty(l.factor))
             if (l.scanSum > 0 && Math.abs(l.qty * l.price - l.scanSum) > Math.max(1.0, l.scanSum * 0.01)) {
@@ -235,7 +377,17 @@ class PhotoReceiptFragment : CodeFragment() {
             }
             if (p != null) ReceiptMatch.priceJump(mem, sup, p.id, l.price)?.let { warn += getString(R.string.pr_price_jump, if (usd) usd(it) else som(it)) }
             if (warn.isNotEmpty()) box.addView(Ui.hint(ctx, warn.joinToString("\n"), 2).apply { setTextColor(ContextCompat.getColor(ctx, R.color.brand_error)) })
-            card.setOnClickListener { showCrop(i) }
+            // v5.3.12: aniq tugmalar — tovarni almashtirish, soni/narx, o'chirish
+            box.addView(
+                Ui.buttonRow(
+                    ctx,
+                    Ui.button(ctx, getString(R.string.pr_b_goods), outlined = true, top = 0) { focusRow(i); editGoods(i) },
+                    Ui.button(ctx, getString(R.string.pr_b_qty), outlined = true, top = 0) { focusRow(i); editQtyPrice(i) },
+                    Ui.button(ctx, getString(R.string.delete), outlined = true, top = 0) { removeLine(i) },
+                    top = 4,
+                ),
+            )
+            card.setOnClickListener { focusRow(i) }
             card.setOnLongClickListener { removeLine(i); true }
             linesBox.addView(card)
         }
@@ -260,35 +412,14 @@ class PhotoReceiptFragment : CodeFragment() {
             adjustViewBounds = true
             val pad = Ui.dp(ctx, 12)
             setPadding(pad, pad, pad, 0)
-            setOnClickListener { showPhoto(l.photo) }
+            setOnClickListener { showPhotoAt(l.photo) }
         }
-    }
-
-    /** Qatorni bosganda — rasmning aynan shu qatori; pastida butun rasmni ochish. */
-    private fun showCrop(i: Int) {
-        val l = lines.getOrNull(i) ?: return
-        val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        cropView(i)?.let { col.addView(it) }
-        col.addView(Ui.hint(ctx, getString(R.string.pr_on_photo, l.text) + "\n" + scanLine(l), 8).apply { setPadding(Ui.dp(ctx, 16), 0, Ui.dp(ctx, 16), 0) })
-        MaterialAlertDialogBuilder(ctx).setTitle(R.string.pr_row).setView(col)
-            .setPositiveButton(R.string.pr_change_goods) { _, _ -> editGoods(i) }
-            .setNeutralButton(R.string.pr_change_qty) { _, _ -> editQtyPrice(i) }
-            .setNegativeButton(R.string.close, null).show()
     }
 
     private fun scanLine(l: Line): String = getString(
         R.string.pr_scan_line, fmtQty(l.scanQty) + (if (l.unit.isNotEmpty()) " " + l.unit else ""),
         if (usd) usd(l.scanPrice) else som(l.scanPrice), if (usd) usd(l.scanSum) else som(l.scanSum),
     )
-
-    private fun showPhoto(photo: Int) {
-        val ph = photos.getOrNull(photo) ?: return
-        val bmp = ai.upright(ph.file, ph.rotate) ?: return
-        val iv = ImageView(ctx).apply { setImageBitmap(bmp); adjustViewBounds = true }
-        val sc = android.widget.ScrollView(ctx).apply { addView(iv) }
-        MaterialAlertDialogBuilder(ctx).setView(sc).setPositiveButton(R.string.close, null)
-            .setNeutralButton(R.string.pr_rotate) { _, _ -> ph.rotate = (ph.rotate + 90) % 360; save(); showPhoto(photo) }.show()
-    }
 
     /** Tovarni almashtirish: rasm qatori, taxminlar (o'xshashlari), boshqa tovar. */
     private fun editGoods(i: Int) {
@@ -300,7 +431,7 @@ class PhotoReceiptFragment : CodeFragment() {
         col.addView(list)
         var dlg: androidx.appcompat.app.AlertDialog? = null
         l.alts.mapNotNull { byId[it] }.forEach { p ->
-            list.addView(Ui.item(ctx, p.name, getString(R.string.ad_product_code, p.id), icon = R.drawable.ic_shopping_bag) {
+            list.addView(Ui.item(ctx, p.name, getString(R.string.ad_product_code, p.id) + "\n" + lastText(p.id, p.name), icon = R.drawable.ic_shopping_bag) {
                 dlg?.dismiss()
                 setGoods(i, p.id)
             })
@@ -404,6 +535,10 @@ class PhotoReceiptFragment : CodeFragment() {
                 supText = ""; supCode = ""; supName = ""; usd = false; docTotal = 0.0; notes = ""
                 stateFile.delete()
                 tvStatus.text = ""
+                curPhoto = -1
+                zoom.show(null)
+                viewer.show(false)
+                btnShowPh.show(false)
                 render()
             }
             .setNegativeButton(R.string.cancel, null).show()

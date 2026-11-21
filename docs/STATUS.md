@@ -662,6 +662,15 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
 
+## 5.3.12 (versionCode 62) (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Rasmdan kirim: tepada o'lchami qotirilgan rasm maydoni — ikki barmoq bilan kattalashtirish/kichiklashtirish, surish, ikki marta bosish; ◀ ▶ rasmlar orasida, Burish, Yopish / «Rasmni ko'rsatish» | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| Qator bosilsa rasm maydonida aynan o'sha qator kattalashtirib ko'rsatiladi (bitta so'rovdagi y0/y1 — qo'shimcha limit sarflanmaydi) | VERIFIED (kompilyatsiya) / telefonda IMPLEMENTED-UNVERIFIED |
+| Har qatorda aniq tugmalar: «Almashtirish» (tovarni boshqasiga), «Soni/narx», «O'chirish» | VERIFIED (kompilyatsiya) |
+| Yuk beruvchi tanlangach: qarz holati, oxirgi 6 hujjat (sana · Kirim/To'lov/Qaytarish · summa), «Tarixi» — barcha hujjatlar qidiruv bilan | VERIFIED (kompilyatsiya) / 1C ma'lumoti bilan IMPLEMENTED-UNVERIFIED |
+| Har tovar ostida va almashtirish ro'yxatida: «Oxirgi kirim: sana · soni × narx · yuk beruvchi» (barcha yuk beruvchilar kirimlaridan, kod yoki nom bo'yicha) | VERIFIED (kompilyatsiya) / 1C ma'lumoti bilan IMPLEMENTED-UNVERIFIED |
+
 ## 5.3.11 (versionCode 61) (2026-11-21)
 | Funksiya | Holat |
 |---|---|

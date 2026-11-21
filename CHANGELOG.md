@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Ilova 5.3.12 — 2026-11-21
+Rasmdan kirimda: tepada kattalashtiriladigan rasm maydoni, qator bosilsa rasmdagi joyi; tovarni almashtirish tugmasi; yuk beruvchi tarixi va har tovarning oxirgi kirimi.
+
 ## Ilova 5.3.11 — 2026-11-21
 «Kirim (rasmdan ham)» — Sozlamalarda va bosh sahifa tugmasida to'g'ridan-to'g'ri.
 

@@ -1303,7 +1303,7 @@ STRINGS.update({
  # v5.3.8: rasm orqali kirim
  'hub_receipt': 'Kirim (rasmdan ham)', 'hub_receipt_sub': "Yuk beruvchidan tovar kirimi — qo'lda yoki yuk xati rasmi orqali",
  'pr_title': 'Rasm orqali kirim', 'pr_open': 'Rasmdan to\'ldirish (yuk xati, chek, ro\'yxat)',
- 'pr_hint': "Yuk xati, chek, nakladnaya yoki qo'lda yozilgan ro'yxatni rasmga oling. Ilova o'qiydi va tovarlarni o'zi tanlaydi; har qatorni bosib rasmdagisini ko'rasiz va tuzatasiz. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o'xshash yozuvni o'zi taniydi.",
+ 'pr_hint': "Yuk xati, chek, nakladnaya yoki qo'lda yozilgan ro'yxatni rasmga oling. Ilova o'qiydi va tovarlarni o'zi tanlaydi; rasm tepada turadi (ikki barmoq bilan kattalashtiring); qatorni bosing — rasmda o'sha joy ko'rsatiladi. «Almashtirish» — tovarni boshqasiga o'zgartirish. Siz tasdiqlaganlarni eslab qoladi — keyingi safar o'xshash yozuvni o'zi taniydi.",
  'pr_reading': "Rasm o'qilmoqda… (10–40 soniya)", 'pr_read_ok': '%1$d ta qator o\'qildi — tekshiring',
  'pr_read_fail': "Rasm o'qilmadi: %1$s", 'pr_on_photo': 'Rasmda: %1$s', 'pr_sup_unknown': "Rasmda: %1$s — 1C'dagi yuk beruvchini tanlang",
  'pr_no_goods': 'Tovar tanlanmagan — bosing', 'pr_how_mem': "o'rganilgan", 'pr_how_fuzzy': "o'xshash yozuv %1$d%%",
@@ -1315,6 +1315,8 @@ STRINGS.update({
  'pr_key': "Sun'iy intellekt kaliti", 'pr_learned': "O'rganilgan yozuvlar: %1$d ta",
  'pr_row': 'Rasmdagi qator', 'pr_change_goods': 'Tovarni almashtirish', 'pr_change_qty': 'Miqdor / narx',
  'pr_scan_line': "O'qilgani: %1$s × %2$s = %3$s", 'pr_rotate': 'Burish', 'pr_other_goods': 'Boshqa tovar…',
+ 'pr_hide': 'Yopish', 'pr_b_goods': 'Almashtirish', 'pr_b_qty': 'Soni/narx', 'pr_show_photo': "Rasmni ko'rsatish", 'pr_n_goods': '%1$d ta tovar',
+ 'pr_no_last': "Oldin kirim bo'lmagan", 'pr_last_in': 'Oxirgi kirim: %1$s · %2$s × %3$s · %4$s',
  'pr_no_suppliers': "Yuk beruvchilar ro'yxati hali kelmagan (kompyuter dasturi)",
  'pr_key_hint': "Rasmni o'qish uchun kalit kerak. BEPUL: Google Gemini — aistudio.google.com → «Create API key» → nusxa (AQ.… yoki AIza… bilan boshlanadi; bepul kalitda Google rasmlardan o'z xizmatini yaxshilash uchun foydalanishi mumkin). Pullik, eng aniq: Anthropic Claude — console.anthropic.com (sk-ant-…), har rasm ~1–3 sent. Kalit faqat shu telefonda shifrlangan holda saqlanadi.",
  'pr_key_field': 'API kalit (AQ.… / AIza… yoki sk-ant-…)', 'pr_model_field': "Model (bo'sh — avtomatik)", 'pr_key_saved': "Kalit saqlangan (o'zgartirish uchun yangisini yozing)",
