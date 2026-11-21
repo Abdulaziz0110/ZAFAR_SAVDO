@@ -43,6 +43,23 @@ class ReceiptTest {
         assertEquals("invalid x-api-key", err.exceptionOrNull()?.message)
     }
 
+    @Test
+    fun geminiFreeProvider() {
+        assertTrue(ReceiptScan.isGemini("AIzaSyX"))
+        assertTrue(!ReceiptScan.isGemini("sk-ant-1"))
+        assertEquals(ReceiptScan.GEMINI_MODEL, ReceiptScan.modelFor("AIzaX", ""))
+        assertEquals(ReceiptScan.GEMINI_MODEL, ReceiptScan.modelFor("AIzaX", "claude-sonnet-5-5"))
+        assertEquals("gemini-3-flash-preview", ReceiptScan.modelFor("AIzaX", "gemini-3-flash-preview"))
+        assertEquals(ReceiptScan.DEFAULT_MODEL, ReceiptScan.modelFor("sk-ant-x", "gemini-2.5-flash"))
+        val body = JObj.parse(ReceiptScan.geminiRequest("QUJD"))
+        val parts = body.objs("contents")[0].objs("parts")
+        assertEquals("QUJD", parts[0].obj("inline_data")?.str("data"))
+        assertEquals("application/json", body.obj("generationConfig")?.str("responseMimeType"))
+        assertEquals("{\"rows\":[]}", ReceiptScan.geminiReplyText("""{"candidates":[{"content":{"parts":[{"text":"{\"rows\":[]}"}]}}]}"""))
+        val err = runCatching { ReceiptScan.geminiReplyText("""{"error":{"code":400,"message":"API key not valid","status":"INVALID_ARGUMENT"}}""") }
+        assertEquals("API key not valid", err.exceptionOrNull()?.message)
+    }
+
     private val cands = listOf(
         ReceiptMatch.Cand("101", "Jiyda Xitoy 218 gr"),
         ReceiptMatch.Cand("102", "Pista Eron"),

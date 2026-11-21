@@ -55,24 +55,41 @@ class ReceiptAi(private val app: Context, private val key: () -> String, private
         val out = ByteArrayOutputStream()
         small.compress(Bitmap.CompressFormat.JPEG, 85, out)
         val b64 = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
-        val body = ReceiptScan.request(b64, model()).toByteArray(Charsets.UTF_8)
-        val c = URL(ReceiptScan.API_URL).openConnection() as HttpURLConnection
+        if (ReceiptScan.isGemini(k)) {
+            val m = ReceiptScan.modelFor(k, model())
+            val first = runCatching { post(ReceiptScan.GEMINI_URL + m + ":generateContent", ReceiptScan.geminiRequest(b64), mapOf("x-goog-api-key" to k), true) }
+            // model o'chirilgan / topilmasa — zaxira bepul model
+            val text = first.getOrElse { e ->
+                if (m != ReceiptScan.GEMINI_FALLBACK && (e.message.orEmpty().startsWith("HTTP 404") || e.message.orEmpty().contains("not found", true))) {
+                    post(ReceiptScan.GEMINI_URL + ReceiptScan.GEMINI_FALLBACK + ":generateContent", ReceiptScan.geminiRequest(b64), mapOf("x-goog-api-key" to k), true)
+                } else throw e
+            }
+            return@withContext ReceiptScan.parse(text)
+        }
+        val text = post(ReceiptScan.API_URL, ReceiptScan.request(b64, ReceiptScan.modelFor(k, model())),
+            mapOf("x-api-key" to k, "anthropic-version" to ReceiptScan.API_VERSION), false)
+        ReceiptScan.parse(text)
+    }
+
+    /** POST JSON -> modelning matni (Gemini yoki Anthropic javob shakli). */
+    private fun post(url: String, json: String, headers: Map<String, String>, gemini: Boolean): String {
+        val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.requestMethod = "POST"
             c.connectTimeout = 20_000
             c.readTimeout = 180_000
             c.doOutput = true
             c.setRequestProperty("content-type", "application/json")
-            c.setRequestProperty("x-api-key", k)
-            c.setRequestProperty("anthropic-version", ReceiptScan.API_VERSION)
-            c.outputStream.use { it.write(body) }
+            headers.forEach { (h, v) -> c.setRequestProperty(h, v) }
+            c.outputStream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
             val code = c.responseCode
             val text = (if (code in 200..299) c.inputStream else c.errorStream)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
+            val reply = { t: String -> if (gemini) ReceiptScan.geminiReplyText(t) else ReceiptScan.replyText(t) }
             if (code !in 200..299) {
-                val msg = runCatching { ReceiptScan.replyText(text) }.exceptionOrNull()?.message ?: text.take(200)
+                val msg = runCatching { reply(text) }.exceptionOrNull()?.message ?: text.take(200)
                 throw IllegalStateException("HTTP $code: $msg")
             }
-            ReceiptScan.parse(ReceiptScan.replyText(text))
+            return reply(text)
         } finally {
             c.disconnect()
         }

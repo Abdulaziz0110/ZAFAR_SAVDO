@@ -382,7 +382,7 @@ class PhotoReceiptFragment : CodeFragment() {
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(Ui.dp(ctx, 20), 0, Ui.dp(ctx, 20), 0) }
         col.addView(Ui.hint(ctx, getString(R.string.pr_key_hint), 4))
         val (tk, ek) = Ui.field(ctx, getString(R.string.pr_key_field), android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        val (tm, em) = Ui.field(ctx, getString(R.string.pr_model_field), value = ServiceLocator.secure.aiModel.ifBlank { ReceiptScan.DEFAULT_MODEL })
+        val (tm, em) = Ui.field(ctx, getString(R.string.pr_model_field), value = ServiceLocator.secure.aiModel)
         col.addView(tk)
         col.addView(tm)
         if (ServiceLocator.secure.aiKey.isNotBlank()) col.addView(Ui.hint(ctx, getString(R.string.pr_key_saved), 4))

@@ -1,4 +1,4 @@
-# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 43) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
+# Holat — Savdo (bitta ilova: Admin/xodim) 5.3.6 (versionCode 56) + kompyuter dasturi 5.4 (pc 44) + Savdo Mijoz 5.4 (versionCode 32) + iPhone: agent va mijoz (veb), 2026-11-20
 
 Belgilar:
 - **VERIFIED** — shu muhitda kompilyatsiya qilindi va testdan o'tdi (yoki mustaqil vosita bilan tekshirildi).
@@ -661,6 +661,12 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Admin telefoni Tailscale'siz Xprinter'ga: to'g'ridan-to'g'ri ulanmasa (3 soniya) — internet orqali kompyuter ko'prigiga (lb navbati), kompyuter o'zi chop etadi; tushunarli xato matni | VERIFIED (kompilyatsiya, 330 test) / telefonda IMPLEMENTED-UNVERIFIED |
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
+
+## 5.3.9 (versionCode 59) + pc 44 (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Rasm orqali kirim — BEPUL yo'l: Google Gemini kaliti (aistudio.google.com, "AIza…"), standart model gemini-2.5-flash, topilmasa zaxira gemini-3.1-flash-lite; Anthropic kaliti ("sk-ant-…") bo'lsa — Claude. Kalit turiga qarab o'zi tanlaydi | VERIFIED (unit test: so'rov/javob shakli) / haqiqiy kalit bilan IMPLEMENTED-UNVERIFIED |
+| Kassa: savdolar ro'yxati ixchamroq (shrift va tugmalar kichikroq) — bir ekranda ko'proq savdo | VERIFIED (kod) |
 
 ## 5.3.8 (versionCode 58) — rasm orqali kirim (2026-11-21)
 | Funksiya | Holat |

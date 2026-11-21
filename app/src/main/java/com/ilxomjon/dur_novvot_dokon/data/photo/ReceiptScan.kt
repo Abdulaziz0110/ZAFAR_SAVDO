@@ -11,6 +11,48 @@ object ReceiptScan {
     const val DEFAULT_MODEL = "claude-sonnet-5-5"
     const val API_URL = "https://api.anthropic.com/v1/messages"
     const val API_VERSION = "2023-06-01"
+    /** Google Gemini — BEPUL kalit (aistudio.google.com), rasm o'qiydi (kirill, qo'lyozma ham). */
+    const val GEMINI_MODEL = "gemini-2.5-flash"
+    const val GEMINI_FALLBACK = "gemini-3.1-flash-lite"
+    const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
+
+    /** Kalit turiga qarab: Google ("AIza…") yoki Anthropic ("sk-ant-…"). */
+    fun isGemini(key: String): Boolean = key.trim().startsWith("AIza")
+
+    /** Saqlangan model shu xizmatniki bo'lmasa — standart. */
+    fun modelFor(key: String, saved: String): String {
+        val g = isGemini(key)
+        val m = saved.trim()
+        return when {
+            m.isEmpty() -> if (g) GEMINI_MODEL else DEFAULT_MODEL
+            g && !m.startsWith("gemini") -> GEMINI_MODEL
+            !g && !m.startsWith("claude") -> DEFAULT_MODEL
+            else -> m
+        }
+    }
+
+    /** Gemini generateContent so'rovi (javob — faqat JSON). */
+    fun geminiRequest(imageB64: String): String = Json.write(
+        mapOf(
+            "contents" to listOf(
+                mapOf(
+                    "parts" to listOf(
+                        mapOf("inline_data" to mapOf("mime_type" to "image/jpeg", "data" to imageB64)),
+                        mapOf("text" to PROMPT),
+                    ),
+                ),
+            ),
+            "generationConfig" to mapOf("responseMimeType" to "application/json", "temperature" to 0),
+        ),
+    )
+
+    /** Gemini javobi -> matn. Xato bo'lsa — IllegalStateException(xabar). */
+    fun geminiReplyText(body: String): String {
+        val o = JObj.parse(body)
+        o.obj("error")?.let { throw IllegalStateException(it.str("message").ifEmpty { it.str("status") }) }
+        val c = o.objs("candidates").firstOrNull() ?: throw IllegalStateException(o.obj("promptFeedback")?.str("blockReason")?.ifEmpty { null } ?: "javob bo'sh")
+        return c.obj("content")?.objs("parts").orEmpty().joinToString("") { it.str("text") }
+    }
 
     /** Rasmdagi bitta tovar qatori. [y0]/[y1] — qator tepasi/pasti, to'g'rilangan rasm bo'yining ulushi (0..1). */
     data class Row(

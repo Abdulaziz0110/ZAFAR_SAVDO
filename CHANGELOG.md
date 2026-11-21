@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Ilova 5.3.9 + kompyuter pc 44 — 2026-11-21
+Rasm orqali kirim bepul Google Gemini kaliti bilan ham ishlaydi. Kassada savdolar ro'yxati ixchamroq.
+
 ## Ilova 5.3.8 — 2026-11-21
 **Rasm orqali kirim:** yuk xati, chek yoki qo'lda yozilgan ro'yxat rasmi o'qiladi, tovarlar o'zi tanlanadi, har qatorda rasmdagi
 ko'rinishi; tasdiqlanganlarni eslab qoladi (yozuv→tovar, yuk beruvchi, blok→dona, oxirgi narx). Anthropic API kaliti kerak.

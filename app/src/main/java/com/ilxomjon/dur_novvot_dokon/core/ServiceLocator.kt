@@ -202,7 +202,7 @@ object ServiceLocator {
     val secure by lazy { SecureStore(app) }
     /** v5.3.8: rasm orqali kirim (rasmni o'qish va o'rganilganlar). */
     val receiptAi by lazy {
-        com.ilxomjon.dur_novvot_dokon.data.photo.ReceiptAi(app, { secure.aiKey }, { secure.aiModel.ifBlank { com.ilxomjon.dur_novvot_dokon.data.photo.ReceiptScan.DEFAULT_MODEL } })
+        com.ilxomjon.dur_novvot_dokon.data.photo.ReceiptAi(app, { secure.aiKey }, { secure.aiModel })
     }
     val localDb by lazy { LocalDb(app) }
     val historyDb by lazy { HistoryDb(app) }

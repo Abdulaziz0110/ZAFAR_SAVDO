@@ -669,3 +669,11 @@ body.stockcol .thead, body.stockcol .row { grid-template-columns: 30px 1fr 70px 
 .totals.solo .t-line.due b { font-size: 44px; }
 .kb-row button.on { background: var(--acc); color: #fff; }
 .sale-card.holding { background: rgba(220, 38, 38, .14); transition: background 5s linear; }
+/* pc 44: savdolar ro'yxati ixchamroq — bir ekranda ko'proq savdo */
+.sale-card { padding: 5px 4px; gap: 2px 10px; }
+.sale-card .sc-who { font-size: 16px; }
+.sale-card .sc-sum { font-size: 18px; }
+.sale-card .sc-time { font-size: 16px; }
+.sale-card .sc-sub { font-size: 12px; }
+.sale-card .sc-btns { gap: 4px; }
+.sale-card .sc-btns button { min-height: 40px; padding: 0 10px; font-size: 15px; }
