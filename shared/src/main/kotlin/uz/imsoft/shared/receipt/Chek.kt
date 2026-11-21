@@ -68,6 +68,12 @@ data class Chek(
     /** ТелФирма. */
     val phone: String,
     val labels: Labels = Labels.LATIN,
+    /** v5.3.13: Vaqt/Sana ostidagi sarlavha ("KIRIM", "YUK BERUVCHIGA TO'LOV"); bo'sh — savdo cheki, sarlavhasiz. */
+    val title: String = "",
+    /** Oldingi va keyingi qarz qatorlari (kirim chekida — yo'q). */
+    val showDebt: Boolean = true,
+    /** Chegirma va to'lov (naqd/plastik/$) qatorlari. */
+    val showPay: Boolean = true,
 ) {
     /** Maketdagi "[Номер] || [Товар]" va "[Блок] [Кол] х [Цена] = [Сум]". */
     data class Line(val no: Int, val name: String, val block: String, val qty: String, val price: String, val sum: String) {
@@ -114,23 +120,30 @@ data class Chek(
     fun text(): String = buildString {
         val l = labels
         append(l.time).append(' ').append(time).append("   ").append(l.date).append(' ').append(date).append('\n')
+        if (title.isNotEmpty()) append(title).append('\n')
         if (number.isNotEmpty()) append(l.number).append(' ').append(number).append('\n')
         if (client.isNotEmpty()) append(l.client).append(' ').append(client).append('\n')
         if (agent.isNotEmpty()) append(l.agent).append(' ').append(agent).append('\n')
-        append(l.debtSom).append(' ').append(debtSom).append('\n')
-        append(l.debtUsd).append(' ').append(debtUsd).append('\n')
+        if (showDebt) {
+            append(l.debtSom).append(' ').append(debtSom).append('\n')
+            append(l.debtUsd).append(' ').append(debtUsd).append('\n')
+        }
         append("------------------------\n")
         for (x in lines) append(x.title).append('\n').append("   ").append(x.calc).append('\n')
         append("------------------------\n")
         append(l.sum).append(' ').append(l.som).append(' ').append(sumSom).append('\n')
         append("      ").append(l.usd).append(' ').append(sumUsd).append('\n')
-        append(l.discount).append(' ').append(l.som).append(' ').append(discountSom).append('\n')
-        append("        ").append(l.usd).append(' ').append(discountUsd).append('\n')
-        append(l.payment).append(' ').append(l.cash).append(' ').append(cash).append('\n')
-        append("       ").append(l.card).append(' ').append(card).append('\n')
-        append("       ").append(l.paidUsd).append(' ').append(paidUsd).append('\n')
-        append(l.endSom).append(' ').append(endSom).append('\n')
-        append(l.endUsd).append(' ').append(endUsd).append('\n')
+        if (showPay) {
+            append(l.discount).append(' ').append(l.som).append(' ').append(discountSom).append('\n')
+            append("        ").append(l.usd).append(' ').append(discountUsd).append('\n')
+            append(l.payment).append(' ').append(l.cash).append(' ').append(cash).append('\n')
+            append("       ").append(l.card).append(' ').append(card).append('\n')
+            append("       ").append(l.paidUsd).append(' ').append(paidUsd).append('\n')
+        }
+        if (showDebt) {
+            append(l.endSom).append(' ').append(endSom).append('\n')
+            append(l.endUsd).append(' ').append(endUsd).append('\n')
+        }
         if (phone.isNotEmpty()) append(l.phone).append(' ').append(phone).append('\n')
     }
 
@@ -257,27 +270,35 @@ fun Chek.html(): String {
     b.append(".tel{text-align:center;font-size:12pt;margin-top:8px}</style></head><body><div class='r'>")
     b.append("<div class='a'><span>").append(e(l.time)).append(' ').append(e(time)).append("</span><span>")
         .append(e(l.date)).append(' ').append(e(date)).append("</span></div>")
+    if (title.isNotEmpty()) b.append("<div style='text-align:center;font-size:13pt;margin:4px 0'>").append(e(title)).append("</div>")
     if (number.isNotEmpty()) b.append("<div class='p'><span class='k'>").append(e(l.number)).append("</span><span class='v'>").append(e(number)).append("</span></div>")
     if (client.isNotEmpty()) b.append("<div class='p'><span class='k'>").append(e(l.client)).append("</span><span class='v'>").append(e(client)).append("</span></div>")
     if (agent.isNotEmpty()) b.append("<div class='s' style='font-size:11pt'><span>").append(e(l.agent)).append("</span><span>").append(e(agent)).append("</span></div>")
-    b.append("<div class='s'><span>").append(e(l.debtSom)).append("</span><span>").append(e(debtSom)).append("</span></div>")
-    b.append("<div class='s'><span>").append(e(l.debtUsd)).append("</span><span>").append(e(debtUsd)).append("</span></div>")
-    b.append("<table>")
+    if (showDebt) {
+        b.append("<div class='s'><span>").append(e(l.debtSom)).append("</span><span>").append(e(debtSom)).append("</span></div>")
+        b.append("<div class='s'><span>").append(e(l.debtUsd)).append("</span><span>").append(e(debtUsd)).append("</span></div>")
+    }
+    if (lines.isNotEmpty()) b.append("<table>") else b.append("<hr>")
     for (x in lines) b.append("<tr><td><span class='n'>").append(e(x.title)).append("</span><span class='f'>").append(e(x.calc)).append("</span></td></tr>")
-    b.append("</table><hr>")
+    if (lines.isNotEmpty()) b.append("</table>")
+    b.append("<hr>")
     fun t3(c0: String, k: String, v: String) {
         b.append("<div class='t'><span class='c0'>").append(e(c0)).append("</span><span>").append(e(k)).append("</span><span>").append(e(v)).append("</span></div>")
     }
     t3(l.sum, l.som, sumSom)
     t3("", l.usd, sumUsd)
     b.append("<hr>")
-    t3(l.discount, l.som, discountSom)
-    t3("", l.usd, discountUsd)
-    t3(l.payment, l.cash, cash)
-    t3("", l.card, card)
-    t3("", l.paidUsd, paidUsd)
-    b.append("<div class='s' style='font-size:11pt'><span>").append(e(l.endSom)).append("</span><span>").append(e(endSom)).append("</span></div>")
-    b.append("<div class='s' style='font-size:11pt'><span>").append(e(l.endUsd)).append("</span><span>").append(e(endUsd)).append("</span></div>")
+    if (showPay) {
+        t3(l.discount, l.som, discountSom)
+        t3("", l.usd, discountUsd)
+        t3(l.payment, l.cash, cash)
+        t3("", l.card, card)
+        t3("", l.paidUsd, paidUsd)
+    }
+    if (showDebt) {
+        b.append("<div class='s' style='font-size:11pt'><span>").append(e(l.endSom)).append("</span><span>").append(e(endSom)).append("</span></div>")
+        b.append("<div class='s' style='font-size:11pt'><span>").append(e(l.endUsd)).append("</span><span>").append(e(endUsd)).append("</span></div>")
+    }
     if (phone.isNotEmpty()) b.append("<div class='tel'>").append(e(l.phone)).append(' ').append(e(phone)).append("</div>")
     b.append("</div></body></html>")
     return b.toString()

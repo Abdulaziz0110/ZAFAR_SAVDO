@@ -196,7 +196,7 @@ class WriteFormFragment : CodeFragment() {
                 icon = if (d.kind == uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY) R.drawable.ic_payment else R.drawable.ic_receipt,
             )
         }
-        Ui.pickSearch(ctx, sup.name, rows, getString(R.string.wf_history_search), getString(R.string.close), keys = docs.map { it.haystack }) { }
+        Ui.pickSearch(ctx, sup.name, rows, getString(R.string.wf_history_search), getString(R.string.close), keys = docs.map { it.haystack }) { i -> docs.getOrNull(i)?.let { showDoc(it) } }
     }
 
     private fun docName(kind: String): String = getString(

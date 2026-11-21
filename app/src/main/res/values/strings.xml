@@ -1760,6 +1760,17 @@
     <string name="pr_scan_line">O\'qilgani: %1$s × %2$s = %3$s</string>
     <string name="pr_rotate">Burish</string>
     <string name="pr_other_goods">Boshqa tovar…</string>
+    <string name="ck_button">Chek</string>
+    <string name="ck_title_receipt">KIRIM</string>
+    <string name="ck_title_pay">YUK BERUVCHIGA TO\'LOV</string>
+    <string name="ck_title_sret">YUK BERUVCHIGA QAYTARISH</string>
+    <string name="ck_l_no">Hujjat №:</string>
+    <string name="ck_l_supplier">Yuk beruvchi:</string>
+    <string name="ck_l_paid">To\'landi</string>
+    <string name="ck_l_before_som">Oldingi qarzimiz (So\'m):</string>
+    <string name="ck_l_before_usd">Oldingi qarzimiz (Val):</string>
+    <string name="ck_l_after_som">Qolgan qarzimiz (So\'m):</string>
+    <string name="ck_l_after_usd">Qolgan qarzimiz (Val):</string>
     <string name="pr_hide">Yopish</string>
     <string name="pr_b_goods">Almashtirish</string>
     <string name="pr_b_qty">Soni/narx</string>

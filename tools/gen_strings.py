@@ -1315,6 +1315,11 @@ STRINGS.update({
  'pr_key': "Sun'iy intellekt kaliti", 'pr_learned': "O'rganilgan yozuvlar: %1$d ta",
  'pr_row': 'Rasmdagi qator', 'pr_change_goods': 'Tovarni almashtirish', 'pr_change_qty': 'Miqdor / narx',
  'pr_scan_line': "O'qilgani: %1$s × %2$s = %3$s", 'pr_rotate': 'Burish', 'pr_other_goods': 'Boshqa tovar…',
+ # v5.3.13: yuk beruvchi hujjatlari cheki
+ 'ck_button': 'Chek', 'ck_title_receipt': 'KIRIM', 'ck_title_pay': "YUK BERUVCHIGA TO'LOV", 'ck_title_sret': 'YUK BERUVCHIGA QAYTARISH',
+ 'ck_l_no': 'Hujjat №:', 'ck_l_supplier': 'Yuk beruvchi:', 'ck_l_paid': "To'landi",
+ 'ck_l_before_som': "Oldingi qarzimiz (So'm):", 'ck_l_before_usd': 'Oldingi qarzimiz (Val):',
+ 'ck_l_after_som': "Qolgan qarzimiz (So'm):", 'ck_l_after_usd': 'Qolgan qarzimiz (Val):',
  'pr_hide': 'Yopish', 'pr_b_goods': 'Almashtirish', 'pr_b_qty': 'Soni/narx', 'pr_show_photo': "Rasmni ko'rsatish", 'pr_n_goods': '%1$d ta tovar',
  'pr_no_last': "Oldin kirim bo'lmagan", 'pr_last_in': 'Oxirgi kirim: %1$s · %2$s × %3$s · %4$s',
  'pr_no_suppliers': "Yuk beruvchilar ro'yxati hali kelmagan (kompyuter dasturi)",

@@ -1,6 +1,7 @@
 package com.ilxomjon.dur_novvot_dokon.ui.history
 
 import androidx.fragment.app.Fragment
+import com.ilxomjon.dur_novvot_dokon.R
 import com.ilxomjon.dur_novvot_dokon.core.ServiceLocator
 import com.ilxomjon.dur_novvot_dokon.domain.Currency
 import com.ilxomjon.dur_novvot_dokon.domain.DealMode
@@ -54,6 +55,28 @@ object OrderReceipt {
             payment = true, note = p.note,
         )
         return wrap(Chek.ofSale(sale, code, p.storeName, agent(), phone()), sale.stamp)
+    }
+
+    /**
+     * v5.3.13: yuk beruvchi hujjati (kirim / to'lov / qaytarish) cheki — savdo chekimiz ko'rinishida.
+     * Kirimda qarz qatorlari yo'q; to'lovda [debtBefore] — oldingi qarzimiz, pastda qolgan qarzimiz.
+     */
+    fun ofSupplierDoc(ctx: android.content.Context, d: uz.imsoft.shared.onec.OneCDoc, debtBefore: uz.imsoft.shared.report.Money2?): Receipt {
+        val pay = d.kind == uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY
+        val title = ctx.getString(
+            when (d.kind) {
+                uz.imsoft.shared.onec.OneCDoc.SUPPLIER_PAY -> R.string.ck_title_pay
+                uz.imsoft.shared.onec.OneCDoc.SUPPLIER_RETURN -> R.string.ck_title_sret
+                else -> R.string.ck_title_receipt
+            },
+        )
+        val labels = Chek.Labels.LATIN.copy(
+            number = ctx.getString(R.string.ck_l_no), client = ctx.getString(R.string.ck_l_supplier),
+            debtSom = ctx.getString(R.string.ck_l_before_som), debtUsd = ctx.getString(R.string.ck_l_before_usd),
+            endSom = ctx.getString(R.string.ck_l_after_som), endUsd = ctx.getString(R.string.ck_l_after_usd),
+            sum = if (pay) ctx.getString(R.string.ck_l_paid) else Chek.Labels.LATIN.sum,
+        )
+        return wrap(uz.imsoft.shared.receipt.SupplierChek.of(d, title, labels, agent(), phone(), debtBefore), d.stamp)
     }
 
     fun show(f: Fragment, r: Receipt, stamp: Long) = ReceiptActions.preview(f, r, DokonLedgerHost, Stamp.formatDate(stamp))

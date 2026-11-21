@@ -662,6 +662,13 @@ Raqamlar — sizning ro'yxatingiz tartibida.
 | Kassada mijoz qarzi: kod bo'yicha, topilmasa nom bo'yicha moslash; bir nechta qator qo'shiladi; dasturchi rejimida «1C'dagi qarz qatorlari / mos keldi» | VERIFIED (test_kassa) / haqiqiy 1C'da IMPLEMENTED-UNVERIFIED |
 | gen_strings.py strings.xml bilan sinxron (matnli yorliq matnlari generatorga ko'chirildi) | VERIFIED (generator natijasi avvalgisi bilan bir xil) |
 
+## 5.3.13 (versionCode 63) (2026-11-21)
+| Funksiya | Holat |
+|---|---|
+| Kirim cheki: hujjat oynasida «Chek» (Yuk beruvchilar → yuk beruvchi → hujjat, kirim oynasidagi «Tarixi», rasmdan kirimdagi «Tarixi») — savdo chekimiz ko'rinishida, «KIRIM» sarlavhasi, tovarlar ro'yxati va summa, qarz qatorlari yo'q; ko'rish, printer, rasm, PDF | VERIFIED (unit test, kompilyatsiya) / printerda IMPLEMENTED-UNVERIFIED |
+| Yuk beruvchiga to'lov cheki: to'langan summa, oldingi va qolgan qarzimiz (hozirgi qarzdan shu va keyingi hujjatlar ayiriladi; 90 kunlik oraliqdagi hujjat uchun) | VERIFIED (unit test) / haqiqiy 1C ma'lumotida IMPLEMENTED-UNVERIFIED |
+| Yuk beruvchiga qaytarish cheki (kirimdek, qarzsiz) | VERIFIED (unit test) |
+
 ## 5.3.12 (versionCode 62) (2026-11-21)
 | Funksiya | Holat |
 |---|---|

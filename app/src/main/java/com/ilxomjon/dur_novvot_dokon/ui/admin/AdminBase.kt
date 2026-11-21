@@ -94,6 +94,17 @@ abstract class CodeFragment : Fragment() {
         else -> R.drawable.ic_list
     }
 
+    /** v5.3.13: yuk beruvchi hujjati cheki; to'lovda oldingi qarz shu yuk beruvchining hozirgi qarzi va hujjatlaridan. */
+    protected fun supplierChek(d: OneCDoc) {
+        val sups = com.ilxomjon.dur_novvot_dokon.core.ServiceLocator.onec.state.value.suppliers?.list.orEmpty()
+        val sup = sups.firstOrNull { s -> s.docs.any { it.id == d.id } } ?: sups.firstOrNull { it.name == d.party }
+        val before = if (d.kind == OneCDoc.SUPPLIER_PAY && sup != null) {
+            uz.imsoft.shared.receipt.SupplierChek.oweBefore(sup.docs, uz.imsoft.shared.report.Money2(sup.oweSom, sup.oweUsd), d)
+        } else null
+        val r = com.ilxomjon.dur_novvot_dokon.ui.history.OrderReceipt.ofSupplierDoc(ctx, d, before)
+        com.ilxomjon.dur_novvot_dokon.ui.history.OrderReceipt.show(this, r, d.stamp)
+    }
+
     /** Hujjat tafsiloti (qatorlar) oynasi. */
     protected fun showDoc(d: OneCDoc) {
         val sb = StringBuilder()
@@ -110,6 +121,8 @@ abstract class CodeFragment : Fragment() {
         if (d.note.isNotBlank()) sb.append('\n').append(d.note)
         val b = MaterialAlertDialogBuilder(ctx).setTitle(d.party.ifEmpty { kindName(d.kind) }).setMessage(sb.toString())
         // v5.2 (A5): tovarli hujjatni shu yerdan ham o'zgartirsa bo'ladi
+        // v5.3.13: kirim / yuk beruvchiga to'lov / qaytarish — chek (savdo chekimiz ko'rinishida)
+        if (uz.imsoft.shared.receipt.SupplierChek.supports(d.kind)) b.setNeutralButton(R.string.ck_button) { _, _ -> supplierChek(d) }
         if (d.kind in uz.imsoft.shared.onec.DocField.EDITABLE && d.lines.isNotEmpty()) {
             b.setPositiveButton(R.string.de_edit) { _, _ -> navigator().push(DocEditFragment.of(d.id)) }
             b.setNegativeButton(R.string.close, null)

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## Ilova 5.3.13 — 2026-11-21
+Kirim va yuk beruvchiga to'lov cheki (savdo chekimiz ko'rinishida): kirimda faqat ro'yxat va summa, to'lovda oldingi va qolgan qarz.
+
 ## Ilova 5.3.12 — 2026-11-21
 Rasmdan kirimda: tepada kattalashtiriladigan rasm maydoni, qator bosilsa rasmdagi joyi; tovarni almashtirish tugmasi; yuk beruvchi tarixi va har tovarning oxirgi kirimi.
 

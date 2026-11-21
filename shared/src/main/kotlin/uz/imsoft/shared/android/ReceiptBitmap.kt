@@ -244,11 +244,17 @@ object ReceiptBitmap {
                 c.drawText(right, width - pad - p9.measureText(right), base, p9)
             }
         }
+        if (chek.title.isNotEmpty()) {
+            val tl = sl(chek.title, p14, inner, Layout.Alignment.ALIGN_CENTER)
+            ops += Op(tl.height + 6 * k) { c, y -> c.save(); c.translate(pad, y); tl.draw(c); c.restore() }
+        }
         if (chek.number.isNotEmpty()) pair(l.number, chek.number, p11, p14, 2f)
         if (chek.client.isNotEmpty()) pair(l.client, chek.client, p11, p14, 2f)
         if (chek.agent.isNotEmpty()) pair(l.agent, chek.agent, p11, p11, 6f) else gap(4f)
-        pair(l.debtSom, chek.debtSom, p9, p10, 2f)
-        pair(l.debtUsd, chek.debtUsd, p9, p10, 6f)
+        if (chek.showDebt) {
+            pair(l.debtSom, chek.debtSom, p9, p10, 2f)
+            pair(l.debtUsd, chek.debtUsd, p9, p10, 6f)
+        }
         // Tovarlar — maketda har qator ramkada (chap/o'ng chegara, tepada va pastda chiziq)
         val cell = 8 * k
         for (x in chek.lines) {
@@ -266,13 +272,17 @@ object ReceiptBitmap {
         triple(l.sum, l.som, chek.sumSom, p9, p9, p11)
         triple("", l.usd, chek.sumUsd, p9, p9, p11, 6f)
         rule(6f)
-        triple(l.discount, l.som, chek.discountSom, p10, p11, p11)
-        triple("", l.usd, chek.discountUsd, p10, p11, p11, 6f)
-        triple(l.payment, l.cash, chek.cash, p10, p11, p11)
-        triple("", l.card, chek.card, p10, p11, p11)
-        triple("", l.paidUsd, chek.paidUsd, p10, p11, p11, 6f)
-        pair(l.endSom, chek.endSom, p10, p11, 2f)
-        pair(l.endUsd, chek.endUsd, p10, p11, 8f)
+        if (chek.showPay) {
+            triple(l.discount, l.som, chek.discountSom, p10, p11, p11)
+            triple("", l.usd, chek.discountUsd, p10, p11, p11, 6f)
+            triple(l.payment, l.cash, chek.cash, p10, p11, p11)
+            triple("", l.card, chek.card, p10, p11, p11)
+            triple("", l.paidUsd, chek.paidUsd, p10, p11, p11, 6f)
+        }
+        if (chek.showDebt) {
+            pair(l.endSom, chek.endSom, p10, p11, 2f)
+            pair(l.endUsd, chek.endUsd, p10, p11, 8f)
+        }
         if (chek.phone.isNotEmpty()) {
             val t = l.phone + " " + chek.phone
             val tl = sl(t, p12, inner, Layout.Alignment.ALIGN_CENTER)

@@ -1760,6 +1760,17 @@
     <string name="pr_scan_line">Ўқилгани: %1$s × %2$s = %3$s</string>
     <string name="pr_rotate">Буриш</string>
     <string name="pr_other_goods">Бошқа товар…</string>
+    <string name="ck_button">Чек</string>
+    <string name="ck_title_receipt">КИРИМ</string>
+    <string name="ck_title_pay">ЮК БЕРУВЧИГА ТЎЛОВ</string>
+    <string name="ck_title_sret">ЮК БЕРУВЧИГА ҚАЙТАРИШ</string>
+    <string name="ck_l_no">Ҳужжат №:</string>
+    <string name="ck_l_supplier">Юк берувчи:</string>
+    <string name="ck_l_paid">Тўланди</string>
+    <string name="ck_l_before_som">Олдинги қарзимиз (Сўм):</string>
+    <string name="ck_l_before_usd">Олдинги қарзимиз (Вал):</string>
+    <string name="ck_l_after_som">Қолган қарзимиз (Сўм):</string>
+    <string name="ck_l_after_usd">Қолган қарзимиз (Вал):</string>
     <string name="pr_hide">Ёпиш</string>
     <string name="pr_b_goods">Алмаштириш</string>
     <string name="pr_b_qty">Сони/нарх</string>
